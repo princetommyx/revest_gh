@@ -56,7 +56,7 @@ const Chat = () => {
         if (!activeChat) return null;
         const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api/';
         const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
-        const wsHost = apiUrl.replace(/^https?:\/\//, '').replace(/\/api\/$/, '');
+        const wsHost = apiUrl.replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
         return `${wsProtocol}://${wsHost}/ws/chat/${activeChat.id}/?token=${localStorage.getItem('access_token')}`;
     };
 
