@@ -1,10 +1,3 @@
-databases:
-  - name: revesta-db
-    databaseName: revesta
-    user: revesta_user
-    plan: free
-    region: frankfurt
-
 services:
   - type: web
     name: revesta-backend
@@ -22,17 +15,6 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        fromDatabase:
-          name: revesta-db
-          property: connectionString
+        sync: false
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: revesta-redis
-          property: connectionString
-
-  - type: redis
-    name: revesta-redis
-    region: frankfurt
-    plan: free
-    ipAllowList: [] # Allow all internal connections
+        sync: false
