@@ -9,12 +9,10 @@ services:
   - type: web
     name: revesta-backend
     runtime: python
-    repo: https://github.com/princetommyx/revest_gh
-    branch: main
     rootDir: backend
     plan: free
     region: frankfurt
-    buildCommand: ./build.sh
+    buildCommand: bash build.sh
     startCommand: daphne -b 0.0.0.0 -p $PORT revesta_backend.asgi:application
     envVars:
       - key: PYTHON_VERSION
