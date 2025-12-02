@@ -1,0 +1,40 @@
+databases:
+  - name: revesta-db
+    databaseName: revesta
+    user: revesta_user
+    plan: free
+    region: frankfurt
+
+services:
+  - type: web
+    name: revesta-backend
+    runtime: python
+    repo: https://github.com/princetommyx/revest_gh
+    branch: main
+    rootDir: backend
+    plan: free
+    region: frankfurt
+    buildCommand: ./build.sh
+    startCommand: daphne -b 0.0.0.0 -p $PORT revesta_backend.asgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.5
+      - key: DEBUG
+        value: 'False'
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: revesta-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: revesta-redis
+          property: connectionString
+
+  - type: redis
+    name: revesta-redis
+    region: frankfurt
+    plan: free
+    ipAllowList: [] # Allow all internal connections
