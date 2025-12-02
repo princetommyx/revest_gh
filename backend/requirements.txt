@@ -9,3 +9,4 @@ python-dotenv
 redis
 channels_redis
 djangorestframework-simplejwt
+Pillow
