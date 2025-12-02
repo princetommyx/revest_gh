@@ -1,6 +1,11 @@
 import os
+import django
 from django.core.asgi import get_asgi_application
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'revesta_backend.settings')
+django.setup()
+
+print("Django setup completed.")
 
 django_asgi_app = get_asgi_application()
 
