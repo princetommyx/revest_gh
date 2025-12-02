@@ -1,0 +1,10 @@
+Django>=5.0
+djangorestframework
+django-cors-headers
+channels["daphne"]
+psycopg2-binary
+dj-database-url
+whitenoise
+python-dotenv
+redis
+channels_redis
