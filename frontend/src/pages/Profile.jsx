@@ -1,5 +1,5 @@
-import WalletCard from '../components/WalletCard';
-import TransactionHistory from '../components/TransactionHistory';
+// import WalletCard from '../components/WalletCard';
+// import TransactionHistory from '../components/TransactionHistory';
 
 // ... existing imports ...
 
@@ -13,8 +13,8 @@ const Profile = () => {
                 {/* ... existing profile card content ... */}
             </div>
 
-            {/* Wallet Section */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Wallet Section - Temporarily Disabled */}
+            {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
                     <WalletCard />
                 </div>
@@ -22,7 +22,7 @@ const Profile = () => {
                     <h3 className="font-bold text-lg mb-4">Recent Activity</h3>
                     <TransactionHistory />
                 </div>
-            </div>
+            </div> */}
             <button
                 onClick={() => setIsEditing(!isEditing)}
                 className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full text-gray-500 transition-colors"

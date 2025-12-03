@@ -5,4 +5,5 @@ class WalletConfig(AppConfig):
     name = 'wallet'
 
     def ready(self):
-        import wallet.signals
+        pass  # Temporarily disabled
+        # import wallet.signals

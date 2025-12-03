@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'market',
     'logistics',
     'chat',
-    'wallet',
+    # 'wallet',  # Temporarily disabled
 ]
 
 MIDDLEWARE = [
