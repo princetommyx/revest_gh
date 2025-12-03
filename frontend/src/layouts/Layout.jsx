@@ -33,9 +33,11 @@ const Layout = () => {
                             <Link to="/" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/') ? 'text-primary' : 'text-gray-600'}`}>
                                 Logistics
                             </Link>
-                            <Link to="/marketplace" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/marketplace') ? 'text-primary' : 'text-gray-600'}`}>
-                                Marketplace
-                            </Link>
+                            {user?.role !== 'COLLECTOR' && (
+                                <Link to="/marketplace" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/marketplace') ? 'text-primary' : 'text-gray-600'}`}>
+                                    Marketplace
+                                </Link>
+                            )}
                             <Link to="/chat" className={`text-sm font-bold hover:text-primary transition-colors ${isActive('/chat') ? 'text-primary' : 'text-gray-600'}`}>
                                 Messages
                             </Link>
@@ -77,7 +79,9 @@ const Layout = () => {
                     <div className="md:hidden bg-white border-t border-gray-100 absolute w-full px-4 py-6 shadow-xl animate-fade-in-down">
                         <div className="flex flex-col gap-4">
                             <Link to="/" className="text-lg font-bold text-gray-800" onClick={() => setIsMobileMenuOpen(false)}>Logistics</Link>
-                            <Link to="/marketplace" className="text-lg font-bold text-gray-800" onClick={() => setIsMobileMenuOpen(false)}>Marketplace</Link>
+                            {user?.role !== 'COLLECTOR' && (
+                                <Link to="/marketplace" className="text-lg font-bold text-gray-800" onClick={() => setIsMobileMenuOpen(false)}>Marketplace</Link>
+                            )}
                             <Link to="/chat" className="text-lg font-bold text-gray-800" onClick={() => setIsMobileMenuOpen(false)}>Messages</Link>
                             <hr className="border-gray-100" />
                             {user ? (
