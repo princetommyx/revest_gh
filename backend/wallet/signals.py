@@ -6,4 +6,8 @@ from .models import Wallet
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_user_wallet(sender, instance, created, **kwargs):
     if created:
-        Wallet.objects.create(user=instance)
+        try:
+            Wallet.objects.create(user=instance)
+        except Exception as e:
+            # Log the error but don't prevent user creation
+            print(f"Warning: Failed to create wallet for user {instance.username}: {e}")
