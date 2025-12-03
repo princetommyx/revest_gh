@@ -6,7 +6,7 @@ services:
     plan: free
     region: frankfurt
     buildCommand: bash build.sh
-    startCommand: daphne -b 0.0.0.0 -p $PORT revesta_backend.asgi:application
+    startCommand: python manage.py migrate && daphne -b 0.0.0.0 -p $PORT revesta_backend.asgi:application
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.5
