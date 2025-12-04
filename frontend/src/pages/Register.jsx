@@ -357,7 +357,7 @@ const Register = () => {
                                     />
                                 </div>
                                 <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed">
-                                    By registering, you agree to our <span className="text-green-500 font-medium">Terms of Service</span> and <span className="text-green-500 font-medium">Privacy policy</span>, commit to comply with obligations under the European Union and local legislation and provide only legal services and content on the Bolt Platform.
+                                    By registering, you agree to our <span className="text-green-500 font-medium">Terms of Service</span> and <span className="text-green-500 font-medium">Privacy policy</span>, commit to comply with obligations under the European Union and local legislation and provide only legal services and content on the Revesta Platform.
                                 </label>
                             </div>
 
