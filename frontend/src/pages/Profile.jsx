@@ -1,10 +1,55 @@
-// import WalletCard from '../components/WalletCard';
-// import TransactionHistory from '../components/TransactionHistory';
-
-// ... existing imports ...
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Package, Edit2, Save, X } from 'lucide-react';
+import useAuth from '../hooks/useAuth';
+import api from '../api/axios';
 
 const Profile = () => {
-    // ... existing code ...
+    const { user, setUser } = useAuth();
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [myListings, setMyListings] = useState([]);
+    const [formData, setFormData] = useState({
+        email: user?.email || '',
+        vehicle_type: user?.vehicle_type || '',
+        license_plate: user?.license_plate || '',
+    });
+
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                email: user.email || '',
+                vehicle_type: user.vehicle_type || '',
+                license_plate: user.license_plate || '',
+            });
+            fetchMyListings();
+        }
+    }, [user]);
+
+    const fetchMyListings = async () => {
+        try {
+            const response = await api.get('market/listings/my/');
+            setMyListings(response.data);
+        } catch (error) {
+            console.error('Error fetching listings:', error);
+        }
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const response = await api.patch('users/me/', formData);
+            setUser(response.data);
+            setIsEditing(false);
+            alert('Profile updated successfully!');
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            alert('Failed to update profile.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">

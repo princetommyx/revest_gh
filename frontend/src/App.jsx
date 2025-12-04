@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+// import { AnimatePresence } from 'framer-motion';
 import Layout from './layouts/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -24,8 +25,10 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
+  const location = useLocation();
+
   return (
-    <Routes>
+    <Routes location={location} key={location.pathname}>
       <Route path="/intro" element={<Intro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
