@@ -4,7 +4,7 @@ from django.db import models
 class User(AbstractUser):
     class Role(models.TextChoices):
         COLLECTOR = 'COLLECTOR', 'Collector' # Formerly Provider (Driver)
-        SELLER = 'SELLER', 'Seller'       # Formerly Collector (Waste Generator)
+        SELLER = 'SELLER', 'Disposer'       # Formerly Collector (Waste Generator)
         RECYCLER = 'RECYCLER', 'Recycler' # New Role (Buyer)
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.SELLER)
@@ -19,6 +19,8 @@ class User(AbstractUser):
     national_id = models.CharField(max_length=50, blank=True, null=True)
     
     # Common fields
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
     
     # Live Location & Status

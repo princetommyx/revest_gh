@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './layouts/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Intro from './pages/Intro';
 import Home from './pages/Home';
 import Marketplace from './pages/Marketplace';
 import CreateListing from './pages/CreateListing';
@@ -16,7 +17,7 @@ const ProtectedRoute = ({ children }) => {
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
   if (!user) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/intro" />;
   }
 
   return children;
@@ -25,6 +26,7 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <Routes>
+      <Route path="/intro" element={<Intro />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 

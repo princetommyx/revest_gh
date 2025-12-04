@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { Truck, Package, Recycle, Eye, EyeOff, Building2, User } from 'lucide-react';
+import { ArrowLeft, X, Truck, Trash2, Recycle } from 'lucide-react';
 
 const Register = () => {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
-        username: '',
         email: '',
-        password: '',
-        role: '',
+        phoneNumber: '',
+        city: 'Accra',
+        role: 'COLLECTOR',
+        termsAccepted: false,
         // Collector
         vehicle_type: '',
         license_plate: '',
@@ -19,259 +20,354 @@ const Register = () => {
         tax_id: '',
         national_id: '',
     });
-    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const { register } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const value = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+        setFormData({ ...formData, [e.target.name]: value });
     };
 
     const selectRole = (role) => {
         setFormData({ ...formData, role });
-        if (role === 'SELLER') {
-            // Sellers don't need extra info for now
-            handleSubmit(null, role);
-        } else {
-            setStep(2);
-        }
+        setStep(2);
     };
 
-    const handleSubmit = async (e, roleOverride) => {
-        if (e) e.preventDefault();
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setError('');
 
-        const dataToSend = { ...formData };
-        if (roleOverride) dataToSend.role = roleOverride;
+        if (!formData.termsAccepted) {
+            setError('You must accept the Terms of Service and Privacy Policy.');
+            return;
+        }
 
         try {
+            const dataToSend = {
+                username: formData.email,
+                email: formData.email,
+                phone_number: formData.phoneNumber,
+                city: formData.city,
+                role: formData.role,
+                password: 'Password123!', // Temporary default
+                ...formData
+            };
+            // Adding password to state and form for functionality
+            if (!formData.password) {
+                // If we add password field back
+                dataToSend.password = formData.password;
+            }
+            // For now using hardcoded password if field is missing, or we should add it back.
+            // Previous edit added password field, let's keep it.
+            if (formData.password) {
+                dataToSend.password = formData.password;
+            }
+
             await register(dataToSend);
             navigate('/login');
         } catch (err) {
+            console.error(err);
             if (err.response && err.response.data) {
                 const errorData = err.response.data;
-                if (typeof errorData === 'string') {
-                    setError('Server error. Please try again later.');
-                } else {
-                    const firstError = Object.values(errorData).flat()[0];
-                    setError(firstError || 'Registration failed. Please check your inputs.');
-                }
+                const firstError = Object.values(errorData).flat()[0];
+                setError(firstError || 'Registration failed.');
             } else {
                 setError('Registration failed. Please try again.');
             }
         }
     };
 
+    const getRoleLabel = (role) => {
+        switch (role) {
+            case 'SELLER': return 'Disposer';
+            case 'COLLECTOR': return 'Collector';
+            case 'RECYCLER': return 'Recycler';
+            default: return 'User';
+        }
+    };
+
     return (
-        <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
-            <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-primary mb-2">Join ReVesta</h1>
-                    <p className="text-gray-500">
-                        {step === 1 ? 'Create your account' :
-                            formData.role === 'COLLECTOR' ? 'Collector Details' : 'Recycler Details'}
-                    </p>
+        <div className="min-h-screen bg-white flex flex-col">
+            {/* Header */}
+            <div className="p-4 flex items-center justify-between">
+                <button onClick={() => step === 1 ? navigate('/intro') : setStep(1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                    <ArrowLeft size={24} className="text-gray-900" />
+                </button>
+                <h1 className="text-lg font-bold text-gray-900">Register</h1>
+                <div className="w-8"></div>
+            </div>
+
+            <div className="flex-1 px-6 py-4 max-w-md mx-auto w-full">
+                <div className="flex justify-end mb-6">
+                    <div className="flex items-center gap-2">
+                        <span className="text-2xl">🇬🇭</span>
+                        <span className="font-bold text-gray-900">EN</span>
+                    </div>
                 </div>
 
-                {error && (
-                    <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-4 text-sm text-center">
-                        {error}
-                    </div>
-                )}
-
-                {step === 1 && (
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                            <input
-                                type="text"
-                                name="username"
-                                value={formData.username}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                            <div className="relative">
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    name="password"
-                                    value={formData.password}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none pr-10"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                                >
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="pt-4">
-                            <p className="text-center text-sm font-medium text-gray-700 mb-4">I am a...</p>
-                            <div className="grid grid-cols-3 gap-3">
-                                <button
-                                    onClick={() => selectRole('SELLER')}
-                                    className="flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-primary hover:bg-green-50 transition-all group"
-                                >
-                                    <Package size={24} className="text-gray-400 group-hover:text-primary mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 group-hover:text-primary">Seller</span>
-                                </button>
-                                <button
-                                    onClick={() => selectRole('COLLECTOR')}
-                                    className="flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-primary hover:bg-green-50 transition-all group"
-                                >
-                                    <Truck size={24} className="text-gray-400 group-hover:text-primary mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 group-hover:text-primary">Collector</span>
-                                </button>
-                                <button
-                                    onClick={() => selectRole('RECYCLER')}
-                                    className="flex flex-col items-center justify-center p-3 border-2 border-gray-100 rounded-xl hover:border-primary hover:bg-green-50 transition-all group"
-                                >
-                                    <Recycle size={24} className="text-gray-400 group-hover:text-primary mb-2" />
-                                    <span className="text-xs font-bold text-gray-600 group-hover:text-primary">Recycler</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {step === 2 && (
-                    <form onSubmit={(e) => handleSubmit(e)} className="space-y-4">
-
-                        {/* COLLECTOR FIELDS */}
-                        {formData.role === 'COLLECTOR' && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Type</label>
-                                    <select
-                                        name="vehicle_type"
-                                        value={formData.vehicle_type}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                                    >
-                                        <option value="">Select Vehicle</option>
-                                        <option value="TRICYCLE">Tricycle (Aboboyaa)</option>
-                                        <option value="TRUCK">Truck</option>
-                                        <option value="MOTORBIKE">Motorbike</option>
-                                    </select>
+                {step === 1 ? (
+                    <>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">Choose your role</h2>
+                        <div className="space-y-4">
+                            <button
+                                onClick={() => selectRole('COLLECTOR')}
+                                className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-primary hover:bg-green-50 transition-all group text-left"
+                            >
+                                <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                                    <Truck size={24} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">License Plate</label>
-                                    <input
-                                        type="text"
-                                        name="license_plate"
-                                        value={formData.license_plate}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                                    />
+                                    <h3 className="font-bold text-gray-900">Become a Collector</h3>
+                                    <p className="text-sm text-gray-500">Pick up waste and earn money</p>
                                 </div>
-                            </>
+                            </button>
+
+                            <button
+                                onClick={() => selectRole('SELLER')}
+                                className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-primary hover:bg-green-50 transition-all group text-left"
+                            >
+                                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                                    <Trash2 size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900">Become a Disposer</h3>
+                                    <p className="text-sm text-gray-500">Dispose of waste responsibly</p>
+                                </div>
+                            </button>
+
+                            <button
+                                onClick={() => selectRole('RECYCLER')}
+                                className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl hover:border-primary hover:bg-green-50 transition-all group text-left"
+                            >
+                                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 group-hover:bg-orange-600 group-hover:text-white transition-colors">
+                                    <Recycle size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900">Become a Recycler</h3>
+                                    <p className="text-sm text-gray-500">Buy and process recyclables</p>
+                                </div>
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-8">Become a {getRoleLabel(formData.role)}</h2>
+
+                        {error && (
+                            <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-6 text-sm">
+                                {error}
+                            </div>
                         )}
 
-                        {/* RECYCLER FIELDS */}
-                        {formData.role === 'RECYCLER' && (
-                            <>
-                                <div className="flex gap-4 mb-4">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="recycler_type"
-                                            value="INDIVIDUAL"
-                                            checked={formData.recycler_type === 'INDIVIDUAL'}
-                                            onChange={handleChange}
-                                            className="text-primary focus:ring-primary"
-                                        />
-                                        <span className="text-sm font-medium text-gray-700">Individual</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="recycler_type"
-                                            value="COMPANY"
-                                            checked={formData.recycler_type === 'COMPANY'}
-                                            onChange={handleChange}
-                                            className="text-primary focus:ring-primary"
-                                        />
-                                        <span className="text-sm font-medium text-gray-700">Company</span>
-                                    </label>
-                                </div>
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2">Email</label>
+                                <input
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="Enter email address"
+                                    className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                    required
+                                />
+                            </div>
 
-                                {formData.recycler_type === 'COMPANY' ? (
-                                    <>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                                            <input
-                                                type="text"
-                                                name="company_name"
-                                                value={formData.company_name}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
-                                            <input
-                                                type="text"
-                                                name="tax_id"
-                                                value={formData.tax_id}
-                                                onChange={handleChange}
-                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
-                                            />
-                                        </div>
-                                    </>
-                                ) : (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">National ID</label>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2">Password</label>
+                                <input
+                                    type="password"
+                                    name="password"
+                                    value={formData.password || ''}
+                                    onChange={handleChange}
+                                    placeholder="Create a password"
+                                    className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2">Phone number</label>
+                                <div className="flex gap-3">
+                                    <div className="w-1/3 bg-gray-100 rounded-xl border border-transparent flex items-center justify-center gap-2 px-3">
+                                        <span className="text-lg">🇬🇭</span>
+                                        <span className="text-gray-700 font-medium">+233</span>
+                                    </div>
+                                    <div className="flex-1">
                                         <input
-                                            type="text"
-                                            name="national_id"
-                                            value={formData.national_id}
+                                            type="tel"
+                                            name="phoneNumber"
+                                            value={formData.phoneNumber}
                                             onChange={handleChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                                            placeholder="Mobile number"
+                                            className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                            required
                                         />
                                     </div>
-                                )}
-                            </>
-                        )}
+                                </div>
+                            </div>
 
-                        <button
-                            type="submit"
-                            className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-green-600 transition-colors shadow-md"
-                        >
-                            Complete Registration
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStep(1)}
-                            className="w-full text-gray-500 py-2 hover:text-gray-800"
-                        >
-                            Back
-                        </button>
-                    </form>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-900 mb-2">City</label>
+                                <div className="relative">
+                                    <select
+                                        name="city"
+                                        value={formData.city}
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all appearance-none"
+                                    >
+                                        <option value="Accra">Accra</option>
+                                        <option value="Kumasi">Kumasi</option>
+                                        <option value="Takoradi">Takoradi</option>
+                                        <option value="Tamale">Tamale</option>
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M1 1.5L6 6.5L11 1.5" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Role Specific Fields */}
+                            {formData.role === 'COLLECTOR' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">Vehicle Type</label>
+                                        <div className="relative">
+                                            <select
+                                                name="vehicle_type"
+                                                value={formData.vehicle_type}
+                                                onChange={handleChange}
+                                                className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all appearance-none"
+                                            >
+                                                <option value="">Select Vehicle</option>
+                                                <option value="TRICYCLE">Tricycle (Aboboyaa)</option>
+                                                <option value="TRUCK">Truck</option>
+                                                <option value="MOTORBIKE">Motorbike</option>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M1 1.5L6 6.5L11 1.5" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                </svg>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">License Plate</label>
+                                        <input
+                                            type="text"
+                                            name="license_plate"
+                                            value={formData.license_plate}
+                                            onChange={handleChange}
+                                            placeholder="Enter license plate"
+                                            className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            {formData.role === 'RECYCLER' && (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-900 mb-2">Recycler Type</label>
+                                        <div className="flex gap-4 mb-2">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="recycler_type"
+                                                    value="INDIVIDUAL"
+                                                    checked={formData.recycler_type === 'INDIVIDUAL'}
+                                                    onChange={handleChange}
+                                                    className="text-primary focus:ring-primary"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">Individual</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="recycler_type"
+                                                    value="COMPANY"
+                                                    checked={formData.recycler_type === 'COMPANY'}
+                                                    onChange={handleChange}
+                                                    className="text-primary focus:ring-primary"
+                                                />
+                                                <span className="text-sm font-medium text-gray-700">Company</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {formData.recycler_type === 'COMPANY' ? (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-900 mb-2">Company Name</label>
+                                                <input
+                                                    type="text"
+                                                    name="company_name"
+                                                    value={formData.company_name}
+                                                    onChange={handleChange}
+                                                    placeholder="Enter company name"
+                                                    className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-900 mb-2">Tax ID</label>
+                                                <input
+                                                    type="text"
+                                                    name="tax_id"
+                                                    value={formData.tax_id}
+                                                    onChange={handleChange}
+                                                    placeholder="Enter Tax ID"
+                                                    className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div>
+                                            <label className="block text-sm font-bold text-gray-900 mb-2">National ID</label>
+                                            <input
+                                                type="text"
+                                                name="national_id"
+                                                value={formData.national_id}
+                                                onChange={handleChange}
+                                                placeholder="Enter National ID"
+                                                className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            )}
+
+                            <div className="flex items-start gap-3 mt-8">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        name="termsAccepted"
+                                        checked={formData.termsAccepted}
+                                        onChange={handleChange}
+                                        className="w-5 h-5 border-gray-300 rounded text-primary focus:ring-primary"
+                                        id="terms"
+                                    />
+                                </div>
+                                <label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed">
+                                    By registering, you agree to our <span className="text-green-500 font-medium">Terms of Service</span> and <span className="text-green-500 font-medium">Privacy policy</span>, commit to comply with obligations under the European Union and local legislation and provide only legal services and content on the Bolt Platform.
+                                </label>
+                            </div>
+
+                            <p className="text-xs text-gray-500 mt-4 leading-relaxed">
+                                Once you've become a {getRoleLabel(formData.role).toLowerCase()}, we will occasionally send you offers and promotions related to our services. You can always unsubscribe by changing your communication preferences.
+                            </p>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-primary text-white py-4 rounded-full font-bold text-lg hover:bg-green-600 transition-colors shadow-md mt-6"
+                            >
+                                Register as a {getRoleLabel(formData.role)}
+                            </button>
+                        </form>
+                    </>
                 )}
-
-                <p className="mt-6 text-center text-gray-600">
-                    Already have an account?{' '}
-                    <Link to="/login" className="text-primary font-bold hover:underline">
-                        Sign In
-                    </Link>
-                </p>
             </div>
         </div>
     );

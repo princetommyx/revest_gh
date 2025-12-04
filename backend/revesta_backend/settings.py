@@ -160,6 +160,12 @@ REST_FRAMEWORK = {
     ),
 }
 
+AUTHENTICATION_BACKENDS = [
+    'users.backends.EmailOrPhoneBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+
 # Redis Channel Layer
 if 'REDIS_URL' in os.environ:
     CHANNEL_LAYERS = {
