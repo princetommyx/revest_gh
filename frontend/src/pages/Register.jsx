@@ -77,10 +77,14 @@ const Register = () => {
             console.error(err);
             if (err.response && err.response.data) {
                 const errorData = err.response.data;
+                console.log('Error Data:', errorData); // Log full error data
                 const firstError = Object.values(errorData).flat()[0];
-                setError(firstError || 'Registration failed.');
+                const errorMessage = firstError || 'Registration failed.';
+                setError(errorMessage);
+                alert(`Registration Error: ${JSON.stringify(errorData)}`); // Alert full error for debugging
             } else {
                 setError('Registration failed. Please try again.');
+                alert('Registration failed. Please check your connection.');
             }
         }
     };
