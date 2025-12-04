@@ -21,7 +21,7 @@ const Register = () => {
         national_id: '',
     });
     const [error, setError] = useState('');
-    const { register } = useAuth();
+    const { register, login } = useAuth();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -65,7 +65,13 @@ const Register = () => {
             }
 
             await register(dataToSend);
-            navigate('/login');
+
+            // Auto-login after successful registration
+            const loginPassword = formData.password || 'Password123!';
+            await login(formData.email, loginPassword);
+
+            alert('Account created successfully!');
+            navigate('/');
         } catch (err) {
             console.error(err);
             if (err.response && err.response.data) {
