@@ -6,7 +6,6 @@ import uuid
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(read_only=True)
 
     class Meta:
         model = User
