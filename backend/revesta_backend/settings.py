@@ -146,13 +146,13 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
-CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-#     "http://localhost:5174",
-#     "http://localhost:5175",
-# ]
+# CORS_ALLOW_ALL_ORIGINS = True  # Disabled for security
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://localhost:5175",
+]
 
 if 'CORS_ALLOWED_ORIGINS' in os.environ:
     CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
@@ -161,6 +161,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',  # Limit for unauthenticated users
+        'user': '1000/day',   # Limit for authenticated users
+        'register': '5/minute', # Strict limit for registration
+        'login': '10/minute',    # Strict limit for login (check token endpoint)
+    }
 }
 
 AUTHENTICATION_BACKENDS = [

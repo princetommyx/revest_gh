@@ -6,12 +6,13 @@ import uuid
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'role', 'phone_number', 'city', 'vehicle_type', 'license_plate', 'company_name', 'tax_id', 'national_id', 'is_verified', 'password', 'is_online', 'current_lat', 'current_lon')
         extra_kwargs = {
             'password': {'write_only': True},
-            'username': {'read_only': True, 'required': False}
         }
 
     def create(self, validated_data):
