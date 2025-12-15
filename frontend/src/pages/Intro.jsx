@@ -12,7 +12,7 @@ const Intro = () => {
         setTimeout(() => {
             navigate(path);
             setLoadingTarget(null);
-        }, 800);
+        }, 400);
     };
 
     return (

@@ -38,7 +38,7 @@ const Register = () => {
             setFormData({ ...formData, role });
             setStep(2);
             setLoadingRole(null);
-        }, 800);
+        }, 400);
     };
 
     const handleSubmit = async (e) => {
