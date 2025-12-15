@@ -1,7 +1,20 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+
 import PageTransition from '../components/PageTransition';
 
 const Intro = () => {
+    const navigate = useNavigate();
+    const [loadingTarget, setLoadingTarget] = useState(null);
+
+    const handleNavigation = (path, target) => {
+        setLoadingTarget(target);
+        setTimeout(() => {
+            navigate(path);
+            setLoadingTarget(null);
+        }, 800);
+    };
+
     return (
         <PageTransition>
             <div className="min-h-screen flex flex-col items-center justify-center bg-white px-4 relative overflow-hidden">
@@ -17,19 +30,41 @@ const Intro = () => {
 
                     {/* Actions */}
                     <div className="space-y-4 w-full">
-                        <Link
-                            to="/login"
-                            className="block w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-600 hover:shadow-xl transition-all transform hover:-translate-y-1"
+                        <button
+                            onClick={() => handleNavigation('/login', 'login')}
+                            disabled={loadingTarget !== null}
+                            className="block w-full bg-primary text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-green-600 hover:shadow-xl transition-all transform hover:-translate-y-1 flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Log in
-                        </Link>
+                            {loadingTarget === 'login' ? (
+                                <div className="flex items-center space-x-2">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Opening...</span>
+                                </div>
+                            ) : (
+                                "Log in"
+                            )}
+                        </button>
 
-                        <Link
-                            to="/register"
-                            className="block w-full bg-gray-100 text-gray-800 py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition-all"
+                        <button
+                            onClick={() => handleNavigation('/register', 'register')}
+                            disabled={loadingTarget !== null}
+                            className="block w-full bg-gray-100 text-gray-800 py-4 rounded-xl font-bold text-lg hover:bg-gray-200 transition-all flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Register
-                        </Link>
+                            {loadingTarget === 'register' ? (
+                                <div className="flex items-center space-x-2">
+                                    <svg className="animate-spin h-5 w-5 text-gray-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Loading...</span>
+                                </div>
+                            ) : (
+                                "Register"
+                            )}
+                        </button>
                     </div>
 
                     {/* Footer / Terms */}
