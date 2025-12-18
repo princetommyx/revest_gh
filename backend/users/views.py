@@ -7,8 +7,41 @@ from django.utils.html import strip_tags
 from django.conf import settings
 import logging
 
+from datetime import datetime
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+def send_login_alert(user):
+    """
+    Send an email alert for new login.
+    """
+    try:
+        app_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'https://revesta.app'
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        context = {
+            'user_name': user.username,
+            'user_email': user.email,
+            'login_time': current_time,
+            'app_url': app_url,
+        }
+        
+        html_message = render_to_string('emails/login_alert.html', context)
+        # Use simple text fallback if template fails or for simplicity
+        plain_message = f"New login detected for {user.username} at {current_time}. Was this you?"
+        
+        send_mail(
+            subject='Security Alert: New Login Detected',
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=True,
+        )
+        logger.info(f"Login alert sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send login alert: {str(e)}")
 
 def send_welcome_email(user):
     """
@@ -41,6 +74,23 @@ def send_welcome_email(user):
         logger.info(f"Welcome email sent to {user.email}")
     except Exception as e:
         logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            try:
+                # Get username from request to find user
+                username = request.data.get('username')
+                if username:
+                    user = User.objects.filter(username=username).first()
+                    if user and user.email:
+                        send_login_alert(user)
+            except Exception as e:
+                logger.error(f"Error in login alert: {str(e)}")
+        return response
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
