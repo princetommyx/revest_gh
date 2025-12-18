@@ -4,6 +4,8 @@ import { Analytics } from '@vercel/analytics/react';
 import Layout from './layouts/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Intro from './pages/Intro';
 import Home from './pages/Home';
 import Marketplace from './pages/Marketplace';
@@ -34,6 +36,8 @@ function App() {
         <Route path="/intro" element={<Intro />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={
           <ProtectedRoute>
