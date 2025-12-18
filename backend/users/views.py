@@ -4,8 +4,12 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.conf import settings
+import threading
 import logging
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
 
 from datetime import datetime
 
@@ -31,17 +35,18 @@ def send_login_alert(user):
         # Use simple text fallback if template fails or for simplicity
         plain_message = f"New login detected for {user.username} at {current_time}. Was this you?"
         
-        send_mail(
-            subject='Security Alert: New Login Detected',
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=True,
-        )
-        logger.info(f"Login alert sent to {user.email}")
+        email_thread = threading.Thread(target=send_mail, kwargs={
+            'subject': 'Security Alert: New Login Detected',
+            'message': plain_message,
+            'from_email': settings.DEFAULT_FROM_EMAIL,
+            'recipient_list': [user.email],
+            'html_message': html_message,
+            'fail_silently': True,
+        })
+        email_thread.start()
+        logger.info(f"Login alert scheduled for {user.email}")
     except Exception as e:
-        logger.error(f"Failed to send login alert: {str(e)}")
+        logger.error(f"Failed to schedule login alert: {str(e)}")
 
 def send_welcome_email(user):
     """
@@ -62,18 +67,20 @@ def send_welcome_email(user):
         html_message = render_to_string('emails/welcome_email.html', context)
         plain_message = render_to_string('emails/welcome_email.txt', context)
         
-        # Send email
-        send_mail(
-            subject='Welcome to ReVesta!',
-            message=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=True,  # Don't break registration if email fails
-        )
-        logger.info(f"Welcome email sent to {user.email}")
+        # Send email in background thread
+        email_thread = threading.Thread(target=send_mail, kwargs={
+            'subject': 'Welcome to ReVesta!',
+            'message': plain_message,
+            'from_email': settings.DEFAULT_FROM_EMAIL,
+            'recipient_list': [user.email],
+            'html_message': html_message,
+            'fail_silently': True,
+        })
+        email_thread.start()
+        
+        logger.info(f"Welcome email scheduled for {user.email}")
     except Exception as e:
-        logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
+        logger.error(f"Failed to schedule welcome email to {user.email}: {str(e)}")
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 
