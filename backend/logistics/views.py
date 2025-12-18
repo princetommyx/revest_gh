@@ -110,3 +110,18 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                     }
                 }
             )
+
+    @action(detail=False, methods=['get'])
+    def history(self, request):
+        """
+        Return completed rides for the current user.
+        """
+        user = request.user
+        if user.role == 'COLLECTOR':
+            rides = PickupRequest.objects.filter(collector=user, status='COMPLETED').order_by('-created_at')
+        else:
+            # For Providers or others
+            rides = PickupRequest.objects.filter(provider=user, status='COMPLETED').order_by('-created_at')
+        
+        serializer = self.get_serializer(rides, many=True)
+        return Response(serializer.data)

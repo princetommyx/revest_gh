@@ -13,6 +13,7 @@ import CreateListing from './pages/CreateListing';
 import ListingDetail from './pages/ListingDetail';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
+import RideHistory from './pages/RideHistory';
 import useAuth from './hooks/useAuth';
 
 const ProtectedRoute = ({ children }) => {
@@ -49,7 +50,9 @@ function App() {
           <Route path="marketplace/create" element={<CreateListing />} />
           <Route path="marketplace/:id" element={<ListingDetail />} />
           <Route path="profile" element={<Profile />} />
-          <Route path="chat" element={<Chat />} /> {/* Added Route for /chat */}
+          <Route path="profile" element={<Profile />} />
+          <Route path="chat" element={<Chat />} />
+          <Route path="ride-history" element={<RideHistory />} />
         </Route>
       </Routes>
       <Analytics />
