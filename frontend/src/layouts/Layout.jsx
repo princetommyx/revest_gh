@@ -11,6 +11,8 @@ const Layout = () => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const isHomePage = location.pathname === '/';
+    const isActive = (path) => location.pathname === path;
+
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-900">

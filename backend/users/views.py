@@ -1,14 +1,58 @@
 from rest_framework import generics, permissions
 from .serializers import UserSerializer
 from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
+
+def send_welcome_email(user):
+    """
+    Send a welcome email to newly registered users.
+    """
+    try:
+        # Get the app URL from environment or use default
+        app_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'https://revesta.app'
+        
+        # Prepare context for email template
+        context = {
+            'user_name': user.username,
+            'user_role': user.role,
+            'app_url': app_url,
+        }
+        
+        # Render HTML and plain text versions
+        html_message = render_to_string('emails/welcome_email.html', context)
+        plain_message = render_to_string('emails/welcome_email.txt', context)
+        
+        # Send email
+        send_mail(
+            subject='Welcome to ReVesta!',
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=True,  # Don't break registration if email fails
+        )
+        logger.info(f"Welcome email sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to send welcome email to {user.email}: {str(e)}")
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserSerializer
     throttle_scope = 'register'
+    
+    def perform_create(self, serializer):
+        # Save the new user
+        user = serializer.save()
+        # Send welcome email
+        send_welcome_email(user)
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()

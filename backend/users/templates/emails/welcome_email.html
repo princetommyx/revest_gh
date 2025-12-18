@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to ReVesta</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation" style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 16px 16px 0 0;">
+                            <h1 style="margin: 0; font-size: 32px; font-weight: bold; color: #ffffff;">
+                                Re<span style="color: #d1fae5;">Vesta</span>
+                            </h1>
+                            <div style="width: 48px; height: 48px; margin: 20px auto; background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">♻️</span>
+                            </div>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 20px 0; font-size: 24px; font-weight: bold; color: #1f2937;">
+                                Welcome to ReVesta, {{ user_name }}!
+                            </h2>
+                            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #4b5563;">
+                                Thank you for joining our community! Your account has been successfully created.
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #4b5563;">
+                                ReVesta is your platform for easy waste recycling and sustainability. Whether you're a collector, disposer, or recycler, we're here to make the process seamless.
+                            </p>
+                            
+                            <!-- Role-specific message -->
+                            <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+                                <p style="margin: 0; font-size: 14px; color: #065f46;">
+                                    {% if user_role == 'COLLECTOR' %}
+                                    <strong>As a Collector:</strong> You can now go online and start receiving pickup requests from users in your area.
+                                    {% elif user_role == 'RECYCLER' %}
+                                    <strong>As a Recycler:</strong> Browse the marketplace to purchase recyclable materials and connect with disposers.
+                                    {% else %}
+                                    <strong>As a Disposer:</strong> Request pickups for your recyclable waste and list items in the marketplace.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <table role="presentation" style="margin: 0 auto;">
+                                <tr>
+                                    <td style="border-radius: 8px; background-color: #10b981;">
+                                        <a href="{{ app_url }}" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: bold; color: #ffffff; text-decoration: none;">
+                                            Get Started
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style="margin: 24px 0 0 0; font-size: 14px; line-height: 1.6; color: #6b7280;">
+                                If you have any questions, feel free to reach out to our support team.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 40px; background-color: #f9fafb; border-radius: 0 0 16px 16px; text-align: center;">
+                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 ReVesta. Making recycling easier.
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                You received this email because you signed up for ReVesta.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

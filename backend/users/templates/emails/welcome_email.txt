@@ -1,0 +1,21 @@
+Welcome to ReVesta, {{ user_name }}!
+
+Thank you for joining our community! Your account has been successfully created.
+
+ReVesta is your platform for easy waste recycling and sustainability. Whether you're a collector, disposer, or recycler, we're here to make the process seamless.
+
+{% if user_role == 'COLLECTOR' %}
+As a Collector: You can now go online and start receiving pickup requests from users in your area.
+{% elif user_role == 'RECYCLER' %}
+As a Recycler: Browse the marketplace to purchase recyclable materials and connect with disposers.
+{% else %}
+As a Disposer: Request pickups for your recyclable waste and list items in the marketplace.
+{% endif %}
+
+Get started now: {{ app_url }}
+
+If you have any questions, feel free to reach out to our support team.
+
+---
+© 2025 ReVesta. Making recycling easier.
+You received this email because you signed up for ReVesta.
