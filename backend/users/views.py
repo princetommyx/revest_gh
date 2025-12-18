@@ -122,10 +122,23 @@ class RegisterView(generics.CreateAPIView):
     throttle_scope = 'register'
     
     def perform_create(self, serializer):
-        # Save the new user
-        user = serializer.save()
-        # Send welcome email
-        send_welcome_email(user)
+        logger.info("Starting user registration...")
+        try:
+            # Save the new user
+            user = serializer.save()
+            logger.info(f"User {user.username} (ID: {user.pk}) saved to DB.")
+
+            # Send welcome email with extra safety
+            try:
+                send_welcome_email(user)
+                logger.info("send_welcome_email wrapper called.")
+            except Exception as e:
+                logger.error(f"CRITICAL: Failed to call send_welcome_email: {e}")
+                # Do not raise, let registration succeed
+                
+        except Exception as e:
+            logger.error(f"CRITICAL: Registration failed during save: {e}")
+            raise e
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
