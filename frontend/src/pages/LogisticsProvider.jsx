@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import api from '../api/axios';
 import useWebSocket from 'react-use-websocket';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, Loader, CheckCircle, Truck, History } from 'lucide-react';
+import { MapPin, Navigation, Loader, CheckCircle, Truck } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import axios from 'axios';
@@ -66,7 +65,6 @@ const MapUpdater = ({ bounds }) => {
 };
 
 const LogisticsProvider = () => {
-    const navigate = useNavigate();
     const { user } = useAuth();
     const [requesting, setRequesting] = useState(false);
     const [searching, setSearching] = useState(false);
@@ -307,16 +305,6 @@ const LogisticsProvider = () => {
                         </Marker>
                     </MapContainer>
                 </ErrorBoundary>
-            </div>
-
-            {/* History Button */}
-            <div className="absolute top-4 right-4 z-[1000]">
-                <button
-                    onClick={() => navigate('/ride-history')}
-                    className="bg-white p-3 rounded-full shadow-lg hover:shadow-xl transition-shadow"
-                >
-                    <History size={24} className="text-gray-700" />
-                </button>
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 bg-white p-6 rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] max-h-[60vh] overflow-y-auto z-10">

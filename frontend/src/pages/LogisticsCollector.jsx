@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import useAuth from '../hooks/useAuth';
 import api from '../api/axios';
 import useWebSocket from 'react-use-websocket';
-import { useNavigate } from 'react-router-dom';
-import { MapPin, Navigation, Truck, Power, History } from 'lucide-react';
+import { MapPin, Navigation, Truck, Power } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 
@@ -39,7 +38,6 @@ const truckIcon = new L.Icon({
 });
 
 const LogisticsCollector = () => {
-    const navigate = useNavigate();
     const { user } = useAuth();
     const [isOnline, setIsOnline] = useState(false);
     const [requests, setRequests] = useState([]);
@@ -145,13 +143,6 @@ const LogisticsCollector = () => {
                     <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                     <span className="font-bold text-gray-700">{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
                 </div>
-                <button
-                    onClick={() => navigate('/ride-history')}
-                    className="ml-auto px-4 py-2 rounded-full font-bold bg-white text-gray-700 hover:bg-gray-50 flex items-center gap-2 border border-gray-200"
-                >
-                    <History size={18} />
-                    History
-                </button>
                 <button
                     onClick={toggleOnline}
                     className={`ml-4 px-6 py-2 rounded-full font-bold transition-colors flex items-center gap-2 ${isOnline

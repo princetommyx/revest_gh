@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, MessageSquare, User, LogOut, Recycle, X, Menu } from 'lucide-react';
+import { Home, ShoppingBag, MessageSquare, User, LogOut, Recycle, X, Menu, History } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 
 import SupportWidget from '../components/SupportWidget';
@@ -116,6 +116,9 @@ const Layout = () => {
                             )}
                             <Link to="/chat" className="text-lg font-bold text-gray-800 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
                                 <MessageSquare size={20} /> Messages
+                            </Link>
+                            <Link to="/ride-history" className="text-lg font-bold text-gray-800 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
+                                <History size={20} /> Ride History
                             </Link>
                             <hr className="border-gray-100" />
                             {user ? (
