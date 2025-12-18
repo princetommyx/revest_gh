@@ -136,7 +136,7 @@ const LogisticsCollector = () => {
     };
 
     return (
-        <div className="h-[80vh] relative bg-gray-100 rounded-2xl overflow-hidden flex flex-col">
+        <div className="h-screen relative bg-gray-100 overflow-hidden flex flex-col">
             {/* Header / Status Bar */}
             <div className="bg-white p-4 shadow-sm z-10 flex justify-between items-center">
                 <div className="flex items-center gap-3">
