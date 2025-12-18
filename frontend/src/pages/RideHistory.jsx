@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Package, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, Package, MapPin, User } from 'lucide-react';
 import api from '../api/axios';
+import useAuth from '../hooks/useAuth';
 
 const RideHistory = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [rides, setRides] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -78,6 +80,20 @@ const RideHistory = () => {
                                     {ride.quantity_estimate}
                                 </span>
                             </div>
+
+                            {/* Show counterparty based on user role */}
+                            {user?.role === 'COLLECTOR' && ride.provider_name && (
+                                <div className="flex items-center gap-2 text-gray-600 mb-3">
+                                    <User size={14} />
+                                    <span className="text-sm">Provider: {ride.provider_name}</span>
+                                </div>
+                            )}
+                            {user?.role !== 'COLLECTOR' && ride.collector_name && (
+                                <div className="flex items-center gap-2 text-gray-600 mb-3">
+                                    <User size={14} />
+                                    <span className="text-sm">Collector: {ride.collector_name}</span>
+                                </div>
+                            )}
 
                             {/* Location (if available in future, simple logic for now) */}
                             <div className="flex items-start gap-2 text-gray-500 text-sm">
