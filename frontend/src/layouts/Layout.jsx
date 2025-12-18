@@ -4,9 +4,11 @@ import { Home, ShoppingBag, MessageSquare, User, LogOut, Recycle, X, Menu, Histo
 import useAuth from '../hooks/useAuth';
 
 import SupportWidget from '../components/SupportWidget';
+import { useToast } from '../contexts/ToastContext';
 
 const Layout = () => {
     const { user, logout } = useAuth();
+    const { showSuccess } = useToast();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -53,7 +55,13 @@ const Layout = () => {
                                             </div>
                                             <span className="text-sm font-bold">{user.username}</span>
                                         </Link>
-                                        <button onClick={logout} className="text-gray-400 hover:text-red-500 transition-colors">
+                                        <button
+                                            onClick={() => {
+                                                logout();
+                                                showSuccess('Logged out successfully!');
+                                            }}
+                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                        >
                                             <LogOut size={20} />
                                         </button>
                                     </div>
@@ -126,7 +134,13 @@ const Layout = () => {
                                     <Link to="/profile" className="text-lg font-bold text-gray-800 flex items-center gap-3" onClick={() => setIsMobileMenuOpen(false)}>
                                         <User size={20} /> My Profile
                                     </Link>
-                                    <button onClick={logout} className="text-lg font-bold text-red-500 flex items-center gap-3 text-left">
+                                    <button
+                                        onClick={() => {
+                                            logout();
+                                            showSuccess('Logged out successfully!');
+                                        }}
+                                        className="text-lg font-bold text-red-500 flex items-center gap-3 text-left"
+                                    >
                                         <LogOut size={20} /> Log Out
                                     </button>
                                 </>
