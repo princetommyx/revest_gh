@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { ArrowLeft, X, Truck, Trash2, Recycle } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import { useToast } from '../contexts/ToastContext';
 
 const Register = () => {
     const [step, setStep] = useState(1);
@@ -26,6 +27,7 @@ const Register = () => {
     const [loadingRole, setLoadingRole] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { register, login } = useAuth();
+    const { showSuccess, showError } = useToast();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -80,7 +82,7 @@ const Register = () => {
             const loginPassword = formData.password || 'Password123!';
             await login(formData.email, loginPassword);
 
-            alert('Account created successfully!');
+            showSuccess('Account created successfully!');
             navigate('/');
         } catch (err) {
             console.error(err);
@@ -90,10 +92,10 @@ const Register = () => {
                 const firstError = Object.values(errorData).flat()[0];
                 const errorMessage = firstError || 'Registration failed.';
                 setError(errorMessage);
-                alert(`Registration Error: ${JSON.stringify(errorData)}`); // Alert full error for debugging
+                showError(`Registration Error: ${errorMessage}`);
             } else {
                 setError('Registration failed. Please try again.');
-                alert('Registration failed. Please check your connection.');
+                showError('Registration failed. Please check your connection.');
             }
         } finally {
             setIsSubmitting(false);

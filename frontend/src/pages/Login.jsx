@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { Eye, EyeOff, Phone, Mail, ArrowLeft } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import { useToast } from '../contexts/ToastContext';
 
 const Login = () => {
     const [loginMethod, setLoginMethod] = useState('phone'); // 'phone' or 'email'
@@ -16,6 +17,7 @@ const Login = () => {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
+    const { showSuccess, showError } = useToast();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -36,10 +38,11 @@ const Login = () => {
 
             // Note: If backend expects 'username' field, we send identifier as username
             await login(identifier, formData.password);
-            alert('Login successful!');
+            showSuccess('Login successful!');
             navigate('/');
         } catch (err) {
             console.error(err);
+            showError('Invalid credentials');
             setError('Invalid credentials');
         } finally {
             setIsSubmitting(false);

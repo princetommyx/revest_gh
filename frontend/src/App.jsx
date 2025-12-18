@@ -15,6 +15,7 @@ import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import RideHistory from './pages/RideHistory';
 import useAuth from './hooks/useAuth';
+import { ToastProvider } from './contexts/ToastContext';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -32,7 +33,7 @@ function App() {
   const location = useLocation();
 
   return (
-    <>
+    <ToastProvider>
       <Routes location={location} key={location.pathname}>
         <Route path="/intro" element={<Intro />} />
         <Route path="/login" element={<Login />} />
@@ -56,7 +57,7 @@ function App() {
         </Route>
       </Routes>
       <Analytics />
-    </>
+    </ToastProvider>
   );
 }
 
