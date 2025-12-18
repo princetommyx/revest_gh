@@ -157,6 +157,14 @@ CORS_ALLOWED_ORIGINS = [
 if 'CORS_ALLOWED_ORIGINS' in os.environ:
     CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
 
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
+if 'CORS_ALLOWED_ORIGINS' in os.environ:
+    # Also trust frontend origins for CSRF (though mainly backend needed for Admin)
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS').split(','):
+        CSRF_TRUSTED_ORIGINS.append(origin)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
