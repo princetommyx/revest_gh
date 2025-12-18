@@ -16,12 +16,13 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
-def send_login_alert(user):
-    """
-    Send an email alert for new login.
-    """
+def _send_login_alert_task(user_id):
     try:
-        app_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'https://revesta.app'
+        user = User.objects.get(pk=user_id)
+        app_url = 'https://revesta.app'
+        if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+             app_url = settings.CORS_ALLOWED_ORIGINS[0]
+             
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         context = {
@@ -32,55 +33,70 @@ def send_login_alert(user):
         }
         
         html_message = render_to_string('emails/login_alert.html', context)
-        # Use simple text fallback if template fails or for simplicity
         plain_message = f"New login detected for {user.username} at {current_time}. Was this you?"
         
-        email_thread = threading.Thread(target=send_mail, kwargs={
-            'subject': 'Security Alert: New Login Detected',
-            'message': plain_message,
-            'from_email': settings.DEFAULT_FROM_EMAIL,
-            'recipient_list': [user.email],
-            'html_message': html_message,
-            'fail_silently': True,
-        })
+        send_mail(
+            subject='Security Alert: New Login Detected',
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=True,
+        )
+        logger.info(f"Login alert sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to process login alert: {str(e)}")
+
+def send_login_alert(user):
+    """
+    Schedule login alert in background thread.
+    """
+    try:
+        # Pass ID instead of user object to avoid thread safety issues
+        email_thread = threading.Thread(target=_send_login_alert_task, args=(user.pk,))
         email_thread.start()
-        logger.info(f"Login alert scheduled for {user.email}")
+        logger.info(f"Login alert scheduled for user {user.pk}")
     except Exception as e:
         logger.error(f"Failed to schedule login alert: {str(e)}")
 
-def send_welcome_email(user):
-    """
-    Send a welcome email to newly registered users.
-    """
+def _send_welcome_email_task(user_id):
     try:
-        # Get the app URL from environment or use default
-        app_url = settings.CORS_ALLOWED_ORIGINS[0] if settings.CORS_ALLOWED_ORIGINS else 'https://revesta.app'
+        user = User.objects.get(pk=user_id)
+        app_url = 'https://revesta.app'
+        if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+             app_url = settings.CORS_ALLOWED_ORIGINS[0]
         
-        # Prepare context for email template
         context = {
             'user_name': user.username,
             'user_role': user.role,
             'app_url': app_url,
         }
         
-        # Render HTML and plain text versions
         html_message = render_to_string('emails/welcome_email.html', context)
         plain_message = render_to_string('emails/welcome_email.txt', context)
         
-        # Send email in background thread
-        email_thread = threading.Thread(target=send_mail, kwargs={
-            'subject': 'Welcome to ReVesta!',
-            'message': plain_message,
-            'from_email': settings.DEFAULT_FROM_EMAIL,
-            'recipient_list': [user.email],
-            'html_message': html_message,
-            'fail_silently': True,
-        })
-        email_thread.start()
-        
-        logger.info(f"Welcome email scheduled for {user.email}")
+        send_mail(
+            subject='Welcome to ReVesta!',
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=True,
+        )
+        logger.info(f"Welcome email sent to {user.email}")
     except Exception as e:
-        logger.error(f"Failed to schedule welcome email to {user.email}: {str(e)}")
+        logger.error(f"Failed to process welcome email: {str(e)}")
+
+def send_welcome_email(user):
+    """
+    Schedule welcome email in background thread.
+    """
+    try:
+        email_thread = threading.Thread(target=_send_welcome_email_task, args=(user.pk,))
+        email_thread.start()
+        logger.info(f"Welcome email scheduled for user {user.pk}")
+    except Exception as e:
+        logger.error(f"Failed to schedule welcome email: {str(e)}")
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 
