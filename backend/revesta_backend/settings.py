@@ -209,12 +209,20 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 465
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+# Use Resend if API key is available (bypasses SMTP port blocking)
+if os.environ.get('RESEND_API_KEY'):
+    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+else:
+    # Fallback to SMTP (for local development)
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 465
+    EMAIL_USE_TLS = False
+    EMAIL_USE_SSL = True
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+
 EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
