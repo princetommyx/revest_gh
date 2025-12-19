@@ -51,6 +51,10 @@ def send_login_alert(user):
     """
     Schedule login alert in background thread.
     """
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        logger.warning("Email configuration missing. Skipping login alert.")
+        return
+
     try:
         # Pass ID instead of user object to avoid thread safety issues
         email_thread = threading.Thread(target=_send_login_alert_task, args=(user.pk,))
@@ -91,6 +95,10 @@ def send_welcome_email(user):
     """
     Schedule welcome email in background thread.
     """
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        logger.warning("Email configuration missing. Skipping welcome email.")
+        return
+
     try:
         email_thread = threading.Thread(target=_send_welcome_email_task, args=(user.pk,))
         email_thread.start()
@@ -190,6 +198,10 @@ def send_password_reset_email(user, reset_link, token):
     """
     Schedule password reset email in background thread.
     """
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        logger.warning("Email configuration missing. Skipping password reset email.")
+        return
+
     try:
         email_thread = threading.Thread(target=_send_password_reset_email_task, args=(user.pk, reset_link, token))
         email_thread.start()
