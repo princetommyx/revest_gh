@@ -47,8 +47,8 @@ def send_login_alert(user):
     """
     Schedule login alert in background thread.
     """
-    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
-        logger.warning("Email configuration missing. Skipping login alert.")
+    if (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD) and not getattr(settings, 'RESEND_API_KEY', None):
+        logger.warning("Email configuration missing (neither SMTP nor Resend). Skipping login alert.")
         return
 
     try:
@@ -91,8 +91,8 @@ def send_welcome_email(user):
     """
     Schedule welcome email in background thread.
     """
-    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
-        logger.warning("Email configuration missing. Skipping welcome email.")
+    if (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD) and not getattr(settings, 'RESEND_API_KEY', None):
+        logger.warning("Email configuration missing (neither SMTP nor Resend). Skipping welcome email.")
         return
 
     try:
@@ -206,8 +206,8 @@ def send_password_reset_email(user, reset_link, token):
     """
     Schedule password reset email in background thread.
     """
-    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
-        logger.warning("Email configuration missing. Skipping password reset email.")
+    if (not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD) and not getattr(settings, 'RESEND_API_KEY', None):
+        logger.warning("Email configuration missing (neither SMTP nor Resend). Skipping password reset email.")
         return
 
     try:

@@ -36,6 +36,7 @@ class ResendBackend(BaseEmailBackend):
                     "from": "onboarding@resend.dev",
                     "to": message.to,
                     "subject": message.subject,
+                    "reply_to": "revesta3@gmail.com",
                 }
 
                 # Add HTML or plain text body
