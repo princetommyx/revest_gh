@@ -100,9 +100,10 @@ def send_welcome_email(user):
         return
 
     try:
+        logger.info(f"Preparing to spawn welcome email thread for user {user.pk}")
         email_thread = threading.Thread(target=_send_welcome_email_task, args=(user.pk,))
         email_thread.start()
-        logger.info(f"Welcome email scheduled for user {user.pk}")
+        logger.info(f"Welcome email thread spawned for user {user.pk}")
     except Exception as e:
         logger.error(f"Failed to schedule welcome email: {str(e)}")
 
