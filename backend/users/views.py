@@ -322,4 +322,40 @@ class PasswordResetConfirmView(APIView):
             except Exception as e:
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
                 
-        return Response({"error": "Invalid mode"}, status=status.HTTP_400_BAD_REQUEST)
+
+class DebugEmailView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        # 1. Check Env Vars
+        email_user = settings.EMAIL_HOST_USER
+        email_pass = settings.EMAIL_HOST_PASSWORD
+        
+        status_report = {
+            "EMAIL_HOST_USER_CONFIGURED": bool(email_user),
+            "EMAIL_HOST_PASSWORD_CONFIGURED": bool(email_pass),
+            "EMAIL_HOST_USER_LENGTH": len(email_user) if email_user else 0,
+            "EMAIL_HOST_PASSWORD_LENGTH": len(email_pass) if email_pass else 0,
+        }
+
+        # 2. Try Sending
+        try:
+            recipient = request.query_params.get('to', email_user)
+            if not recipient:
+                 return Response({"error": "No recipient email found (EMAIL_HOST_USER is empty and no 'to' param provided)", "config": status_report})
+
+            send_mail(
+                'ReVesta Debug Email',
+                f'If you received this, your email configuration is working correctly!\nServer: {settings.EMAIL_HOST}',
+                settings.DEFAULT_FROM_EMAIL,
+                [recipient],
+                fail_silently=False,
+            )
+            status_report["SEND_STATUS"] = "SUCCESS"
+            status_report["MESSAGE"] = f"Email sent successfully to {recipient}"
+        except Exception as e:
+            status_report["SEND_STATUS"] = "FAILED"
+            status_report["ERROR_MESSAGE"] = str(e)
+            status_report["ERROR_TYPE"] = type(e).__name__
+        
+        return Response(status_report)
