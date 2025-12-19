@@ -102,8 +102,15 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        # Standard behavior, no email alert
-        return super().post(request, *args, **kwargs)
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            # Get user from username
+            try:
+                user = User.objects.get(username=request.data['username'])
+                send_login_alert(user)
+            except User.DoesNotExist:
+                pass
+        return response
 
 
 class RegisterView(generics.CreateAPIView):
@@ -115,7 +122,8 @@ class RegisterView(generics.CreateAPIView):
     def perform_create(self, serializer):
         # Save the new user
         serializer.save()
-        # Email notification removed as requested
+        # Send welcome email in background
+        send_welcome_email(serializer.instance)
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
@@ -152,6 +160,43 @@ from datetime import timedelta
 from .models import PasswordResetOTP
 from .notifications import generate_otp, send_mock_sms, send_mock_email
 
+
+def _send_password_reset_email_task(user_id, reset_link, token):
+    try:
+        user = User.objects.get(pk=user_id)
+        
+        context = {
+            'user_name': user.username,
+            'reset_link': reset_link,
+            'token': token
+        }
+        
+        html_message = render_to_string('emails/password_reset.html', context)
+        plain_message = f"Reset your password here: {reset_link}\nOr use code: {token}"
+        
+        send_mail(
+            subject='Reset Your Password',
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            html_message=html_message,
+            fail_silently=True,
+        )
+        logger.info(f"Password reset email sent to {user.email}")
+    except Exception as e:
+        logger.error(f"Failed to process password reset email: {str(e)}")
+
+def send_password_reset_email(user, reset_link, token):
+    """
+    Schedule password reset email in background thread.
+    """
+    try:
+        email_thread = threading.Thread(target=_send_password_reset_email_task, args=(user.pk, reset_link, token))
+        email_thread.start()
+        logger.info(f"Password reset email scheduled for user {user.pk}")
+    except Exception as e:
+        logger.error(f"Failed to schedule password reset email: {str(e)}")
+
 class PasswordResetRequestView(APIView):
     permission_classes = (permissions.AllowAny,)
     
@@ -169,10 +214,21 @@ class PasswordResetRequestView(APIView):
                 # Generate token link
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
-                reset_link = f"http://localhost:5173/reset-password?uid={uid}&token={token}"
                 
-                send_mock_email(user.email, "Password Reset", f"Click here to reset: {reset_link}")
-                return Response({"message": "Password reset email sent (check console)"})
+                # Determine frontend URL
+                app_url = 'http://localhost:5173'
+                if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
+                     # Use the first origin as base, typically production URL in prod
+                     app_url = settings.CORS_ALLOWED_ORIGINS[0]
+                     if app_url.endswith('/'):
+                         app_url = app_url[:-1]
+                
+                reset_link = f"{app_url}/reset-password?uid={uid}&token={token}"
+                
+                # Send real email
+                send_password_reset_email(user, reset_link, token)
+                
+                return Response({"message": "Password reset email sent"})
                 
             else:
                 # Assume phone
