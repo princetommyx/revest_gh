@@ -7,10 +7,6 @@ from django.utils.html import strip_tags
 import threading
 import logging
 from django.conf import settings
-from django.template.loader import render_to_string
-from django.core.mail import send_mail
-from django.contrib.auth import get_user_model
-
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -139,7 +135,11 @@ class RegisterView(generics.CreateAPIView):
         # Save the new user
         serializer.save()
         # Send welcome email in background
-        send_welcome_email(serializer.instance)
+        try:
+            send_welcome_email(serializer.instance)
+        except Exception as e:
+            # Prevent email errors from failing registration
+            logger.error(f"FATAL ERROR sending welcome email: {e}")
 
 
 class UserDetailView(generics.RetrieveUpdateAPIView):
