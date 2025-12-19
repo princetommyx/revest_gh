@@ -115,10 +115,17 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         if response.status_code == 200:
             # Get user from username
             try:
-                user = User.objects.get(username=request.data['username'])
-                send_login_alert(user)
-            except User.DoesNotExist:
-                pass
+                username = request.data['username']
+                user = User.objects.filter(
+                    Q(username=username) | 
+                    Q(email=username) | 
+                    Q(phone_number=username)
+                ).first()
+                
+                if user:
+                    send_login_alert(user)
+            except Exception as e:
+                logger.error(f"Error sending login alert: {e}")
         return response
 
 
