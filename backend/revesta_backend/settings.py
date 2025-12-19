@@ -213,7 +213,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 if os.environ.get('RESEND_API_KEY'):
     EMAIL_BACKEND = 'users.email_backend.ResendBackend'
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+    DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Resend sandbox email
 else:
     # Fallback to SMTP (for local development)
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

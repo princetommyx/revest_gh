@@ -31,8 +31,9 @@ class ResendBackend(BaseEmailBackend):
         for message in email_messages:
             try:
                 # Resend expects a specific format
+                # Use Resend's sandbox email (works without domain verification)
                 params = {
-                    "from": message.from_email or settings.DEFAULT_FROM_EMAIL,
+                    "from": "onboarding@resend.dev",
                     "to": message.to,
                     "subject": message.subject,
                 }
