@@ -62,33 +62,36 @@ const Register = () => {
                 phone_number: formData.phoneNumber,
                 city: formData.city,
                 role: formData.role,
-                password: 'Password123!', // Temporary default
+                password: formData.password || 'Password123!',
                 ...formData
             };
-            // Adding password to state and form for functionality
-            if (!formData.password) {
-                // If we add password field back
-                dataToSend.password = formData.password;
-            }
-            // For now using hardcoded password if field is missing, or we should add it back.
-            // Previous edit added password field, let's keep it.
-            if (formData.password) {
-                dataToSend.password = formData.password;
-            }
 
+            // Register the user
             await register(dataToSend);
+            console.log('Registration successful');
 
-            // Auto-login after successful registration
-            const loginPassword = formData.password || 'Password123!';
-            await login(formData.email, loginPassword);
+            // Show success immediately after registration
+            showSuccess('Account created successfully! Welcome to ReVesta!');
 
-            showSuccess('Account created successfully!');
-            navigate('/');
+            // Try to auto-login
+            try {
+                const loginPassword = formData.password || 'Password123!';
+                await login(formData.email, loginPassword);
+                console.log('Auto-login successful');
+                navigate('/');
+            } catch (loginErr) {
+                console.log('Auto-login failed, redirecting to login page:', loginErr);
+                // If auto-login fails, just redirect to login page
+                // The registration was still successful
+                setTimeout(() => {
+                    navigate('/login');
+                }, 1500);
+            }
         } catch (err) {
-            console.error(err);
+            console.error('Registration error:', err);
             if (err.response && err.response.data) {
                 const errorData = err.response.data;
-                console.log('Error Data:', errorData); // Log full error data
+                console.log('Error Data:', errorData);
                 const firstError = Object.values(errorData).flat()[0];
                 const errorMessage = firstError || 'Registration failed.';
                 setError(errorMessage);

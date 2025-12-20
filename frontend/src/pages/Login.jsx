@@ -104,7 +104,7 @@ const Login = () => {
                                         value={formData.phoneNumber}
                                         onChange={handleChange}
                                         placeholder="Phone number"
-                                        className="w-full px-4 py-3 bg-white border border-green-500 rounded-xl focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
                                         required
                                     />
                                 </div>
