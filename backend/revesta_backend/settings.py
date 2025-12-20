@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'market',
     'logistics',
     'chat',
+    'admin_dashboard',  # Admin dashboard system
     # 'wallet',  # Temporarily disabled
 ]
 

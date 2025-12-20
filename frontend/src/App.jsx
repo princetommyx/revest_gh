@@ -14,6 +14,7 @@ import ListingDetail from './pages/ListingDetail';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import RideHistory from './pages/RideHistory';
+import AdminRoutes from './pages/admin/AdminRoutes';
 import useAuth from './hooks/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
 
@@ -41,6 +42,14 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
+        {/* Admin Dashboard */}
+        <Route path="/admin-dashboard/*" element={
+          <ProtectedRoute>
+            <AdminRoutes />
+          </ProtectedRoute>
+        } />
+
+        {/* Main App */}
         <Route path="/" element={
           <ProtectedRoute>
             <Layout />
@@ -50,7 +59,6 @@ function App() {
           <Route path="marketplace" element={<Marketplace />} />
           <Route path="marketplace/create" element={<CreateListing />} />
           <Route path="marketplace/:id" element={<ListingDetail />} />
-          <Route path="profile" element={<Profile />} />
           <Route path="profile" element={<Profile />} />
           <Route path="chat" element={<Chat />} />
           <Route path="ride-history" element={<RideHistory />} />

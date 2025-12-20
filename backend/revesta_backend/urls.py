@@ -15,6 +15,7 @@ router.register(r'messages', MessageViewSet, basename='message')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/users/', include('users.urls')),
+    path('api/admin/', include('admin_dashboard.urls')),  # Admin dashboard API
     # path('api/', include('wallet.urls')),  # Temporarily disabled
     path('api/', include(router.urls)),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
