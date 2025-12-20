@@ -323,39 +323,93 @@ class PasswordResetConfirmView(APIView):
                 return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
                 
 
-class DebugEmailView(APIView):
+class EmailHealthCheckView(APIView):
+    """
+    Comprehensive email health check endpoint.
+    Shows configuration status and can send test emails.
+    """
     permission_classes = (permissions.AllowAny,)
 
     def get(self, request):
-        # 1. Check Env Vars
-        email_user = settings.EMAIL_HOST_USER
-        email_pass = settings.EMAIL_HOST_PASSWORD
+        import traceback
+        
+        # Determine which backend is configured
+        backend = settings.EMAIL_BACKEND
         
         status_report = {
-            "EMAIL_HOST_USER_CONFIGURED": bool(email_user),
-            "EMAIL_HOST_PASSWORD_CONFIGURED": bool(email_pass),
-            "EMAIL_HOST_USER_LENGTH": len(email_user) if email_user else 0,
-            "EMAIL_HOST_PASSWORD_LENGTH": len(email_pass) if email_pass else 0,
+            "email_backend": backend,
+            "timestamp": datetime.now().isoformat(),
         }
+        
+        # Check Resend configuration
+        if 'ResendBackend' in backend or hasattr(settings, 'RESEND_API_KEY'):
+            resend_key = getattr(settings, 'RESEND_API_KEY', None)
+            status_report["backend_type"] = "Resend API"
+            status_report["resend_api_key_configured"] = bool(resend_key)
+            status_report["resend_api_key_length"] = len(resend_key) if resend_key else 0
+            status_report["default_from_email"] = settings.DEFAULT_FROM_EMAIL
+            
+            if not resend_key:
+                status_report["error"] = "RESEND_API_KEY is not set in environment variables"
+                status_report["status"] = "MISCONFIGURED"
+                return Response(status_report, status=500)
+        else:
+            # SMTP configuration
+            email_user = getattr(settings, 'EMAIL_HOST_USER', '')
+            email_pass = getattr(settings, 'EMAIL_HOST_PASSWORD', '')
+            
+            status_report["backend_type"] = "SMTP"
+            status_report["email_host"] = getattr(settings, 'EMAIL_HOST', '')
+            status_report["email_port"] = getattr(settings, 'EMAIL_PORT', '')
+            status_report["email_host_user_configured"] = bool(email_user)
+            status_report["email_host_password_configured"] = bool(email_pass)
+            status_report["email_host_user_length"] = len(email_user) if email_user else 0
+            status_report["email_host_password_length"] = len(email_pass) if email_pass else 0
 
-        # 2. Try Sending
-        try:
-            recipient = request.query_params.get('to', email_user)
+        # Try sending a test email if requested
+        send_test = request.query_params.get('send_test', 'false').lower() == 'true'
+        recipient = request.query_params.get('to', '')
+        
+        if send_test:
             if not recipient:
-                 return Response({"error": "No recipient email found (EMAIL_HOST_USER is empty and no 'to' param provided)", "config": status_report})
-
-            send_mail(
-                'ReVesta Debug Email',
-                f'If you received this, your email configuration is working correctly!\nServer: {settings.EMAIL_HOST}',
-                settings.DEFAULT_FROM_EMAIL,
-                [recipient],
-                fail_silently=False,
-            )
-            status_report["SEND_STATUS"] = "SUCCESS"
-            status_report["MESSAGE"] = f"Email sent successfully to {recipient}"
-        except Exception as e:
-            status_report["SEND_STATUS"] = "FAILED"
-            status_report["ERROR_MESSAGE"] = str(e)
-            status_report["ERROR_TYPE"] = type(e).__name__
+                status_report["test_email_error"] = "No recipient provided. Add ?send_test=true&to=your@email.com"
+                status_report["status"] = "NO_RECIPIENT"
+                return Response(status_report, status=400)
+            
+            try:
+                logger.info(f"Attempting to send test email to {recipient}")
+                
+                send_mail(
+                    subject='ReVesta Email Health Check',
+                    message=f'This is a test email from ReVesta.\n\nBackend: {backend}\nTimestamp: {datetime.now()}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[recipient],
+                    fail_silently=False,
+                )
+                
+                status_report["test_email_sent"] = True
+                status_report["test_email_recipient"] = recipient
+                status_report["status"] = "SUCCESS"
+                logger.info(f"Test email sent successfully to {recipient}")
+                
+            except Exception as e:
+                error_msg = str(e)
+                status_report["test_email_sent"] = False
+                status_report["test_email_error"] = error_msg
+                status_report["test_email_error_type"] = type(e).__name__
+                status_report["test_email_traceback"] = traceback.format_exc()
+                status_report["status"] = "FAILED"
+                logger.error(f"Test email failed: {error_msg}")
+                logger.error(traceback.format_exc())
+                return Response(status_report, status=500)
+        else:
+            status_report["status"] = "OK"
+            status_report["message"] = "Email backend is configured. Add ?send_test=true&to=your@email.com to test sending."
         
         return Response(status_report)
+
+
+# Keep old endpoint for backwards compatibility
+class DebugEmailView(EmailHealthCheckView):
+    pass
+

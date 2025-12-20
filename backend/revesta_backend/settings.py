@@ -210,10 +210,14 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email Configuration
 # Use Resend if API key is available (bypasses SMTP port blocking)
+import logging
+email_logger = logging.getLogger('revesta.email')
+
 if os.environ.get('RESEND_API_KEY'):
     EMAIL_BACKEND = 'users.email_backend.ResendBackend'
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
     DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Resend sandbox email
+    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)})")
 else:
     # Fallback to SMTP (for local development)
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -224,5 +228,10 @@ else:
     EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
     EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
     DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+    
+    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+        email_logger.info(f"✓ Email configured with SMTP ({EMAIL_HOST}:{EMAIL_PORT})")
+    else:
+        email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or SMTP credentials")
 
 EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
