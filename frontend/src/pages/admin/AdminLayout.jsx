@@ -4,8 +4,8 @@ import {
     LayoutDashboard, Users, Activity, MessageSquare, Settings,
     LogOut, Bell, ChevronLeft, Menu, X
 } from 'lucide-react';
-import useAuth from '../hooks/useAuth';
-import { useAdmin } from '../contexts/AdminContext';
+import useAuth from '../../hooks/useAuth';
+import { useAdmin } from '../../contexts/AdminContext';
 
 const AdminLayout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
