@@ -31,14 +31,12 @@ const AdminLogin = () => {
                     return;
                 }
 
-                // Register admin user
-                await api.post('/users/register/', {
+                // Register admin user via dedicated endpoint
+                await api.post('/users/admin-register/', {
                     username: credentials.username,
                     email: credentials.email,
                     password: credentials.password,
-                    role: 'COLLECTOR', // Default role, will be overridden
-                    is_staff: true,
-                    is_superuser: true
+                    role: 'COLLECTOR'
                 });
 
                 // Auto-login after registration

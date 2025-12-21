@@ -142,6 +142,32 @@ class RegisterView(generics.CreateAPIView):
             logger.error(f"FATAL ERROR sending welcome email: {e}")
 
 
+class AdminRegisterView(generics.CreateAPIView):
+    """
+    Special endpoint for creating admin accounts.
+    Note: In production, this should be secured or removed.
+    """
+    queryset = User.objects.all()
+    permission_classes = (permissions.AllowAny,)  # Open for initial setup
+    serializer_class = UserSerializer
+    
+    def perform_create(self, serializer):
+        # Create user with admin privileges
+        user = serializer.save()
+        user.is_staff = True
+        user.is_superuser = True
+        user.is_verified = True  # Auto-verify admin accounts
+        user.save()
+        logger.info(f"Admin account created: {user.username}")
+        
+        # Optionally send welcome email
+        try:
+            send_welcome_email(user)
+        except Exception as e:
+            logger.error(f"Error sending admin welcome email: {e}")
+
+
+
 class UserDetailView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.IsAuthenticated,)
