@@ -11,10 +11,11 @@ import useAuth from '../../hooks/useAuth';
 const AdminRoutes = () => {
     const { user } = useAuth();
 
-    // Check if user is admin (staff or superuser)
-    if (!user?.is_staff && !user?.is_superuser) {
-        return <Navigate to="/" />;
-    }
+    // TEMPORARY: Admin check disabled for preview
+    // TODO: Re-enable before production
+    // if (!user?.is_staff && !user?.is_superuser) {
+    //     return <Navigate to="/" />;
+    // }
 
     return (
         <AdminProvider>
