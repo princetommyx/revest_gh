@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, User, AlertCircle, Mail } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
@@ -14,8 +14,15 @@ const AdminLogin = () => {
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, user } = useAuth(); // Get user from context
     const navigate = useNavigate();
+
+    // Auto-redirect if already logged in as admin
+    useEffect(() => {
+        if (user?.is_staff || user?.is_superuser) {
+            navigate('/admin-dashboard');
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

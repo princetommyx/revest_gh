@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import api from '../api/axios';
+import useAuth from '../hooks/useAuth';
 
 const AdminContext = createContext();
 
@@ -12,6 +13,8 @@ export const AdminProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    const { user } = useAuth(); // Need to access token functionality from auth context
+
     // Fetch dashboard statistics
     const fetchStats = async () => {
         try {
@@ -23,7 +26,54 @@ export const AdminProvider = ({ children }) => {
         }
     };
 
-    // Fetch users with optional filters
+    // ... existing fetch functions ...
+
+    // WebSocket Connection
+    useEffect(() => {
+        let socket;
+        const token = localStorage.getItem('access_token');
+
+        if (token && (user?.is_staff || user?.is_superuser)) {
+            // Determine protocol (ws or wss)
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//localhost:8000/ws/admin/?token=${token}`;
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => {
+                console.log('Admin WebSocket Connected');
+            };
+
+            socket.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Admin Socket Message:', data);
+
+                if (data.type === 'admin_notification' || data.type === 'INFO' || data.type === 'URGENT_ISSUE') {
+                    // Refresh notifications list
+                    fetchNotifications();
+                    // Optional: Show toast or update badge count directly
+                    setNotifications(prev => [data.message, ...prev]);
+                    // Also refresh stats if it's a relevant event
+                    fetchStats();
+                }
+            };
+
+            socket.onclose = () => {
+                console.log('Admin WebSocket Disconnected');
+            };
+
+            socket.onerror = (error) => {
+                console.error('Admin WebSocket Error:', error);
+            };
+        }
+
+        return () => {
+            if (socket) {
+                socket.close();
+            }
+        };
+    }, [user]); // Re-connect if user changes
+
     const fetchUsers = async (filters = {}) => {
         try {
             const params = new URLSearchParams(filters);

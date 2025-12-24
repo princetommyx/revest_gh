@@ -19,6 +19,8 @@ export const AuthProvider = ({ children }) => {
             try {
                 const response = await api.get('users/me/');
                 setUser(response.data);
+                setLoading(false);
+                return response.data;
             } catch (error) {
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
@@ -26,14 +28,14 @@ export const AuthProvider = ({ children }) => {
             }
         }
         setLoading(false);
+        return null;
     };
 
     const login = async (username, password) => {
         const response = await api.post('users/token/', { username, password });
         localStorage.setItem('access_token', response.data.access);
         localStorage.setItem('refresh_token', response.data.refresh);
-        await checkUserLoggedIn();
-        return true;
+        return await checkUserLoggedIn();
     };
 
     const register = async (userData) => {
