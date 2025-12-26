@@ -310,7 +310,7 @@ class GoogleLoginView(views.APIView):
                     username=username,
                     email=email,
                     password=None, # Unusable password
-                    role='DISPOSER', # Default role
+                    role='SELLER', # Default role (Disposer)
                     is_verified=True # Google verified email
                 )
                 
@@ -351,4 +351,4 @@ class GoogleLoginView(views.APIView):
             return Response({'error': f'Token verification failed: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(f"Google login error: {e}")
-            return Response({'error': 'Login failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': f'Login failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
