@@ -295,7 +295,9 @@ class GoogleLoginView(views.APIView):
 
             # Check if user exists
             try:
-                user = User.objects.get(email=email)
+                user = User.objects.filter(email=email).first()
+                if not user:
+                    raise User.DoesNotExist
             except User.DoesNotExist:
                 # Create new user
                 username = email.split('@')[0]
