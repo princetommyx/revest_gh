@@ -30,8 +30,8 @@ const GoogleAuthButton = ({ text = "Continue with Google", mode = "login" }) => 
             // but ideally we should call a context method. 
             // Let's update AuthContext to have a `socialLogin` method later if needed.
             // For now:
-            localStorage.setItem('accessToken', access);
-            localStorage.setItem('refreshToken', refresh);
+            localStorage.setItem('access_token', access);
+            localStorage.setItem('refresh_token', refresh);
             localStorage.setItem('user', JSON.stringify(user));
 
             // Force a small delay or context refresh if needed, but navigate typically causes re-render 

@@ -332,8 +332,11 @@ class GoogleLoginView(views.APIView):
             # Generate tokens
             refresh = RefreshToken.for_user(user)
             
-            # Send login alert (optional, maybe less noisy for recurring Google logins)
-            # send_login_alert(user)
+            # Send login alert
+            try:
+                send_login_alert(user)
+            except Exception as e:
+                logger.error(f"Failed to send login alert: {e}")
 
             return Response({
                 'refresh': str(refresh),
