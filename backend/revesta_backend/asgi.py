@@ -9,6 +9,7 @@ print("Django setup completed.")
 
 django_asgi_app = get_asgi_application()
 
+from channels.routing import ProtocolTypeRouter, URLRouter
 import logistics.routing
 import chat.routing
 import admin_dashboard.routing

@@ -1,9 +1,8 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UpdateLocationView, 
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
-    DebugEmailView, EmailHealthCheckView
+    DebugEmailView, EmailHealthCheckView, GoogleLoginView
 )
 
 urlpatterns = [
@@ -17,5 +16,6 @@ urlpatterns = [
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),  # Backwards compatibility
+    path('google/', GoogleLoginView.as_view(), name='google_login'),
 ]
 

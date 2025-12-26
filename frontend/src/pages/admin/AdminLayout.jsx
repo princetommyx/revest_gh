@@ -9,10 +9,11 @@ import { useAdmin } from '../../contexts/AdminContext';
 
 const AdminLayout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [showNotifications, setShowNotifications] = useState(false); // UI State
     const location = useLocation();
     const navigate = useNavigate();
     const { user, logout } = useAuth();
-    const { notifications } = useAdmin();
+    const { notifications, markNotificationRead } = useAdmin(); // Get function from context
 
     const handleLogout = () => {
         logout();
@@ -70,8 +71,8 @@ const AdminLayout = () => {
                                     key={item.name}
                                     to={item.href}
                                     className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
-                                            ? 'bg-primary text-white'
-                                            : 'text-gray-700 hover:bg-gray-100'
+                                        ? 'bg-primary text-white'
+                                        : 'text-gray-700 hover:bg-gray-100'
                                         }`}
                                 >
                                     <item.icon size={20} />
@@ -127,14 +128,56 @@ const AdminLayout = () => {
 
                         <div className="flex items-center gap-4">
                             {/* Notifications */}
-                            <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                <Bell size={20} className="text-gray-600" />
-                                {unreadNotifications > 0 && (
-                                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {unreadNotifications}
-                                    </span>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowNotifications(!showNotifications)}
+                                    className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <Bell size={20} className="text-gray-600" />
+                                    {unreadNotifications > 0 && (
+                                        <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                            {unreadNotifications}
+                                        </span>
+                                    )}
+                                </button>
+
+                                {/* Notification Dropdown */}
+                                {showNotifications && (
+                                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-100 z-50">
+                                        <div className="p-3 border-b border-gray-100 flex justify-between items-center">
+                                            <h3 className="font-semibold text-gray-900">Notifications</h3>
+                                            <span className="text-xs text-gray-500">{unreadNotifications} new</span>
+                                        </div>
+                                        <div className="max-h-96 overflow-y-auto">
+                                            {notifications?.length > 0 ? (
+                                                notifications.map((notification, index) => (
+                                                    <div
+                                                        key={notification.id || index}
+                                                        className={`p-3 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!notification.is_read ? 'bg-blue-50/50' : ''}`}
+                                                        onClick={() => {
+                                                            if (notification.id) markNotificationRead(notification.id);
+                                                            setShowNotifications(false);
+                                                            if (notification.link) navigate(notification.link);
+                                                        }}
+                                                    >
+                                                        <div className="flex justify-between items-start mb-1">
+                                                            <p className="text-sm font-medium text-gray-900">{notification.title || 'Notification'}</p>
+                                                            <span className="text-xs text-gray-400">
+                                                                {new Date(notification.created_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 line-clamp-2">{notification.message}</p>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <div className="p-4 text-center text-gray-500 text-sm">
+                                                    No notifications
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
-                            </button>
+                            </div>
 
                             {/* Quick Actions */}
                             <div className="flex items-center gap-2">

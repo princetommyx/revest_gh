@@ -4,6 +4,7 @@ import useAuth from '../hooks/useAuth';
 import { Eye, EyeOff, Phone, Mail, ArrowLeft } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { useToast } from '../contexts/ToastContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Login = () => {
     const [loginMethod, setLoginMethod] = useState('phone'); // 'phone' or 'email'
@@ -166,6 +167,17 @@ const Login = () => {
                                 "Continue"
                             )}
                         </button>
+
+                        <div className="relative my-8">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-gray-300"></span>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <GoogleAuthButton />
                     </form>
                 </div>
             </div>

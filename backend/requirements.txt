@@ -11,3 +11,5 @@ channels_redis
 djangorestframework-simplejwt
 Pillow
 resend==0.8.0
+google-auth
+requests

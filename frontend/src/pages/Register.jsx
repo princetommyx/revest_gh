@@ -4,6 +4,7 @@ import useAuth from '../hooks/useAuth';
 import { ArrowLeft, X, Truck, Trash2, Recycle } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
 import { useToast } from '../contexts/ToastContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Register = () => {
     const [step, setStep] = useState(1);
@@ -220,6 +221,20 @@ const Register = () => {
                     ) : (
                         <>
                             <h2 className="text-2xl font-bold text-gray-900 mb-8">Become a {getRoleLabel(formData.role)}</h2>
+
+                            {formData.role === 'SELLER' && (
+                                <>
+                                    <GoogleAuthButton mode="register" />
+                                    <div className="relative my-8">
+                                        <div className="absolute inset-0 flex items-center">
+                                            <span className="w-full border-t border-gray-100"></span>
+                                        </div>
+                                        <div className="relative flex justify-center text-sm">
+                                            <span className="px-2 bg-white text-gray-500">Or register with email</span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             {error && (
                                 <div className="bg-red-50 text-red-500 p-3 rounded-lg mb-6 text-sm">
