@@ -11,7 +11,7 @@ class UserSummarySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'role', 'role_display', 'is_online', 'is_verified', 'date_joined']
+        fields = ['id', 'username', 'email', 'role', 'role_display', 'is_online', 'is_verified', 'date_joined', 'is_staff', 'is_superuser']
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):
@@ -110,7 +110,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'phone_number', 'role', 'role_display',
-                  'city', 'is_verified', 'is_online', 'is_active', 'is_support', 
+                  'city', 'is_verified', 'is_online', 'is_active', 'is_support', 'is_staff', 'is_superuser', 
                   'current_lat', 'current_lon', 'date_joined', 'last_login',
                   'vehicle_type', 'license_plate', 'company_name', 'tax_id', 'national_id',
                   'recent_activities', 'total_orders', 'total_rides', 'open_tickets']
