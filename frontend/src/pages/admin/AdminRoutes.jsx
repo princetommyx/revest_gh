@@ -4,6 +4,7 @@ import AdminLayout from './AdminLayout';
 import Overview from './Overview';
 import UsersPage from './UsersPage';
 import ActivityPage from './ActivityPage';
+import AdminUsersPage from './AdminUsersPage';
 import SupportPage from './SupportPage';
 import SettingsPage from './SettingsPage';
 import useAuth from '../../hooks/useAuth';
@@ -24,6 +25,7 @@ const AdminRoutes = () => {
                     <Route path="users" element={<UsersPage />} />
                     <Route path="activity" element={<ActivityPage />} />
                     <Route path="support" element={<SupportPage />} />
+                    <Route path="admins" element={<AdminUsersPage />} />
                     <Route path="settings" element={<SettingsPage />} />
                 </Route>
             </Routes>

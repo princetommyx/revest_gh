@@ -100,7 +100,7 @@ const UsersPage = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {users?.map((user) => (
+                            {users?.filter(u => !u.is_staff && !u.is_superuser).map((user) => (
                                 <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div>

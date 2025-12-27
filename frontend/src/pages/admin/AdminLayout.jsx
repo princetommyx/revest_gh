@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-    LayoutDashboard, Users, Activity, MessageSquare, Settings,
+    LayoutDashboard, Users, Activity, MessageSquare, Settings, ShieldCheck,
     LogOut, Bell, ChevronLeft, Menu, X
 } from 'lucide-react';
 import useAuth from '../../hooks/useAuth';
@@ -27,6 +27,7 @@ const AdminLayout = () => {
         { name: 'Users', href: '/admin-dashboard/users', icon: Users },
         { name: 'Activity', href: '/admin-dashboard/activity', icon: Activity },
         { name: 'Support', href: '/admin-dashboard/support', icon: MessageSquare },
+        { name: 'Admins', href: '/admin-dashboard/admins', icon: ShieldCheck },
         { name: 'Settings', href: '/admin-dashboard/settings', icon: Settings },
     ];
 
