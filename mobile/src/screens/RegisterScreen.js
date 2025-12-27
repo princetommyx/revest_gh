@@ -89,13 +89,18 @@ export default function RegisterScreen() {
             Alert.alert('Success', 'Account created! Please login.');
             navigation.navigate('Login');
         } catch (error) {
-            console.log("Registration Error:", error.response?.data);
+            console.log("Registration Error Detail:", error);
 
-            // Format error message similar to web
             let msg = 'Registration failed';
-            if (error.response?.data) {
+
+            if (error.code === 'ECONNABORTED') {
+                msg = "Connection timed out. Check your IP address and backend.";
+            } else if (!error.response) {
+                // Network error (no response received)
+                msg = "Network Error. Is the backend running at " + authApi.apiClient?.defaults?.baseURL + "?";
+                if (error.message) msg += " (" + error.message + ")";
+            } else if (error.response?.data) {
                 const errorData = error.response.data;
-                // Try to get the first error message from the object
                 const firstValue = Object.values(errorData)[0];
                 if (Array.isArray(firstValue)) {
                     msg = firstValue[0];
