@@ -24,6 +24,8 @@ const Intro = () => {
                 <div className="w-full max-w-md text-center space-y-8 z-10">
                     {/* Logo / Branding */}
                     <div className="mb-12">
+                        {/* Logo / Branding */}
+                        <img src="/logo.png" alt="ReVesta Logo" className="h-24 w-24 mx-auto mb-6 rounded-full shadow-lg" />
                         <h1 className="text-5xl font-extrabold text-primary tracking-tight">ReVesta</h1>
                         <p className="text-gray-500 mt-2 text-lg">Recycle. Reward. Repeat.</p>
                     </div>

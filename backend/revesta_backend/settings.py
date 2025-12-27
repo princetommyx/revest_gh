@@ -49,13 +49,15 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'channels',
+    'drf_spectacular',  # API documentation
+    'django_filters',   # Advanced filtering
     # Local apps
     'users',
     'market',
     'logistics',
     'chat',
     'admin_dashboard',  # Admin dashboard system
-    # 'wallet',  # Temporarily disabled
+    'wallet',  # Enabled for mobile app
 ]
 
 MIDDLEWARE = [
@@ -167,9 +169,17 @@ if 'CORS_ALLOWED_ORIGINS' in os.environ:
         CSRF_TRUSTED_ORIGINS.append(origin)
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
@@ -180,7 +190,11 @@ REST_FRAMEWORK = {
         'user': '1000/day',   # Limit for authenticated users
         'register': '5/minute', # Strict limit for registration
         'login': '10/minute',    # Strict limit for login (check token endpoint)
-    }
+    },
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -236,3 +250,44 @@ else:
         email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or SMTP credentials")
 
 EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
+
+# JWT Configuration for Mobile API
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+# API Documentation Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ReVesta API',
+    'DESCRIPTION': 'RESTful API for ReVesta mobile application - waste management and recycling platform',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Local development server'},
+        {'url': 'https://your-app.onrender.com', 'description': 'Production server'},
+    ],
+    'TAGS': [
+        {'name': 'auth', 'description': 'Authentication endpoints'},
+        {'name': 'users', 'description': 'User profile and management'},
+        {'name': 'market', 'description': 'Marketplace listings'},
+        {'name': 'logistics', 'description': 'Pickup requests and tracking'},
+        {'name': 'chat', 'description': 'Messaging system'},
+        {'name': 'wallet', 'description': 'Financial transactions'},
+        {'name': 'admin', 'description': 'Admin dashboard (staff only)'},
+    ],
+}
+
+# Mobile App Configuration
+MOBILE_APP_SCHEME = os.environ.get('MOBILE_APP_SCHEME', 'revesta://')  # For deep linking

@@ -106,6 +106,8 @@ const Layout = () => {
                                 <div className="bg-primary p-1.5 rounded-lg">
                                     <Recycle size={20} className="text-white" />
                                 </div>
+                                { /* Logo Image */}
+                                <img src="/logo.png" alt="ReVesta Logo" className="h-8 w-8 mr-2 rounded-full" />
                                 <span className="text-xl font-black text-gray-900">ReVesta</span>
                             </Link>
                             <button onClick={() => setIsMobileMenuOpen(false)} className="text-gray-500 hover:text-gray-900">

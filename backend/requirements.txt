@@ -9,6 +9,8 @@ python-dotenv
 redis
 channels_redis
 djangorestframework-simplejwt
+drf-spectacular>=0.27.0
+django-filter>=23.5
 Pillow
 resend==0.8.0
 google-auth

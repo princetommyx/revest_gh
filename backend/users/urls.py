@@ -1,22 +1,42 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from django.conf import settings
+from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    RegisterView, AdminRegisterView, UserDetailView, UpdateLocationView, 
+    RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
+    UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
     DebugEmailView, EmailHealthCheckView, GoogleLoginView
 )
 
-urlpatterns = [
+# Authentication endpoints (for /api/v1/auth/)
+auth_urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
-    path('admin-register/', AdminRegisterView.as_view(), name='admin_register'),
-    path('me/', UserDetailView.as_view(), name='user_detail'),
-    path('me/location/', UpdateLocationView.as_view(), name='update_location'),
-    path('token/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('google/', GoogleLoginView.as_view(), name='google_login'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
-    path('debug-email/', DebugEmailView.as_view(), name='debug_email'),  # Backwards compatibility
-    path('google/', GoogleLoginView.as_view(), name='google_login'),
 ]
 
+# Only include admin-register in development
+if settings.DEBUG:
+    auth_urlpatterns.append(
+        path('admin-register/', AdminRegisterView.as_view(), name='admin_register')
+    )
+
+# User profile endpoints (for /api/v1/users/)
+user_urlpatterns = [
+    path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path('me/', UserDetailView.as_view(), name='user_detail'),  # Backward compatibility
+    path('location/', UpdateLocationView.as_view(), name='update_location'),
+    path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+]
+
+# Debug/Health endpoints
+debug_urlpatterns = [
+    path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
+    path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
+]
+
+# Main urlpatterns - combine all
+urlpatterns = auth_urlpatterns + user_urlpatterns + debug_urlpatterns

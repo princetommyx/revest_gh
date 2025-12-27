@@ -1,6 +1,10 @@
 from rest_framework import generics, permissions, status, views
 from rest_framework.response import Response
-from .serializers import UserSerializer
+from .serializers import (
+    UserSerializer, UserRegistrationSerializer, UserProfileSerializer,
+    UserLocationSerializer, ChangePasswordSerializer, PublicUserSerializer
+)
+from .permissions import IsOwnerOrAdmin
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
@@ -12,6 +16,9 @@ from datetime import datetime
 from rest_framework_simplejwt.tokens import RefreshToken
 from google.oauth2 import id_token
 from google.auth.transport import requests
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+import os
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -84,10 +91,15 @@ def send_welcome_email(user):
     thread.start()
 
 
+@extend_schema(
+    tags=['auth'],
+    summary="Register new user",
+    description="Create a new user account with email and password. Returns JWT tokens on success.",
+)
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
-    serializer_class = UserSerializer
+    serializer_class = UserRegistrationSerializer
     throttle_scope = 'register'
     
     def perform_create(self, serializer):
@@ -110,6 +122,18 @@ class RegisterView(generics.CreateAPIView):
             )
         except Exception as e:
             logger.error(f"Error sending admin notification: {e}")
+    
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        # Add JWT tokens to response
+        if response.status_code == status.HTTP_201_CREATED:
+            user = User.objects.get(email=request.data.get('email'))
+            refresh = RefreshToken.for_user(user)
+            response.data['tokens'] = {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        return response
 
 
 class AdminRegisterView(generics.CreateAPIView):
@@ -138,36 +162,69 @@ class AdminRegisterView(generics.CreateAPIView):
         #     logger.error(f"Error sending admin welcome email: {e}")
 
 
+@extend_schema(
+    tags=['users'],
+    summary="Get/Update current user (legacy)",
+    description="Retrieve or update the authenticated user's profile. Use /users/profile/ instead.",
+)
 class UserDetailView(generics.RetrieveUpdateAPIView):
-    serializer_class = UserSerializer
+    serializer_class = UserProfileSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self):
         return self.request.user
 
 
+@extend_schema(
+    tags=['users'],
+    summary="Get/Update user profile",
+    description="Retrieve or update the authenticated user's profile information.",
+)
+class UserProfileView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = (permissions.IsAuthenticated, IsOwnerOrAdmin)
+
+    def get_object(self):
+        return self.request.user
+
+
+@extend_schema(
+    tags=['users'],
+    summary="Update user location",
+    description="Update the current user's GPS coordinates and online status. Used for real-time tracking.",
+)
 class UpdateLocationView(generics.UpdateAPIView):
     permission_classes = (permissions.IsAuthenticated,)
-    serializer_class = UserSerializer
+    serializer_class = UserLocationSerializer
     throttle_scope = 'user'
 
     def get_object(self):
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
-        user = self.get_object()
-        lat = request.data.get('latitude')
-        lon = request.data.get('longitude')
+
+@extend_schema(
+    tags=['users'],
+    summary="Change password",
+    description="Change the authenticated user's password. Requires old password verification.",
+)
+class ChangePasswordView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            # Set new password
+            request.user.set_password(serializer.validated_data['new_password'])
+            request.user.save()
+            
+            logger.info(f"Password changed for user {request.user.username}")
+            
+            return Response({
+                'status': 'success',
+                'message': 'Password changed successfully'
+            })
         
-        if lat and lon:
-            user.current_lat = lat
-            user.current_lon = lon
-            user.save()
-            return Response({'status': 'Location updated'})
-        return Response(
-            {'error': 'Invalid location data'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class PasswordResetRequestView(views.APIView):
     permission_classes = (permissions.AllowAny,)
