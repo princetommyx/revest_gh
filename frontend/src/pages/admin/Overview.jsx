@@ -112,7 +112,7 @@ const AdminOverview = () => {
                     value={stats?.open_tickets}
                     change={`${stats?.resolved_tickets_today || 0} resolved today`}
                     changeType="down"
-                    icon={Ticket}
+                    icon={Time}
                     color="orange"
                 />
             </div>
