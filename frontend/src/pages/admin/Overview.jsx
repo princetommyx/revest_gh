@@ -108,7 +108,7 @@ const AdminOverview = () => {
                     color="purple"
                 />
                 <StatCard
-                    title="Open Tickets"
+                    title="Active Time"
                     value={stats?.open_tickets}
                     change={`${stats?.resolved_tickets_today || 0} resolved today`}
                     changeType="down"
