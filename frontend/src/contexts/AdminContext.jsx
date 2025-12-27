@@ -35,8 +35,11 @@ export const AdminProvider = ({ children }) => {
 
         if (token && (user?.is_staff || user?.is_superuser)) {
             // Determine protocol (ws or wss)
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//localhost:8000/ws/admin/?token=${token}`;
+            // Determine WebSocket URL dynamically
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/';
+            const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
+            const wsHost = apiUrl.replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
+            const wsUrl = `${wsProtocol}://${wsHost}/ws/admin/?token=${token}`;
 
             socket = new WebSocket(wsUrl);
 
