@@ -7,7 +7,7 @@ import { useToast } from '../contexts/ToastContext';
 
 const GoogleAuthButton = ({ text = "Continue with Google", mode = "login" }) => {
     const navigate = useNavigate();
-    const { setToken } = useAuth();
+    const { checkUserLoggedIn } = useAuth();
     const { showSuccess, showError } = useToast();
 
     const handleSuccess = async (credentialResponse) => {
@@ -27,6 +27,9 @@ const GoogleAuthButton = ({ text = "Continue with Google", mode = "login" }) => 
             showSuccess(`Welcome back, ${user.username || 'User'}!`);
 
             // Delay to allow toast to be seen? No, navigation is fine.
+            // Refresh auth context
+            await checkUserLoggedIn();
+
             if (user.role === 'ADMIN' || user.is_staff) {
                 navigate('/admin-dashboard');
             } else {
