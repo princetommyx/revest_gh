@@ -54,7 +54,7 @@ const AdminLogin = () => {
                     username: credentials.username,
                     email: credentials.email,
                     password: credentials.password,
-                    role: 'COLLECTOR'
+                    role: 'ADMIN'
                 });
 
                 setSuccessMsg('Admin account created successfully! Redirecting...');

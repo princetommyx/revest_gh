@@ -6,6 +6,7 @@ class User(AbstractUser):
         COLLECTOR = 'COLLECTOR', 'Collector' # Formerly Provider (Driver)
         SELLER = 'SELLER', 'Disposer'       # Formerly Collector (Waste Generator)
         RECYCLER = 'RECYCLER', 'Recycler' # New Role (Buyer)
+        ADMIN = 'ADMIN', 'Administrator' # New Role for Staff
 
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.SELLER, db_index=True)
     

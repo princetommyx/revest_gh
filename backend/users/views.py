@@ -127,6 +127,7 @@ class AdminRegisterView(generics.CreateAPIView):
         user.is_staff = True
         user.is_superuser = True
         user.is_verified = True  # Auto-verify admin accounts
+        user.role = 'ADMIN' # Explicitly set role
         user.save()
         logger.info(f"Admin account created: {user.username}")
         
