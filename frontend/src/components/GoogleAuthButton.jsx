@@ -28,9 +28,9 @@ const GoogleAuthButton = ({ text = "Continue with Google", mode = "login" }) => 
 
             // Delay to allow toast to be seen? No, navigation is fine.
             if (user.role === 'ADMIN' || user.is_staff) {
-                window.location.href = '/admin-dashboard';
+                navigate('/admin-dashboard');
             } else {
-                window.location.href = '/dashboard';
+                navigate('/');
             }
 
         } catch (err) {
