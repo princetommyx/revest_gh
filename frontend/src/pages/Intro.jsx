@@ -13,7 +13,7 @@ const Intro = () => {
             id: 0,
             image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=1600", // Clean city street/recycling theme
             title: "Revolutionizing Waste",
-            text: "Join the future of smart waste management in Accra. Fast, efficient, and green.",
+            text: "Join the future of smart waste management in Ghana. Fast, efficient, and green.",
             buttonText: "Next",
             action: "next"
         },
