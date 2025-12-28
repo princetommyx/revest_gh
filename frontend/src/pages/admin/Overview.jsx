@@ -1,5 +1,5 @@
 import { useAdmin } from '../../contexts/AdminContext';
-import { Users, ShoppingCart, Truck, Ticket, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, ShoppingCart, Truck, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 
 const StatCard = ({ title, value, change, changeType, icon: Icon, color = 'blue' }) => {
     const colorClasses = {
@@ -108,11 +108,11 @@ const AdminOverview = () => {
                     color="purple"
                 />
                 <StatCard
-                    title="Active Time"
+                    title="Open Tickets"
                     value={stats?.open_tickets}
                     change={`${stats?.resolved_tickets_today || 0} resolved today`}
                     changeType="down"
-                    icon={Time}
+                    icon={Clock}
                     color="orange"
                 />
             </div>
