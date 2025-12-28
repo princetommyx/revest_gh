@@ -32,14 +32,14 @@ export const AuthProvider = ({ children }) => {
     };
 
     const login = async (username, password) => {
-        const response = await api.post('users/token/', { username, password });
+        const response = await api.post('auth/login/', { username, password });
         localStorage.setItem('access_token', response.data.access);
         localStorage.setItem('refresh_token', response.data.refresh);
         return await checkUserLoggedIn();
     };
 
     const register = async (userData) => {
-        await api.post('users/register/', userData);
+        await api.post('auth/register/', userData);
         return true;
     };
 

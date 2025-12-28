@@ -50,7 +50,7 @@ const AdminLogin = () => {
                 }
 
                 // Register admin user via dedicated endpoint
-                await api.post('users/admin-register/', {
+                await api.post('auth/admin-register/', {
                     username: credentials.username,
                     email: credentials.email,
                     password: credentials.password,

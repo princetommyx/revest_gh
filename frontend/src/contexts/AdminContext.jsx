@@ -18,7 +18,7 @@ export const AdminProvider = ({ children }) => {
     // Fetch dashboard statistics
     const fetchStats = async () => {
         try {
-            const response = await api.get('/admin/stats/');
+            const response = await api.get('admin/stats/');
             setStats(response.data);
         } catch (err) {
             console.error('Error fetching stats:', err);
@@ -80,7 +80,7 @@ export const AdminProvider = ({ children }) => {
     const fetchUsers = async (filters = {}) => {
         try {
             const params = new URLSearchParams(filters);
-            const response = await api.get(`/admin/users/?${params}`);
+            const response = await api.get(`admin/users/?${params}`);
             setUsers(response.data);
         } catch (err) {
             console.error('Error fetching users:', err);
@@ -92,7 +92,7 @@ export const AdminProvider = ({ children }) => {
     const fetchActivities = async (filters = {}) => {
         try {
             const params = new URLSearchParams(filters);
-            const response = await api.get(`/admin/activity/?${params}`);
+            const response = await api.get(`admin/activity/?${params}`);
             setActivities(response.data);
         } catch (err) {
             console.error('Error fetching activities:', err);
@@ -103,7 +103,7 @@ export const AdminProvider = ({ children }) => {
     const fetchTickets = async (filters = {}) => {
         try {
             const params = new URLSearchParams(filters);
-            const response = await api.get(`/admin/support/tickets/?${params}`);
+            const response = await api.get(`admin/support/tickets/?${params}`);
             setTickets(response.data);
         } catch (err) {
             console.error('Error fetching tickets:', err);
@@ -113,7 +113,7 @@ export const AdminProvider = ({ children }) => {
     // Fetch notifications
     const fetchNotifications = async () => {
         try {
-            const response = await api.get('/admin/notifications/');
+            const response = await api.get('admin/notifications/');
             setNotifications(response.data);
         } catch (err) {
             console.error('Error fetching notifications:', err);
@@ -123,7 +123,7 @@ export const AdminProvider = ({ children }) => {
     // Mark notification as read
     const markNotificationRead = async (id) => {
         try {
-            await api.post(`/admin/notifications/${id}/mark-read/`);
+            await api.post(`admin/notifications/${id}/mark-read/`);
             fetchNotifications();
         } catch (err) {
             console.error('Error marking notification as read:', err);
@@ -133,7 +133,7 @@ export const AdminProvider = ({ children }) => {
     // Update user
     const updateUser = async (userId, data) => {
         try {
-            const response = await api.patch(`/admin/users/${userId}/`, data);
+            const response = await api.patch(`admin/users/${userId}/`, data);
             fetchUsers();
             return response.data;
         } catch (err) {
@@ -145,7 +145,7 @@ export const AdminProvider = ({ children }) => {
     // Update support ticket
     const updateTicket = async (ticketId, data) => {
         try {
-            const response = await api.patch(`/admin/support/tickets/${ticketId}/`, data);
+            const response = await api.patch(`admin/support/tickets/${ticketId}/`, data);
             fetchTickets();
             return response.data;
         } catch (err) {

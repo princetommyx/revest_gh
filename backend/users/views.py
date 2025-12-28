@@ -366,11 +366,16 @@ class GoogleLoginView(views.APIView):
                     username = f"{base_username}{counter}"
                     counter += 1
 
+                # Use provided role or default to SELLER
+                role = request.data.get('role', 'SELLER')
+                if role not in ['COLLECTOR', 'SELLER', 'RECYCLER']:
+                    role = 'SELLER'
+
                 user = User.objects.create_user(
                     username=username,
                     email=email,
                     password=None, # Unusable password
-                    role='SELLER', # Default role (Disposer)
+                    role=role, 
                     is_verified=True # Google verified email
                 )
                 
