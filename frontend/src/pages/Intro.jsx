@@ -11,7 +11,7 @@ const Intro = () => {
     const slides = [
         {
             id: 0,
-            image: "https://images.unsplash.com/photo-1561501900-3701fa6a0864?auto=format&fit=crop&q=80&w=1600", // Sunny urban street with greenery
+            image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=1600", // Clean city street/recycling theme
             title: "Revolutionizing Waste",
             text: "Join the future of smart waste management in Accra. Fast, efficient, and green.",
             buttonText: "Next",
@@ -19,7 +19,7 @@ const Intro = () => {
         },
         {
             id: 1,
-            image: "https://images.unsplash.com/photo-1556742049-05230c822709?auto=format&fit=crop&q=80&w=1600", // Person using phone in urban setting
+            image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&q=80&w=1600", // Communicating/Rewards theme
             title: "Earn Every Time you Recycle",
             text: "Turn your waste into instant rewards. Get paid directly to your mobile wallet.",
             buttonText: "Get Started",
