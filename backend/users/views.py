@@ -333,6 +333,10 @@ class GoogleLoginView(views.APIView):
 
     def post(self, request):
         token = request.data.get('token')
+        role = request.data.get('role', 'SELLER')
+        
+        print(f"DEBUG: Google Login Attempt - Role: {role}, Token Length: {len(token) if token else 0}")
+        
         if not token:
             return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -340,9 +344,11 @@ class GoogleLoginView(views.APIView):
             # First attempt: Verify as an ID Token (credential)
             id_info = None
             try:
+                print("DEBUG: Attempting to verify token as Google ID Token...")
                 id_info = id_token.verify_oauth2_token(token, requests.Request())
+                print("DEBUG: ID Token verification successful")
             except Exception as e:
-                logger.debug(f"ID Token verification failed, trying UserInfo API: {e}")
+                print(f"DEBUG: ID Token verification failed ({e}), attempting Access Token /userinfo fallack...")
                 # Second attempt: Treat as Access Token and fetch UserInfo
                 userinfo_res = requests.get(
                     'https://www.googleapis.com/oauth2/v3/userinfo',
@@ -350,7 +356,9 @@ class GoogleLoginView(views.APIView):
                 )
                 if userinfo_res.status_code == 200:
                     id_info = userinfo_res.json()
+                    print("DEBUG: Access Token UserInfo fetch successful")
                 else:
+                    print(f"DEBUG: Access Token fetch failed: {userinfo_res.text}")
                     raise ValueError(f"Failed to fetch userinfo: {userinfo_res.text}")
 
             if not id_info:

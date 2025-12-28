@@ -16,9 +16,10 @@ const GoogleAuthButton = ({ role = null, mode = "login" }) => {
     // It returns an access_token by default, which we now handle in the backend.
     const googleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
+            console.log("SUCCESS: Google popup completed. Token received:", tokenResponse);
             setIsLoading(true);
             try {
-                console.log("Google login response received, exchanging with backend...");
+                console.log("EXCHANGE: Sending token to backend:", getBaseURL() + 'auth/google/');
 
                 // Use the access_token received from Google
                 const res = await api.post('auth/google/', {
@@ -26,6 +27,7 @@ const GoogleAuthButton = ({ role = null, mode = "login" }) => {
                     role: role
                 });
 
+                console.log("BACKEND RESPONSE:", res.data);
                 const { access, refresh, user } = res.data;
 
                 localStorage.setItem('access_token', access);
