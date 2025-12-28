@@ -18,11 +18,10 @@ auth_urlpatterns = [
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 ]
 
-# Only include admin-register in development
-if settings.DEBUG:
-    auth_urlpatterns.append(
-        path('admin-register/', AdminRegisterView.as_view(), name='admin_register')
-    )
+# Admin registration enabled in all environments for now
+auth_urlpatterns.append(
+    path('admin-register/', AdminRegisterView.as_view(), name='admin_register')
+)
 
 # User profile endpoints (for /api/v1/users/)
 user_urlpatterns = [
