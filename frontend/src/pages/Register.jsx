@@ -64,6 +64,7 @@ const Register = () => {
                 city: formData.city,
                 role: formData.role,
                 password: formData.password || 'Password123!',
+                password2: formData.password || 'Password123!',
                 ...formData
             };
 

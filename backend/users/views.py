@@ -275,7 +275,13 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        data = super().validate(attrs)
+        print(f"DEBUG: Validating credentials for: {attrs.get('username')}")
+        try:
+            data = super().validate(attrs)
+            print(f"DEBUG: Validation successful for {self.user.username}")
+        except Exception as e:
+            print(f"DEBUG: Validation FAILED: {e}")
+            raise e
         
         # Add extra data to response
         data['user'] = {
