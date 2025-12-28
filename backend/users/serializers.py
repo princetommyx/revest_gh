@@ -89,6 +89,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'company_name', 'tax_id', 'national_id',  # RECYCLER
             # Location
             'current_lat', 'current_lon',
+            # Authentication Provider tracking
+            'auth_provider', 'google_id', 'profile_picture_url',
             # Admin flags (read-only)
             'is_staff', 'is_superuser', 'is_support',
             # Timestamps
@@ -96,7 +98,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             'id', 'is_verified', 'is_staff', 'is_superuser', 
-            'is_support', 'date_joined', 'last_login'
+            'is_support', 'date_joined', 'last_login',
+            'auth_provider', 'google_id'
         )
     
     def to_representation(self, instance):

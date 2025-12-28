@@ -359,6 +359,7 @@ class GoogleLoginView(views.APIView):
             email = id_info.get('email')
             name = id_info.get('name', '')
             picture = id_info.get('picture', '')
+            google_id = id_info.get('sub') # This is the unique Google ID
             
             if not email:
                 return Response({'error': 'Email not found in Google response'}, status=status.HTTP_400_BAD_REQUEST)
@@ -368,6 +369,15 @@ class GoogleLoginView(views.APIView):
                 user = User.objects.filter(email=email).first()
                 if not user:
                     raise User.DoesNotExist
+                
+                # Update existing user if they haven't been linked to google yet
+                if not user.google_id:
+                    user.google_id = google_id
+                    user.auth_provider = User.AuthProvider.GOOGLE
+                    if picture:
+                        user.profile_picture_url = picture
+                    user.save()
+
             except User.DoesNotExist:
                 # Create new user
                 username = email.split('@')[0]
@@ -388,7 +398,10 @@ class GoogleLoginView(views.APIView):
                     email=email,
                     password=None, # Unusable password
                     role=role, 
-                    is_verified=True # Google verified email
+                    is_verified=True, # Google verified email
+                    auth_provider=User.AuthProvider.GOOGLE,
+                    google_id=google_id,
+                    profile_picture_url=picture
                 )
                 
                 # Send welcome email

@@ -29,6 +29,20 @@ class User(AbstractUser):
     current_lon = models.FloatField(null=True, blank=True)
     is_online = models.BooleanField(default=False)
     
+    # Authentication Provider tracking
+    class AuthProvider(models.TextChoices):
+        EMAIL = 'EMAIL', 'Email'
+        GOOGLE = 'GOOGLE', 'Google'
+    
+    auth_provider = models.CharField(
+        max_length=20, 
+        choices=AuthProvider.choices, 
+        default=AuthProvider.EMAIL,
+        db_index=True
+    )
+    google_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
+
     # Support Role
     is_support = models.BooleanField(default=False)
 

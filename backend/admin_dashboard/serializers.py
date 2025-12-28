@@ -109,10 +109,10 @@ class UserDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'phone_number', 'role', 'role_display',
-                  'city', 'is_verified', 'is_online', 'is_active', 'is_support', 'is_staff', 'is_superuser', 
+                          'city', 'is_verified', 'is_online', 'is_active', 'is_support', 'is_staff', 'is_superuser', 
                   'current_lat', 'current_lon', 'date_joined', 'last_login',
                   'vehicle_type', 'license_plate', 'company_name', 'tax_id', 'national_id',
+                  'auth_provider', 'google_id', 'profile_picture_url',
                   'recent_activities', 'total_orders', 'total_rides', 'open_tickets']
         read_only_fields = ['date_joined', 'last_login']
     
