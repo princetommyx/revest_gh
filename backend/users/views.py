@@ -337,19 +337,31 @@ class GoogleLoginView(views.APIView):
             return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Verify the token
-            id_info = id_token.verify_oauth2_token(token, requests.Request())
+            # First attempt: Verify as an ID Token (credential)
+            id_info = None
+            try:
+                id_info = id_token.verify_oauth2_token(token, requests.Request())
+            except Exception as e:
+                logger.debug(f"ID Token verification failed, trying UserInfo API: {e}")
+                # Second attempt: Treat as Access Token and fetch UserInfo
+                userinfo_res = requests.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f'Bearer {token}'}
+                )
+                if userinfo_res.status_code == 200:
+                    id_info = userinfo_res.json()
+                else:
+                    raise ValueError(f"Failed to fetch userinfo: {userinfo_res.text}")
 
-            # Check issuer (optional but good practice)
-            # if id_info['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-            #     raise ValueError('Wrong issuer.')
+            if not id_info:
+                return Response({'error': 'Invalid or expired Google token'}, status=status.HTTP_400_BAD_REQUEST)
 
             email = id_info.get('email')
-            name = id_info.get('name')
-            # picture = id_info.get('picture')
-
+            name = id_info.get('name', '')
+            picture = id_info.get('picture', '')
+            
             if not email:
-                return Response({'error': 'Email not found in token'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'Email not found in Google response'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Check if user exists
             try:
