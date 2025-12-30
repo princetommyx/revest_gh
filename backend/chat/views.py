@@ -69,6 +69,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 'contact_id': contact.id,
                 'contact_username': contact.username,
                 'contact_role': contact.role,
+                'contact_profile_image': contact.profile_picture_url,
                 'last_message': last_msg.content if last_msg else '',
                 'timestamp': last_msg.timestamp if last_msg else None,
                 'unread_count': 0 # TODO: Add is_read field to Message model

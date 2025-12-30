@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ActivityIndicator, ScrollView
+    Image, ActivityIndicator, ScrollView, Linking, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, User, MessageSquare, Tag } from 'lucide-react-native';
+import { ArrowLeft, MapPin, User, MessageSquare, Phone, ShieldCheck, AlertTriangle } from 'lucide-react-native';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-root-toast';
@@ -15,6 +15,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     const { user } = useAuth();
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [revealPhone, setRevealPhone] = useState(false);
 
     useEffect(() => {
         fetchListing();
@@ -45,6 +46,20 @@ export default function ListingDetailScreen({ route, navigation }) {
         });
     };
 
+    const handleCallSeller = () => {
+        if (!listing.seller_phone) {
+            Alert.alert("No Phone Number", "This seller hasn't provided a phone number.");
+            return;
+        }
+
+        if (!revealPhone) {
+            setRevealPhone(true);
+            return;
+        }
+
+        Linking.openURL(`tel:${listing.seller_phone}`);
+    };
+
     if (loading) {
         return (
             <SafeAreaView style={styles.container}>
@@ -72,11 +87,11 @@ export default function ListingDetailScreen({ route, navigation }) {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
                     <ArrowLeft size={24} color="#000" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Listing Details</Text>
+                <Text style={styles.headerTitle}>Details</Text>
                 <View style={{ width: 24 }} />
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {/* Image */}
                 <View style={styles.imageContainer}>
                     {listing.image ? (
@@ -87,67 +102,114 @@ export default function ListingDetailScreen({ route, navigation }) {
                         />
                     ) : (
                         <View style={styles.placeholderImage}>
-                            <Tag size={64} color="#ccc" />
+                            <Image source={require('../../assets/icon.png')} style={{ width: 60, height: 60, opacity: 0.2 }} />
                         </View>
                     )}
+                    <View style={styles.imgCountBadge}>
+                        <Text style={styles.imgCountText}>1/1</Text>
+                    </View>
                 </View>
 
-                {/* Details */}
+                {/* Main Details */}
                 <View style={styles.detailsContainer}>
-                    {/* Title and Price */}
-                    <View style={styles.titleRow}>
-                        <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
-                        <View style={[styles.priceBadge, listing.is_free ? styles.freeBadge : styles.paidBadge]}>
-                            <Text style={[styles.priceText, listing.is_free ? styles.freeText : styles.paidText]}>
-                                {listing.is_free ? 'FREE' : `₵${listing.price}`}
-                            </Text>
+                    <Text style={styles.title}>{listing.title}</Text>
+
+                    <View style={styles.priceRow}>
+                        <Text style={styles.price}>
+                            {listing.is_free ? 'FREE' : `₵${listing.price}`}
+                        </Text>
+                        {!listing.is_free && <Text style={styles.negotiable}>Negotiable</Text>}
+                    </View>
+
+                    {/* Meta Data */}
+                    <View style={styles.metaBox}>
+                        <View style={styles.metaItem}>
+                            <MapPin size={16} color="#666" />
+                            <Text style={styles.metaText}>{listing.location}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>Posted:</Text>
+                            <Text style={styles.metaText}>{new Date(listing.created_at).toLocaleDateString()}</Text>
                         </View>
                     </View>
 
-                    {/* Location */}
-                    <View style={styles.locationRow}>
-                        <MapPin size={18} color="#888" />
-                        <Text style={styles.locationText}>{listing.location}</Text>
+                    <View style={styles.divider} />
+
+                    {/* Specs */}
+                    <View style={styles.specsGrid}>
+                        <View style={styles.specItem}>
+                            <Text style={styles.specLabel}>Material</Text>
+                            <Text style={styles.specValue}>{listing.material_type}</Text>
+                        </View>
+                        <View style={styles.specItem}>
+                            <Text style={styles.specLabel}>Quantity</Text>
+                            <Text style={styles.specValue}>{listing.quantity}</Text>
+                        </View>
+                        <View style={styles.specItem}>
+                            <Text style={styles.specLabel}>Condition</Text>
+                            <Text style={styles.specValue}>Recyclable</Text>
+                        </View>
                     </View>
 
-                    {/* Tags */}
-                    <View style={styles.tagsRow}>
-                        <View style={styles.tag}>
-                            <Text style={styles.tagText}>{listing.material_type}</Text>
-                        </View>
-                        <View style={styles.tag}>
-                            <Text style={styles.tagText}>{listing.quantity}</Text>
-                        </View>
-                    </View>
+                    <View style={styles.divider} />
 
                     {/* Description */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Description</Text>
-                        <Text style={styles.descriptionText}>{listing.description}</Text>
-                    </View>
+                    <Text style={styles.sectionTitle}>Description</Text>
+                    <Text style={styles.descriptionText}>{listing.description}</Text>
 
-                    {/* Seller Info */}
-                    <View style={styles.section}>
-                        <View style={styles.sellerRow}>
-                            <View style={styles.sellerIcon}>
-                                <User size={24} color="#2E7D32" />
+                    <View style={styles.divider} />
+
+                    {/* Seller Profile */}
+                    <View style={styles.sellerSection}>
+                        <View style={styles.sellerHeader}>
+                            <View style={styles.sellerAvatar}>
+                                <User size={24} color="#fff" />
                             </View>
-                            <View>
-                                <Text style={styles.sellerName}>{listing.seller_name}</Text>
-                                <Text style={styles.sellerLabel}>Seller</Text>
+                            <View style={styles.sellerInfo}>
+                                <View style={styles.sellerNameRow}>
+                                    <Text style={styles.sellerName}>{listing.seller_name}</Text>
+                                    {listing.seller?.is_verified && (
+                                        <ShieldCheck size={16} color="#2E7D32" style={{ marginLeft: 5 }} />
+                                    )}
+                                </View>
+                                <Text style={styles.sellerRole}>Member since {new Date(listing.seller?.date_joined || Date.now()).getFullYear()}</Text>
                             </View>
                         </View>
 
-                        {user?.username !== listing.seller_name && (
+                        <View style={styles.actionButtons}>
                             <TouchableOpacity
-                                style={styles.contactButton}
+                                style={[styles.actionBtn, styles.callBtn]}
+                                onPress={handleCallSeller}
+                            >
+                                <Phone size={20} color="#fff" />
+                                <Text style={styles.actionBtnText}>
+                                    {revealPhone ? listing.seller_phone : 'Show Contact'}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.actionBtn, styles.chatBtn]}
                                 onPress={handleContactSeller}
                             >
-                                <MessageSquare size={20} color="#fff" />
-                                <Text style={styles.contactButtonText}>Contact Seller</Text>
+                                <MessageSquare size={20} color="#2E7D32" />
+                                <Text style={[styles.actionBtnText, styles.chatBtnText]}>Chat</Text>
                             </TouchableOpacity>
-                        )}
+                        </View>
                     </View>
+
+                    {/* Safety Tips */}
+                    <View style={styles.safetyBox}>
+                        <View style={styles.safetyHeader}>
+                            <AlertTriangle size={18} color="#F57C00" />
+                            <Text style={styles.safetyTitle}>Safety Tips</Text>
+                        </View>
+                        <View style={styles.safetyList}>
+                            <Text style={styles.safetyItem}>• Do not pay in advance even for delivery.</Text>
+                            <Text style={styles.safetyItem}>• Try to meet at a safe, public location.</Text>
+                            <Text style={styles.safetyItem}>• Inspect the item before paying.</Text>
+                        </View>
+                    </View>
+
                 </View>
             </ScrollView>
         </SafeAreaView>
@@ -155,104 +217,76 @@ export default function ListingDetailScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9fafb' },
+    container: { flex: 1, backgroundColor: '#fff' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee'
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 15, paddingVertical: 12, backgroundColor: '#fff',
+        borderBottomWidth: 1, borderBottomColor: '#f0f0f0'
     },
+    headerTitle: { fontSize: 16, fontWeight: 'bold' },
     backButton: { padding: 5 },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
 
-    scrollContent: { paddingBottom: 30 },
+    scrollContent: { paddingBottom: 40 },
 
-    imageContainer: { width: '100%', height: 300, backgroundColor: '#f1f3f5' },
+    imageContainer: { width: '100%', height: 300, backgroundColor: '#eee' },
     image: { width: '100%', height: '100%' },
-    placeholderImage: {
-        width: '100%',
-        height: '100%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#f1f3f5'
+    placeholderImage: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    imgCountBadge: {
+        position: 'absolute', bottom: 15, right: 15,
+        backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12
     },
+    imgCountText: { color: '#fff', fontSize: 12 },
 
-    detailsContainer: { padding: 20, backgroundColor: '#fff', marginTop: 2 },
+    detailsContainer: { padding: 20 },
+    title: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 8 },
 
-    titleRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 16
+    priceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 15 },
+    price: { fontSize: 24, fontWeight: 'bold', color: '#2E7D32' },
+    negotiable: { fontSize: 12, color: '#2E7D32', backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
+
+    metaBox: { flexDirection: 'row', gap: 20, marginBottom: 10 },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+    metaLabel: { color: '#888', fontSize: 12 },
+    metaText: { color: '#555', fontSize: 13 },
+
+    divider: { height: 1, backgroundColor: '#f0f0f0', marginVertical: 20 },
+
+    specsGrid: { flexDirection: 'row', justifyContent: 'space-between' },
+    specItem: { flex: 1 },
+    specLabel: { fontSize: 12, color: '#888', marginBottom: 4 },
+    specValue: { fontSize: 14, fontWeight: '600', color: '#333' },
+
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 10, color: '#333' },
+    descriptionText: { fontSize: 15, color: '#555', lineHeight: 22 },
+
+    sellerSection: { backgroundColor: '#F9FAFB', padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#eee' },
+    sellerHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 15 },
+    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#ccc', justifyContent: 'center', alignItems: 'center' },
+    sellerInfo: { flex: 1 },
+    sellerNameRow: { flexDirection: 'row', alignItems: 'center' },
+    sellerName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+    sellerRole: { fontSize: 12, color: '#888' },
+
+    actionButtons: { flexDirection: 'row', gap: 12 },
+    actionBtn: {
+        flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 12, borderRadius: 8, gap: 8
     },
-    title: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a', flex: 1, marginRight: 10 },
+    callBtn: { backgroundColor: '#2E7D32' },
+    chatBtn: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#2E7D32' },
+    actionBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+    chatBtnText: { color: '#2E7D32' },
 
-    priceBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-    freeBadge: { backgroundColor: '#E8F5E9' },
-    paidBadge: { backgroundColor: '#E3F2FD' },
-    priceText: { fontSize: 14, fontWeight: 'bold' },
-    freeText: { color: '#2E7D32' },
-    paidText: { color: '#1976D2' },
-
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 16
+    safetyBox: {
+        marginTop: 25, padding: 15, borderRadius: 8,
+        backgroundColor: '#FFF3E0', borderWidth: 1, borderColor: '#FFE0B2'
     },
-    locationText: { fontSize: 16, color: '#666' },
-
-    tagsRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
-    tag: { backgroundColor: '#f1f3f5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-    tagText: { fontSize: 14, fontWeight: '500', color: '#666' },
-
-    section: {
-        borderTopWidth: 1,
-        borderTopColor: '#f1f3f5',
-        paddingTop: 20,
-        marginTop: 20
-    },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 12 },
-    descriptionText: { fontSize: 16, color: '#666', lineHeight: 24 },
-
-    sellerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 20
-    },
-    sellerIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#E8F5E9',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    sellerName: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-    sellerLabel: { fontSize: 12, color: '#999' },
-
-    contactButton: {
-        backgroundColor: '#2E7D32',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        padding: 16,
-        borderRadius: 16,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5
-    },
-    contactButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    safetyHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    safetyTitle: { fontSize: 14, fontWeight: 'bold', color: '#F57C00' },
+    safetyList: { gap: 5 },
+    safetyItem: { fontSize: 12, color: '#666' },
 
     errorText: { fontSize: 16, color: '#999' }
 });

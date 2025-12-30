@@ -12,10 +12,18 @@ import {
     Filter, ArrowRight, Truck,
     Package, TrendingUp, ShoppingBag
 } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
 
-const CATEGORIES = ['', 'Plastics', 'Metals', 'Paper', 'Glass', 'Electronics'];
+const CATEGORIES = [
+    { id: '', name: 'All', icon: 'grid-outline', color: '#455A64', bg: '#fff' },
+    { id: 'Plastics', name: 'Plastics', icon: 'water-outline', color: '#0288D1', bg: '#fff' },
+    { id: 'Metals', name: 'Metals', icon: 'hammer-outline', color: '#5D4037', bg: '#fff' },
+    { id: 'Paper', name: 'Paper', icon: 'document-text-outline', color: '#FBC02D', bg: '#fff' },
+    { id: 'Glass', name: 'Glass', icon: 'wine-outline', color: '#00796B', bg: '#fff' },
+    { id: 'Electronics', name: 'E-Waste', icon: 'phone-portrait-outline', color: '#7B1FA2', bg: '#fff' }
+];
 
 export default function HomeScreen({ navigation }) {
     const { userRole, signOut } = useAuth();
@@ -28,7 +36,7 @@ export default function HomeScreen({ navigation }) {
         fetchListings();
     }, []);
 
-    // Refresh when screen comes into focus (after creating listing)
+    // Refresh when screen comes into focus
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             fetchListings();
@@ -61,17 +69,41 @@ export default function HomeScreen({ navigation }) {
         (!search || l.title.toLowerCase().includes(search.toLowerCase()))
     );
 
-    const renderCategory = (item) => (
-        <TouchableOpacity
-            key={item}
-            style={[styles.catBtn, filter === item && styles.catBtnActive]}
-            onPress={() => setFilter(item)}
-        >
-            <Text style={[styles.catText, filter === item && styles.catTextActive]}>
-                {item || 'All'}
-            </Text>
-        </TouchableOpacity>
-    );
+    const renderCategory = (item) => {
+        const isActive = filter === item.id;
+        return (
+            <TouchableOpacity
+                key={item.id}
+                style={[styles.catBtn]}
+                onPress={() => setFilter(item.id)}
+            >
+                <View style={[
+                    styles.catIconBox,
+                    isActive && { borderColor: '#2E7D32', borderWidth: 2, backgroundColor: '#E8F5E9' }
+                ]}>
+                    <Ionicons
+                        name={item.icon}
+                        size={24}
+                        color={isActive ? '#2E7D32' : item.color}
+                    />
+                </View>
+                <Text style={[styles.catText, isActive && styles.catTextActive]}>
+                    {item.name}
+                </Text>
+            </TouchableOpacity>
+        );
+    };
+
+    const formatTime = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diff = (now - date) / 1000; // seconds
+
+        if (diff < 3600) return 'Just now';
+        if (diff < 86400) return 'Today';
+        if (diff < 172800) return 'Yesterday';
+        return date.toLocaleDateString();
+    };
 
     const renderListing = ({ item }) => (
         <TouchableOpacity
@@ -80,29 +112,44 @@ export default function HomeScreen({ navigation }) {
         >
             <View style={styles.imageBox}>
                 {item.image ? (
-                    <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.image} />
+                    <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.image} resizeMode="cover" />
                 ) : (
                     <Package size={30} color="#ccc" />
                 )}
-                <View style={styles.priceBadge}>
-                    <Text style={styles.priceText}>
-                        {item.is_free ? 'FREE' : `₵${item.price}`}
-                    </Text>
-                </View>
+                {item.is_free && (
+                    <View style={styles.freeBadge}>
+                        <Text style={styles.freeText}>FREE</Text>
+                    </View>
+                )}
+                {item.seller?.is_verified && (
+                    <View style={styles.verifiedBadge}>
+                        <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                    </View>
+                )}
             </View>
             <View style={styles.listingContent}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.listingSpec}>{item.material_type} • {item.quantity}</Text>
-                <View style={styles.locationRow}>
-                    <MapPin size={12} color="#888" />
-                    <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+
+                <Text style={styles.listingPrice}>
+                    {item.is_free ? 'Contact for details' : `₵${item.price}`}
+                </Text>
+
+                <View style={styles.metaRow}>
+                    <View style={styles.locationBox}>
+                        <MapPin size={10} color="#888" />
+                        <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+                    </View>
+                    <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
                 </View>
             </View>
         </TouchableOpacity>
     );
 
+    // ... CollectorDashboard remains similar but update imports/styles if needed ...
+    // Simplified CollectorDashboard for brevity in this replacement
     const CollectorDashboard = () => (
         <FlatList
+            // ... (keep existing collector dashboard logic or reuse filteredListings)
             data={filteredListings}
             renderItem={renderListing}
             keyExtractor={item => item.id.toString()}
@@ -121,7 +168,7 @@ export default function HomeScreen({ navigation }) {
                             <Text style={styles.statusText}>Active</Text>
                         </View>
                     </View>
-
+                    {/* ... stats ... */}
                     <View style={styles.statsGrid}>
                         <View style={styles.statsCard}>
                             <Text style={styles.statsVal}>0</Text>
@@ -132,7 +179,6 @@ export default function HomeScreen({ navigation }) {
                             <Text style={styles.statsLab}>Earning Today</Text>
                         </View>
                     </View>
-
                     <TouchableOpacity
                         style={styles.mapAction}
                         onPress={() => navigation.navigate('Pickups')}
@@ -149,7 +195,6 @@ export default function HomeScreen({ navigation }) {
                             <Truck size={60} color="rgba(255,255,255,0.2)" />
                         </View>
                     </TouchableOpacity>
-
                     <View style={styles.marketHeader}>
                         <ShoppingBag size={20} color="#2E7D32" />
                         <Text style={styles.sectionTitle}>Available for Pickup</Text>
@@ -177,32 +222,26 @@ export default function HomeScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
+            {/* Header Area */}
             <View style={styles.header}>
-                <View style={styles.headerTop}>
-                    <Text style={styles.headerTitle}>ReVesta Market</Text>
-                    <TouchableOpacity
-                        style={styles.sellBtn}
-                        onPress={() => navigation.navigate('CreateListing')}
-                    >
-                        <Plus size={20} color="#fff" />
-                        <Text style={styles.sellBtnText}>Sell</Text>
+                {/* Search Bar - Jiji Style */}
+                <View style={styles.searchContainer}>
+                    <View style={styles.searchBar}>
+                        <Search size={20} color="#888" />
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="I am looking for..."
+                            value={search}
+                            onChangeText={setSearch}
+                            placeholderTextColor="#999"
+                        />
+                    </View>
+                    <TouchableOpacity style={styles.filterBtn}>
+                        <Filter size={20} color="#fff" />
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.searchBar}>
-                    <Search size={20} color="#888" />
-                    <TextInput
-                        style={styles.searchInput}
-                        placeholder="Search materials..."
-                        value={search}
-                        onChangeText={setSearch}
-                    />
-                    <Filter size={20} color="#2E7D32" />
-                </View>
-
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow}>
-                    {CATEGORIES.map(renderCategory)}
-                </ScrollView>
+                {/* Categories - Jiji Style (Icons) removed from Header */}
             </View>
 
             {loading ? (
@@ -217,94 +256,184 @@ export default function HomeScreen({ navigation }) {
                     numColumns={2}
                     contentContainerStyle={styles.list}
                     columnWrapperStyle={styles.columnWrapper}
+                    ListHeaderComponent={() => (
+                        <View>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                style={styles.catRow}
+                                contentContainerStyle={styles.catContent}
+                            >
+                                {CATEGORIES.map(renderCategory)}
+                            </ScrollView>
+
+                            <View style={styles.listHeader}>
+                                <Text style={styles.listHeaderTitle}>Fresh Recommendations</Text>
+                            </View>
+                        </View>
+                    )}
                     ListEmptyComponent={
                         <View style={styles.emptyBox}>
                             <ShoppingBag size={50} color="#eee" />
                             <Text style={styles.emptyText}>No listings found</Text>
+                            <TouchableOpacity style={styles.postBtnEmpty} onPress={() => navigation.navigate('CreateListing')}>
+                                <Text style={styles.postBtnText}>Post First Ad</Text>
+                            </TouchableOpacity>
                         </View>
                     }
                     onRefresh={fetchListings}
                     refreshing={loading}
                 />
             )}
+
+            {/* Floating Sell Button */}
+            <TouchableOpacity
+                style={styles.fab}
+                onPress={() => navigation.navigate('CreateListing')}
+            >
+                <Plus size={24} color="#fff" />
+                <Text style={styles.fabText}>SELL</Text>
+            </TouchableOpacity>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: '#f9f9f9' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    header: { padding: 20, paddingBottom: 10 },
-    marketHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 15 },
-    headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#1a1a1a' },
-    sellBtn: {
+    header: {
+        paddingTop: 15,
+        paddingBottom: 15,
         backgroundColor: '#2E7D32',
+        borderBottomLeftRadius: 15,
+        borderBottomRightRadius: 15,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
+        zIndex: 10
+    },
+    searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 20,
-        gap: 5
+        marginBottom: 5, // Tighten up
+        gap: 10
     },
-    sellBtnText: { color: '#fff', fontWeight: 'bold' },
     searchBar: {
+        flex: 1,
         flexDirection: 'row',
-        backgroundColor: '#f1f3f5',
-        borderRadius: 15,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        alignItems: 'center',
-        marginBottom: 15
-    },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 16 },
-    catRow: { marginBottom: 10 },
-    catBtn: {
-        paddingHorizontal: 20,
+        backgroundColor: '#fff',
+        borderRadius: 25,
+        paddingHorizontal: 12,
         paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#eee',
-        marginRight: 10
+        alignItems: 'center',
+        height: 40
     },
-    catBtnActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-    catText: { fontSize: 14, color: '#666', fontWeight: '500' },
-    catTextActive: { color: '#fff' },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#333' },
+    filterBtn: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 8,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: 40,
+        width: 40
+    },
 
-    list: { padding: 15 },
+    catRow: {
+        paddingVertical: 15,
+        paddingLeft: 15,
+        backgroundColor: '#f9f9f9',
+    },
+    catContent: { paddingRight: 25 },
+    catBtn: {
+        alignItems: 'center',
+        marginRight: 10,
+        width: 70
+    },
+    catBtnActive: {
+        // No specific active container style needed with new clean design
+    },
+    catIconBox: {
+        width: 50, height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+        backgroundColor: '#fff', // Default white bg
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        shadowOffset: { width: 0, height: 1 },
+        borderWidth: 1,
+        borderColor: '#f0f0f0'
+    },
+
+    catText: { fontSize: 11, color: '#666', textAlign: 'center' },
+    catTextActive: { color: '#2E7D32', fontWeight: 'bold' },
+
+    listHeader: { paddingHorizontal: 15, marginBottom: 10 },
+    listHeaderTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+
+    list: { paddingHorizontal: 10 },
     columnWrapper: { justifyContent: 'space-between' },
+
     listingCard: {
-        width: '48%',
+        width: '48.5%',
         backgroundColor: '#fff',
-        borderRadius: 15,
-        marginBottom: 20,
+        borderRadius: 8,
+        marginBottom: 10,
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
         overflow: 'hidden'
     },
-    imageBox: { height: 130, backgroundColor: '#f8f9fa', justifyContent: 'center', alignItems: 'center' },
+    imageBox: { height: 150, backgroundColor: '#f0f0f0' },
     image: { width: '100%', height: '100%' },
-    priceBadge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8
+    freeBadge: {
+        position: 'absolute', top: 8, left: 8,
+        backgroundColor: '#E74C3C', paddingHorizontal: 6, paddingVertical: 2,
+        borderRadius: 4
     },
-    priceText: { fontSize: 12, fontWeight: 'bold', color: '#2E7D32' },
-    listingContent: { padding: 12 },
-    listingTitle: { fontSize: 15, fontWeight: 'bold', color: '#1a1a1a' },
-    listingSpec: { fontSize: 12, color: '#888', marginTop: 4 },
-    locationRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 },
-    locationText: { fontSize: 11, color: '#999', flex: 1 },
+    freeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+    verifiedBadge: {
+        position: 'absolute', bottom: 8, right: 8,
+        backgroundColor: '#2E7D32', borderRadius: 10, padding: 2
+    },
 
-    collectorContainer: { flex: 1, padding: 20 },
+    listingContent: { padding: 10 },
+    listingTitle: { fontSize: 13, color: '#333', marginBottom: 4, height: 36, lineHeight: 18 }, // Fixed height for 2 lines
+    listingPrice: { fontSize: 15, fontWeight: 'bold', color: '#2E7D32', marginBottom: 6 },
+
+    metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    locationBox: { flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 },
+    locationText: { fontSize: 10, color: '#999', flex: 1 },
+    timeText: { fontSize: 10, color: '#ccc' },
+
+    fab: {
+        position: 'absolute', bottom: 20, alignSelf: 'center',
+        backgroundColor: '#FF9800',
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 25, paddingVertical: 14,
+        borderRadius: 30, elevation: 6,
+        shadowColor: '#FF9800', shadowOpacity: 0.4
+    },
+    fabText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+    emptyBox: { flex: 1, alignItems: 'center', marginTop: 80 },
+    emptyText: { color: '#999', fontSize: 16, marginTop: 10, marginBottom: 20 },
+    postBtnEmpty: {
+        backgroundColor: '#2E7D32', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20
+    },
+    postBtnText: { color: '#fff', fontWeight: 'bold' },
+
+    // Collector styles (minimal updates)
     welcomeSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
     welcomeLabel: { fontSize: 14, color: '#888' },
     welcomeName: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
@@ -325,51 +454,23 @@ const styles = StyleSheet.create({
         padding: 20,
         borderRadius: 20,
         elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
     },
     statsVal: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
     statsLab: { fontSize: 12, color: '#888', marginTop: 4 },
     mapAction: {
         backgroundColor: '#2E7D32',
-        borderRadius: 25,
-        height: 180,
-        flexDirection: 'row',
-        overflow: 'hidden',
-        elevation: 5,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        marginBottom: 30
+        borderRadius: 25, height: 180, flexDirection: 'row', overflow: 'hidden',
+        elevation: 5, marginBottom: 30
     },
     mapActionContent: { flex: 1, padding: 25, justifyContent: 'center' },
     mapActionTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
     mapActionSub: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5, marginBottom: 20 },
     mapBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 15,
-        gap: 8
+        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)',
+        alignSelf: 'flex-start', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 15, gap: 8
     },
     mapBtnText: { color: '#fff', fontWeight: 'bold' },
     mapIconBox: { position: 'absolute', right: -20, bottom: -20 },
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 15 },
-    emptyActivity: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 50,
-        backgroundColor: '#fcfcfc',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#f1f1f1',
-        borderStyle: 'dashed'
-    },
-    emptyActivityText: { color: '#aaa', marginTop: 10, fontSize: 14 },
-    emptyBox: { flex: 1, alignItems: 'center', marginTop: 50 },
-    emptyText: { color: '#999', fontSize: 16, marginTop: 10 },
+    marketHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 15 },
+    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
 });

@@ -32,36 +32,67 @@ export default function ChatScreen() {
         }, [])
     );
 
-    const renderConversation = ({ item }) => (
-        <TouchableOpacity
-            style={styles.convCard}
-            onPress={() => navigation.navigate('ChatDetail', {
-                contactId: item.contact_id,
-                contactName: item.contact_username
-            })}
-        >
-            <View style={styles.avatarBox}>
-                <User size={24} color="#2E7D32" />
-                {item.unread_count > 0 && (
-                    <View style={styles.unreadBadge}>
-                        <Text style={styles.unreadText}>{item.unread_count}</Text>
+    // Generate random pastel color based on name
+    const getAvatarColor = (name) => {
+        const colors = ['#E57373', '#F06292', '#BA68C8', '#9575CD', '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1', '#4DB6AC', '#81C784', '#AED581', '#FFD54F', '#FFB74D', '#FF8A65'];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        return colors[Math.abs(hash) % colors.length];
+    };
+
+    const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'U';
+
+    const formatSmartTime = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+
+        if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'short' });
+        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
+    const renderConversation = ({ item }) => {
+        const avatarColor = getAvatarColor(item.contact_username || 'User');
+        return (
+            <TouchableOpacity
+                style={styles.convCard}
+                onPress={() => navigation.navigate('ChatDetail', {
+                    contactId: item.contact_id,
+                    contactName: item.contact_username
+                })}
+            >
+                <View style={[styles.avatarBox, { backgroundColor: avatarColor + '20', borderColor: avatarColor + '40' }]}>
+                    <Text style={[styles.avatarInitials, { color: avatarColor }]}>
+                        {getInitials(item.contact_username)}
+                    </Text>
+                    {item.unread_count > 0 && (
+                        <View style={styles.unreadBadge}>
+                            <Text style={styles.unreadText}>{item.unread_count}</Text>
+                        </View>
+                    )}
+                </View>
+                <View style={styles.convInfo}>
+                    <View style={styles.convHeader}>
+                        <Text style={[styles.contactName, item.unread_count > 0 && styles.contactNameUnread]}>
+                            {item.contact_username}
+                        </Text>
+                        <Text style={[styles.convTime, item.unread_count > 0 && styles.convTimeUnread]}>
+                            {formatSmartTime(item.timestamp)}
+                        </Text>
                     </View>
-                )}
-            </View>
-            <View style={styles.convInfo}>
-                <View style={styles.convHeader}>
-                    <Text style={styles.contactName}>{item.contact_username}</Text>
-                    <Text style={styles.convTime}>
-                        {item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    <Text
+                        style={[styles.lastMsg, item.unread_count > 0 && styles.unreadMsg]}
+                        numberOfLines={1}
+                    >
+                        {item.last_message || 'Start a conversation...'}
                     </Text>
                 </View>
-                <Text style={styles.lastMsg} numberOfLines={1}>
-                    {item.last_message || 'Start a conversation...'}
-                </Text>
-            </View>
-            <ChevronRight size={20} color="#ccc" />
-        </TouchableOpacity>
-    );
+            </TouchableOpacity>
+        );
+    };
 
     if (loading) {
         return (
@@ -72,100 +103,218 @@ export default function ChatScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Messages</Text>
+        <View style={styles.container}>
+            {/* Header Section */}
+            <View style={styles.headerContainer}>
+                <SafeAreaView edges={['top']} style={styles.safeArea}>
+                    <View style={styles.searchBarContainer}>
+                        {/* <TouchableOpacity style={styles.backButton}>
+                            <ChevronLeft size={28} color="#fff" />
+                        </TouchableOpacity> */}
+                        <View style={styles.searchBar}>
+                            <View style={styles.searchIcon}>
+                                <MessageSquare size={20} color="#999" />
+                            </View>
+                            <Text style={styles.searchText}>Search in Messages</Text>
+                        </View>
+                    </View>
+                </SafeAreaView>
+
+                {/* Tabs */}
+                <View style={styles.tabsContainer}>
+                    {['All', 'Unread', 'Spam'].map(tab => (
+                        <TouchableOpacity
+                            key={tab}
+                            style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
+                            onPress={() => setActiveTab(tab)}
+                        >
+                            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                                {tab}
+                            </Text>
+                            {activeTab === 'Unread' && (
+                                <View style={styles.badgeCommon}>
+                                    <Text style={styles.badgeTextCommon}>3</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </View>
             </View>
 
+            {/* Chat List */}
             <FlatList
-                data={conversations}
+                data={filteredConversations}
                 renderItem={renderConversation}
                 keyExtractor={item => item.contact_id.toString()}
-                contentContainerStyle={styles.list}
+                contentContainerStyle={styles.listContent}
                 ListHeaderComponent={
                     <TouchableOpacity
-                        style={styles.aiSupportCard}
+                        style={styles.aiSupportRow}
                         onPress={() => navigation.navigate('SupportChat')}
                     >
                         <View style={styles.aiIconBox}>
                             <Bot size={24} color="#fff" />
                         </View>
                         <View style={styles.aiInfo}>
-                            <Text style={styles.aiTitle}>ReVesta AI Support</Text>
-                            <Text style={styles.aiSubtitle}>Get instant help with your orders</Text>
+                            <Text style={styles.aiTitle}>AI Assistant</Text>
+                            <Text style={styles.aiSubtitle}>Need help? Ask our bot instantly.</Text>
                         </View>
-                        <ChevronRight size={20} color="#2E7D32" />
+                        <ChevronRight size={20} color="#ccc" />
                     </TouchableOpacity>
                 }
                 ListEmptyComponent={
-                    <View style={styles.emptyBox}>
-                        <MessageSquare size={60} color="#eee" />
-                        <Text style={styles.emptyText}>No messages yet</Text>
-                        <Text style={styles.emptySub}>Connect with buyers and sellers in the marketplace</Text>
+                    <View style={styles.emptyContainer}>
+                        <MessageSquare size={48} color="#ccc" />
+                        <Text style={styles.emptyTitle}>No messages yet</Text>
+                        <Text style={styles.emptySubtitle}>Chats with sellers and buyers will appear here.</Text>
                     </View>
                 }
                 onRefresh={fetchConversations}
                 refreshing={loading}
             />
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: { padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f1f1' },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    list: { paddingHorizontal: 15, paddingVertical: 10 },
-    convCard: {
+    container: { flex: 1, backgroundColor: '#fff' }, // White background like Jiji
+
+    // Header
+    headerContainer: {
+        backgroundColor: '#2E7D32',
+        elevation: 4,
+        zIndex: 10,
+    },
+    safeArea: {
+        paddingBottom: 10,
+    },
+    searchBarContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f9f9f9'
+        paddingHorizontal: 15,
+        marginTop: 10,
     },
-    avatarBox: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: '#E8F5E9',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    unreadBadge: {
-        position: 'absolute',
-        top: -2,
-        right: -2,
-        backgroundColor: '#E74C3C',
-        width: 18,
-        height: 18,
-        borderRadius: 9,
-        justifyContent: 'center',
+    searchBar: {
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: '#fff'
+        backgroundColor: '#fff',
+        borderRadius: 4,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
     },
-    unreadText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-    convInfo: { flex: 1, marginLeft: 15, marginRight: 10 },
-    convHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    contactName: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-    convTime: { fontSize: 12, color: '#999' },
-    lastMsg: { fontSize: 14, color: '#666' },
-    emptyBox: { flex: 1, alignItems: 'center', marginTop: 100, paddingHorizontal: 40 },
-    emptyText: { fontSize: 20, fontWeight: 'bold', color: '#333', marginTop: 20 },
-    emptySub: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 10 },
+    searchIcon: { marginRight: 10 },
+    searchText: { color: '#aaa', fontSize: 15 },
 
-    // AI Support Styles
-    aiSupportCard: {
+    // Tabs
+    tabsContainer: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+    },
+    tabItem: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderBottomWidth: 3,
+        borderBottomColor: 'transparent',
+        flexDirection: 'row',
+        gap: 6
+    },
+    tabItemActive: {
+        borderBottomColor: '#2E7D32',
+    },
+    tabText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#757575',
+    },
+    tabTextActive: {
+        color: '#2E7D32',
+    },
+    badgeCommon: {
+        backgroundColor: '#E74C3C',
+        borderRadius: 10,
+        paddingHorizontal: 6,
+        paddingVertical: 1,
+    },
+    badgeTextCommon: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+
+    // List
+    listContent: {
+        paddingTop: 0,
+    },
+
+    // AI Support Row (Streamlined)
+    aiSupportRow: {
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: '#E8F5E9', padding: 15, borderRadius: 12,
-        marginBottom: 15, borderWidth: 1, borderColor: '#C8E6C9'
+        paddingVertical: 12, paddingHorizontal: 16,
+        borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
+        backgroundColor: '#fff'
     },
     aiIconBox: {
-        width: 40, height: 40, borderRadius: 20, backgroundColor: '#2E7D32',
+        width: 48, height: 48, borderRadius: 24,
+        backgroundColor: '#2E7D32', // Green circle for bot
         justifyContent: 'center', alignItems: 'center', marginRight: 15
     },
+    aiTitle: { fontSize: 16, fontWeight: 'bold', color: '#2E7D32' },
+    aiSubtitle: { fontSize: 13, color: '#666' },
     aiInfo: { flex: 1 },
-    aiTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 2 },
-    aiSubtitle: { fontSize: 13, color: '#2E7D32' },
+
+    // Conversation Item (Flat List Style)
+    convCard: {
+        backgroundColor: '#fff',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+    },
+    avatarBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#eee',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#e0e0e0',
+        marginRight: 15,
+        overflow: 'hidden'
+    },
+    avatarImage: { width: '100%', height: '100%' },
+    avatarInitials: { fontSize: 18, fontWeight: 'bold' },
+
+    unreadBadge: {
+        position: 'absolute',
+        top: 0, right: 0,
+        backgroundColor: '#2E7D32',
+        width: 14, height: 14,
+        borderRadius: 7,
+        borderWidth: 2, borderColor: '#fff'
+    },
+    unreadText: { display: 'none' },
+
+    convInfo: { flex: 1 },
+    convHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 4,
+    },
+    contactName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
+    contactNameUnread: { color: '#000' },
+
+    convTime: { fontSize: 12, color: '#999' },
+    convTimeUnread: { color: '#2E7D32', fontWeight: 'bold' },
+
+    lastMsg: { fontSize: 14, color: '#757575' },
+    unreadMsg: { color: '#333', fontWeight: '500' },
+
+    // Empty State
+    emptyContainer: { flex: 1, alignItems: 'center', marginTop: 100 },
+    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginTop: 15 },
+    emptySubtitle: { color: '#999', marginTop: 5 },
+
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });
