@@ -65,7 +65,7 @@ export default function AppNavigator() {
         const checkOnboarding = async () => {
             try {
                 // TEMP: Clear the flag to force onboarding to show for testing
-                await SecureStore.deleteItemAsync('has_seen_onboarding');
+                // await SecureStore.deleteItemAsync('has_seen_onboarding');
 
                 const value = await SecureStore.getItemAsync('has_seen_onboarding');
                 setHasSeenOnboarding(value === 'true');
@@ -88,7 +88,9 @@ export default function AppNavigator() {
         <NavigationContainer>
             <Stack.Navigator
                 screenOptions={{ headerShown: false }}
-                initialRouteName={hasSeenOnboarding ? "Login" : "Onboarding"}
+                initialRouteName={
+                    user ? "Main" : (hasSeenOnboarding ? "Login" : "Onboarding")
+                }
             >
                 {user == null ? (
                     <>

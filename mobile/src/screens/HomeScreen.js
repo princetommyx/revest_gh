@@ -84,19 +84,19 @@ export default function HomeScreen({ navigation }) {
                 ) : (
                     <Package size={30} color="#ccc" />
                 )}
-                <div style={styles.priceBadge}>
+                <View style={styles.priceBadge}>
                     <Text style={styles.priceText}>
                         {item.is_free ? 'FREE' : `₵${item.price}`}
                     </Text>
-                </div>
+                </View>
             </View>
             <View style={styles.listingContent}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
                 <Text style={styles.listingSpec}>{item.material_type} • {item.quantity}</Text>
-                <div style={styles.locationRow}>
+                <View style={styles.locationRow}>
                     <MapPin size={12} color="#888" />
                     <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
-                </div>
+                </View>
             </View>
         </TouchableOpacity>
     );

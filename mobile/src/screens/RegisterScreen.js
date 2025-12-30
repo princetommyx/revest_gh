@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Truck, Trash2, Recycle, Check } from 'lucide-react-native';
+import apiClient from '../api/client';
 
 const COLORS = {
     primary: '#27AE60', // Matching Web

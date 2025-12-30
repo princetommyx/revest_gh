@@ -40,7 +40,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
     const handleContactSeller = () => {
         navigation.navigate('ChatDetail', {
-            contactId: listing.seller,
+            contactId: listing.seller.id,
             contactName: listing.seller_name
         });
     };
