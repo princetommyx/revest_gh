@@ -8,11 +8,16 @@ import { Ionicons } from '@expo/vector-icons'; // Expo comes with vector icons
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import PickupsScreen from '../screens/PickupsScreen';
 import ChatScreen from '../screens/ChatScreen';
+import ChatDetailScreen from '../screens/ChatDetailScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import CreateListingScreen from '../screens/CreateListingScreen';
+import ListingDetailScreen from '../screens/ListingDetailScreen';
+import { useAuth } from '../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -53,41 +58,51 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-    const [isLoading, setIsLoading] = useState(true);
-    const [userToken, setUserToken] = useState(null);
+    const { user, loading: authLoading } = useAuth();
+    const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
 
     useEffect(() => {
-        const checkToken = async () => {
+        const checkOnboarding = async () => {
             try {
-                const token = await SecureStore.getItemAsync('access_token');
-                setUserToken(token);
+                // TEMP: Clear the flag to force onboarding to show for testing
+                await SecureStore.deleteItemAsync('has_seen_onboarding');
+
+                const value = await SecureStore.getItemAsync('has_seen_onboarding');
+                setHasSeenOnboarding(value === 'true');
             } catch (e) {
-                console.warn(e);
-            } finally {
-                setIsLoading(false);
+                setHasSeenOnboarding(false);
             }
         };
-        checkToken();
+        checkOnboarding();
     }, []);
 
-    if (isLoading) {
+    if (authLoading || hasSeenOnboarding === null) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#0000ff" />
+                <ActivityIndicator size="large" color="#2E7D32" />
             </View>
         );
     }
 
     return (
         <NavigationContainer>
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-                {userToken == null ? (
+            <Stack.Navigator
+                screenOptions={{ headerShown: false }}
+                initialRouteName={hasSeenOnboarding ? "Login" : "Onboarding"}
+            >
+                {user == null ? (
                     <>
+                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
                     </>
                 ) : (
-                    <Stack.Screen name="Main" component={MainTabs} />
+                    <>
+                        <Stack.Screen name="Main" component={MainTabs} />
+                        <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false }} />
+                    </>
                 )}
             </Stack.Navigator>
         </NavigationContainer>

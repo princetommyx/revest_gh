@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -35,6 +36,15 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'material_type']
     ordering_fields = ['created_at', 'status']
+    
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'COLLECTOR':
+            # Collectors see jobs they accepted or pending jobs (if not filtered by available_jobs)
+            return PickupRequest.objects.filter(
+                models.Q(collector=user) | models.Q(status='PENDING')
+            ).order_by('-created_at')
+        return PickupRequest.objects.filter(provider=user).order_by('-created_at')
 
     def get_serializer_class(self):
         if self.action == 'list':

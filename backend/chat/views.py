@@ -39,6 +39,7 @@ class MessageViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Get conversations")
     @action(detail=False, methods=['get'])
     def conversations(self, request):
+        print(f"DEBUG: conversations called by {request.user}")
         """
         Get list of unique users the current user has chatted with,
         along with the last message.

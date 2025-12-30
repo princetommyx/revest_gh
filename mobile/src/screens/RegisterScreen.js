@@ -37,6 +37,7 @@ export default function RegisterScreen() {
         company_name: '',
         tax_id: '',
         national_id: '',
+        termsAccepted: false,
     });
 
     const handleChange = (name, value) => {
@@ -59,6 +60,10 @@ export default function RegisterScreen() {
             Alert.alert('Error', 'Please fill all required fields');
             return;
         }
+        if (!formData.termsAccepted) {
+            Alert.alert('Error', 'You must accept the Terms and Conditions');
+            return;
+        }
 
         setLoading(true);
         try {
@@ -67,7 +72,7 @@ export default function RegisterScreen() {
                 username: formData.username,
                 email: formData.email,
                 password: formData.password,
-                password_confirmation: formData.confirm_password,
+                password2: formData.confirm_password,
                 phone_number: formData.phone_number,
                 city: formData.city,
                 role: formData.role,
@@ -353,6 +358,23 @@ export default function RegisterScreen() {
                     </>
                 )}
 
+                <View style={styles.termsContainer}>
+                    <TouchableOpacity
+                        style={[styles.checkbox, formData.termsAccepted && styles.checkboxActive]}
+                        onPress={() => handleChange('termsAccepted', !formData.termsAccepted)}
+                    >
+                        {formData.termsAccepted && <Check size={14} color="#fff" />}
+                    </TouchableOpacity>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.termsText}>
+                            By registering, you agree to our <Text style={styles.linkText}>Terms of Service</Text> and <Text style={styles.linkText}>Privacy policy</Text>, commit to comply with obligations under the European Union and local legislation and provide only legal services and content on the Revesta Platform.
+                        </Text>
+                        <Text style={[styles.termsText, { marginTop: 8 }]}>
+                            Once you've become a {formData.role.toLowerCase()}, we will occasionally send you offers and promotions related to our services. You can always unsubscribe by changing your communication preferences.
+                        </Text>
+                    </View>
+                </View>
+
                 <TouchableOpacity
                     style={styles.submitButton}
                     onPress={handleRegister}
@@ -508,6 +530,36 @@ const styles = StyleSheet.create({
     submitButtonText: {
         color: COLORS.white,
         fontSize: 18,
+        fontWeight: 'bold',
+    },
+    termsContainer: {
+        flexDirection: 'row',
+        marginTop: 20,
+        gap: 12,
+        alignItems: 'flex-start',
+    },
+    checkbox: {
+        width: 20,
+        height: 20,
+        borderRadius: 4,
+        borderWidth: 2,
+        borderColor: COLORS.border,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 2,
+    },
+    checkboxActive: {
+        backgroundColor: COLORS.primary,
+        borderColor: COLORS.primary,
+    },
+    termsText: {
+        flex: 1,
+        fontSize: 12,
+        color: COLORS.textLight,
+        lineHeight: 18,
+    },
+    linkText: {
+        color: COLORS.primary,
         fontWeight: 'bold',
     },
 });

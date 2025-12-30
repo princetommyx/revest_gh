@@ -11,16 +11,17 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     Lightweight serializer for pickup list views
     """
     provider = PublicUserSerializer(read_only=True)
-    collector = PublicUserSerializer(read_only=True)
+    collector_name = serializers.CharField(source='collector.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
         model = PickupRequest
         fields = (
             'id', 'material_type', 'quantity_estimate', 'status', 'status_display',
-            'latitude', 'longitude', 'created_at', 'provider', 'collector'
+            'latitude', 'longitude', 'current_lat', 'current_lon',
+            'created_at', 'provider', 'collector', 'collector_name'
         )
-        read_only_fields = ('provider', 'collector', 'created_at')
+        read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
 
 
 class PickupRequestDetailSerializer(serializers.ModelSerializer):

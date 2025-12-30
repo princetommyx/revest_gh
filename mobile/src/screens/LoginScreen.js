@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
 import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import { useAuth } from '../context/AuthContext';
+import Toast from 'react-native-root-toast';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -29,14 +32,13 @@ export default function LoginScreen() {
         }
     }, [response]);
 
+    const { signIn } = useAuth();
+
     const handleGoogleBackend = async (token) => {
         setLoading(true);
         try {
-            const data = await authApi.googleLogin(token);
+            await authApi.googleLogin(token);
             Alert.alert("Success", "Logged in with Google!");
-            // Navigation or state update happens here automatically if using context, 
-            // but for now we might need to rely on the token check in AppNavigator 
-            // or perform a manual reload if needed.
         } catch (error) {
             console.log("Google Login Error:", error);
             Alert.alert('Google Login Failed', 'Could not authenticate with server');
@@ -53,17 +55,11 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            // Assuming 'email' parameter works for username field or backend handles it
-            const response = await authApi.login(email, password);
-            // Reload app or update context to trigger navigation state change
-            // For now, we rely on AppNavigator re-rendering based on token? 
-            // Actually AppNavigator needs to know token changed. 
-            // We'll fix State Management in next step.
-            Alert.alert("Success", "Logged in!");
-            // Temporary: Force reload or use context
+            await signIn(email, password);
+            Toast.show("Welcome back!", { backgroundColor: '#2E7D32' });
         } catch (error) {
             console.log(error);
-            Alert.alert('Login Failed', error.response?.data?.detail || 'Something went wrong');
+            Alert.alert('Login Failed', error.response?.data?.detail || 'Invalid credentials');
         } finally {
             setLoading(false);
         }
@@ -71,6 +67,12 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <ArrowLeft size={24} color="#000" />
+                </TouchableOpacity>
+                <View style={{ width: 24 }} />
+            </View>
             <View style={styles.content}>
                 <Text style={styles.title}>ReVesta</Text>
                 <Text style={styles.subtitle}>Sign in to continue</Text>
@@ -123,6 +125,16 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    backButton: {
+        padding: 5,
     },
     content: {
         flex: 1,
