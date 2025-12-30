@@ -49,7 +49,11 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = PickupRequest
-        fields = ('id', 'material_type', 'quantity_estimate', 'latitude', 'longitude')
+        fields = (
+            'id', 'material_type', 'quantity_estimate', 
+            'latitude', 'longitude', 'estimated_price',
+            'distance_km', 'duration_min'
+        )
     
     def validate_latitude(self, value):
         if not -90 <= value <= 90:

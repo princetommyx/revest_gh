@@ -41,10 +41,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'COLLECTOR':
             # Collectors see jobs they accepted or pending jobs (if not filtered by available_jobs)
-            return PickupRequest.objects.filter(
+            return PickupRequest.objects.select_related('provider', 'collector').filter(
                 models.Q(collector=user) | models.Q(status='PENDING')
             ).order_by('-created_at')
-        return PickupRequest.objects.filter(provider=user).order_by('-created_at')
+        return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -189,7 +189,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         
         # Filter by time: Only show jobs created in the last 60 minutes
         one_hour_ago = timezone.now() - timedelta(minutes=60)
-        jobs = PickupRequest.objects.filter(status='PENDING', created_at__gte=one_hour_ago).order_by('-created_at')
+        # Optimization: Limit to latest 50 pending jobs to prevent scanning entire DB
+        jobs = PickupRequest.objects.filter(
+            status='PENDING', 
+            created_at__gte=one_hour_ago
+        ).select_related('provider').order_by('-created_at')[:50]
         
         # Filter by location if coordinates are provided
         lat = request.query_params.get('lat')
@@ -255,4 +259,54 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             rides = PickupRequest.objects.filter(provider=user, status='COMPLETED').order_by('-created_at')
         
         serializer = self.get_serializer(rides, many=True)
-        return Response(serializer.data)
+    @extend_schema(summary="Estimate pickup price")
+    @action(detail=False, methods=['post'])
+    def estimate_price(self, request):
+        """
+        Calculate estimated price for a pickup based on user location
+        and nearest available collector.
+        """
+        lat = request.data.get('latitude')
+        lon = request.data.get('longitude')
+        
+        if not lat or not lon:
+            return Response({'error': 'Latitude and Longitude required'}, status=400)
+            
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+             return Response({'error': 'Invalid coordinates'}, status=400)
+
+        # 1. Find nearest online collector
+        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        nearest_collector = None
+        min_dist = float('inf')
+        
+        for collector in online_collectors:
+            if collector.current_lat and collector.current_lon:
+                dist = haversine(lat, lon, collector.current_lat, collector.current_lon)
+                if dist < min_dist:
+                    min_dist = dist
+                    nearest_collector = collector
+        
+        # Fallback if no collectors online: Use a default distance (e.g., from city center or 5km)
+        if not nearest_collector:
+            # For estimation purposes, assume a collector is ~5km away if none found
+            min_dist = 5.0 
+            
+        # 2. Estimate Duration (Assume 40km/h avg speed in city)
+        # Time = Distance / Speed * 60 min
+        avg_speed_kmh = 40.0
+        duration_min = (min_dist / avg_speed_kmh) * 60
+        
+        # 3. Calculate Price
+        from .pricing import calculate_fare_estimate
+        price = calculate_fare_estimate(min_dist, duration_min)
+        
+        return Response({
+            'estimated_price': price,
+            'distance_km': round(min_dist, 2),
+            'duration_min': round(duration_min, 0),
+            'currency': 'GHS'
+        })

@@ -80,7 +80,7 @@ export default function ProfileScreen({ navigation }) {
                         icon={User}
                         title="Personal Information"
                         subtitle="Update your name and number"
-                        onPress={() => { }}
+                        onPress={() => navigation.navigate('EditProfile')}
                         color="#2E7D32"
                     />
                     <MenuItem
@@ -94,7 +94,7 @@ export default function ProfileScreen({ navigation }) {
                         icon={Shield}
                         title="Security"
                         subtitle="Password and 2FA"
-                        onPress={() => { }}
+                        onPress={() => navigation.navigate('Security')}
                         color="#E74C3C"
                     />
                 </View>
@@ -104,13 +104,13 @@ export default function ProfileScreen({ navigation }) {
                     <MenuItem
                         icon={Bell}
                         title="Notifications"
-                        onPress={() => { }}
+                        onPress={() => Alert.alert("Coming Soon", "Notification settings will be available in the next update.")}
                         color="#3498DB"
                     />
                     <MenuItem
                         icon={HelpCircle}
                         title="Support & Help"
-                        onPress={() => { }}
+                        onPress={() => navigation.navigate('Help')}
                         color="#9B59B6"
                     />
                 </View>

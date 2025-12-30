@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
-import { MessageSquare, User, Clock, ChevronRight } from 'lucide-react-native';
+import { MessageSquare, User, Clock, ChevronRight, Bot } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
 
 export default function ChatScreen() {
@@ -82,6 +82,21 @@ export default function ChatScreen() {
                 renderItem={renderConversation}
                 keyExtractor={item => item.contact_id.toString()}
                 contentContainerStyle={styles.list}
+                ListHeaderComponent={
+                    <TouchableOpacity
+                        style={styles.aiSupportCard}
+                        onPress={() => navigation.navigate('SupportChat')}
+                    >
+                        <View style={styles.aiIconBox}>
+                            <Bot size={24} color="#fff" />
+                        </View>
+                        <View style={styles.aiInfo}>
+                            <Text style={styles.aiTitle}>ReVesta AI Support</Text>
+                            <Text style={styles.aiSubtitle}>Get instant help with your orders</Text>
+                        </View>
+                        <ChevronRight size={20} color="#2E7D32" />
+                    </TouchableOpacity>
+                }
                 ListEmptyComponent={
                     <View style={styles.emptyBox}>
                         <MessageSquare size={60} color="#eee" />
@@ -139,4 +154,18 @@ const styles = StyleSheet.create({
     emptyBox: { flex: 1, alignItems: 'center', marginTop: 100, paddingHorizontal: 40 },
     emptyText: { fontSize: 20, fontWeight: 'bold', color: '#333', marginTop: 20 },
     emptySub: { fontSize: 14, color: '#999', textAlign: 'center', marginTop: 10 },
+
+    // AI Support Styles
+    aiSupportCard: {
+        flexDirection: 'row', alignItems: 'center',
+        backgroundColor: '#E8F5E9', padding: 15, borderRadius: 12,
+        marginBottom: 15, borderWidth: 1, borderColor: '#C8E6C9'
+    },
+    aiIconBox: {
+        width: 40, height: 40, borderRadius: 20, backgroundColor: '#2E7D32',
+        justifyContent: 'center', alignItems: 'center', marginRight: 15
+    },
+    aiInfo: { flex: 1 },
+    aiTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 2 },
+    aiSubtitle: { fontSize: 13, color: '#2E7D32' },
 });

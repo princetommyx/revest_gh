@@ -11,6 +11,11 @@ export const logisticsApi = {
         return response.data;
     },
 
+    estimatePrice: async (coords) => {
+        const response = await apiClient.post('/logistics/pickups/estimate_price/', coords);
+        return response.data;
+    },
+
     getPickupDetails: async (id) => {
         const response = await apiClient.get(`/logistics/pickups/${id}/`);
         return response.data;

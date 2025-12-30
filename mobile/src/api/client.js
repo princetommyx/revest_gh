@@ -10,7 +10,8 @@ const LOCAL_API_URL = 'http://192.168.5.79:8000/api/v1';
 const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1';
 
 // Set this to true when building for production
-const IS_PROD = false;
+// Auto-detect environment
+const IS_PROD = !__DEV__;
 
 const baseURL = IS_PROD ? PROD_API_URL : LOCAL_API_URL;
 

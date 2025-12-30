@@ -74,9 +74,42 @@ export default function PickupsScreen() {
         }
     };
 
+    const fetchEstimate = async () => {
+        if (!location) {
+            Toast.show("Location missing. Cannot calculate estimate.", { backgroundColor: '#E74C3C' });
+            return;
+        }
+
+        setRequestLoading(true);
+        try {
+            const estimate = await logisticsApi.estimatePrice({
+                latitude: location.latitude,
+                longitude: location.longitude
+            });
+
+            setRequestForm(prev => ({
+                ...prev,
+                estimated_price: estimate.estimated_price,
+                distance_km: estimate.distance_km,
+                duration_min: estimate.duration_min
+            }));
+        } catch (error) {
+            console.error("Estimate Error:", error);
+            Toast.show("Failed to get estimate", { backgroundColor: '#E74C3C' });
+        } finally {
+            setRequestLoading(false);
+        }
+    };
+
     const handleCreateRequest = async () => {
         if (!location) {
             Toast.show("Location not available", { backgroundColor: '#E74C3C' });
+            return;
+        }
+
+        // Ensure price is calculated
+        if (!requestForm.estimated_price) {
+            fetchEstimate();
             return;
         }
 
@@ -231,7 +264,6 @@ export default function PickupsScreen() {
 
                 {jobs.length === 0 && (
                     <View style={styles.emptyState}>
-                        <ActivityIndicator size="small" color="#999" style={{ marginBottom: 10 }} />
                         <Text style={styles.emptyText}>
                             {userRole === 'COLLECTOR' ? 'No jobs available nearby' : 'You have no active pickups'}
                         </Text>
@@ -303,15 +335,53 @@ export default function PickupsScreen() {
                                 ))}
                             </View>
 
+                            {/* Price Estimate Section */}
+                            <View style={styles.estimateContainer}>
+                                <Text style={styles.label}>Fare Estimate</Text>
+                                {requestLoading ? (
+                                    <View style={styles.estimateLoading}>
+                                        <ActivityIndicator size="small" color="#2E7D32" />
+                                        <Text style={styles.estimateLoadingText}>Calculating fare...</Text>
+                                    </View>
+                                ) : requestForm.estimated_price ? (
+                                    <View style={styles.estimateBox}>
+                                        <View style={styles.estimateRow}>
+                                            <Text style={styles.estimateLabel}>Base Price</Text>
+                                            <Text style={styles.estimateValue}>₵10.00</Text>
+                                        </View>
+                                        <View style={styles.estimateRow}>
+                                            <Text style={styles.estimateLabel}>Distance ({requestForm.distance_km}km)</Text>
+                                            <Text style={styles.estimateValue}>₵{(requestForm.distance_km * 2.5).toFixed(2)}</Text>
+                                        </View>
+                                        <View style={styles.estimateRow}>
+                                            <Text style={styles.estimateLabel}>Time Estimate ({Math.round(requestForm.duration_min)} min)</Text>
+                                            <Text style={styles.estimateValue}>₵{(requestForm.duration_min * 0.5).toFixed(2)}</Text>
+                                        </View>
+                                        <View style={styles.divider} />
+                                        <View style={styles.estimateTotalRow}>
+                                            <Text style={styles.estimateTotalLabel}>Total Estimated Price</Text>
+                                            <Text style={styles.estimateTotalValue}>₵{requestForm.estimated_price}</Text>
+                                        </View>
+                                        <Text style={styles.estimateNote}>
+                                            *Final price may vary slightly based on traffic.
+                                        </Text>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity style={styles.calcBtn} onPress={fetchEstimate}>
+                                        <Text style={styles.calcBtnText}>Calculate Estimate</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
                             <TouchableOpacity
-                                style={styles.submitRequestBtn}
+                                style={[styles.submitRequestBtn, !requestForm.estimated_price && { backgroundColor: '#ccc' }]}
                                 onPress={handleCreateRequest}
-                                disabled={requestLoading}
+                                disabled={requestLoading || !requestForm.estimated_price}
                             >
                                 {requestLoading ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.submitRequestBtnText}>Request Pickup Now</Text>
+                                    <Text style={styles.submitRequestBtnText}>Confirm Request</Text>
                                 )}
                             </TouchableOpacity>
                         </ScrollView>
@@ -419,7 +489,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
-        minHeight: height * 0.5,
+        minHeight: height * 0.6,
         padding: 24,
         paddingBottom: Platform.OS === 'ios' ? 40 : 24
     },
@@ -444,6 +514,28 @@ const styles = StyleSheet.create({
     pickerItemActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
     pickerItemText: { color: '#666', fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
+
+    estimateContainer: { marginBottom: 30 },
+    estimateLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 20 },
+    estimateLoadingText: { color: '#666' },
+    estimateBox: {
+        backgroundColor: '#f8f9fa', padding: 20, borderRadius: 16,
+        borderWidth: 1, borderColor: '#eee'
+    },
+    estimateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+    estimateLabel: { fontSize: 14, color: '#666' },
+    estimateValue: { fontSize: 14, fontWeight: '600', color: '#333' },
+    divider: { height: 1, backgroundColor: '#eee', marginVertical: 10 },
+    estimateTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+    estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
+    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#2E7D32' },
+    estimateNote: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 5 },
+    calcBtn: {
+        padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#2E7D32',
+        alignItems: 'center', borderStyle: 'dashed'
+    },
+    calcBtnText: { color: '#2E7D32', fontWeight: 'bold' },
+
     submitRequestBtn: {
         backgroundColor: '#2E7D32',
         padding: 18,

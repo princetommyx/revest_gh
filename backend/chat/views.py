@@ -9,6 +9,8 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+from django.utils import timezone
+
 @extend_schema(tags=['chat'])
 @extend_schema_view(
     list=extend_schema(summary="List messages", description="Get all messages for the current user."),
@@ -69,9 +71,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 'contact_role': contact.role,
                 'last_message': last_msg.content if last_msg else '',
                 'timestamp': last_msg.timestamp if last_msg else None,
-                'unread_count': Message.objects.filter(
-                    sender=contact, receiver=user, is_read=False # Assuming we add is_read later
-                ).count()
+                'unread_count': 0 # TODO: Add is_read field to Message model
             })
         
         # Sort by last message timestamp
