@@ -4,6 +4,7 @@ import {
     ActivityIndicator, Dimensions, FlatList, Modal,
     ScrollView, Platform
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { logisticsApi } from '../api/logistics';
@@ -32,6 +33,8 @@ export default function PickupsScreen() {
     const mapRef = useRef(null);
 
     useEffect(() => {
+        loadCache();
+
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
@@ -52,25 +55,49 @@ export default function PickupsScreen() {
         })();
     }, [userRole]);
 
+    const loadCache = async () => {
+        try {
+            const cached = await AsyncStorage.getItem('cache_jobs');
+            if (cached) {
+                setJobs(JSON.parse(cached));
+                setLoading(false);
+            }
+        } catch (e) {
+            console.log("Cache error:", e);
+        }
+    };
+
     const fetchAvailableJobs = async (coords) => {
+        if (jobs.length === 0) setLoading(true);
+
         try {
             const data = await logisticsApi.getPickupRequests({
                 lat: coords.latitude,
                 lon: coords.longitude,
                 status: 'PENDING'
             });
-            setJobs(Array.isArray(data) ? data : (data.results || []));
+            const items = Array.isArray(data) ? data : (data.results || []);
+            setJobs(items);
+            await AsyncStorage.setItem('cache_jobs', JSON.stringify(items));
         } catch (error) {
             console.error("Fetch Available Jobs Error:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
     const fetchMyRequests = async () => {
+        if (jobs.length === 0) setLoading(true);
+
         try {
             const data = await logisticsApi.getPickupRequests();
-            setJobs(Array.isArray(data) ? data : (data.results || []));
+            const items = Array.isArray(data) ? data : (data.results || []);
+            setJobs(items);
+            await AsyncStorage.setItem('cache_jobs', JSON.stringify(items));
         } catch (error) {
             console.error("Fetch My Requests Error:", error);
+        } finally {
+            setLoading(false);
         }
     };
 

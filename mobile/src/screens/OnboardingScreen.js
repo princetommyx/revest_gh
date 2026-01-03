@@ -13,21 +13,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
 const slides = [
     {
         id: '0',
-        image: "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&q=80&w=1600",
+        image: "https://images.unsplash.com/photo-1596464716127-f9a804e0647e?auto=format&fit=crop&q=80&w=1600", // African man smiling/recycling concept (or happy outdoor)
         title: "Revolutionizing Waste",
         text: "Join the future of smart waste management in Ghana. Fast, efficient, and green.",
         buttonText: "Next",
     },
     {
         id: '1',
-        image: "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&q=80&w=1600",
+        image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=1600", // African person with smartphone happy
         title: "Earn Every Time you Recycle",
         text: "Turn your waste into instant rewards. Get paid directly to your mobile wallet.",
         buttonText: "Get Started",
@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
     };
 
     const finishOnboarding = async (target) => {
-        await SecureStore.setItemAsync('has_seen_onboarding', 'true');
+        await AsyncStorage.setItem('has_seen_onboarding', 'true');
         navigation.navigate(target);
     };
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import { authStorage } from '../utils/authStorage';
 import { authApi } from '../api/auth';
 
 const AuthContext = createContext();
@@ -15,14 +15,17 @@ export const AuthProvider = ({ children }) => {
 
     const loadStoredAuth = async () => {
         try {
-            const token = await SecureStore.getItemAsync('access_token');
-            const role = await SecureStore.getItemAsync('user_role');
-            const userData = await SecureStore.getItemAsync('user_data');
+            // 1. Run migration first (checks async storage -> moves to secure)
+            await authStorage.migrateFromAsyncStorage();
+
+            // 2. Load from secure storage
+            const token = await authStorage.getAccessToken();
+            const role = await authStorage.getUserRole();
+            const userData = await authStorage.getUserData();
 
             if (token) {
                 setUserRole(role);
-                if (userData) setUser(JSON.parse(userData));
-                // Optionally verify token here
+                setUser(userData);
             }
         } catch (error) {
             console.error('Error loading auth state:', error);
@@ -33,13 +36,60 @@ export const AuthProvider = ({ children }) => {
 
     const signIn = async (username, password) => {
         const data = await authApi.login(username, password);
-        await SecureStore.setItemAsync('access_token', data.access);
-        await SecureStore.setItemAsync('refresh_token', data.refresh);
-        await SecureStore.setItemAsync('user_role', data.user.role || 'SELLER');
-        await SecureStore.setItemAsync('user_data', JSON.stringify(data.user));
+
+        await authStorage.storeSession(
+            data.access,
+            data.refresh,
+            data.user.role || 'SELLER',
+            data.user
+        );
 
         setUser(data.user);
         setUserRole(data.user.role || 'SELLER');
+        return data;
+    };
+
+    const signUp = async (userData) => {
+        const data = await authApi.register(userData);
+
+        // If backend returns tokens on register, store them and log user in
+        if (data.tokens) {
+            await authStorage.storeSession(
+                data.tokens.access,
+                data.tokens.refresh,
+                data.user.role || 'SELLER',
+                data.user
+            );
+
+            setUser(data.user);
+            setUserRole(data.user.role || 'SELLER');
+        }
+        return data;
+    };
+
+    const googleSignIn = async (token) => {
+        const data = await authApi.googleLogin(token);
+
+        // Ensure backend returns user object, otherwise fetch it
+        // Assuming data contains { access, refresh, user } like login
+        // If not, we might need: const user = await authApi.getProfile();
+
+        // For now, let's assume standard auth response. 
+        // If googleLogin endpoint doesn't return user, we should fetch it.
+
+        let userForState = data.user;
+        let roleForState = data.user?.role || 'SELLER';
+
+        // Store what we have. If user checks fail later, we can refine.
+        await authStorage.storeSession(
+            data.access,
+            data.refresh,
+            roleForState,
+            userForState
+        );
+
+        setUser(userForState);
+        setUserRole(roleForState);
         return data;
     };
 
@@ -49,10 +99,7 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
             console.log('Logout error (backend):', e);
         }
-        await SecureStore.deleteItemAsync('access_token');
-        await SecureStore.deleteItemAsync('refresh_token');
-        await SecureStore.deleteItemAsync('user_role');
-        await SecureStore.deleteItemAsync('user_data');
+        await authStorage.clearSession();
         setUser(null);
         setUserRole(null);
     };
@@ -64,6 +111,8 @@ export const AuthProvider = ({ children }) => {
             userRole,
             loading,
             signIn,
+            signUp,
+            googleSignIn,
             signOut,
             isAuthenticated: !!user
         }}>

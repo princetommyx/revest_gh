@@ -4,14 +4,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 
+import Toast from 'react-native-toast-message';
+
 export default function App() {
   return (
-    <ErrorBoundary>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <AppNavigator />
-        </AuthProvider>
-      </SafeAreaProvider>
-    </ErrorBoundary>
+    <>
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <AppNavigator />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </ErrorBoundary>
+      <Toast />
+    </>
   );
 }

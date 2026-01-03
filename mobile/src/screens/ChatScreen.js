@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList,
-    TouchableOpacity, ActivityIndicator, Image
+    TouchableOpacity, ActivityIndicator, Image, TextInput
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,12 +12,16 @@ import Toast from 'react-native-root-toast';
 export default function ChatScreen() {
     const navigation = useNavigation();
     const [conversations, setConversations] = useState([]);
+    const [filteredConversations, setFilteredConversations] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [activeTab, setActiveTab] = useState('All');
 
     const fetchConversations = async () => {
         try {
             const data = await chatApi.getConversations();
             setConversations(data);
+            setFilteredConversations(data);
         } catch (error) {
             console.error("Conversations Load Error:", error);
             Toast.show("Failed to load conversations", { backgroundColor: '#E74C3C' });
@@ -31,6 +35,27 @@ export default function ChatScreen() {
             fetchConversations();
         }, [])
     );
+
+    // Filter logic
+    useEffect(() => {
+        let result = conversations;
+        if (search) {
+            result = result.filter(c =>
+                c.contact_username.toLowerCase().includes(search.toLowerCase()) ||
+                (c.last_message && c.last_message.toLowerCase().includes(search.toLowerCase()))
+            );
+        }
+        if (activeTab === 'Unread') {
+            result = result.filter(c => c.unread_count > 0);
+        }
+        setFilteredConversations(result);
+    }, [search, activeTab, conversations]);
+
+    const resolveImageUrl = (path) => {
+        if (!path) return null;
+        if (path.startsWith('http')) return path;
+        return `https://revesta-backend.onrender.com${path.startsWith('/') ? '' : '/'}${path}`;
+    };
 
     // Generate random pastel color based on name
     const getAvatarColor = (name) => {
@@ -55,7 +80,10 @@ export default function ChatScreen() {
     };
 
     const renderConversation = ({ item }) => {
+
         const avatarColor = getAvatarColor(item.contact_username || 'User');
+        const profileImg = resolveImageUrl(item.contact_profile_image);
+
         return (
             <TouchableOpacity
                 style={styles.convCard}
@@ -64,10 +92,14 @@ export default function ChatScreen() {
                     contactName: item.contact_username
                 })}
             >
-                <View style={[styles.avatarBox, { backgroundColor: avatarColor + '20', borderColor: avatarColor + '40' }]}>
-                    <Text style={[styles.avatarInitials, { color: avatarColor }]}>
-                        {getInitials(item.contact_username)}
-                    </Text>
+                <View style={[styles.avatarBox, !profileImg && { backgroundColor: avatarColor + '20', borderColor: avatarColor + '40' }]}>
+                    {profileImg ? (
+                        <Image source={{ uri: profileImg }} style={styles.avatarImage} />
+                    ) : (
+                        <Text style={[styles.avatarInitials, { color: avatarColor }]}>
+                            {getInitials(item.contact_username)}
+                        </Text>
+                    )}
                     {item.unread_count > 0 && (
                         <View style={styles.unreadBadge}>
                             <Text style={styles.unreadText}>{item.unread_count}</Text>
@@ -115,7 +147,13 @@ export default function ChatScreen() {
                             <View style={styles.searchIcon}>
                                 <MessageSquare size={20} color="#999" />
                             </View>
-                            <Text style={styles.searchText}>Search in Messages</Text>
+                            <TextInput
+                                style={styles.searchText}
+                                placeholder="Search in Messages"
+                                placeholderTextColor="#aaa"
+                                value={search}
+                                onChangeText={setSearch}
+                            />
                         </View>
                     </View>
                 </SafeAreaView>

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { authStorage } from '../utils/authStorage';
 import { Platform } from 'react-native';
 
 // Detect environment based on release channel or simple manual switch
@@ -20,14 +20,14 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 10000, // 10s timeout
+    timeout: 60000, // 60s timeout for cold starts
 });
 
 // Request Interceptor: Attach Token
 apiClient.interceptors.request.use(
     async (config) => {
         try {
-            const token = await SecureStore.getItemAsync('access_token');
+            const token = await authStorage.getAccessToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
@@ -50,14 +50,28 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refresh = await SecureStore.getItemAsync('refresh_token');
+                const refresh = await authStorage.getRefreshToken();
                 if (refresh) {
                     const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
                         refresh,
                     });
 
                     const newAccess = response.data.access;
-                    await SecureStore.setItemAsync('access_token', newAccess);
+
+                    // Note: We need the full user/role data to use storeSession fully, 
+                    // but here we only have the new access token.
+                    // Ideally we'd fetch the user again or just patch the access token. 
+                    // For now, we'll expose a helper or just manually use SecureStore via the util if needed, 
+                    // BUT authStorage has `storeSession` which expects all args.
+                    // Let's assume we can grab the existing role/user and re-save, OR
+                    // better yet, we can add a specific method to authStorage for updating just the token,
+                    // or just use storeSession with existing data.
+
+                    // Fetch existing data to re-store securely
+                    const role = await authStorage.getUserRole();
+                    const user = await authStorage.getUserData();
+
+                    await authStorage.storeSession(newAccess, refresh, role, user);
 
                     // Retry original request with new token
                     originalRequest.headers.Authorization = `Bearer ${newAccess}`;
@@ -65,8 +79,7 @@ apiClient.interceptors.response.use(
                 }
             } catch (refreshError) {
                 // Refresh failed, logout user
-                await SecureStore.deleteItemAsync('access_token');
-                await SecureStore.deleteItemAsync('refresh_token');
+                await authStorage.clearSession();
                 console.log('Session expired, please login again');
                 // Logic to redirect to login would trigger here (via event or state)
             }

@@ -4,11 +4,10 @@ import { ArrowLeft } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
-import * as SecureStore from 'expo-secure-store';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../context/AuthContext';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-toast-message';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -32,16 +31,24 @@ export default function LoginScreen() {
         }
     }, [response]);
 
-    const { signIn } = useAuth();
+    const { signIn, googleSignIn } = useAuth();
 
     const handleGoogleBackend = async (token) => {
         setLoading(true);
         try {
-            await authApi.googleLogin(token);
-            Alert.alert("Success", "Logged in with Google!");
+            await googleSignIn(token);
+            Toast.show({
+                type: 'success',
+                text1: 'Google Sign-In',
+                text2: 'Logged in with Google!'
+            });
         } catch (error) {
             console.log("Google Login Error:", error);
-            Alert.alert('Google Login Failed', 'Could not authenticate with server');
+            Toast.show({
+                type: 'error',
+                text1: 'Google Login Failed',
+                text2: 'Could not authenticate with server'
+            });
         } finally {
             setLoading(false);
         }
@@ -49,17 +56,29 @@ export default function LoginScreen() {
 
     const handleLogin = async () => {
         if (!email || !password) {
-            Alert.alert('Error', 'Please enter email and password');
+            Toast.show({
+                type: 'error',
+                text1: 'Validation Error',
+                text2: 'Please enter email and password'
+            });
             return;
         }
 
         setLoading(true);
         try {
             await signIn(email, password);
-            Toast.show("Welcome back!", { backgroundColor: '#2E7D32' });
+            Toast.show({
+                type: 'success',
+                text1: 'Welcome back!',
+                text2: 'Successfully signed in.'
+            });
         } catch (error) {
             console.log(error);
-            Alert.alert('Login Failed', error.response?.data?.detail || 'Invalid credentials');
+            Toast.show({
+                type: 'error',
+                text1: 'Login Failed',
+                text2: error.response?.data?.detail || 'Invalid credentials'
+            });
         } finally {
             setLoading(false);
         }

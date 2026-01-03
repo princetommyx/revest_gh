@@ -3,7 +3,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons'; // Expo comes with vector icons
 
 import LoginScreen from '../screens/LoginScreen';
@@ -69,9 +69,9 @@ export default function AppNavigator() {
         const checkOnboarding = async () => {
             try {
                 // TEMP: Clear the flag to force onboarding to show for testing
-                // await SecureStore.deleteItemAsync('has_seen_onboarding');
+                // await AsyncStorage.removeItem('has_seen_onboarding');
 
-                const value = await SecureStore.getItemAsync('has_seen_onboarding');
+                const value = await AsyncStorage.getItem('has_seen_onboarding');
                 setHasSeenOnboarding(value === 'true');
             } catch (e) {
                 setHasSeenOnboarding(false);

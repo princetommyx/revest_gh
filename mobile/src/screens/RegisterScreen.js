@@ -6,6 +6,8 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Truck, Trash2, Recycle, Check } from 'lucide-react-native';
 import apiClient from '../api/client';
 
+import Toast from 'react-native-toast-message';
+
 const COLORS = {
     primary: '#27AE60', // Matching Web
     secondary: '#2980B9',
@@ -16,8 +18,11 @@ const COLORS = {
     border: '#E5E7EB',
 };
 
+import { useAuth } from '../context/AuthContext';
+
 export default function RegisterScreen() {
     const navigation = useNavigation();
+    const { signUp } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
 
@@ -90,10 +95,23 @@ export default function RegisterScreen() {
                 })
             };
 
-            await authApi.register(payload);
+            await signUp(payload);
 
-            Alert.alert('Success', 'Account created! Please login.');
-            navigation.navigate('Login');
+            Toast.show({
+                type: 'success',
+                text1: 'Account Created',
+                text2: 'Welcome to ReVesta!'
+            });
+            // No need to navigate manually if auth state updates, 
+            // but if backend requires verify, login might not happen yet.
+            // Assuming current flow:
+            // If auto-login happens, AuthContext state changes -> Navigator switches to Main.
+            // If not, we might need to go to Login.
+            // Based on context code: if data.tokens exists, we set user.
+            // So logic should handle navigation automatically via AppNavigator.
+
+            // However, to be safe and consistent with previous flow if auto-login fails:
+            // navigation.navigate('Login'); // AppNavigator will redirect if user is set.
         } catch (error) {
             console.log("Registration Error Detail:", error);
 
@@ -103,7 +121,7 @@ export default function RegisterScreen() {
                 msg = "Connection timed out. Check your IP address and backend.";
             } else if (!error.response) {
                 // Network error (no response received)
-                msg = "Network Error. Is the backend running at " + authApi.apiClient?.defaults?.baseURL + "?";
+                msg = "Network Error. Is the backend running at " + apiClient.defaults.baseURL + "?";
                 if (error.message) msg += " (" + error.message + ")";
             } else if (error.response?.data) {
                 const errorData = error.response.data;
@@ -116,7 +134,11 @@ export default function RegisterScreen() {
                     msg = JSON.stringify(errorData);
                 }
             }
-            Alert.alert('Registration Failed', msg);
+            Toast.show({
+                type: 'error',
+                text1: 'Registration Failed',
+                text2: msg
+            });
         } finally {
             setLoading(false);
         }
