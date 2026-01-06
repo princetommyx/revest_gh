@@ -4,7 +4,7 @@ import {
     ActivityIndicator, Dimensions, FlatList, Modal,
     ScrollView, Platform
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePickups } from '../hooks/usePickups';
 import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { logisticsApi } from '../api/logistics';
@@ -21,85 +21,31 @@ export default function PickupsScreen() {
     const { userRole, user } = useAuth();
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
-    const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [activeJob, setActiveJob] = useState(null);
-    const [showRequestModal, setShowRequestModal] = useState(false);
-    const [requestLoading, setRequestLoading] = useState(false);
-    const [requestForm, setRequestForm] = useState({
-        material_type: 'Plastics',
-        quantity_estimate: '1-2 Bags'
-    });
-    const mapRef = useRef(null);
+    const { data: jobs = [], isLoading: jobsLoading, refetch } = usePickups(location);
+    // Combine location loading with query loading if necessary, 
+    // but typically map shows up first then pins drop.
+    // If location is required for collector, we might want to wait.
+
+    // We can derive "loading" state:
+    const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location); // simplified
 
     useEffect(() => {
-        loadCache();
-
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 setErrorMsg('Permission to access location was denied');
-                setLoading(false);
                 return;
             }
 
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc.coords);
-            setLoading(false);
-
-            if (userRole === 'COLLECTOR') {
-                fetchAvailableJobs(loc.coords);
-            } else {
-                fetchMyRequests();
-            }
         })();
-    }, [userRole]);
+    }, []);
 
-    const loadCache = async () => {
-        try {
-            const cached = await AsyncStorage.getItem('cache_jobs');
-            if (cached) {
-                setJobs(JSON.parse(cached));
-                setLoading(false);
-            }
-        } catch (e) {
-            console.log("Cache error:", e);
-        }
-    };
+    // Effect to refresh jobs when location changes (handled by query key)
+    // or when focus
+    // React Query handles focus refetch
 
-    const fetchAvailableJobs = async (coords) => {
-        if (jobs.length === 0) setLoading(true);
-
-        try {
-            const data = await logisticsApi.getPickupRequests({
-                lat: coords.latitude,
-                lon: coords.longitude,
-                status: 'PENDING'
-            });
-            const items = Array.isArray(data) ? data : (data.results || []);
-            setJobs(items);
-            await AsyncStorage.setItem('cache_jobs', JSON.stringify(items));
-        } catch (error) {
-            console.error("Fetch Available Jobs Error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchMyRequests = async () => {
-        if (jobs.length === 0) setLoading(true);
-
-        try {
-            const data = await logisticsApi.getPickupRequests();
-            const items = Array.isArray(data) ? data : (data.results || []);
-            setJobs(items);
-            await AsyncStorage.setItem('cache_jobs', JSON.stringify(items));
-        } catch (error) {
-            console.error("Fetch My Requests Error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const fetchEstimate = async () => {
         if (!location) {
@@ -149,7 +95,7 @@ export default function PickupsScreen() {
             });
             Toast.show("Pickup request created!", { backgroundColor: '#2E7D32' });
             setShowRequestModal(false);
-            fetchMyRequests();
+            refetch();
         } catch (error) {
             console.error("Create Request Error:", error);
             Toast.show("Failed to create request", { backgroundColor: '#E74C3C' });
@@ -163,11 +109,7 @@ export default function PickupsScreen() {
             await logisticsApi.acceptRequest(jobId);
             Toast.show("Job accepted! Start navigating.", { backgroundColor: '#2E7D32' });
             // Refresh
-            if (userRole === 'COLLECTOR') {
-                fetchAvailableJobs(location);
-            } else {
-                fetchMyRequests();
-            }
+            refetch();
         } catch (error) {
             Toast.show("Failed to accept job", { backgroundColor: '#E74C3C' });
         }

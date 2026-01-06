@@ -6,14 +6,20 @@ import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 import Toast from 'react-native-toast-message';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient();
+
 export default function App() {
   return (
     <>
       <ErrorBoundary>
         <SafeAreaProvider>
-          <AuthProvider>
-            <AppNavigator />
-          </AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <AppNavigator />
+            </AuthProvider>
+          </QueryClientProvider>
         </SafeAreaProvider>
       </ErrorBoundary>
       <Toast />

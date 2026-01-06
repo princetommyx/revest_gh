@@ -200,6 +200,26 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 
+# Redis Cache Configuration
+# Redis Cache Configuration
+if 'REDIS_URL' in os.environ:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": os.environ.get('REDIS_URL'),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
+
 # Redis Channel Layer
 if 'REDIS_URL' in os.environ:
     CHANNEL_LAYERS = {

@@ -22,6 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.revesta.mobile",
+      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"

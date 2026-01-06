@@ -125,13 +125,19 @@ class RegisterView(generics.CreateAPIView):
     
     def create(self, request, *args, **kwargs):
         response = super().create(request, *args, **kwargs)
-        # Add JWT tokens to response
+        # Add JWT tokens to response and structure it like login
         if response.status_code == status.HTTP_201_CREATED:
             user = User.objects.get(email=request.data.get('email'))
             refresh = RefreshToken.for_user(user)
-            response.data['tokens'] = {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
+            
+            # Re-structure the response to match what frontend expects: { user: {...}, tokens: {...} }
+            user_data = response.data
+            response.data = {
+                'user': user_data,
+                'tokens': {
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                }
             }
         return response
 

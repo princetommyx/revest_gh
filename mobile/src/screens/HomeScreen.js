@@ -4,7 +4,6 @@ import {
     FlatList, Image, ActivityIndicator,
     TextInput, ScrollView
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { marketApi } from '../api/market';
@@ -26,58 +25,18 @@ const CATEGORIES = [
     { id: 'Electronics', name: 'E-Waste', icon: 'phone-portrait-outline', color: '#7B1FA2', bg: '#fff' }
 ];
 
+import { useListings } from '../hooks/useListings';
+
 export default function HomeScreen({ navigation }) {
     const { userRole, signOut } = useAuth();
-    const [listings, setListings] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('');
     const [search, setSearch] = useState('');
 
-    useEffect(() => {
-        loadCache();
-        fetchListings();
-    }, []);
+    // React Query Hook
+    const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings();
 
-    // Refresh when screen comes into focus
-    useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => {
-            fetchListings();
-        });
-        return unsubscribe;
-    }, [navigation]);
-
-    const loadCache = async () => {
-        try {
-            const cached = await AsyncStorage.getItem('cache_listings');
-            if (cached) {
-                setListings(JSON.parse(cached));
-                setLoading(false); // Show cached data immediately
-            }
-        } catch (e) {
-            console.log('Cache load error:', e);
-        }
-    };
-
-    const fetchListings = async () => {
-        // Only set loading true if we have no data at all
-        if (listings.length === 0) setLoading(true);
-
-        try {
-            const data = await marketApi.getListings();
-            const items = Array.isArray(data) ? data : (data.results || []);
-            setListings(items);
-            // Save to cache
-            await AsyncStorage.setItem('cache_listings', JSON.stringify(items));
-        } catch (error) {
-            console.error("Fetch Listings Error:", error);
-            // Don't show toast if we have cached data, silent fail is better for UX here
-            if (listings.length === 0) {
-                Toast.show("Failed to load marketplace", { backgroundColor: '#E74C3C' });
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    // No manual useEffect needed for fetching!
+    // React Query handles focus refetching automatically if configured (default true)
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
@@ -302,8 +261,8 @@ export default function HomeScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
                     }
-                    onRefresh={fetchListings}
-                    refreshing={loading}
+                    onRefresh={refetch}
+                    refreshing={isRefetching}
                 />
             )}
 

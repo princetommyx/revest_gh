@@ -11,6 +11,10 @@ from .serializers import (
 )
 
 
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_cookie
+
 @extend_schema(tags=['market'])
 @extend_schema_view(
     list=extend_schema(summary="List all marketplace listings", description="Get paginated list of all listings with optional filtering and search."),
@@ -20,6 +24,7 @@ from .serializers import (
     partial_update=extend_schema(summary="Partially update listing", description="Partially update a listing. Only the owner can update."),
     destroy=extend_schema(summary="Delete listing", description="Delete a listing. Only the owner or admin can delete."),
 )
+@method_decorator(cache_page(60 * 5), name='list')
 class ListingViewSet(viewsets.ModelViewSet):
     queryset = Listing.objects.all().select_related('seller').order_by('-created_at')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
