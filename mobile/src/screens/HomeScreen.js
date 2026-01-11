@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    FlatList, Image, ActivityIndicator,
+    FlatList, ActivityIndicator,
     TextInput, ScrollView
 } from 'react-native';
+import { Image } from 'expo-image'; // ✅ Faster than react-native Image
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { marketApi } from '../api/market';
@@ -26,6 +27,7 @@ const CATEGORIES = [
 ];
 
 import { useListings } from '../hooks/useListings';
+import { SkeletonCard } from '../components/Skeleton';
 
 export default function HomeScreen({ navigation }) {
     const { userRole, signOut } = useAuth();
@@ -92,7 +94,13 @@ export default function HomeScreen({ navigation }) {
         >
             <View style={styles.imageBox}>
                 {item.image ? (
-                    <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.image} resizeMode="cover" />
+                    <Image
+                        source={{ uri: resolveImageUrl(item.image) }}
+                        style={styles.image}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={200}
+                    />
                 ) : (
                     <Package size={30} color="#ccc" />
                 )}
@@ -225,9 +233,15 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             {loading ? (
-                <View style={styles.center}>
-                    <ActivityIndicator size="large" color="#2E7D32" />
-                </View>
+                // Skeleton loading - no spinner!
+                <FlatList
+                    data={Array(6).fill({})}
+                    renderItem={() => <SkeletonCard />}
+                    keyExtractor={(_, index) => `skeleton-${index}`}
+                    numColumns={2}
+                    contentContainerStyle={styles.list}
+                    columnWrapperStyle={styles.columnWrapper}
+                />
             ) : (
                 <FlatList
                     data={filteredListings}
@@ -236,6 +250,12 @@ export default function HomeScreen({ navigation }) {
                     numColumns={2}
                     contentContainerStyle={styles.list}
                     columnWrapperStyle={styles.columnWrapper}
+                    // ✅ Performance optimizations
+                    removeClippedSubviews={true}
+                    maxToRenderPerBatch={10}
+                    initialNumToRender={6}
+                    windowSize={5}
+                    updateCellsBatchingPeriod={50}
                     ListHeaderComponent={() => (
                         <View>
                             <ScrollView

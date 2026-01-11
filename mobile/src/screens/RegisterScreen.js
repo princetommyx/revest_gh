@@ -95,6 +95,13 @@ export default function RegisterScreen() {
                 })
             };
 
+            // Show progress message
+            Toast.show({
+                type: 'info',
+                text1: 'Creating Account',
+                text2: 'This may take a moment...'
+            });
+
             await signUp(payload);
 
             Toast.show({
@@ -102,43 +109,49 @@ export default function RegisterScreen() {
                 text1: 'Account Created',
                 text2: 'Welcome to ReVesta!'
             });
-            // No need to navigate manually if auth state updates, 
-            // but if backend requires verify, login might not happen yet.
-            // Assuming current flow:
-            // If auto-login happens, AuthContext state changes -> Navigator switches to Main.
-            // If not, we might need to go to Login.
-            // Based on context code: if data.tokens exists, we set user.
-            // So logic should handle navigation automatically via AppNavigator.
-
-            // However, to be safe and consistent with previous flow if auto-login fails:
-            // navigation.navigate('Login'); // AppNavigator will redirect if user is set.
         } catch (error) {
             console.log("Registration Error Detail:", error);
 
             let msg = 'Registration failed';
+            let shouldRetryLogin = false;
 
-            if (error.code === 'ECONNABORTED') {
-                msg = "Connection timed out. Check your IP address and backend.";
+            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                msg = "Server is taking longer than expected. Your account may have been created. Try logging in instead.";
+                shouldRetryLogin = true;
             } else if (!error.response) {
                 // Network error (no response received)
                 msg = "Network Error. Is the backend running at " + apiClient.defaults.baseURL + "?";
                 if (error.message) msg += " (" + error.message + ")";
             } else if (error.response?.data) {
                 const errorData = error.response.data;
-                const firstValue = Object.values(errorData)[0];
-                if (Array.isArray(firstValue)) {
-                    msg = firstValue[0];
-                } else if (typeof firstValue === 'string') {
-                    msg = firstValue;
+
+                // Check if account already exists
+                const errorStr = JSON.stringify(errorData).toLowerCase();
+                if (errorStr.includes('already exists') || errorStr.includes('duplicate')) {
+                    msg = "Account already exists. Please try logging in.";
+                    shouldRetryLogin = true;
                 } else {
-                    msg = JSON.stringify(errorData);
+                    const firstValue = Object.values(errorData)[0];
+                    if (Array.isArray(firstValue)) {
+                        msg = firstValue[0];
+                    } else if (typeof firstValue === 'string') {
+                        msg = firstValue;
+                    } else {
+                        msg = JSON.stringify(errorData);
+                    }
                 }
             }
+
             Toast.show({
-                type: 'error',
-                text1: 'Registration Failed',
+                type: shouldRetryLogin ? 'info' : 'error',
+                text1: shouldRetryLogin ? 'Try Logging In' : 'Registration Failed',
                 text2: msg
             });
+
+            // If account might exist, nav to login after delay
+            if (shouldRetryLogin) {
+                setTimeout(() => navigation.navigate('Login'), 2000);
+            }
         } finally {
             setLoading(false);
         }

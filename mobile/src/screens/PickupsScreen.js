@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ActivityIndicator, Dimensions, FlatList, Modal,
@@ -22,6 +22,18 @@ export default function PickupsScreen() {
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, refetch } = usePickups(location);
+
+    // Missing state declarations
+    const mapRef = useRef(null);
+    const [showRequestModal, setShowRequestModal] = useState(false);
+    const [requestLoading, setRequestLoading] = useState(false);
+    const [requestForm, setRequestForm] = useState({
+        material_type: 'Plastics',
+        quantity_estimate: '1-2 Bags',
+        estimated_price: null,
+        distance_km: null,
+        duration_min: null
+    });
     // Combine location loading with query loading if necessary, 
     // but typically map shows up first then pins drop.
     // If location is required for collector, we might want to wait.
@@ -155,6 +167,11 @@ export default function PickupsScreen() {
         return markers;
     };
 
+    // Memoize markers to prevent re-rendering on every state change
+    const memoizedMarkers = useMemo(() => {
+        return jobs.flatMap(renderJobMarker);
+    }, [jobs]);
+
     if (loading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#2E7D32" /></View>;
     }
@@ -172,7 +189,7 @@ export default function PickupsScreen() {
                 }}
                 showsUserLocation={true}
             >
-                {jobs.map(renderJobMarker)}
+                {memoizedMarkers}
             </MapView>
 
             <View style={styles.overlay}>

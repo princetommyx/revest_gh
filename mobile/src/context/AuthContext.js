@@ -15,13 +15,12 @@ export const AuthProvider = ({ children }) => {
 
     const loadStoredAuth = async () => {
         try {
-            // 1. Run migration first (checks async storage -> moves to secure)
-            await authStorage.migrateFromAsyncStorage();
-
-            // 2. Load from secure storage
-            const token = await authStorage.getAccessToken();
-            const role = await authStorage.getUserRole();
-            const userData = await authStorage.getUserData();
+            // Run all SecureStore reads in PARALLEL for faster startup
+            const [token, role, userData] = await Promise.all([
+                authStorage.getAccessToken(),
+                authStorage.getUserRole(),
+                authStorage.getUserData()
+            ]);
 
             if (token) {
                 setUserRole(role);

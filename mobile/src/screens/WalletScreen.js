@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator, Modal,
     TextInput, ScrollView, Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { walletApi } from '../api/wallet';
+import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
+import { SkeletonWalletCard } from '../components/Skeleton';
 import {
     Wallet, Plus, ArrowUpRight,
     ArrowDownLeft, History, X,
@@ -20,9 +21,12 @@ const NETWORKS = [
 ];
 
 export default function WalletScreen() {
-    const [wallet, setWallet] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [actionLoading, setActionLoading] = useState(false);
+    // React Query hooks with optimistic updates
+    const { data: wallet, isLoading } = useWallet();
+    const depositMutation = useOptimisticDeposit();
+    const withdrawMutation = useOptimisticWithdraw();
+    const verifyMutation = useVerifyPayment();
+
     const [modalVisible, setModalVisible] = useState(false);
     const [modalType, setModalType] = useState('DEPOSIT');
 
@@ -35,22 +39,7 @@ export default function WalletScreen() {
     // Payment status
     const [pendingTxn, setPendingTxn] = useState(null);
 
-    useEffect(() => {
-        fetchWalletData();
-    }, []);
-
-    const fetchWalletData = async () => {
-        try {
-            const data = await walletApi.getWallet();
-            setWallet(data);
-        } catch (error) {
-            console.error("Wallet Fetch Error:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleAction = async () => {
+    const handleAction = () => {
         if (!amount || isNaN(amount) || parseFloat(amount) < 1) {
             Toast.show("Minimum amount is 1.00", { backgroundColor: '#E74C3C' });
             return;
@@ -60,66 +49,48 @@ export default function WalletScreen() {
             return;
         }
 
-        setActionLoading(true);
-        try {
-            if (modalType === 'DEPOSIT') {
-                const res = await walletApi.deposit({
-                    amount: parseFloat(amount),
-                    phone_number: phone,
-                    network: network
-                });
+        const payload = {
+            amount: parseFloat(amount),
+            phone_number: phone,
+            network: network
+        };
 
-                setPendingTxn(res.transaction);
-                setModalVisible(false);
-
-                if (res.authorization_url) {
-                    Toast.show("Redirecting to secure payment...", { backgroundColor: '#2E7D32' });
-                    setTimeout(() => Linking.openURL(res.authorization_url), 1000);
+        if (modalType === 'DEPOSIT') {
+            depositMutation.mutate(payload, {
+                onSuccess: (res) => {
+                    setPendingTxn(res.transaction);
+                    setModalVisible(false);
+                    if (res.authorization_url) {
+                        Toast.show("Redirecting to secure payment...", { backgroundColor: '#2E7D32' });
+                        setTimeout(() => Linking.openURL(res.authorization_url), 1000);
+                    }
                 }
-            } else {
-                if (!accountName) {
-                    Toast.show("Account name is required for withdrawal", { backgroundColor: '#E74C3C' });
-                    setActionLoading(false);
-                    return;
-                }
-                const res = await walletApi.withdraw({
-                    amount: parseFloat(amount),
-                    phone_number: phone,
-                    network: network,
-                    account_name: accountName
-                });
-                setWallet(res);
-                setModalVisible(false);
-                setAmount('');
-                Toast.show("Withdrawal initiated successfully!", { backgroundColor: '#27AE60' });
+            });
+        } else {
+            if (!accountName) {
+                Toast.show("Account name is required for withdrawal", { backgroundColor: '#E74C3C' });
+                return;
             }
-        } catch (error) {
-            console.error("Wallet Action Error:", error);
-            Toast.show(error.response?.data?.error || "Transaction failed", { backgroundColor: '#E74C3C' });
-        } finally {
-            setActionLoading(false);
+            withdrawMutation.mutate({ ...payload, account_name: accountName }, {
+                onSuccess: () => {
+                    setModalVisible(false);
+                    setAmount('');
+                }
+            });
         }
     };
 
-    const verifyTopUp = async () => {
+    const verifyTopUp = () => {
         if (!pendingTxn) return;
-        setActionLoading(true);
-        try {
-            const res = await walletApi.verifyPayment(pendingTxn.reference);
-            if (res.balance !== undefined) {
-                setWallet(res);
-                setPendingTxn(null);
-                setAmount('');
-                setPhone('');
-                Toast.show("Top-up confirmed!", { backgroundColor: '#27AE60' });
-            } else {
-                Toast.show("Payment still pending. Please wait.", { backgroundColor: '#F39C12' });
+        verifyMutation.mutate(pendingTxn.reference, {
+            onSuccess: (result) => {
+                if (result?.verified) {
+                    setPendingTxn(null);
+                    setAmount('');
+                    setPhone('');
+                }
             }
-        } catch (error) {
-            Toast.show("Verification failed. Please check later.", { backgroundColor: '#E74C3C' });
-        } finally {
-            setActionLoading(false);
-        }
+        });
     };
 
     const renderTransaction = ({ item }) => (
@@ -147,8 +118,16 @@ export default function WalletScreen() {
         </View>
     );
 
-    if (loading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#2E7D32" /></View>;
+    // Skeleton loading state - no spinner!
+    if (isLoading) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>My Wallet</Text>
+                </View>
+                <SkeletonWalletCard />
+            </SafeAreaView>
+        );
     }
 
     const transactions = wallet?.recent_transactions || [];
@@ -189,8 +168,8 @@ export default function WalletScreen() {
                             <AlertCircle size={20} color="#E65100" />
                             <Text style={styles.pendingText}>Top-up of ₵{parseFloat(pendingTxn.amount).toFixed(2)} is pending</Text>
                         </View>
-                        <TouchableOpacity style={styles.verifyBtn} onPress={verifyTopUp} disabled={actionLoading}>
-                            {actionLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyBtnText}>Verify Payment</Text>}
+                        <TouchableOpacity style={styles.verifyBtn} onPress={verifyTopUp} disabled={verifyMutation.isPending}>
+                            {verifyMutation.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyBtnText}>Verify Payment</Text>}
                         </TouchableOpacity>
                     </View>
                 )}
@@ -267,8 +246,8 @@ export default function WalletScreen() {
                             onChangeText={setAmount}
                         />
 
-                        <TouchableOpacity style={styles.confirmButton} onPress={handleAction} disabled={actionLoading}>
-                            {actionLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm {modalType === 'DEPOSIT' ? 'Deposit' : 'Withdraw'}</Text>}
+                        <TouchableOpacity style={styles.confirmButton} onPress={handleAction} disabled={depositMutation.isPending || withdrawMutation.isPending}>
+                            {(depositMutation.isPending || withdrawMutation.isPending) ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm {modalType === 'DEPOSIT' ? 'Deposit' : 'Withdraw'}</Text>}
                         </TouchableOpacity>
                     </View>
                 </View>

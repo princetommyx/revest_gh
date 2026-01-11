@@ -7,7 +7,10 @@ export const authApi = {
     },
 
     register: async (userData) => {
-        const response = await apiClient.post('/auth/register/', userData);
+        // Registration can be slow on Render (cold starts), so use longer timeout
+        const response = await apiClient.post('/auth/register/', userData, {
+            timeout: 120000 // 120 seconds for registration
+        });
         return response.data;
     },
 
