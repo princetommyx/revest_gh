@@ -17,8 +17,11 @@ export const usePickups = (location) => {
                 });
                 return Array.isArray(data) ? data : (data.results || []);
             } else {
+                // For sellers, fetch all and filter client-side to show only active requests
                 const data = await logisticsApi.getPickupRequests();
-                return Array.isArray(data) ? data : (data.results || []);
+                const allPickups = Array.isArray(data) ? data : (data.results || []);
+                // Exclude CANCELLED and COMPLETED from map view
+                return allPickups.filter(p => p.status !== 'CANCELLED' && p.status !== 'COMPLETED');
             }
         },
         // Only run for collectors if location is available. 

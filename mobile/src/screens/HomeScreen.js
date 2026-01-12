@@ -19,7 +19,7 @@ import { BASE_URL } from '../api/client';
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: 'grid-outline', color: '#455A64', bg: '#fff' },
-    { id: 'Plastics', name: 'Plastics', icon: 'water-outline', color: '#0288D1', bg: '#fff' },
+    { id: 'Plastics', name: 'Plastics', icon: 'cube-outline', color: '#2E7D32', bg: '#fff' },
     { id: 'Metals', name: 'Metals', icon: 'hammer-outline', color: '#5D4037', bg: '#fff' },
     { id: 'Paper', name: 'Paper', icon: 'document-text-outline', color: '#FBC02D', bg: '#fff' },
     { id: 'Glass', name: 'Glass', icon: 'wine-outline', color: '#00796B', bg: '#fff' },

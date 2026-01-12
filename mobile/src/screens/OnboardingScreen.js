@@ -20,14 +20,14 @@ const { width, height } = Dimensions.get('window');
 const slides = [
     {
         id: '0',
-        image: "https://images.unsplash.com/photo-1596464716127-f9a804e0647e?auto=format&fit=crop&q=80&w=1600", // African man smiling/recycling concept (or happy outdoor)
+        image: require('../../assets/onboarding1.jpg'),
         title: "Revolutionizing Waste",
         text: "Join the future of smart waste management in Ghana. Fast, efficient, and green.",
         buttonText: "Next",
     },
     {
         id: '1',
-        image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&q=80&w=1600", // African person with smartphone happy
+        image: require('../../assets/onboarding2.jpg'),
         title: "Earn Every Time you Recycle",
         text: "Turn your waste into instant rewards. Get paid directly to your mobile wallet.",
         buttonText: "Get Started",
@@ -63,7 +63,7 @@ export default function OnboardingScreen() {
     };
 
     const renderItem = ({ item }) => (
-        <ImageBackground source={{ uri: item.image }} style={styles.image}>
+        <ImageBackground source={item.image} style={styles.image}>
             <View style={styles.overlay} />
             <SafeAreaView style={styles.slideContent}>
                 <View style={styles.textContainer}>
@@ -76,7 +76,7 @@ export default function OnboardingScreen() {
 
     if (showAuthView) {
         return (
-            <ImageBackground source={{ uri: slides[1].image }} style={styles.image}>
+            <ImageBackground source={require('../../assets/auth_bg.jpg')} style={styles.image}>
                 <View style={[styles.overlay, { backgroundColor: 'rgba(46, 125, 50, 0.4)' }]} />
                 <SafeAreaView style={styles.authContainer}>
                     <View style={styles.logoBranding}>

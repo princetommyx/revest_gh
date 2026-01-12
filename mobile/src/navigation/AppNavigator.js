@@ -21,6 +21,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import SecurityScreen from '../screens/SecurityScreen';
 import HelpScreen from '../screens/HelpScreen';
 import SupportChatScreen from '../screens/SupportChatScreen';
+import PickupHistoryScreen from '../screens/PickupHistoryScreen';
 import { useAuth } from '../context/AuthContext';
 
 const Stack = createNativeStackNavigator();
@@ -112,6 +113,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Security" component={SecurityScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

@@ -8,11 +8,13 @@ import { useAuth } from '../context/AuthContext';
 import {
     User, Settings, Shield, Bell,
     LogOut, ChevronRight, HelpCircle,
-    Star, Wallet, Package
+    Star, Wallet, Package, Clock
 } from 'lucide-react-native';
+import { usePickupHistory } from '../hooks/usePickupHistory';
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
+    const { data: pickups = [] } = usePickupHistory();
 
     const handleLogout = () => {
         Alert.alert(
@@ -93,18 +95,8 @@ export default function ProfileScreen({ navigation }) {
                 {/* Floating Stats Card */}
                 <View style={styles.statsContainer}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statValue}>0</Text>
+                        <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
                         <Text style={styles.statLabel}>Pickups</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>5.0</Text>
-                        <Text style={styles.statLabel}>Rating</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>0</Text>
-                        <Text style={styles.statLabel}>Txns</Text>
                     </View>
                 </View>
 
@@ -117,6 +109,13 @@ export default function ProfileScreen({ navigation }) {
                         subtitle="Name, Phone, City"
                         onPress={() => navigation.navigate('EditProfile')}
                         color="#2E7D32"
+                    />
+                    <MenuItem
+                        icon={Clock}
+                        title="Pickup History"
+                        subtitle="View past requests"
+                        onPress={() => navigation.navigate('PickupHistory')}
+                        color="#5C6BC0"
                     />
                     <MenuItem
                         icon={Wallet}

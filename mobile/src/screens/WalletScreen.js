@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator, Modal,
-    TextInput, ScrollView, Linking
+    TextInput, ScrollView, Linking, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
+import { useAuth } from '../context/AuthContext';
 import { SkeletonWalletCard } from '../components/Skeleton';
 import {
     Wallet, Plus, ArrowUpRight,
@@ -16,11 +17,12 @@ import Toast from 'react-native-root-toast';
 
 const NETWORKS = [
     { id: 'MTN', name: 'MTN MoMo', color: '#FFCC00' },
-    { id: 'VOD', name: 'Vodafone Cash', color: '#E60000' },
+    { id: 'TEL', name: 'Telecel Cash', color: '#E60000' },
     { id: 'ATL', name: 'AirtelTigo Money', color: '#003399' },
 ];
 
 export default function WalletScreen() {
+    const { userRole } = useAuth();
     // React Query hooks with optimistic updates
     const { data: wallet, isLoading } = useWallet();
     const depositMutation = useOptimisticDeposit();
@@ -35,6 +37,11 @@ export default function WalletScreen() {
     const [phone, setPhone] = useState('');
     const [network, setNetwork] = useState('MTN');
     const [accountName, setAccountName] = useState('');
+
+    // Refs for keyboard navigation
+    const phoneInputRef = useRef(null);
+    const accountNameInputRef = useRef(null);
+    const amountInputRef = useRef(null);
 
     // Payment status
     const [pendingTxn, setPendingTxn] = useState(null);
@@ -145,18 +152,20 @@ export default function WalletScreen() {
                         {wallet?.currency || 'GHS'} {parseFloat(wallet?.balance || 0).toFixed(2)}
                     </Text>
                     <View style={styles.actionRow}>
+                        {userRole === 'COLLECTOR' && (
+                            <TouchableOpacity
+                                style={styles.actionButton}
+                                onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}
+                            >
+                                <Plus size={20} color="#fff" />
+                                <Text style={styles.actionText}>Top Up</Text>
+                            </TouchableOpacity>
+                        )}
                         <TouchableOpacity
                             style={styles.actionButton}
-                            onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}
-                        >
-                            <Plus size={20} color="#fff" />
-                            <Text style={styles.actionText}>Top Up</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={[styles.actionButton, { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }]}
                             onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}
                         >
-                            <ArrowUpRight size={20} color="#fff" />
+                            <ArrowUpRight size={20} color="#2E7D32" />
                             <Text style={styles.actionText}>Withdraw</Text>
                         </TouchableOpacity>
                     </View>
@@ -192,65 +201,95 @@ export default function WalletScreen() {
             </ScrollView>
 
             <Modal animationType="slide" transparent={true} visible={modalVisible}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'MoMo Top Up' : 'MoMo Withdrawal'}</Text>
-                            <TouchableOpacity onPress={() => setModalVisible(false)}><X size={24} color="#666" /></TouchableOpacity>
-                        </View>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={{ flex: 1 }}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'MoMo Top Up' : 'MoMo Withdrawal'}</Text>
+                                <TouchableOpacity onPress={() => setModalVisible(false)}><X size={24} color="#666" /></TouchableOpacity>
+                            </View>
 
-                        <Text style={styles.inputLabel}>Select Network</Text>
-                        <View style={styles.networkRow}>
-                            {NETWORKS.map(net => (
-                                <TouchableOpacity
-                                    key={net.id}
-                                    style={[styles.netChip, network === net.id && { borderColor: net.color, backgroundColor: net.color + '10' }]}
-                                    onPress={() => setNetwork(net.id)}
-                                >
-                                    <View style={[styles.netDot, { backgroundColor: net.color }]} />
-                                    <Text style={[styles.netName, network === net.id && { color: '#000', fontWeight: 'bold' }]}>{net.name}</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
+                            <ScrollView
+                                keyboardShouldPersistTaps="handled"
+                                showsVerticalScrollIndicator={false}
+                                contentContainerStyle={{ paddingBottom: 20 }}
+                            >
+                                <Text style={styles.inputLabel}>Select Network</Text>
+                                <View style={styles.networkRow}>
+                                    {NETWORKS.map(net => (
+                                        <TouchableOpacity
+                                            key={net.id}
+                                            style={[styles.netChip, network === net.id && { borderColor: net.color, backgroundColor: net.color + '10' }]}
+                                            onPress={() => setNetwork(net.id)}
+                                        >
+                                            <View style={[styles.netDot, { backgroundColor: net.color }]} />
+                                            <Text style={[styles.netName, network === net.id && { color: '#000', fontWeight: 'bold' }]}>{net.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
 
-                        <Text style={styles.inputLabel}>MoMo Number</Text>
-                        <View style={styles.inputBox}>
-                            <Smartphone size={18} color="#888" />
-                            <TextInput
-                                style={styles.input}
-                                keyboardType="phone-pad"
-                                placeholder="024XXXXXXX"
-                                value={phone}
-                                onChangeText={setPhone}
-                            />
-                        </View>
+                                <Text style={styles.inputLabel}>MoMo Number</Text>
+                                <View style={styles.inputBox}>
+                                    <Smartphone size={18} color="#888" />
+                                    <TextInput
+                                        ref={phoneInputRef}
+                                        style={styles.input}
+                                        keyboardType="phone-pad"
+                                        placeholder="024XXXXXXX"
+                                        value={phone}
+                                        onChangeText={setPhone}
+                                        returnKeyType="next"
+                                        onSubmitEditing={() => {
+                                            if (modalType === 'WITHDRAW') {
+                                                // Focus account name if withdrawal
+                                                accountNameInputRef.current?.focus();
+                                            } else {
+                                                // Focus amount if deposit
+                                                amountInputRef.current?.focus();
+                                            }
+                                        }}
+                                        blurOnSubmit={false}
+                                    />
+                                </View>
 
-                        {modalType === 'WITHDRAW' && (
-                            <>
-                                <Text style={styles.inputLabel}>Account Name</Text>
+                                {modalType === 'WITHDRAW' && (
+                                    <>
+                                        <Text style={styles.inputLabel}>Account Name</Text>
+                                        <TextInput
+                                            ref={accountNameInputRef}
+                                            style={[styles.input, styles.standaloneInput]}
+                                            placeholder="Enter registered MoMo name"
+                                            value={accountName}
+                                            onChangeText={setAccountName}
+                                            returnKeyType="next"
+                                            onSubmitEditing={() => amountInputRef.current?.focus()}
+                                            blurOnSubmit={false}
+                                        />
+                                    </>
+                                )}
+
+                                <Text style={styles.inputLabel}>Amount (GHS)</Text>
                                 <TextInput
-                                    style={[styles.input, styles.standaloneInput]}
-                                    placeholder="Enter registered MoMo name"
-                                    value={accountName}
-                                    onChangeText={setAccountName}
+                                    ref={amountInputRef}
+                                    style={[styles.input, styles.standaloneInput, { fontSize: 24, fontWeight: 'bold' }]}
+                                    keyboardType="numeric"
+                                    placeholder="0.00"
+                                    value={amount}
+                                    onChangeText={setAmount}
+                                    returnKeyType="done"
+                                    blurOnSubmit={true}
                                 />
-                            </>
-                        )}
 
-                        <Text style={styles.inputLabel}>Amount (GHS)</Text>
-                        <TextInput
-                            style={[styles.input, styles.standaloneInput, { fontSize: 24, fontWeight: 'bold' }]}
-                            keyboardType="numeric"
-                            placeholder="0.00"
-                            value={amount}
-                            onChangeText={setAmount}
-                        />
-
-                        <TouchableOpacity style={styles.confirmButton} onPress={handleAction} disabled={depositMutation.isPending || withdrawMutation.isPending}>
-                            {(depositMutation.isPending || withdrawMutation.isPending) ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm {modalType === 'DEPOSIT' ? 'Deposit' : 'Withdraw'}</Text>}
-                        </TouchableOpacity>
+                                <TouchableOpacity style={styles.confirmButton} onPress={handleAction} disabled={depositMutation.isPending || withdrawMutation.isPending}>
+                                    {(depositMutation.isPending || withdrawMutation.isPending) ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm {modalType === 'DEPOSIT' ? 'Deposit' : 'Withdraw'}</Text>}
+                                </TouchableOpacity>
+                            </ScrollView>
+                        </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </SafeAreaView>
     );

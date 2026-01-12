@@ -46,5 +46,12 @@ export const logisticsApi = {
             longitude: lon
         });
         return response.data;
+    },
+
+    cancelRequest: async (id, reason) => {
+        const response = await apiClient.post(`/logistics/pickups/${id}/cancel/`, {
+            cancel_reason: reason
+        });
+        return response.data;
     }
 };

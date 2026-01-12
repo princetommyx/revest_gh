@@ -49,7 +49,7 @@ export default function EditProfileScreen({ navigation }) {
         }
 
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ImagePicker.MediaType.Images,
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
@@ -72,8 +72,10 @@ export default function EditProfileScreen({ navigation }) {
 
             if (image) {
                 const filename = image.split('/').pop();
-                const match = /\.(\w+)$/.exec(filename);
+                const match = /\.(\\w+)$/.exec(filename);
                 const type = match ? `image/${match[1]}` : `image`;
+
+                console.log('[Profile Update] Uploading image:', { filename, type, uri: image });
 
                 data.append('profile_picture', {
                     uri: image,
@@ -82,13 +84,35 @@ export default function EditProfileScreen({ navigation }) {
                 });
             }
 
+            console.log('[Profile Update] Sending data...');
             const updatedUser = await authApi.updateProfile(data);
+            console.log('[Profile Update] Success:', updatedUser);
+
             setUser(updatedUser); // Update local user state
             Toast.show("Profile updated successfully!", { backgroundColor: '#2E7D32' });
             navigation.goBack();
         } catch (error) {
-            console.error("Update Profile Error:", error);
-            Toast.show("Failed to update profile", { backgroundColor: '#E74C3C' });
+            console.error("[Profile Update] Error details:", {
+                message: error.message,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+
+            let errorMsg = "Failed to update profile";
+            if (error.response?.data) {
+                const errData = error.response.data;
+                if (typeof errData === 'string') {
+                    errorMsg = errData;
+                } else if (errData.error) {
+                    errorMsg = errData.error;
+                } else if (errData.detail) {
+                    errorMsg = errData.detail;
+                }
+            } else if (error.message) {
+                errorMsg = error.message;
+            }
+
+            Toast.show(errorMsg, { backgroundColor: '#E74C3C', duration: 4000 });
         } finally {
             setLoading(false);
         }
