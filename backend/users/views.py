@@ -9,7 +9,6 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-import threading
 import logging
 from django.conf import settings
 from datetime import datetime
@@ -20,75 +19,11 @@ from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiPara
 from drf_spectacular.types import OpenApiTypes
 import os
 
+# Import from new modular email service
+from .email_service import send_welcome_email, send_login_alert
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-def _send_login_alert_task(user_id):
-    try:
-        user = User.objects.get(pk=user_id)
-        app_url = 'https://revesta.app'
-        if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
-             app_url = settings.CORS_ALLOWED_ORIGINS[0]
-             
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        context = {
-            'user_name': user.username,
-            'user_email': user.email,
-            'login_time': current_time,
-            'app_url': app_url,
-        }
-        
-        html_content = render_to_string('emails/login_alert.html', context)
-        text_content = strip_tags(html_content)
-        
-        send_mail(
-            subject='New Login Detected - ReVesta',
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        logger.info(f"Login alert sent to {user.email}")
-    except Exception as e:
-        logger.error(f"Failed to send login alert: {e}")
-
-def send_login_alert(user):
-    """Trigger background task to send login alert"""
-    thread = threading.Thread(target=_send_login_alert_task, args=(user.id,))
-    thread.start()
-
-def _send_welcome_email_task(user_id):
-    try:
-        user = User.objects.get(pk=user_id)
-        app_url = 'https://revesta.app'
-        
-        context = {
-            'user_name': user.username,
-            'app_url': app_url,
-            'login_url': f"{app_url}/login"
-        }
-        
-        html_content = render_to_string('emails/welcome.html', context)
-        text_content = strip_tags(html_content)
-        
-        send_mail(
-            subject='Welcome to ReVesta!',
-            message=text_content,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_content,
-            fail_silently=False,
-        )
-        logger.info(f"Welcome email sent to {user.email}")
-    except Exception as e:
-        logger.error(f"Failed to send welcome email: {e}")
-
-def send_welcome_email(user):
-    """Trigger background task to send welcome email"""
-    thread = threading.Thread(target=_send_welcome_email_task, args=(user.id,))
-    thread.start()
 
 
 @extend_schema(

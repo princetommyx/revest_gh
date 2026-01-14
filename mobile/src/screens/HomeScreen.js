@@ -195,8 +195,8 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.emptyText}>No listings found nearby</Text>
                 </View>
             }
-            onRefresh={fetchListings}
-            refreshing={loading}
+            onRefresh={refetch}
+            refreshing={isRefetching}
         />
     );
 
