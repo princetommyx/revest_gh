@@ -30,15 +30,20 @@ import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 
 export default function HomeScreen({ navigation }) {
-    const { userRole, signOut } = useAuth();
+    const { userRole, signOut, user } = useAuth();
     const [filter, setFilter] = useState('');
     const [search, setSearch] = useState('');
 
     // React Query Hook
     const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings();
 
-    // No manual useEffect needed for fetching!
-    // React Query handles focus refetching automatically if configured (default true)
+    // Get time-based greeting
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good morning';
+        if (hour < 17) return 'Good afternoon';
+        return 'Good evening';
+    };
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
@@ -56,16 +61,17 @@ export default function HomeScreen({ navigation }) {
         return (
             <TouchableOpacity
                 key={item.id}
-                style={[styles.catBtn]}
+                style={styles.catBtn}
                 onPress={() => setFilter(item.id)}
+                activeOpacity={0.7}
             >
                 <View style={[
                     styles.catIconBox,
-                    isActive && { borderColor: '#2E7D32', borderWidth: 2, backgroundColor: '#E8F5E9' }
+                    isActive && styles.catIconBoxActive
                 ]}>
                     <Ionicons
                         name={item.icon}
-                        size={24}
+                        size={26}
                         color={isActive ? '#2E7D32' : item.color}
                     />
                 </View>
@@ -91,6 +97,7 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity
             style={styles.listingCard}
             onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
+            activeOpacity={0.9}
         >
             <View style={styles.imageBox}>
                 {item.image ? (
@@ -111,12 +118,12 @@ export default function HomeScreen({ navigation }) {
                 )}
                 {item.seller?.is_verified && (
                     <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                        <Ionicons name="checkmark-circle" size={14} color="#fff" />
                     </View>
                 )}
             </View>
             <View style={styles.listingContent}>
-                <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
 
                 <Text style={styles.listingPrice}>
                     {item.is_free ? 'Contact for details' : `₵${item.price}`}
@@ -124,7 +131,7 @@ export default function HomeScreen({ navigation }) {
 
                 <View style={styles.metaRow}>
                     <View style={styles.locationBox}>
-                        <MapPin size={10} color="#888" />
+                        <MapPin size={11} color="#888" />
                         <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
                     </View>
                     <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
@@ -191,8 +198,9 @@ export default function HomeScreen({ navigation }) {
             )}
             ListEmptyComponent={
                 <View style={styles.emptyBox}>
-                    <TrendingUp size={40} color="#ddd" />
-                    <Text style={styles.emptyText}>No listings found nearby</Text>
+                    <Truck size={40} color="#ddd" />
+                    <Text style={styles.emptyText}>No active pickups right now</Text>
+                    <Text style={styles.emptySubtext}>New jobs will appear here when available</Text>
                 </View>
             }
             onRefresh={refetch}
@@ -210,26 +218,59 @@ export default function HomeScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* Header Area */}
-            <View style={styles.header}>
-                {/* Search Bar - Jiji Style */}
+            {/* Hero Section - Modern greeting and stats */}
+            <View style={styles.heroSection}>
+                {/* Personalized Greeting */}
+                <View style={styles.greetingCard}>
+                    <View style={styles.greetingContent}>
+                        <Text style={styles.greetingText}>{getGreeting()},</Text>
+                        <Text style={styles.userName}>{user?.username || 'Seller'}</Text>
+                        <Text style={styles.tagline}>Turn waste into value today</Text>
+                    </View>
+                </View>
+
+                {/* Quick Stats Card */}
+                <View style={styles.statsCardCompact}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>₵0.00</Text>
+                        <Text style={styles.statLabel}>This Month</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>0</Text>
+                        <Text style={styles.statLabel}>Items Sold</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>0kg</Text>
+                        <Text style={styles.statLabel}>CO₂ Saved</Text>
+                    </View>
+                </View>
+
+                {/* Primary CTA - Sell Waste */}
+                <TouchableOpacity
+                    style={styles.primaryCTA}
+                    onPress={() => navigation.navigate('CreateListing')}
+                    activeOpacity={0.8}
+                >
+                    <Plus size={24} color="#fff" />
+                    <Text style={styles.ctaText}>Sell Waste</Text>
+                    <ArrowRight size={20} color="#fff" />
+                </TouchableOpacity>
+
+                {/* Search Bar */}
                 <View style={styles.searchContainer}>
                     <View style={styles.searchBar}>
                         <Search size={20} color="#888" />
                         <TextInput
                             style={styles.searchInput}
-                            placeholder="I am looking for..."
+                            placeholder="Search waste materials..."
                             value={search}
                             onChangeText={setSearch}
                             placeholderTextColor="#999"
                         />
                     </View>
-                    <TouchableOpacity style={styles.filterBtn}>
-                        <Filter size={20} color="#fff" />
-                    </TouchableOpacity>
                 </View>
-
-                {/* Categories - Jiji Style (Icons) removed from Header */}
             </View>
 
             {loading ? (
@@ -268,7 +309,8 @@ export default function HomeScreen({ navigation }) {
                             </ScrollView>
 
                             <View style={styles.listHeader}>
-                                <Text style={styles.listHeaderTitle}>Fresh Recommendations</Text>
+                                <Text style={styles.listHeaderTitle}>Available Near You</Text>
+                                <Text style={styles.listHeaderSubtitle}>Fresh listings from your area</Text>
                             </View>
                         </View>
                     )}
@@ -277,7 +319,7 @@ export default function HomeScreen({ navigation }) {
                             <ShoppingBag size={50} color="#eee" />
                             <Text style={styles.emptyText}>No listings found</Text>
                             <TouchableOpacity style={styles.postBtnEmpty} onPress={() => navigation.navigate('CreateListing')}>
-                                <Text style={styles.postBtnText}>Post First Ad</Text>
+                                <Text style={styles.postBtnText}>Post Your First Ad</Text>
                             </TouchableOpacity>
                         </View>
                     }
@@ -285,156 +327,307 @@ export default function HomeScreen({ navigation }) {
                     refreshing={isRefetching}
                 />
             )}
-
-            {/* Floating Sell Button */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => navigation.navigate('CreateListing')}
-            >
-                <Plus size={24} color="#fff" />
-                <Text style={styles.fabText}>SELL</Text>
-            </TouchableOpacity>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f9f9f9' },
+    container: { flex: 1, backgroundColor: '#F8F9FA' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    header: {
-        paddingTop: 15,
-        paddingBottom: 15,
-        backgroundColor: '#2E7D32',
-        borderBottomLeftRadius: 15,
-        borderBottomRightRadius: 15,
+    // Hero Section Styles
+    heroSection: {
+        backgroundColor: '#fff',
+        paddingTop: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
         elevation: 4,
         shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
-        shadowOffset: { width: 0, height: 2 },
-        zIndex: 10
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        marginBottom: 5, // Tighten up
-        gap: 10
-    },
-    searchBar: {
-        flex: 1,
-        flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 25,
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        alignItems: 'center',
-        height: 40
-    },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 14, color: '#333' },
-    filterBtn: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        padding: 8,
-        borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: 40,
-        width: 40
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
     },
 
-    catRow: {
-        paddingVertical: 15,
-        paddingLeft: 15,
-        backgroundColor: '#f9f9f9',
+    greetingCard: {
+        marginBottom: 20,
     },
-    catContent: { paddingRight: 25 },
+    greetingContent: {},
+    greetingText: {
+        fontSize: 16,
+        color: '#666',
+        marginBottom: 4,
+    },
+    userName: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 8,
+    },
+    tagline: {
+        fontSize: 14,
+        color: '#888',
+        fontStyle: 'italic',
+    },
+
+    // Quick Stats Card
+    statsCardCompact: {
+        flexDirection: 'row',
+        backgroundColor: '#F8F9FA',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#E8E8E8',
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statValue: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 11,
+        color: '#666',
+        textAlign: 'center',
+    },
+    statDivider: {
+        width: 1,
+        backgroundColor: '#E0E0E0',
+        marginHorizontal: 8,
+    },
+
+    // Primary CTA Button
+    primaryCTA: {
+        backgroundColor: '#FF9800',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 16,
+        marginBottom: 20,
+        gap: 10,
+        elevation: 6,
+        shadowColor: '#FF9800',
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+    },
+    ctaText: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+
+    // Search Bar
+    searchContainer: {
+        marginTop: 4,
+    },
+    searchBar: {
+        flexDirection: 'row',
+        backgroundColor: '#F8F9FA',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#E8E8E8',
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 12,
+        fontSize: 15,
+        color: '#333',
+    },
+
+    // Category Pills
+    catRow: {
+        paddingVertical: 20,
+        paddingLeft: 20,
+        backgroundColor: '#F8F9FA',
+    },
+    catContent: { paddingRight: 20 },
     catBtn: {
         alignItems: 'center',
-        marginRight: 10,
-        width: 70
-    },
-    catBtnActive: {
-        // No specific active container style needed with new clean design
+        marginRight: 16,
+        width: 70,
     },
     catIconBox: {
-        width: 50, height: 50,
-        borderRadius: 25,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 8,
-        backgroundColor: '#fff', // Default white bg
-        elevation: 2,
+        backgroundColor: '#fff',
+        elevation: 3,
         shadowColor: '#000',
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        shadowOffset: { width: 0, height: 1 },
-        borderWidth: 1,
-        borderColor: '#f0f0f0'
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 },
+        borderWidth: 2,
+        borderColor: '#F0F0F0',
+    },
+    catIconBoxActive: {
+        borderColor: '#2E7D32',
+        backgroundColor: '#E8F5E9',
+        elevation: 5,
+        shadowOpacity: 0.15,
+    },
+    catText: {
+        fontSize: 12,
+        color: '#666',
+        textAlign: 'center',
+        fontWeight: '500',
+    },
+    catTextActive: {
+        color: '#2E7D32',
+        fontWeight: 'bold',
     },
 
-    catText: { fontSize: 11, color: '#666', textAlign: 'center' },
-    catTextActive: { color: '#2E7D32', fontWeight: 'bold' },
+    // List Header
+    listHeader: {
+        paddingHorizontal: 20,
+        marginBottom: 16,
+        marginTop: 8,
+    },
+    listHeaderTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 4,
+    },
+    listHeaderSubtitle: {
+        fontSize: 13,
+        color: '#888',
+    },
 
-    listHeader: { paddingHorizontal: 15, marginBottom: 10 },
-    listHeaderTitle: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-
-    list: { paddingHorizontal: 10 },
+    // Listings Grid
+    list: { paddingHorizontal: 12, paddingBottom: 20 },
     columnWrapper: { justifyContent: 'space-between' },
 
+    // Listing Cards
     listingCard: {
         width: '48.5%',
         backgroundColor: '#fff',
-        borderRadius: 8,
-        marginBottom: 10,
-        elevation: 2,
+        borderRadius: 16,
+        marginBottom: 16,
+        elevation: 4,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        overflow: 'hidden'
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        overflow: 'hidden',
     },
-    imageBox: { height: 150, backgroundColor: '#f0f0f0' },
+    imageBox: {
+        height: 160,
+        backgroundColor: '#F0F0F0',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     image: { width: '100%', height: '100%' },
     freeBadge: {
-        position: 'absolute', top: 8, left: 8,
-        backgroundColor: '#E74C3C', paddingHorizontal: 6, paddingVertical: 2,
-        borderRadius: 4
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        backgroundColor: '#E74C3C',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
     },
-    freeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+    freeText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
     verifiedBadge: {
-        position: 'absolute', bottom: 8, right: 8,
-        backgroundColor: '#2E7D32', borderRadius: 10, padding: 2
+        position: 'absolute',
+        bottom: 10,
+        right: 10,
+        backgroundColor: '#2E7D32',
+        borderRadius: 12,
+        padding: 4,
     },
 
-    listingContent: { padding: 10 },
-    listingTitle: { fontSize: 13, color: '#333', marginBottom: 4, height: 36, lineHeight: 18 }, // Fixed height for 2 lines
-    listingPrice: { fontSize: 15, fontWeight: 'bold', color: '#2E7D32', marginBottom: 6 },
-
-    metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    locationBox: { flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 },
-    locationText: { fontSize: 10, color: '#999', flex: 1 },
-    timeText: { fontSize: 10, color: '#ccc' },
-
-    fab: {
-        position: 'absolute', bottom: 20, alignSelf: 'center',
-        backgroundColor: '#FF9800',
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-        paddingHorizontal: 25, paddingVertical: 14,
-        borderRadius: 30, elevation: 6,
-        shadowColor: '#FF9800', shadowOpacity: 0.4
+    listingContent: { padding: 12 },
+    listingTitle: {
+        fontSize: 14,
+        color: '#1A1A1A',
+        marginBottom: 6,
+        fontWeight: '600',
+        lineHeight: 19,
+        height: 38,
     },
-    fabText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    listingPrice: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 8,
+    },
 
-    emptyBox: { flex: 1, alignItems: 'center', marginTop: 80 },
-    emptyText: { color: '#999', fontSize: 16, marginTop: 10, marginBottom: 20 },
+    metaRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 4,
+    },
+    locationBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        flex: 1,
+    },
+    locationText: {
+        fontSize: 11,
+        color: '#888',
+        flex: 1,
+    },
+    timeText: {
+        fontSize: 10,
+        color: '#BBB',
+        fontWeight: '500',
+    },
+
+    // Empty State
+    emptyBox: {
+        flex: 1,
+        alignItems: 'center',
+        marginTop: 100,
+        paddingHorizontal: 40,
+    },
+    emptyText: {
+        color: '#999',
+        fontSize: 16,
+        marginTop: 16,
+        marginBottom: 24,
+        textAlign: 'center',
+    },
     postBtnEmpty: {
-        backgroundColor: '#2E7D32', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20
+        backgroundColor: '#2E7D32',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 16,
     },
-    postBtnText: { color: '#fff', fontWeight: 'bold' },
+    postBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 15,
+    },
 
-    // Collector styles (minimal updates)
-    welcomeSection: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+    // Collector Dashboard Styles
+    welcomeSection: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 25,
+    },
     welcomeLabel: { fontSize: 14, color: '#888' },
     welcomeName: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
     statusBadge: {
@@ -443,9 +636,15 @@ const styles = StyleSheet.create({
         backgroundColor: '#E8F5E9',
         paddingHorizontal: 12,
         paddingVertical: 6,
-        borderRadius: 15
+        borderRadius: 15,
     },
-    activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#27AE60', marginRight: 6 },
+    activeDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#27AE60',
+        marginRight: 6,
+    },
     statusText: { fontSize: 12, color: '#27AE60', fontWeight: 'bold' },
     statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 25 },
     statsCard: {
@@ -459,18 +658,39 @@ const styles = StyleSheet.create({
     statsLab: { fontSize: 12, color: '#888', marginTop: 4 },
     mapAction: {
         backgroundColor: '#2E7D32',
-        borderRadius: 25, height: 180, flexDirection: 'row', overflow: 'hidden',
-        elevation: 5, marginBottom: 30
+        borderRadius: 25,
+        height: 180,
+        flexDirection: 'row',
+        overflow: 'hidden',
+        elevation: 5,
+        marginBottom: 30,
     },
     mapActionContent: { flex: 1, padding: 25, justifyContent: 'center' },
     mapActionTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-    mapActionSub: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5, marginBottom: 20 },
+    mapActionSub: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 5,
+        marginBottom: 20,
+    },
     mapBtn: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.2)',
-        alignSelf: 'flex-start', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 15, gap: 8
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 15,
+        gap: 8,
     },
     mapBtnText: { color: '#fff', fontWeight: 'bold' },
     mapIconBox: { position: 'absolute', right: -20, bottom: -20 },
-    marketHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10, marginBottom: 15 },
+    marketHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginTop: 10,
+        marginBottom: 15,
+    },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
 });

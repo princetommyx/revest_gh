@@ -27,8 +27,8 @@ class WalletSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Wallet
-        fields = ('id', 'balance', 'currency', 'created_at', 'updated_at', 'recent_transactions')
-        read_only_fields = ('balance', 'currency', 'created_at', 'updated_at')
+        fields = ('id', 'balance', 'currency', 'is_frozen', 'created_at', 'updated_at', 'recent_transactions')
+        read_only_fields = ('balance', 'currency', 'is_frozen', 'created_at', 'updated_at')
     
     def get_recent_transactions(self, obj):
         """Get last 5 transactions"""
@@ -67,7 +67,10 @@ class WithdrawalSerializer(serializers.Serializer):
         """Check if user has sufficient balance"""
         request = self.context.get('request')
         if request and hasattr(request.user, 'wallet'):
-            if request.user.wallet.balance < attrs['amount']:
+            wallet = request.user.wallet
+            if wallet.is_frozen:
+                 raise serializers.ValidationError("Wallet is frozen. Cannot withdraw.")
+            if wallet.balance < attrs['amount']:
                 raise serializers.ValidationError("Insufficient balance")
         return attrs
 

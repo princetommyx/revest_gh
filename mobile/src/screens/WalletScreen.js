@@ -100,30 +100,44 @@ export default function WalletScreen() {
         });
     };
 
-    const renderTransaction = ({ item }) => (
-        <View style={styles.transactionCard}>
-            <View style={[styles.iconBox, { backgroundColor: item.transaction_type === 'DEPOSIT' ? '#E8F5E9' : '#FFEBEE' }]}>
-                {item.transaction_type === 'DEPOSIT' ? (
-                    <ArrowDownLeft size={20} color="#2E7D32" />
-                ) : (
-                    <ArrowUpRight size={20} color="#C62828" />
-                )}
-            </View>
-            <View style={styles.transactionInfo}>
-                <Text style={styles.transactionType}>{item.transaction_type}</Text>
-                <Text style={styles.transactionDesc} numberOfLines={1}>{item.description}</Text>
-                <Text style={styles.transactionDate}>{new Date(item.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.transactionAmount, { color: item.transaction_type === 'DEPOSIT' ? '#2E7D32' : '#C62828' }]}>
-                    {item.transaction_type === 'DEPOSIT' ? '+' : '-'} {parseFloat(item.amount).toFixed(2)}
-                </Text>
-                <View style={[styles.statusTag, { backgroundColor: item.status === 'COMPLETED' ? '#E8F5E9' : '#FFF3E0' }]}>
-                    <Text style={[styles.statusText, { color: item.status === 'COMPLETED' ? '#2E7D32' : '#E65100' }]}>{item.status}</Text>
+    const renderTransaction = ({ item }) => {
+        // Determine type-based styles
+        let isCredit = ['DEPOSIT', 'JOB_EARNING'].includes(item.transaction_type);
+        let iconColor = isCredit ? '#2E7D32' : '#C62828';
+        let bgColor = isCredit ? '#E8F5E9' : '#FFEBEE';
+        let sign = isCredit ? '+' : '-';
+
+        return (
+            <View style={styles.transactionCard}>
+                <View style={[styles.iconBox, { backgroundColor: bgColor }]}>
+                    {isCredit ? (
+                        <ArrowDownLeft size={20} color={iconColor} />
+                    ) : (
+                        <ArrowUpRight size={20} color={iconColor} />
+                    )}
+                </View>
+                <View style={styles.transactionInfo}>
+                    <Text style={styles.transactionType}>
+                        {item.transaction_type.replace('_', ' ')}
+                    </Text>
+                    <Text style={styles.transactionDesc} numberOfLines={1}>{item.description}</Text>
+                    <Text style={styles.transactionDate}>
+                        {new Date(item.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.transactionAmount, { color: iconColor }]}>
+                        {sign} {parseFloat(item.amount).toFixed(2)}
+                    </Text>
+                    <View style={[styles.statusTag, { backgroundColor: item.status === 'COMPLETED' ? '#E8F5E9' : '#FFF3E0' }]}>
+                        <Text style={[styles.statusText, { color: item.status === 'COMPLETED' ? '#2E7D32' : '#E65100' }]}>
+                            {item.status}
+                        </Text>
+                    </View>
                 </View>
             </View>
-        </View>
-    );
+        );
+    };
 
     // Skeleton loading state - no spinner!
     if (isLoading) {
@@ -296,30 +310,60 @@ export default function WalletScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f8f9fa' },
-    header: { padding: 20, backgroundColor: '#fff' },
-    headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
+    container: { flex: 1, backgroundColor: '#F8F9FA' },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 16,
+        backgroundColor: '#fff',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0'
+    },
+    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#1A1A1A' },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     balanceCard: {
-        margin: 20,
+        marginHorizontal: 20,
+        marginTop: 20,
+        marginBottom: 24,
         backgroundColor: '#2E7D32',
-        borderRadius: 25,
-        padding: 25,
-        elevation: 10,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10
+        borderRadius: 24,
+        padding: 28,
+        elevation: 8,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.25,
+        shadowRadius: 16
     },
-    balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 16, marginBottom: 5 },
-    balanceValue: { color: '#fff', fontSize: 40, fontWeight: 'bold', marginBottom: 25 },
-    actionRow: { flexDirection: 'row', gap: 15 },
+    balanceLabel: {
+        color: 'rgba(255,255,255,0.85)',
+        fontSize: 14,
+        marginBottom: 8,
+        letterSpacing: 0.5,
+        textTransform: 'uppercase'
+    },
+    balanceValue: {
+        color: '#fff',
+        fontSize: 44,
+        fontWeight: 'bold',
+        marginBottom: 28,
+        letterSpacing: -1
+    },
+    actionRow: { flexDirection: 'row', gap: 12 },
     actionButton: {
         flex: 1,
         flexDirection: 'row',
         backgroundColor: '#fff',
-        padding: 14,
-        borderRadius: 15,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8
+        gap: 8,
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4
     },
     actionText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 15 },
 
@@ -341,34 +385,84 @@ const styles = StyleSheet.create({
     verifyBtnText: { color: '#fff', fontSize: 12, fontWeight: 'bold' },
 
     historySection: { flex: 1, paddingHorizontal: 20 },
-    historyHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
-    historyTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
+    historyHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 20,
+        marginTop: 8
+    },
+    historyTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
     transactionCard: {
         backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 18,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderRadius: 16,
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
-        elevation: 2,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8
     },
-    iconBox: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-    transactionInfo: { flex: 1, marginLeft: 15 },
-    transactionType: { fontSize: 15, fontWeight: 'bold', color: '#1a1a1a' },
-    transactionDesc: { fontSize: 12, color: '#666', marginTop: 2 },
-    transactionDate: { fontSize: 11, color: '#999', marginTop: 4 },
-    transactionAmount: { fontSize: 16, fontWeight: 'bold', marginBottom: 4 },
-    statusTag: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-    statusText: { fontSize: 10, fontWeight: 'bold' },
+    iconBox: {
+        width: 52,
+        height: 52,
+        borderRadius: 16,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    transactionInfo: { flex: 1, marginLeft: 16 },
+    transactionType: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1A1A1A',
+        marginBottom: 4
+    },
+    transactionDesc: { fontSize: 13, color: '#666', marginTop: 2 },
+    transactionDate: { fontSize: 11, color: '#999', marginTop: 6 },
+    transactionAmount: { fontSize: 17, fontWeight: 'bold', marginBottom: 6 },
+    statusTag: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8
+    },
+    statusText: { fontSize: 10, fontWeight: 'bold', letterSpacing: 0.5 },
 
-    emptyBox: { alignItems: 'center', marginTop: 50, opacity: 0.5 },
-    emptyText: { color: '#999', fontSize: 16, marginTop: 10 },
+    emptyBox: {
+        alignItems: 'center',
+        marginTop: 80,
+        opacity: 0.6,
+        paddingHorizontal: 40
+    },
+    emptyText: {
+        color: '#999',
+        fontSize: 16,
+        marginTop: 16,
+        textAlign: 'center'
+    },
 
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35, padding: 25, paddingBottom: 40 },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
-    modalTitle: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'flex-end'
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        padding: 28,
+        paddingBottom: 40
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 28
+    },
+    modalTitle: { fontSize: 24, fontWeight: 'bold', color: '#1A1A1A' },
     inputLabel: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 12, marginTop: 10 },
     networkRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
     netChip: {
@@ -386,13 +480,38 @@ const styles = StyleSheet.create({
     inputBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f1f3f5',
-        borderRadius: 15,
-        paddingHorizontal: 15,
-        marginBottom: 15
+        backgroundColor: '#F8F9FA',
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E8E8E8'
     },
-    input: { flex: 1, padding: 15, fontSize: 16, color: '#000' },
-    standaloneInput: { backgroundColor: '#f1f3f5', borderRadius: 15, marginBottom: 15, paddingHorizontal: 15 },
-    confirmButton: { backgroundColor: '#2E7D32', padding: 18, borderRadius: 18, alignItems: 'center', marginTop: 10 },
-    confirmButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    input: { flex: 1, padding: 16, fontSize: 16, color: '#1A1A1A' },
+    standaloneInput: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 16,
+        marginBottom: 16,
+        paddingHorizontal: 16,
+        borderWidth: 1,
+        borderColor: '#E8E8E8'
+    },
+    confirmButton: {
+        backgroundColor: '#2E7D32',
+        paddingVertical: 18,
+        borderRadius: 16,
+        alignItems: 'center',
+        marginTop: 12,
+        elevation: 4,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8
+    },
+    confirmButtonText: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: 'bold',
+        letterSpacing: 0.5
+    },
 });

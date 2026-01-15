@@ -38,7 +38,8 @@ export default function PickupsScreen() {
         quantity_estimate: '1-2 Bags',
         estimated_price: null,
         distance_km: null,
-        duration_min: null
+        duration_min: null,
+        payment_method: 'CASH'
     });
     const [useCustomLocation, setUseCustomLocation] = useState(false);
     const [customAddress, setCustomAddress] = useState('');
@@ -49,6 +50,10 @@ export default function PickupsScreen() {
     const [cancelJobId, setCancelJobId] = useState(null);
     const [selectedCancelReason, setSelectedCancelReason] = useState(null);
     const [cancelLoading, setCancelLoading] = useState(false);
+
+    // Waste confirmation modal for collectors
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [confirmingJob, setConfirmingJob] = useState(null);
 
     const CANCEL_REASONS = [
         { id: 'long_wait', label: 'Long pickup time', icon: '⏱️' },
@@ -189,6 +194,41 @@ export default function PickupsScreen() {
             refetch();
         } catch (error) {
             Toast.show("Failed to accept job", { backgroundColor: '#E74C3C' });
+        }
+    };
+
+    const handleArriveJob = async (jobId) => {
+        try {
+            await logisticsApi.updateStatus(jobId, 'ARRIVED');
+            Toast.show("Marked as Arrived!", { backgroundColor: '#2E7D32' });
+            refetch();
+        } catch (error) {
+            Toast.show("Failed to update status", { backgroundColor: '#E74C3C' });
+        }
+    };
+
+    const handleCompleteJob = async (jobId) => {
+        // Find the job first to show confirmation
+        const job = jobs.find(j => j.id === jobId);
+        if (job) {
+            setConfirmingJob(job);
+            setShowConfirmModal(true);
+        }
+    };
+
+    const confirmAndCompleteJob = async () => {
+        if (!confirmingJob) return;
+
+        try {
+            await logisticsApi.updateStatus(confirmingJob.id, 'COMPLETED');
+            Toast.show("Job Completed! Funds processed.", { backgroundColor: '#2E7D32' });
+            setShowConfirmModal(false);
+            setConfirmingJob(null);
+            refetch();
+            // Refresh wallet too as balance changed
+            queryClient.invalidateQueries({ queryKey: ['wallet'] });
+        } catch (error) {
+            Toast.show("Failed to complete job", { backgroundColor: '#E74C3C' });
         }
     };
 
@@ -333,13 +373,35 @@ export default function PickupsScreen() {
                                 <Text style={styles.jobInfo}>{item.quantity_estimate}</Text>
                                 <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
 
-                                {userRole === 'COLLECTOR' && item.status === 'PENDING' && (
-                                    <TouchableOpacity
-                                        style={styles.acceptBtn}
-                                        onPress={() => handleAcceptJob(item.id)}
-                                    >
-                                        <Text style={styles.acceptBtnText}>Accept Job</Text>
-                                    </TouchableOpacity>
+                                {userRole === 'COLLECTOR' && (
+                                    <>
+                                        {item.status === 'PENDING' && (
+                                            <TouchableOpacity
+                                                style={styles.acceptBtn}
+                                                onPress={() => handleAcceptJob(item.id)}
+                                            >
+                                                <Text style={styles.acceptBtnText}>Accept Job</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {item.status === 'ACCEPTED' && (
+                                            <TouchableOpacity
+                                                style={[styles.acceptBtn, { backgroundColor: '#F39C12' }]}
+                                                onPress={() => handleArriveJob(item.id)}
+                                            >
+                                                <Text style={styles.acceptBtnText}>I have Arrived</Text>
+                                            </TouchableOpacity>
+                                        )}
+
+                                        {item.status === 'ARRIVED' && (
+                                            <TouchableOpacity
+                                                style={[styles.acceptBtn, { backgroundColor: '#27AE60' }]}
+                                                onPress={() => handleCompleteJob(item.id)}
+                                            >
+                                                <Text style={styles.acceptBtnText}>Complete Job</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </>
                                 )}
 
                                 {item.status !== 'PENDING' && item.collector_name && (
@@ -487,6 +549,28 @@ export default function PickupsScreen() {
                                             styles.pickerItemText,
                                             requestForm.quantity_estimate === qty && styles.pickerItemTextActive
                                         ]}>{qty}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={styles.label}>Payment Method</Text>
+                            <View style={styles.pickerContainer}>
+                                {[
+                                    { id: 'CASH', label: 'Cash' },
+                                    { id: 'DIGITAL', label: 'Digital Wallet' }
+                                ].map(method => (
+                                    <TouchableOpacity
+                                        key={method.id}
+                                        style={[
+                                            styles.pickerItem,
+                                            requestForm.payment_method === method.id && styles.pickerItemActive
+                                        ]}
+                                        onPress={() => setRequestForm({ ...requestForm, payment_method: method.id })}
+                                    >
+                                        <Text style={[
+                                            styles.pickerItemText,
+                                            requestForm.payment_method === method.id && styles.pickerItemTextActive
+                                        ]}>{method.label}</Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>

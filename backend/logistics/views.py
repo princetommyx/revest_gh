@@ -11,6 +11,7 @@ from .serializers import (
     PickupRequestDetailSerializer, PickupRequestCreateSerializer,
     PickupRequestUpdateSerializer
 )
+from wallet.services import WalletService
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -66,6 +67,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request = self.get_object()
         if pickup_request.status != 'PENDING':
             return Response({'error': 'Job already taken or not pending'}, status=400)
+            
+        # Check wallet standing
+        is_eligible, error_msg = WalletService.check_eligibility_for_job(request.user)
+        if not is_eligible:
+            return Response({'error': error_msg}, status=403)
         
         pickup_request.status = 'ACCEPTED'
         pickup_request.collector = request.user
@@ -98,6 +104,14 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         
         pickup_request.status = 'COMPLETED'
         pickup_request.save()
+        
+        # Process Financials
+        try:
+            WalletService.process_job_completion(pickup_request)
+        except Exception as e:
+            # Log error but don't fail the request (or maybe do?)
+            # Ideally we want to be transactional, but logistics is primary here.
+            print(f"Error processing transaction for job {pickup_request.id}: {e}")
         
         self.notify_provider(pickup_request, 'job_completed')
         return Response({'status': 'job completed'})

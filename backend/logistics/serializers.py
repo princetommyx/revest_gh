@@ -19,7 +19,8 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'material_type', 'quantity_estimate', 'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon',
-            'created_at', 'provider', 'collector', 'collector_name'
+            'created_at', 'provider', 'collector', 'collector_name',
+            'estimated_price', 'actual_price', 'payment_method'
         )
         read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
 
@@ -37,7 +38,9 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'material_type', 'quantity_estimate', 'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon',
-            'created_at', 'provider', 'collector'
+            'created_at', 'provider', 'collector',
+            'estimated_price', 'actual_price', 'payment_method',
+            'distance_km', 'duration_min'
         )
         read_only_fields = ('provider', 'collector', 'created_at')
 
@@ -52,7 +55,7 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'material_type', 'quantity_estimate', 
             'latitude', 'longitude', 'estimated_price',
-            'distance_km', 'duration_min'
+            'distance_km', 'duration_min', 'payment_method'
         )
     
     def validate_latitude(self, value):

@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions, filters, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -13,7 +13,7 @@ from decimal import Decimal
 @extend_schema_view(
     list=extend_schema(summary="Get wallet details", description="Get your wallet balance and recent transactions."),
 )
-class WalletViewSet(viewsets.GenericViewSet):
+class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     # Only need list/retrieve really since it's 1-to-1
     permission_classes = [permissions.IsAuthenticated]
     queryset = Wallet.objects.all()
@@ -76,24 +76,17 @@ class WalletViewSet(viewsets.GenericViewSet):
         
         if serializer.is_valid():
             amount = serializer.validated_data['amount']
-            desc = serializer.validated_data.get('description', 'Withdrawal')
             
-            # Create transaction
-            Transaction.objects.create(
-                wallet=wallet,
-                amount=amount,
-                transaction_type='WITHDRAWAL',
-                status='PENDING', # Needs admin approval
-                description=desc,
-                reference=f"WTH-{status.HTTP_200_OK}"
-            )
-            
-            # Deduct balance immediately or hold it? 
-            # Usually deduct and hold, revert if cancelled. 
-            wallet.balance -= amount
-            wallet.save()
-            
-            return Response(self.get_serializer(wallet).data)
+            try:
+                # Use Service
+                from .services import WalletService
+                WalletService.request_withdrawal(request.user, amount)
+                
+                # Refresh wallet to show updated balance (if we deducted immediately)
+                wallet.refresh_from_db()
+                return Response(self.get_serializer(wallet).data)
+            except Exception as e:
+                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
