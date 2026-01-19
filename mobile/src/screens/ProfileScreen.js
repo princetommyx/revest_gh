@@ -184,7 +184,12 @@ const styles = StyleSheet.create({
         marginRight: 20,
     },
     avatar: {
-        width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: '#fff'
+        width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: '#fff',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 4 }
     },
     avatarPlaceholder: {
         width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
@@ -202,30 +207,30 @@ const styles = StyleSheet.create({
     verifiedBadge: { marginTop: 2 },
     userEmail: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
     roleTag: {
-        backgroundColor: 'rgba(0,0,0,0.2)', paddingHorizontal: 10, paddingVertical: 4,
-        borderRadius: 12, alignSelf: 'flex-start', marginTop: 8
+        backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 12, paddingVertical: 5,
+        borderRadius: 16, alignSelf: 'flex-start', marginTop: 10
     },
-    roleText: { color: '#FFD700', fontSize: 10, fontWeight: 'bold' },
+    roleText: { color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 },
 
     // Stats Card (Floating)
     statsContainer: {
         marginTop: -50,
         marginHorizontal: 20,
         backgroundColor: '#fff',
-        borderRadius: 20,
-        padding: 20,
+        borderRadius: 24,
+        padding: 24,
         flexDirection: 'row',
         justifyContent: 'space-between',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-        marginBottom: 25
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+        elevation: 8,
+        marginBottom: 28
     },
     statItem: { alignItems: 'center', flex: 1 },
-    statValue: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a' },
-    statLabel: { fontSize: 12, color: '#888', marginTop: 4 },
+    statValue: { fontSize: 24, fontWeight: 'bold', color: '#1A1A1A' },
+    statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
     statDivider: { width: 1, backgroundColor: '#f0f0f0', height: '80%' },
 
     // Menu Sections
@@ -238,10 +243,14 @@ const styles = StyleSheet.create({
     menuGroup: {
         backgroundColor: '#fff',
         marginHorizontal: 20,
-        borderRadius: 16,
-        paddingVertical: 5,
+        borderRadius: 20,
+        paddingVertical: 6,
         marginBottom: 20,
-        // shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 2 }
     },
     menuItem: {
         flexDirection: 'row', alignItems: 'center',

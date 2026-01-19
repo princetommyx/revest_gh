@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
-    TextInput, ScrollView
+    TextInput, ScrollView, RefreshControl
 } from 'react-native';
 import { Image } from 'expo-image'; // ✅ Faster than react-native Image
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import { marketApi } from '../api/market';
 import {
     Search, Plus, MapPin, Tag,
     Filter, ArrowRight, Truck,
-    Package, TrendingUp, ShoppingBag
+    Package, TrendingUp, ShoppingCart
 } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-root-toast';
@@ -140,72 +140,120 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
     );
 
-    // ... CollectorDashboard remains similar but update imports/styles if needed ...
-    // Simplified CollectorDashboard for brevity in this replacement
     const CollectorDashboard = () => (
-        <FlatList
-            // ... (keep existing collector dashboard logic or reuse filteredListings)
-            data={filteredListings}
-            renderItem={renderListing}
-            keyExtractor={item => item.id.toString()}
-            numColumns={2}
-            contentContainerStyle={styles.list}
-            columnWrapperStyle={styles.columnWrapper}
-            ListHeaderComponent={() => (
-                <View style={{ padding: 20, paddingBottom: 0 }}>
-                    <View style={styles.welcomeSection}>
-                        <View>
-                            <Text style={styles.welcomeLabel}>Welcome back,</Text>
-                            <Text style={styles.welcomeName}>Collector</Text>
-                        </View>
-                        <View style={styles.statusBadge}>
-                            <View style={styles.activeDot} />
-                            <Text style={styles.statusText}>Active</Text>
-                        </View>
-                    </View>
-                    {/* ... stats ... */}
-                    <View style={styles.statsGrid}>
-                        <View style={styles.statsCard}>
-                            <Text style={styles.statsVal}>0</Text>
-                            <Text style={styles.statsLab}>Pickups Today</Text>
-                        </View>
-                        <View style={styles.statsCard}>
-                            <Text style={styles.statsVal}>₵0.00</Text>
-                            <Text style={styles.statsLab}>Earning Today</Text>
-                        </View>
-                    </View>
-                    <TouchableOpacity
-                        style={styles.mapAction}
-                        onPress={() => navigation.navigate('Pickups')}
-                    >
-                        <View style={styles.mapActionContent}>
-                            <Text style={styles.mapActionTitle}>Open Live Map</Text>
-                            <Text style={styles.mapActionSub}>Find waste collections near you</Text>
-                            <View style={styles.mapBtn}>
-                                <Text style={styles.mapBtnText}>Go Online</Text>
-                                <ArrowRight size={18} color="#fff" />
+        <ScrollView
+            style={styles.container}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+                <RefreshControl
+                    refreshing={isRefetching}
+                    onRefresh={refetch}
+                />
+            }
+        >
+            {/* Hero Section - Match Seller Design */}
+            <View style={styles.heroSection}>
+                {/* Personalized Greeting */}
+                <View style={styles.greetingCard}>
+                    <View style={styles.greetingContent}>
+                        <View style={styles.greetingRow}>
+                            <View>
+                                <Text style={styles.greetingText}>{getGreeting()},</Text>
+                                <Text style={styles.userName}>Collector</Text>
+                            </View>
+                            <View style={styles.statusBadge}>
+                                <View style={styles.activeDot} />
+                                <Text style={styles.statusText}>Active</Text>
                             </View>
                         </View>
-                        <View style={styles.mapIconBox}>
-                            <Truck size={60} color="rgba(255,255,255,0.2)" />
-                        </View>
-                    </TouchableOpacity>
-                    <View style={styles.marketHeader}>
-                        <ShoppingBag size={20} color="#2E7D32" />
-                        <Text style={styles.sectionTitle}>Available for Pickup</Text>
                     </View>
                 </View>
-            )}
-            ListEmptyComponent={
-                <View style={styles.emptyBox}>
-                    <Truck size={40} color="#ddd" />
-                    <Text style={styles.emptyText}>No active pickups right now</Text>
-                    <Text style={styles.emptySubtext}>New jobs will appear here when available</Text>
+
+                {/* Quick Stats Card - Premium Design */}
+                <View style={styles.statsCardCompact}>
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>0</Text>
+                        <Text style={styles.statLabel}>Pickups Today</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statItem}>
+                        <Text style={styles.statValue}>₵0.00</Text>
+                        <Text style={styles.statLabel}>Earning Today</Text>
+                    </View>
                 </View>
-            }
-            onRefresh={refetch}
-            refreshing={isRefetching}
-        />
+
+                {/* Primary CTA - Go Online */}
+                <TouchableOpacity
+                    style={styles.primaryCTA}
+                    onPress={() => navigation.navigate('Pickups')}
+                    activeOpacity={0.8}
+                >
+                    <Truck size={24} color="#fff" />
+                    <Text style={styles.ctaText}>Go Online</Text>
+                    <ArrowRight size={20} color="#fff" />
+                </TouchableOpacity>
+            </View>
+
+            {/* Available Pickups Section */}
+            <View style={styles.availableSection}>
+                <View style={styles.sectionHeaderRow}>
+                    <ShoppingCart size={20} color="#2E7D32" />
+                    <Text style={styles.sectionTitle}>Available for Pickup</Text>
+                </View>
+
+                {filteredListings.length === 0 ? (
+                    <View style={styles.emptyBox}>
+                        <Truck size={50} color="#ddd" />
+                        <Text style={styles.emptyText}>No active pickups right now</Text>
+                        <Text style={styles.emptySubtext}>New jobs will appear here when available</Text>
+                    </View>
+                ) : (
+                    <View style={styles.pickupsGrid}>
+                        {filteredListings.map((item) => (
+                            <TouchableOpacity
+                                key={item.id}
+                                style={styles.listingCard}
+                                onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
+                                activeOpacity={0.9}
+                            >
+                                <View style={styles.imageBox}>
+                                    {item.image ? (
+                                        <Image
+                                            source={{ uri: resolveImageUrl(item.image) }}
+                                            style={styles.image}
+                                            contentFit="cover"
+                                            cachePolicy="memory-disk"
+                                            transition={200}
+                                        />
+                                    ) : (
+                                        <Package size={30} color="#ccc" />
+                                    )}
+                                    {item.is_free && (
+                                        <View style={styles.freeBadge}>
+                                            <Text style={styles.freeText}>FREE</Text>
+                                        </View>
+                                    )}
+                                </View>
+                                <View style={styles.listingContent}>
+                                    <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+                                    <Text style={styles.listingPrice}>
+                                        {item.is_free ? 'Contact for details' : `₵${item.price}`}
+                                    </Text>
+                                    <View style={styles.metaRow}>
+                                        <View style={styles.locationBox}>
+                                            <MapPin size={11} color="#888" />
+                                            <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+                                        </View>
+                                        <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                )}
+            </View>
+        </ScrollView>
     );
 
     if (userRole === 'COLLECTOR') {
@@ -316,7 +364,7 @@ export default function HomeScreen({ navigation }) {
                     )}
                     ListEmptyComponent={
                         <View style={styles.emptyBox}>
-                            <ShoppingBag size={50} color="#eee" />
+                            <ShoppingCart size={50} color="#eee" />
                             <Text style={styles.emptyText}>No listings found</Text>
                             <TouchableOpacity style={styles.postBtnEmpty} onPress={() => navigation.navigate('CreateListing')}>
                                 <Text style={styles.postBtnText}>Post Your First Ad</Text>
@@ -354,6 +402,11 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     greetingContent: {},
+    greetingRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+    },
     greetingText: {
         fontSize: 16,
         color: '#666',
@@ -622,14 +675,6 @@ const styles = StyleSheet.create({
     },
 
     // Collector Dashboard Styles
-    welcomeSection: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 25,
-    },
-    welcomeLabel: { fontSize: 14, color: '#888' },
-    welcomeName: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
     statusBadge: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -646,51 +691,26 @@ const styles = StyleSheet.create({
         marginRight: 6,
     },
     statusText: { fontSize: 12, color: '#27AE60', fontWeight: 'bold' },
-    statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 25 },
-    statsCard: {
-        flex: 1,
-        backgroundColor: '#fff',
-        padding: 20,
-        borderRadius: 20,
-        elevation: 2,
+    availableSection: {
+        paddingHorizontal: 20,
+        paddingTop: 24,
     },
-    statsVal: { fontSize: 24, fontWeight: 'bold', color: '#1a1a1a' },
-    statsLab: { fontSize: 12, color: '#888', marginTop: 4 },
-    mapAction: {
-        backgroundColor: '#2E7D32',
-        borderRadius: 25,
-        height: 180,
-        flexDirection: 'row',
-        overflow: 'hidden',
-        elevation: 5,
-        marginBottom: 30,
-    },
-    mapActionContent: { flex: 1, padding: 25, justifyContent: 'center' },
-    mapActionTitle: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-    mapActionSub: {
-        fontSize: 14,
-        color: 'rgba(255,255,255,0.8)',
-        marginTop: 5,
-        marginBottom: 20,
-    },
-    mapBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        alignSelf: 'flex-start',
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        borderRadius: 15,
-        gap: 8,
-    },
-    mapBtnText: { color: '#fff', fontWeight: 'bold' },
-    mapIconBox: { position: 'absolute', right: -20, bottom: -20 },
-    marketHeader: {
+    sectionHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        marginTop: 10,
-        marginBottom: 15,
+        marginBottom: 16,
+    },
+    pickupsGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
     },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
+    emptySubtext: {
+        fontSize: 13,
+        color: '#bbb',
+        marginTop: 8,
+        textAlign: 'center',
+    },
 });

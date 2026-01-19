@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Revesta Admin Dashboard - Login">
+    <title>Login - Revesta Admin</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/assets/logo.svg">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <!-- Login Component -->
+
+  <script type="module" crossorigin src="./assets/login-AN8aW9jI.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-ui-DjYv-mAO.js">
+  <link rel="modulepreload" crossorigin href="./assets/api-config-Dc5WE_Fr.js">
+  <link rel="modulepreload" crossorigin href="./assets/vendor-bootstrap-C9iorZI5.js">
+  <link rel="stylesheet" crossorigin href="./assets/login-QD_VOj1Y.css">
+</head>
+
+<body data-page="login" class="bg-light">
+
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+
+            <!-- Left Side - Login Form -->
+            <div class="col-12 col-lg-5 d-flex align-items-center justify-content-center py-5">
+                <div class="w-100" style="max-width: 400px; padding: 0 2rem;">
+
+                    <!-- Logo -->
+                    <div class="text-center mb-4">
+                        <h1 class="display-4 fw-bold text-success">
+                            <i class="bi bi-recycle"></i> Revesta
+                        </h1>
+                        <p class="text-muted">Admin Dashboard</p>
+                    </div>
+
+                    <!-- Login Form -->
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-4">
+                            <h2 class="card-title h4 mb-4 text-center">Sign In</h2>
+
+                            <!-- Alert for errors -->
+                            <div id="loginAlert" class="alert alert-danger d-none" role="alert">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                <span id="loginErrorMessage"></span>
+                            </div>
+
+                            <form id="loginForm" x-data="loginForm" @submit="handleLogin">
+                                <!-- Email/Username Field -->
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">
+                                        <i class="bi bi-person-circle me-1"></i>
+                                        Email or Username
+                                    </label>
+                                    <input type="text" class="form-control form-control-lg" id="username"
+                                        name="username" placeholder="Enter your email or username" required
+                                        autocomplete="username" x-model="username">
+                                </div>
+
+                                <!-- Password Field -->
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">
+                                        <i class="bi bi-lock-fill me-1"></i>
+                                        Password
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control form-control-lg" id="password"
+                                            name="password" placeholder="Enter your password" required
+                                            autocomplete="current-password" x-model="password">
+                                        <button class="btn btn-outline-secondary" type="button" id="togglePassword"
+                                            aria-label="Toggle password visibility">
+                                            <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Remember Me -->
+                                <div class="form-check mb-4">
+                                    <input class="form-check-input" type="checkbox" value="remember" id="rememberMe"
+                                        x-model="rememberMe">
+                                    <label class="form-check-label" for="rememberMe">
+                                        Remember me
+                                    </label>
+                                </div>
+
+                                <!-- Submit Button -->
+                                <button type="submit" class="btn btn-success btn-lg w-100 mb-3" id="loginButton">
+                                    <span id="loginButtonText">
+                                        <i class="bi bi-box-arrow-in-right me-2"></i>
+                                        Sign In
+                                    </span>
+                                    <span id="loginButtonSpinner" class="d-none">
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"
+                                            aria-hidden="true"></span>
+                                        Signing in...
+                                    </span>
+                                </button>
+
+                                <!-- Forgot Password -->
+                                <div class="text-center">
+                                    <a href="#" class="text-muted text-decoration-none">
+                                        <small>Forgot your password?</small>
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Footer Note -->
+                    <p class="text-center text-muted mt-4">
+                        <small>
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Admin access only
+                        </small>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Side - Brand/Image (Hidden on mobile) -->
+            <div
+                class="col-lg-7 d-none d-lg-flex align-items-center justify-content-center bg-success bg-gradient text-white p-5">
+                <div class="text-center">
+                    <i class="bi bi-speedometer2 display-1 mb-4"></i>
+                    <h2 class="display-5 fw-bold mb-3">Welcome Back</h2>
+                    <p class="lead mb-4">
+                        Manage your Revesta platform with powerful admin tools
+                    </p>
+                    <div class="row text-start mt-5">
+                        <div class="col-6">
+                            <div class="mb-4">
+                                <i class="bi bi-people-fill h3 me-2"></i>
+                                <span class="h5">User Management</span>
+                                <p class="small opacity-75 mt-1">Monitor and manage users, collectors, and sellers</p>
+                            </div>
+                            <div class="mb-4">
+                                <i class="bi bi-graph-up h3 me-2"></i>
+                                <span class="h5">Analytics</span>
+                                <p class="small opacity-75 mt-1">Track platform metrics and performance</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="mb-4">
+                                <i class="bi bi-truck h3 me-2"></i>
+                                <span class="h5">Logistics</span>
+                                <p class="small opacity-75 mt-1">Oversee pickup requests and deliveries</p>
+                            </div>
+                            <div class="mb-4">
+                                <i class="bi bi-headset h3 me-2"></i>
+                                <span class="h5">Support</span>
+                                <p class="small opacity-75 mt-1">Handle tickets and user inquiries</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

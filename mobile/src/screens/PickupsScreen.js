@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 15
+        marginBottom: 16
     },
     actionsRow: {
         flexDirection: 'row',
@@ -821,10 +821,12 @@ const styles = StyleSheet.create({
         gap: 12
     },
     historyBtn: {
-        padding: 8,
-        backgroundColor: '#f5f5f5',
-        borderRadius: 8,
-        marginLeft: 10
+        padding: 10,
+        backgroundColor: '#F8F9FA',
+        borderRadius: 12,
+        marginLeft: 12,
+        borderWidth: 1,
+        borderColor: '#E8E8E8'
     },
     requestButton: {
         flex: 1,

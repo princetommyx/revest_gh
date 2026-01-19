@@ -1,0 +1,68 @@
+{
+  "name": "bootstrap-admin-template-modern",
+  "description": "Modern Bootstrap 5 Admin Template with Vite",
+  "version": "3.2.0",
+  "type": "module",
+  "homepage": "https://github.com/puikinsh/Bootstrap-Admin-Template",
+  "author": "puikinsh (http://github.com/puikinsh)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/puikinsh/Bootstrap-Admin-Template.git"
+  },
+  "bugs": {
+    "url": "https://github.com/puikinsh/Bootstrap-Admin-Template/issues"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bootstrap",
+    "vite",
+    "admin",
+    "template",
+    "dashboard",
+    "modern",
+    "bootstrap5"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite build && vite preview",
+    "lint": "eslint src-modern/",
+    "lint:fix": "eslint src-modern/ --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check",
+    "clean": "rimraf dist dist-modern",
+    "clean:all": "rimraf dist dist-modern node_modules package-lock.json"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.1.0",
+    "@popperjs/core": "^2.11.8",
+    "alpinejs": "^3.15.2",
+    "apexcharts": "^5.3.6",
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "chart.js": "^4.5.1",
+    "dayjs": "^1.11.19",
+    "sweetalert2": "^11.26.3"
+  },
+  "optionalDependencies": {
+    "lucide": "^0.555.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@vitejs/plugin-legacy": "^7.2.1",
+    "autoprefixer": "^10.4.22",
+    "eslint": "^9.39.1",
+    "postcss": "^8.5.6",
+    "prettier": "^3.7.2",
+    "rimraf": "^6.1.2",
+    "sass": "^1.94.2",
+    "vite": "^7.2.4"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}
