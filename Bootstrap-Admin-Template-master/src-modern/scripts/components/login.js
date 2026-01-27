@@ -19,7 +19,7 @@ document.addEventListener('alpine:init', () => {
         init() {
             // Check if already authenticated
             if (authManager.isAuthenticated()) {
-                window.location.href = '/dashboard/index.html';
+                window.location.href = '/index.html';
             }
 
             // Setup password toggle
@@ -63,7 +63,7 @@ document.addEventListener('alpine:init', () => {
                 console.log('Login successful:', response);
 
                 // Redirect to dashboard
-                window.location.href = '/dashboard/index.html';
+                window.location.href = '/index.html';
             } catch (error) {
                 console.error('Login error:', error);
                 this.showError(error.message || 'Login failed. Please check your credentials and try again.');

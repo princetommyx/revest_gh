@@ -10,12 +10,31 @@ export default defineConfig({
   publicDir: '../public-assets',
   base: './',
 
+  css: {
+    // Enable CSS source maps in development
+    devSourcemap: true,
+    preprocessorOptions: {
+      scss: {
+        api: 'modern-compiler',
+        silenceDeprecations: ['legacy-js-api', 'import', 'global-builtin', 'color-functions'],
+      },
+    },
+  },
+
   build: {
     outDir: '../dist-modern',
     emptyOutDir: true,
     sourcemap: false,
     // Warn for chunks over 500KB
     chunkSizeWarningLimit: 500,
+
+    // Add CSS code splitting to prevent FOUC
+    cssCodeSplit: true,
+
+    // Add module preload for faster loading
+    modulePreload: {
+      polyfill: true,
+    },
 
     rollupOptions: {
       input: {
@@ -71,17 +90,6 @@ export default defineConfig({
   preview: {
     port: 4173,
     open: true,
-  },
-
-  css: {
-    // Enable CSS source maps in development
-    devSourcemap: true,
-    preprocessorOptions: {
-      scss: {
-        api: 'modern-compiler',
-        silenceDeprecations: ['legacy-js-api', 'import', 'global-builtin', 'color-functions'],
-      },
-    },
   },
 
   resolve: {

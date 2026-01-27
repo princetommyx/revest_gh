@@ -38,7 +38,7 @@ export const authManager = {
     logout() {
         tokenManager.clearTokens();
         this.clearUser();
-        window.location.href = '/dashboard/login.html';
+        window.location.href = '/login.html';
     },
 
     // Check if user is authenticated
@@ -115,7 +115,7 @@ export const authManager = {
         if (!this.isAuthenticated()) {
             // Allow access to login page without auth
             if (!window.location.pathname.includes('login')) {
-                window.location.href = '/dashboard/login.html';
+                window.location.href = '/login.html';
             }
             return false;
         }
@@ -143,7 +143,7 @@ export const authManager = {
 export function requireAuth() {
     if (!window.location.pathname.includes('login')) {
         if (!authManager.isAuthenticated()) {
-            window.location.href = '/dashboard/login.html';
+            window.location.href = '/login.html';
             return false;
         }
 

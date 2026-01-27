@@ -14,8 +14,6 @@ import ListingDetail from './pages/ListingDetail';
 import Chat from './pages/Chat';
 import Profile from './pages/Profile';
 import RideHistory from './pages/RideHistory';
-import AdminLogin from './pages/AdminLogin';
-import AdminRoutes from './pages/admin/AdminRoutes';
 import useAuth from './hooks/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
 
@@ -42,16 +40,6 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-
-        {/* Admin Login - Separate Entry Point */}
-        <Route path="/admin-login" element={<AdminLogin />} />
-
-        {/* Admin Dashboard */}
-        <Route path="/admin-dashboard/*" element={
-          <ProtectedRoute>
-            <AdminRoutes />
-          </ProtectedRoute>
-        } />
 
         {/* Main App */}
         <Route path="/" element={

@@ -11,7 +11,7 @@ const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1';
 
 // Set this to true when building for production
 // Auto-detect environment
-const IS_PROD = false; // Temporarily forcing production to bypass network issues
+const IS_PROD = true; // Use production backend for remote access via Expo tunnel
 
 const baseURL = IS_PROD ? PROD_API_URL : LOCAL_API_URL;
 
@@ -20,7 +20,7 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 60000, // 60s timeout for cold starts
+    timeout: 120000, // 120s timeout for cold starts on Render free tier
 });
 
 // Request Interceptor: Attach Token

@@ -3,7 +3,7 @@
 // Handles all HTTP requests to the Django backend
 // ==========================================================================
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 // Token Management
 const TOKEN_KEY = 'admin_auth_token';
@@ -74,7 +74,7 @@ class ApiClient {
             if (response.status === 401) {
                 // Handle 401 Unauthorized - redirect to login
                 tokenManager.clearTokens();
-                window.location.href = '/dashboard/login.html';
+                window.location.href = '/login.html';
                 throw new Error('Unauthorized - redirecting to login');
             }
 
