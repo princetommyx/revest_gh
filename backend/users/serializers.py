@@ -41,7 +41,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'role', 'phone_number', 'city',
             # Role-specific fields (optional during registration)
             'vehicle_type', 'license_plate',  # For COLLECTOR
-            'company_name', 'tax_id', 'national_id'  # For RECYCLER
+            'company_name', 'tax_id', 'national_id', 'business_certification'  # For RECYCLER
         )
         extra_kwargs = {
             'email': {'required': True},
@@ -86,7 +86,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'role', 'phone_number', 'city', 'is_verified', 'is_online',
             # Role-specific fields
             'vehicle_type', 'license_plate',  # COLLECTOR
-            'company_name', 'tax_id', 'national_id',  # RECYCLER
+            'company_name', 'tax_id', 'national_id', 'business_certification',  # RECYCLER
             # Location
             'current_lat', 'current_lon',
             # Authentication Provider tracking
@@ -117,6 +117,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             data.pop('company_name', None)
             data.pop('tax_id', None)
             data.pop('national_id', None)
+            data.pop('business_certification', None)
         
         return data
 

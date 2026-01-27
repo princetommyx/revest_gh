@@ -3,8 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash2, Recycle, Check } from 'lucide-react-native';
+
+import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Image as ImageIcon } from 'lucide-react-native';
 import apiClient from '../api/client';
+import * as ImagePicker from 'expo-image-picker';
 
 import Toast from 'react-native-toast-message';
 
@@ -45,6 +47,20 @@ export default function RegisterScreen() {
         national_id: '',
         termsAccepted: false,
     });
+    const [certificationImage, setCertificationImage] = useState(null);
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setCertificationImage(result.assets[0]);
+        }
+    };
 
     const handleChange = (name, value) => {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -95,6 +111,40 @@ export default function RegisterScreen() {
                 })
             };
 
+            // Convert to FormData if image is present or simply to handle file upload standard
+            // We'll use FormData if it's a Recycler Company
+            let actualPayload = payload;
+
+            if (formData.role === 'RECYCLER' && formData.recycler_type === 'COMPANY') {
+                const data = new FormData();
+                // Append all text fields
+                Object.keys(payload).forEach(key => {
+                    if (payload[key] !== undefined && payload[key] !== null) {
+                        data.append(key, payload[key]);
+                    }
+                });
+
+                // Append file
+                if (certificationImage) {
+                    const localUri = certificationImage.uri;
+                    const filename = localUri.split('/').pop();
+                    const match = /\.(\w+)$/.exec(filename);
+                    const type = match ? `image/${match[1]}` : `image`;
+
+                    data.append('business_certification', {
+                        uri: localUri,
+                        name: filename,
+                        type,
+                    });
+                } else {
+                    // Optional: Validation if certification is mandatory
+                    // For now, let's make it optional or warn
+                }
+                actualPayload = data;
+            }
+
+            // Show progress message
+
             // Show progress message
             Toast.show({
                 type: 'info',
@@ -102,7 +152,7 @@ export default function RegisterScreen() {
                 text2: 'This may take a moment...'
             });
 
-            await signUp(payload);
+            await signUp(actualPayload);
 
             Toast.show({
                 type: 'success',
@@ -179,12 +229,23 @@ export default function RegisterScreen() {
         );
     };
 
+    const handleBack = () => {
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.reset({
+                index: 0,
+                routes: [{ name: 'Login' }],
+            });
+        }
+    };
+
     // Step 1: Role Selection
     if (step === 1) {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <TouchableOpacity onPress={handleBack} style={styles.backButton}>
                         <ArrowLeft size={24} color="#000" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Register</Text>
@@ -391,6 +452,31 @@ export default function RegisterScreen() {
                                 />
                             </View>
                         )}
+
+                        {formData.recycler_type === 'COMPANY' && (
+                            <View style={styles.formGroup}>
+                                <Text style={styles.label}>Business Certification</Text>
+                                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
+                                    {certificationImage ? (
+                                        <View style={styles.uploadContent}>
+                                            <Image source={{ uri: certificationImage.uri }} style={styles.uploadedPreview} />
+                                            <Text style={styles.filename} numberOfLines={1}>
+                                                {certificationImage.uri.split('/').pop()}
+                                            </Text>
+                                            <View style={styles.changeBadge}>
+                                                <Text style={styles.changeText}>Change</Text>
+                                            </View>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.uploadPlaceholder}>
+                                            <Upload size={24} color={COLORS.primary} />
+                                            <Text style={styles.uploadText}>Upload Business Certificate</Text>
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
                     </>
                 )}
 
@@ -597,5 +683,52 @@ const styles = StyleSheet.create({
     linkText: {
         color: COLORS.primary,
         fontWeight: 'bold',
+    },
+    uploadButton: {
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderStyle: 'dashed',
+        borderRadius: 12,
+        backgroundColor: COLORS.background,
+        overflow: 'hidden',
+    },
+    uploadPlaceholder: {
+        padding: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+    uploadText: {
+        color: COLORS.primary,
+        fontWeight: '500',
+    },
+    uploadContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 8,
+    },
+    uploadedPreview: {
+        width: 60,
+        height: 60,
+        borderRadius: 8,
+        marginRight: 12,
+    },
+    filename: {
+        flex: 1,
+        color: COLORS.text,
+        fontSize: 14,
+    },
+    changeBadge: {
+        backgroundColor: COLORS.background,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+    },
+    changeText: {
+        color: COLORS.textLight,
+        fontSize: 12,
+        fontWeight: '500',
     },
 });

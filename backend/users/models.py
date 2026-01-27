@@ -18,6 +18,7 @@ class User(AbstractUser):
     company_name = models.CharField(max_length=100, blank=True, null=True)
     tax_id = models.CharField(max_length=50, blank=True, null=True)
     national_id = models.CharField(max_length=50, blank=True, null=True)
+    business_certification = models.ImageField(upload_to='certifications/', blank=True, null=True)
     
     # Common fields
     phone_number = models.CharField(max_length=20, blank=True, null=True, db_index=True)

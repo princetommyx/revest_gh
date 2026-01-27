@@ -1,0 +1,20 @@
+# Exclude parent directory Python virtual environment
+**/.venv/**
+.venv/**
+
+# Exclude parent directory files
+../.git/**
+../node_modules/**
+../Bootstrap-Admin-Template-master/**
+../admin-dashboard/**
+../backend/**
+
+# Exclude mobile build artifacts
+.expo/**
+dist/**
+web-build/**
+node_modules/**
+
+# Exclude development files
+*.log
+.DS_Store

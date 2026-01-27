@@ -8,7 +8,11 @@ export const authApi = {
 
     register: async (userData) => {
         // Registration can be slow on Render (cold starts), so use longer timeout
+        const isFormData = userData instanceof FormData;
+        const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
+
         const response = await apiClient.post('/auth/register/', userData, {
+            headers,
             timeout: 120000 // 120 seconds for registration
         });
         return response.data;
@@ -38,6 +42,11 @@ export const authApi = {
 
     changePassword: async (data) => {
         const response = await apiClient.post('/users/change-password/', data);
+        return response.data;
+    },
+
+    requestPasswordReset: async (email) => {
+        const response = await apiClient.post('/auth/password-reset/', { email });
         return response.data;
     }
 };

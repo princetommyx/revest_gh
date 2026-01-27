@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons'; // Expo comes with vector icons
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import PickupsScreen from '../screens/PickupsScreen';
@@ -102,6 +103,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
+                        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
                     </>
                 ) : (
                     <>

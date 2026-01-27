@@ -87,14 +87,17 @@ class WalletService:
         """
         Check if collector is allowed to take new jobs.
         """
-        try:
-            wallet = user.wallet
-        except Wallet.DoesNotExist:
-            return True # No wallet yet, allow (or create one)
-            
-        if wallet.is_frozen:
-            return False, "Your wallet is frozen due to excessive debt. Please top up to continue."
-            
+        # Create wallet if it doesn't exist
+        wallet, created = Wallet.objects.get_or_create(user=user)
+        
+        # More lenient check: Only block if debt is extremely high (e.g., < -1000 GHS)
+        # This allows collectors to work their way out of moderate debt
+        EXTREME_DEBT_LIMIT = Decimal('-1000.00')
+        
+        if wallet.balance < EXTREME_DEBT_LIMIT:
+            return False, f"Your wallet balance is too low (₵{wallet.balance}). Please contact support or top up to continue."
+        
+        # Even if frozen, allow them to work (they can pay off debt through work)
         return True, None
 
     @staticmethod
