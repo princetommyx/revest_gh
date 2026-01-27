@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ActivityIndicator, Dimensions, FlatList, Modal,
-    ScrollView, Platform, TextInput, KeyboardAvoidingView
+    Dimensions, Modal, TextInput, ScrollView,
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePickups } from '../hooks/usePickups';
@@ -21,13 +21,25 @@ const { width, height } = Dimensions.get('window');
 
 import { useNavigation } from '@react-navigation/native';
 
+// Helper: Calculate distance between two coordinates (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Earth radius in km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in km
+};
+
 export default function PickupsScreen() {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
     const queryClient = useQueryClient();
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
-    const { data: jobs = [], isLoading: jobsLoading, refetch } = usePickups(location);
+    const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
     // Missing state declarations
     const mapRef = useRef(null);
@@ -113,8 +125,32 @@ export default function PickupsScreen() {
         })();
     }, []);
 
-    // Effect to refresh jobs when location changes (handled by query key)
-    // or when focus
+    // Location tracking for collectors during active jobs
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR' || !location) return;
+
+        // Find if collector has any ACCEPTED jobs
+        const activeJob = jobs.find(j => j.status === 'ACCEPTED' && j.collector?.id === user?.id);
+
+        if (!activeJob) return; // No active job, don't track
+
+        // Send location update every 10 seconds
+        const interval = setInterval(async () => {
+            try {
+                const currentLocation = await Location.getCurrentPositionAsync({});
+                await logisticsApi.updateLocation(
+                    activeJob.id,
+                    currentLocation.coords.latitude,
+                    currentLocation.coords.longitude
+                );
+            } catch (error) {
+                console.log('Location update error:', error);
+            }
+        }, 10000); // Every 10 seconds
+
+        return () => clearInterval(interval);
+    }, [userRole, location, jobs, user]);
+
     // React Query handles focus refetch
 
 
@@ -207,6 +243,29 @@ export default function PickupsScreen() {
         }
     };
 
+    const openNavigation = (job) => {
+        const { latitude, longitude, pickup_address } = job;
+        const label = encodeURIComponent(pickup_address || 'Pickup Location');
+
+        // Use platform-specific maps URL
+        const scheme = Platform.select({
+            ios: `maps:0,0?q=${label}@${latitude},${longitude}`,
+            android: `geo:0,0?q=${latitude},${longitude}(${label})`
+        });
+
+        // Fallback to Google Maps web if app not installed
+        const url = Platform.select({
+            ios: scheme,
+            android: scheme
+        });
+
+        Linking.openURL(url).catch(() => {
+            // Fallback to Google Maps web
+            const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
+            Linking.openURL(webUrl);
+        });
+    };
+
     const handleCompleteJob = async (jobId) => {
         // Find the job first to show confirmation
         const job = jobs.find(j => j.id === jobId);
@@ -264,6 +323,7 @@ export default function PickupsScreen() {
 
     const renderJobMarker = (job) => {
         const markers = [];
+        const routes = [];
 
         // Pickup Location
         markers.push(
@@ -297,15 +357,39 @@ export default function PickupsScreen() {
                     </View>
                 </Marker>
             );
+
+            // Add route line from collector to pickup
+            routes.push(
+                <Polyline
+                    key={`route-${job.id}`}
+                    coordinates={[
+                        { latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) },
+                        { latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }
+                    ]}
+                    strokeColor="#3498DB"
+                    strokeWidth={3}
+                    lineDashPattern={[5, 5]}
+                />
+            );
         }
 
-        return markers;
+        return [...markers, ...routes];
     };
 
     // Memoize markers to prevent re-rendering on every state change
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
     }, [jobs]);
+
+    // Sort jobs: Active jobs (ACCEPTED/ARRIVED) first, then PENDING
+    const sortedJobs = useMemo(() => {
+        if (userRole !== 'COLLECTOR') return jobs;
+
+        const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+        const pendingJobs = jobs.filter(j => j.status === 'PENDING');
+
+        return [...activeJobs, ...pendingJobs];
+    }, [jobs, userRole]);
 
     if (loading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#2E7D32" /></View>;
@@ -354,75 +438,129 @@ export default function PickupsScreen() {
                 </View>
             </View>
 
-            {jobs.length > 0 && (
+            {sortedJobs.length > 0 && (
                 <View style={styles.jobListContainer}>
                     <FlatList
-                        data={jobs}
+                        data={sortedJobs}
                         keyExtractor={item => item.id.toString()}
                         horizontal
                         showsHorizontalScrollIndicator={false}
-                        renderItem={({ item }) => (
-                            <View style={styles.jobCard}>
-                                <View style={styles.jobHeader}>
-                                    <Truck size={20} color={item.status === 'PENDING' ? '#2E7D32' : '#F39C12'} />
-                                    <Text style={styles.jobType}>{item.material_type}</Text>
-                                    <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
-                                        <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>{item.status}</Text>
+                        renderItem={({ item, index }) => {
+                            // Check if this is the first PENDING job after active jobs
+                            const previousItem = index > 0 ? sortedJobs[index - 1] : null;
+                            const showSeparator = previousItem &&
+                                (previousItem.status === 'ACCEPTED' || previousItem.status === 'ARRIVED') &&
+                                item.status === 'PENDING';
+
+                            return (
+                                <>
+                                    {showSeparator && (
+                                        <View style={styles.jobSeparator}>
+                                            <Text style={styles.separatorText}>Available Jobs</Text>
+                                        </View>
+                                    )}
+                                    <View style={styles.jobCard}>
+                                        {/* Show "ACTIVE JOB" label for accepted/arrived jobs */}
+                                        {(item.status === 'ACCEPTED' || item.status === 'ARRIVED') && (
+                                            <View style={styles.activeJobBanner}>
+                                                <Truck size={16} color="#fff" />
+                                                <Text style={styles.activeJobText}>ACTIVE JOB</Text>
+                                            </View>
+                                        )}
+                                        <View style={styles.jobHeader}>
+                                            <Truck size={20} color={item.status === 'PENDING' ? '#2E7D32' : '#F39C12'} />
+                                            <Text style={styles.jobType}>{item.material_type}</Text>
+                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
+                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>{item.status}</Text>
+                                            </View>
+                                        </View>
+                                        <Text style={styles.jobInfo}>{item.quantity_estimate}</Text>
+                                        <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
+
+                                        {userRole === 'COLLECTOR' && (
+                                            <>
+                                                {item.status === 'PENDING' && (
+                                                    <TouchableOpacity
+                                                        style={styles.acceptBtn}
+                                                        onPress={() => handleAcceptJob(item.id)}
+                                                    >
+                                                        <Text style={styles.acceptBtnText}>Accept Job</Text>
+                                                    </TouchableOpacity>
+                                                )}
+
+                                                {item.status === 'ACCEPTED' && (
+                                                    <>
+                                                        <TouchableOpacity
+                                                            style={[styles.acceptBtn, { backgroundColor: '#3498DB', marginBottom: 10 }]}
+                                                            onPress={() => openNavigation(item)}
+                                                        >
+                                                            <Navigation size={18} color="#fff" />
+                                                            <Text style={[styles.acceptBtnText, { marginLeft: 8 }]}>Navigate to Pickup</Text>
+                                                        </TouchableOpacity>
+
+                                                        <TouchableOpacity
+                                                            style={[styles.acceptBtn, { backgroundColor: '#F39C12' }]}
+                                                            onPress={() => handleArriveJob(item.id)}
+                                                        >
+                                                            <Text style={styles.acceptBtnText}>I have Arrived</Text>
+                                                        </TouchableOpacity>
+                                                    </>
+                                                )}
+
+                                                {item.status === 'ARRIVED' && (
+                                                    <TouchableOpacity
+                                                        style={[styles.acceptBtn, { backgroundColor: '#27AE60' }]}
+                                                        onPress={() => handleCompleteJob(item.id)}
+                                                    >
+                                                        <Text style={styles.acceptBtnText}>Complete Job</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </>
+                                        )}
+
+                                        {item.status !== 'PENDING' && item.collector_name && (
+                                            <View style={styles.collectorInfo}>
+                                                <Info size={14} color="#666" />
+                                                <Text style={styles.collectorName}>Collector: {item.collector_name}</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Tracking Info for Sellers - Bolt-style */}
+                                        {userRole === 'SELLER' && item.status === 'ACCEPTED' && item.current_lat && item.current_lon && (
+                                            <View style={styles.trackingInfo}>
+                                                <View style={styles.trackingRow}>
+                                                    <Navigation size={16} color="#3498DB" />
+                                                    <Text style={styles.trackingText}>
+                                                        {(() => {
+                                                            const distance = calculateDistance(
+                                                                parseFloat(item.current_lat),
+                                                                parseFloat(item.current_lon),
+                                                                parseFloat(item.latitude),
+                                                                parseFloat(item.longitude)
+                                                            );
+                                                            const eta = Math.ceil((distance / 40) * 60); // Assuming 40km/h avg speed
+                                                            return `${distance.toFixed(1)} km away • ETA ${eta} min`;
+                                                        })()}
+                                                    </Text>
+                                                </View>
+                                                <Text style={styles.trackingSubtext}>🚛 {item.collector_name} is on the way</Text>
+                                            </View>
+                                        )}
+
+                                        {/* Cancel Button for Sellers */}
+                                        {userRole === 'SELLER' && (item.status === 'PENDING' || item.status === 'ACCEPTED') && (
+                                            <TouchableOpacity
+                                                style={styles.cancelBtn}
+                                                onPress={() => openCancelModal(item.id)}
+                                            >
+                                                <X size={16} color="#E74C3C" />
+                                                <Text style={styles.cancelBtnText}>Cancel Request</Text>
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
-                                </View>
-                                <Text style={styles.jobInfo}>{item.quantity_estimate}</Text>
-                                <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
-
-                                {userRole === 'COLLECTOR' && (
-                                    <>
-                                        {item.status === 'PENDING' && (
-                                            <TouchableOpacity
-                                                style={styles.acceptBtn}
-                                                onPress={() => handleAcceptJob(item.id)}
-                                            >
-                                                <Text style={styles.acceptBtnText}>Accept Job</Text>
-                                            </TouchableOpacity>
-                                        )}
-
-                                        {item.status === 'ACCEPTED' && (
-                                            <TouchableOpacity
-                                                style={[styles.acceptBtn, { backgroundColor: '#F39C12' }]}
-                                                onPress={() => handleArriveJob(item.id)}
-                                            >
-                                                <Text style={styles.acceptBtnText}>I have Arrived</Text>
-                                            </TouchableOpacity>
-                                        )}
-
-                                        {item.status === 'ARRIVED' && (
-                                            <TouchableOpacity
-                                                style={[styles.acceptBtn, { backgroundColor: '#27AE60' }]}
-                                                onPress={() => handleCompleteJob(item.id)}
-                                            >
-                                                <Text style={styles.acceptBtnText}>Complete Job</Text>
-                                            </TouchableOpacity>
-                                        )}
-                                    </>
-                                )}
-
-                                {item.status !== 'PENDING' && item.collector_name && (
-                                    <View style={styles.collectorInfo}>
-                                        <Info size={14} color="#666" />
-                                        <Text style={styles.collectorName}>Collector: {item.collector_name}</Text>
-                                    </View>
-                                )}
-
-                                {/* Cancel Button for Sellers */}
-                                {userRole === 'SELLER' && (item.status === 'PENDING' || item.status === 'ACCEPTED') && (
-                                    <TouchableOpacity
-                                        style={styles.cancelBtn}
-                                        onPress={() => openCancelModal(item.id)}
-                                    >
-                                        <X size={16} color="#E74C3C" />
-                                        <Text style={styles.cancelBtnText}>Cancel Request</Text>
-                                    </TouchableOpacity>
-                                )}
-                            </View>
-                        )}
+                                </>
+                            );
+                        }}
                     />
                 </View>
             )}
@@ -439,6 +577,25 @@ export default function PickupsScreen() {
                 <View style={styles.errorBox}>
                     <AlertCircle size={20} color="#E74C3C" />
                     <Text style={styles.errorText}>{errorMsg}</Text>
+                </View>
+            )}
+
+            {isError && apiError && (
+                <View style={styles.errorBox}>
+                    <AlertCircle size={20} color="#E74C3C" />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.errorText}>
+                            {apiError.message?.includes('Network') || apiError.message?.includes('timeout')
+                                ? 'Network error. Check your connection and try again.'
+                                : 'Failed to load pickup requests'}
+                        </Text>
+                        <TouchableOpacity
+                            onPress={() => refetch()}
+                            style={{ marginTop: 8, backgroundColor: '#E74C3C', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start' }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
 
@@ -700,6 +857,60 @@ export default function PickupsScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Completion Confirmation Modal */}
+            <Modal
+                visible={showConfirmModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowConfirmModal(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.cancelModalContent}>
+                        <Text style={styles.cancelModalTitle}>Complete Job</Text>
+
+                        {confirmingJob && (
+                            <View style={{ marginVertical: 20 }}>
+                                <Text style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+                                    Job Details:
+                                </Text>
+                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>
+                                    • Material: {confirmingJob.material_type}
+                                </Text>
+                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>
+                                    • Quantity: {confirmingJob.quantity_estimate}
+                                </Text>
+                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 12 }}>
+                                    • Location: {confirmingJob.pickup_address || confirmingJob.city}
+                                </Text>
+                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2E7D32', marginTop: 8 }}>
+                                    Earnings: ₵{confirmingJob.estimated_price || '0.00'}
+                                </Text>
+                            </View>
+                        )}
+
+                        <Text style={{ fontSize: 14, color: '#999', textAlign: 'center', marginBottom: 20 }}>
+                            Mark this job as completed? Funds will be processed to your wallet.
+                        </Text>
+
+                        <View style={styles.cancelModalButtons}>
+                            <TouchableOpacity
+                                style={styles.cancelModalKeepBtn}
+                                onPress={() => setShowConfirmModal(false)}
+                            >
+                                <Text style={styles.cancelModalKeepText}>Go Back</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.cancelModalConfirmBtn, { backgroundColor: '#2E7D32' }]}
+                                onPress={confirmAndCompleteJob}
+                            >
+                                <Text style={styles.cancelModalConfirmText}>Complete Job</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View >
     );
 }
@@ -735,7 +946,15 @@ const styles = StyleSheet.create({
     jobType: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
     jobInfo: { fontSize: 14, color: '#666', marginBottom: 5 },
     jobLoc: { fontSize: 12, color: '#999', marginBottom: 15 },
-    acceptBtn: { backgroundColor: '#2E7D32', padding: 12, borderRadius: 12, alignItems: 'center' },
+    acceptBtn: {
+        backgroundColor: '#2E7D32',
+        padding: 12,
+        borderRadius: 12,
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 6
+    },
     acceptBtnText: { color: '#fff', fontWeight: 'bold' },
     markerContainer: { backgroundColor: '#fff', padding: 5, borderRadius: 10, borderWidth: 2, borderColor: '#2E7D32' },
     errorBox: {
@@ -768,6 +987,58 @@ const styles = StyleSheet.create({
         borderRadius: 8
     },
     collectorName: { fontSize: 12, color: '#666', fontWeight: '500' },
+    trackingInfo: {
+        marginTop: 10,
+        backgroundColor: '#E3F2FD',
+        padding: 12,
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderLeftColor: '#3498DB'
+    },
+    trackingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4
+    },
+    trackingText: {
+        fontSize: 14,
+        color: '#1976D2',
+        fontWeight: 'bold'
+    },
+    trackingSubtext: {
+        fontSize: 12,
+        color: '#666',
+        marginTop: 4
+    },
+    activeJobBanner: {
+        backgroundColor: '#FF9800',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+        borderTopLeftRadius: 15,
+        borderTopRightRadius: 15,
+        marginBottom: 10,
+        gap: 6,
+    },
+    activeJobText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+    },
+    jobSeparator: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 20,
+    },
+    separatorText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#666',
+        textAlign: 'center',
+    },
     emptyState: {
         position: 'absolute',
         bottom: Dimensions.get('window').height * 0.2,

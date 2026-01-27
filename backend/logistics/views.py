@@ -41,9 +41,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         if user.role == 'COLLECTOR':
-            # Collectors see jobs they accepted or pending jobs (if not filtered by available_jobs)
+            # Collectors see:
+            # 1. PENDING jobs nearby (to accept)
+            # 2. Their own active jobs (ACCEPTED, ARRIVED) - like Bolt active ride
             return PickupRequest.objects.select_related('provider', 'collector').filter(
-                models.Q(collector=user) | models.Q(status='PENDING')
+                models.Q(status='PENDING') | models.Q(collector=user, status__in=['ACCEPTED', 'ARRIVED'])
             ).order_by('-created_at')
         return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
 

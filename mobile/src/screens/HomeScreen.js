@@ -4,6 +4,7 @@ import {
     FlatList, ActivityIndicator,
     TextInput, ScrollView, RefreshControl
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image'; // ✅ Faster than react-native Image
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -16,6 +17,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
+import * as Location from 'expo-location';
+import { usePickups } from '../hooks/usePickups';
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: 'grid-outline', color: '#455A64', bg: '#fff' },
@@ -33,9 +36,25 @@ export default function HomeScreen({ navigation }) {
     const { userRole, signOut, user } = useAuth();
     const [filter, setFilter] = useState('');
     const [search, setSearch] = useState('');
+    const [location, setLocation] = useState(null);
 
-    // React Query Hook
+    // For collectors: Use pickup jobs instead of marketplace listings
+    const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups, isRefetching: isRefetchingPickups } = usePickups(location);
+
+    // For sellers/recyclers: Use marketplace listings
     const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings();
+
+    // Get location for collectors
+    useEffect(() => {
+        if (userRole === 'COLLECTOR') {
+            (async () => {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                let loc = await Location.getCurrentPositionAsync({});
+                setLocation(loc.coords);
+            })();
+        }
+    }, [userRole]);
 
     // Get time-based greeting
     const getGreeting = () => {
@@ -147,8 +166,8 @@ export default function HomeScreen({ navigation }) {
             showsVerticalScrollIndicator={false}
             refreshControl={
                 <RefreshControl
-                    refreshing={isRefetching}
-                    onRefresh={refetch}
+                    refreshing={isRefetchingPickups}
+                    onRefresh={refetchPickups}
                 />
             }
         >
@@ -202,7 +221,7 @@ export default function HomeScreen({ navigation }) {
                     <Text style={styles.sectionTitle}>Available for Pickup</Text>
                 </View>
 
-                {filteredListings.length === 0 ? (
+                {pickupJobs.length === 0 ? (
                     <View style={styles.emptyBox}>
                         <Truck size={50} color="#ddd" />
                         <Text style={styles.emptyText}>No active pickups right now</Text>
@@ -210,44 +229,31 @@ export default function HomeScreen({ navigation }) {
                     </View>
                 ) : (
                     <View style={styles.pickupsGrid}>
-                        {filteredListings.map((item) => (
+                        {pickupJobs.map((job) => (
                             <TouchableOpacity
-                                key={item.id}
-                                style={styles.listingCard}
-                                onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
+                                key={job.id}
+                                style={styles.jobCard}
+                                onPress={() => navigation.navigate('Pickups')}
                                 activeOpacity={0.9}
                             >
-                                <View style={styles.imageBox}>
-                                    {item.image ? (
-                                        <Image
-                                            source={{ uri: resolveImageUrl(item.image) }}
-                                            style={styles.image}
-                                            contentFit="cover"
-                                            cachePolicy="memory-disk"
-                                            transition={200}
-                                        />
-                                    ) : (
-                                        <Package size={30} color="#ccc" />
-                                    )}
-                                    {item.is_free && (
-                                        <View style={styles.freeBadge}>
-                                            <Text style={styles.freeText}>FREE</Text>
-                                        </View>
-                                    )}
-                                </View>
-                                <View style={styles.listingContent}>
-                                    <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
-                                    <Text style={styles.listingPrice}>
-                                        {item.is_free ? 'Contact for details' : `₵${item.price}`}
-                                    </Text>
-                                    <View style={styles.metaRow}>
-                                        <View style={styles.locationBox}>
-                                            <MapPin size={11} color="#888" />
-                                            <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
-                                        </View>
-                                        <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
+                                <View style={styles.jobCardHeader}>
+                                    <View style={[styles.jobStatusBadge, { backgroundColor: job.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
+                                        <Text style={[styles.jobStatusText, { color: job.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>
+                                            {job.status}
+                                        </Text>
                                     </View>
                                 </View>
+                                <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
+                                <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
+                                <View style={styles.jobFooter}>
+                                    <View style={styles.jobLocation}>
+                                        <MapPin size={12} color="#888" />
+                                        <Text style={styles.jobLocationText} numberOfLines={1}>
+                                            {job.pickup_address || job.city || 'Nearby'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -265,62 +271,66 @@ export default function HomeScreen({ navigation }) {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            {/* Hero Section - Modern greeting and stats */}
-            <View style={styles.heroSection}>
-                {/* Personalized Greeting */}
-                <View style={styles.greetingCard}>
-                    <View style={styles.greetingContent}>
-                        <Text style={styles.greetingText}>{getGreeting()},</Text>
-                        <Text style={styles.userName}>{user?.username || 'Seller'}</Text>
-                        <Text style={styles.tagline}>Turn waste into value today</Text>
+        <SafeAreaView style={styles.container} edges={['right', 'left']}>
+            {/* Hero Section - Gradient Background */}
+            <LinearGradient
+                colors={['#1B5E20', '#388E3C']} // Deep Green to Vibrant Green
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.heroGradient}
+            >
+                {/* Header Content */}
+                <View style={styles.headerTop}>
+                    <View>
+                        <Text style={styles.greetingTextLight}>{getGreeting()},</Text>
+                        <Text style={styles.userNameLight}>{user?.username || 'Seller'}</Text>
                     </View>
                 </View>
 
-                {/* Quick Stats Card */}
-                <View style={styles.statsCardCompact}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>₵0.00</Text>
-                        <Text style={styles.statLabel}>This Month</Text>
+                {/* Main Stats Display */}
+                <View style={styles.heroStatsContainer}>
+                    <View style={styles.heroStat}>
+                        <Text style={styles.heroStatValue}>₵0.00</Text>
+                        <Text style={styles.heroStatLabel}>Total Earnings</Text>
                     </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>0</Text>
-                        <Text style={styles.statLabel}>Items Sold</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>0kg</Text>
-                        <Text style={styles.statLabel}>CO₂ Saved</Text>
+                    <View style={styles.heroStatDivider} />
+                    <View style={styles.heroStat}>
+                        <Text style={styles.heroStatValue}>0kg</Text>
+                        <Text style={styles.heroStatLabel}>CO₂ Saved</Text>
                     </View>
                 </View>
 
-                {/* Primary CTA - Sell Waste */}
+                {/* Floating "Sell Waste" Button */}
                 <TouchableOpacity
-                    style={styles.primaryCTA}
+                    style={styles.floatingSellBtn}
                     onPress={() => navigation.navigate('CreateListing')}
-                    activeOpacity={0.8}
+                    activeOpacity={0.9}
                 >
-                    <Plus size={24} color="#fff" />
-                    <Text style={styles.ctaText}>Sell Waste</Text>
-                    <ArrowRight size={20} color="#fff" />
+                    <LinearGradient
+                        colors={['#FF9800', '#F57C00']}
+                        style={styles.sellBtnGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                    >
+                        <Plus size={24} color="#fff" />
+                        <Text style={styles.sellBtnText}>Sell Waste Now</Text>
+                    </LinearGradient>
                 </TouchableOpacity>
+            </LinearGradient>
 
-                {/* Search Bar */}
-                <View style={styles.searchContainer}>
-                    <View style={styles.searchBar}>
-                        <Search size={20} color="#888" />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search waste materials..."
-                            value={search}
-                            onChangeText={setSearch}
-                            placeholderTextColor="#999"
-                        />
-                    </View>
+            {/* Overlapping Search Bar */}
+            <View style={styles.floatingSearchContainer}>
+                <View style={styles.floatingSearchBar}>
+                    <Search size={20} color="#888" />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search waste materials..."
+                        value={search}
+                        onChangeText={setSearch}
+                        placeholderTextColor="#999"
+                    />
                 </View>
             </View>
-
             {loading ? (
                 // Skeleton loading - no spinner!
                 <FlatList
@@ -384,6 +394,118 @@ const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     // Hero Section Styles
+    heroGradient: {
+        paddingTop: 60, // more padding for status bar
+        paddingHorizontal: 20,
+        paddingBottom: 40, // space for floating elements
+        borderBottomLeftRadius: 30,
+        borderBottomRightRadius: 30,
+        marginBottom: 25, // space for overlap
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    headerIconBg: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        padding: 8,
+        borderRadius: 12,
+        backdropFilter: 'blur(10px)',
+    },
+    headerLogo: {
+        width: 24,
+        height: 24,
+        tintColor: '#fff',
+    },
+    greetingTextLight: {
+        fontSize: 16,
+        color: 'rgba(255,255,255,0.9)',
+        marginBottom: 2,
+    },
+    userNameLight: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+
+    // Modern Stats Display
+    heroStatsContainer: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    heroStat: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    heroStatValue: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 2,
+    },
+    heroStatLabel: {
+        fontSize: 11,
+        color: 'rgba(255,255,255,0.8)',
+    },
+    heroStatDivider: {
+        width: 1,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        marginHorizontal: 10,
+    },
+
+    // Floating Sell Button
+    floatingSellBtn: {
+        marginBottom: 10,
+        elevation: 8,
+        shadowColor: '#F57C00',
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 8 },
+    },
+    sellBtnGradient: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        borderRadius: 20,
+        gap: 10,
+    },
+    sellBtnText: {
+        color: '#fff',
+        fontSize: 17,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+    },
+
+    // Floating Search Bar
+    floatingSearchContainer: {
+        marginTop: -35, // Negative margin to overlap
+        paddingHorizontal: 20,
+        marginBottom: 10,
+        zIndex: 10,
+    },
+    floatingSearchBar: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderRadius: 18,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        alignItems: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+    },
+
+    // Legacy Hero Section (Collector Dashboard)
     heroSection: {
         backgroundColor: '#fff',
         paddingTop: 20,
@@ -712,5 +834,66 @@ const styles = StyleSheet.create({
         color: '#bbb',
         marginTop: 8,
         textAlign: 'center',
+    },
+
+    // Job Card Styles for Collectors
+    jobCard: {
+        width: '48%',
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 16,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+        borderWidth: 1,
+        borderColor: '#f0f0f0',
+    },
+    jobCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginBottom: 10,
+    },
+    jobStatusBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    jobStatusText: {
+        fontSize: 10,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    jobTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
+        marginBottom: 4,
+    },
+    jobQuantity: {
+        fontSize: 13,
+        color: '#666',
+        marginBottom: 10,
+    },
+    jobFooter: {
+        marginBottom: 8,
+    },
+    jobLocation: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    jobLocationText: {
+        fontSize: 12,
+        color: '#888',
+        flex: 1,
+    },
+    jobPrice: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginTop: 4,
     },
 });
