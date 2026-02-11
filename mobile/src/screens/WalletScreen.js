@@ -4,6 +4,7 @@ import {
     FlatList, ActivityIndicator, Modal,
     TextInput, ScrollView, Linking, KeyboardAvoidingView, Platform
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
 import { useAuth } from '../context/AuthContext';
@@ -22,7 +23,8 @@ const NETWORKS = [
 ];
 
 export default function WalletScreen() {
-    const { userRole } = useAuth();
+    const { userRole, user } = useAuth();
+    const navigation = useNavigation();
     // React Query hooks with optimistic updates
     const { data: wallet, isLoading } = useWallet();
     const depositMutation = useOptimisticDeposit();
@@ -169,7 +171,7 @@ export default function WalletScreen() {
                         {userRole === 'COLLECTOR' && (
                             <TouchableOpacity
                                 style={styles.actionButton}
-                                onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}
+                                onPress={() => navigation.navigate('TopUp', { user })}
                             >
                                 <Plus size={20} color="#fff" />
                                 <Text style={styles.actionText}>Top Up</Text>

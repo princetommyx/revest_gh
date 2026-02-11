@@ -13,7 +13,7 @@ export const walletApi = {
     },
 
     verifyPayment: async (reference) => {
-        const response = await apiClient.get('/wallet/verify/', { params: { reference } });
+        const response = await apiClient.post('/wallet/verify_payment/', { reference });
         return response.data;
     },
 

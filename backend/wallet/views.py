@@ -100,3 +100,72 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         # Simple pagination if needed, but for now just list
         serializer = TransactionSerializer(transactions, many=True)
         return Response(serializer.data)
+
+    @extend_schema(
+        summary="Verify Paystack Payment",
+        description="Call this after successful payment on mobile to credit wallet.",
+        request=None,
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def verify_payment(self, request):
+        """Verify Paystack transaction and credit wallet"""
+        reference = request.data.get('reference')
+        if not reference:
+            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .services import PaystackService
+        success, message = PaystackService.verify_transaction(reference, request.data.get('amount'), request.user)
+        
+        if success:
+            wallet = Wallet.objects.get(user=request.user)
+            return Response({'message': message, 'wallet': self.get_serializer(wallet).data})
+        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Verify Paystack Payment",
+        description="Call this after successful payment on mobile to credit wallet.",
+        request=None, 
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def verify_payment(self, request):
+        """Verify Paystack transaction and credit wallet"""
+        reference = request.data.get('reference')
+        if not reference:
+            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .services import PaystackService
+        success, message = PaystackService.verify_transaction(reference, request.data.get('amount'), request.user)
+        
+        if success:
+            wallet = Wallet.objects.get(user=request.user)
+            return Response({ 'message': message, 'wallet': self.get_serializer(wallet).data })
+        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Verify Paystack Payment",
+        description="Call this after successful payment on mobile to credit wallet.",
+        request=None, # Or a simple serializer with reference
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def verify_payment(self, request):
+        """Verify Paystack transaction and credit wallet"""
+        reference = request.data.get('reference')
+        amount = request.data.get('amount') # Optional comparison
+        
+        if not reference:
+            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .services import PaystackService
+        success, message = PaystackService.verify_transaction(reference, amount, request.user)
+        
+        if success:
+            wallet = Wallet.objects.get(user=request.user)
+            return Response({
+                'message': message,
+                'wallet': self.get_serializer(wallet).data
+            })
+        else:
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)

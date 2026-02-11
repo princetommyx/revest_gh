@@ -245,6 +245,9 @@ else:
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Paystack
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+
 # Email Configuration
 # Use Resend if API key is available (bypasses SMTP port blocking)
 import logging

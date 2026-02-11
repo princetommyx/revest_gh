@@ -116,6 +116,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>
