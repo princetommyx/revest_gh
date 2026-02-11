@@ -15,7 +15,12 @@ export const marketApi = {
     createListing: async (listingData) => {
         // listingData should be FormData if uploading image
         const response = await apiClient.post('/market/listings/', listingData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+            transformRequest: (data, headers) => {
+                return data; // Axios workaround for FormData on React Native
+            }
         });
         return response.data;
     },

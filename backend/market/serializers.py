@@ -62,9 +62,9 @@ class ListingCreateSerializer(serializers.ModelSerializer):
     def validate_image(self, value):
         """Validate image file size and format"""
         if value:
-            # Max 5MB
-            if value.size > 5 * 1024 * 1024:
-                raise serializers.ValidationError("Image file size cannot exceed 5MB.")
+            # Max 10MB
+            if value.size > 10 * 1024 * 1024:
+                raise serializers.ValidationError("Image file size cannot exceed 10MB.")
             
             # Check format
             valid_formats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']

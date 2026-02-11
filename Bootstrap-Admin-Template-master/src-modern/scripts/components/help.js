@@ -5,14 +5,14 @@ document.addEventListener('alpine:init', () => {
     // UI State
     activeSection: 'getting-started',
     loading: false,
-    
+
     // Search functionality
     faqSearch: '',
     filteredFAQ: [],
-    
+
     // Documentation
     selectedDocCategory: 'getting-started',
-    
+
     // Support ticket form
     supportTicket: {
       name: '',
@@ -23,14 +23,14 @@ document.addEventListener('alpine:init', () => {
       description: ''
     },
     submittingTicket: false,
-    
+
     // Feature request form
     featureRequest: {
       title: '',
       category: '',
       description: ''
     },
-    
+
     // Navigation sections
     sections: [
       { id: 'getting-started', name: 'Getting Started', icon: 'bi-play-circle' },
@@ -39,7 +39,7 @@ document.addEventListener('alpine:init', () => {
       { id: 'contact', name: 'Contact Support', icon: 'bi-headset' },
       { id: 'features', name: 'Feature Requests', icon: 'bi-lightbulb' }
     ],
-    
+
     // FAQ data
     faqData: [
       {
@@ -93,7 +93,7 @@ document.addEventListener('alpine:init', () => {
         open: false
       }
     ],
-    
+
     // Documentation categories
     docCategories: [
       { id: 'getting-started', name: 'Getting Started', icon: 'bi-play-circle', count: 5 },
@@ -104,7 +104,7 @@ document.addEventListener('alpine:init', () => {
       { id: 'api', name: 'API Reference', icon: 'bi-code-slash', count: 15 },
       { id: 'troubleshooting', name: 'Troubleshooting', icon: 'bi-tools', count: 7 }
     ],
-    
+
     // Documentation articles
     documentationData: {
       'getting-started': [
@@ -242,7 +242,7 @@ document.addEventListener('alpine:init', () => {
         }
       ]
     },
-    
+
     // System status
     systemStatus: [
       { name: 'API Services', status: 'operational', statusText: 'Operational' },
@@ -251,7 +251,7 @@ document.addEventListener('alpine:init', () => {
       { name: 'Email Service', status: 'maintenance', statusText: 'Maintenance' },
       { name: 'Authentication', status: 'operational', statusText: 'Operational' }
     ],
-    
+
     // Popular feature requests
     popularRequests: [
       {
@@ -291,13 +291,13 @@ document.addEventListener('alpine:init', () => {
         voted: false
       }
     ],
-    
+
     init() {
       console.log('Help component initialized');
       this.filteredFAQ = [...this.faqData];
       this.loadUserPreferences();
     },
-    
+
     // Navigation
     setActiveSection(section) {
       this.activeSection = section;
@@ -305,80 +305,80 @@ document.addEventListener('alpine:init', () => {
         this.selectedDocCategory = 'getting-started';
       }
     },
-    
+
     // FAQ functionality
     toggleFAQ(index) {
       this.filteredFAQ[index].open = !this.filteredFAQ[index].open;
     },
-    
+
     filterFAQ() {
       if (!this.faqSearch.trim()) {
         this.filteredFAQ = [...this.faqData];
         return;
       }
-      
+
       const searchTerm = this.faqSearch.toLowerCase();
-      this.filteredFAQ = this.faqData.filter(faq => 
+      this.filteredFAQ = this.faqData.filter(faq =>
         faq.question.toLowerCase().includes(searchTerm) ||
         faq.answer.toLowerCase().includes(searchTerm)
       );
-      
+
       // Close all FAQ items when searching
       this.filteredFAQ.forEach(faq => faq.open = false);
     },
-    
+
     highlightText(text, searchTerm) {
       if (!searchTerm) return text;
-      
+
       const regex = new RegExp(`(${searchTerm})`, 'gi');
       return text.replace(regex, '<span class="search-highlight">$1</span>');
     },
-    
+
     // Documentation functionality
     selectDocCategory(categoryId) {
       this.selectedDocCategory = categoryId;
     },
-    
+
     get selectedDocs() {
       return this.documentationData[this.selectedDocCategory] || [];
     },
-    
+
     openDoc(docId) {
       this.showNotification(`Opening documentation: ${docId}`, 'info');
       // In a real app, this would open the documentation page
     },
-    
+
     openArticle(articleId) {
       this.showNotification(`Opening article: ${articleId}`, 'info');
       // In a real app, this would open the specific article
     },
-    
+
     // Video functionality
     playVideo(videoId) {
       this.showNotification(`Playing video: ${videoId}`, 'info');
       // In a real app, this would open a video player modal
     },
-    
+
     // Support functionality
     startLiveChat() {
       this.showNotification('Connecting to live chat...', 'info');
       // In a real app, this would open the chat widget
     },
-    
+
     openEmailForm() {
       this.showNotification('Opening email form...', 'info');
       // In a real app, this would open an email composition modal
     },
-    
+
     showPhoneInfo() {
       alert('Support Phone: +1 (555) 123-HELP\\n\\nBusiness Hours:\\nMonday - Friday: 9 AM - 6 PM EST\\nWeekend: Emergency support only');
     },
-    
+
     submitTicket() {
       if (!this.validateTicketForm()) return;
-      
+
       this.submittingTicket = true;
-      
+
       // Simulate API call
       setTimeout(() => {
         this.submittingTicket = false;
@@ -386,19 +386,19 @@ document.addEventListener('alpine:init', () => {
         this.resetTicketForm();
       }, 2000);
     },
-    
+
     validateTicketForm() {
       const required = ['name', 'email', 'priority', 'category', 'subject', 'description'];
       const missing = required.filter(field => !this.supportTicket[field]);
-      
+
       if (missing.length > 0) {
         this.showNotification('Please fill in all required fields', 'error');
         return false;
       }
-      
+
       return true;
     },
-    
+
     resetTicketForm() {
       this.supportTicket = {
         name: '',
@@ -409,14 +409,14 @@ document.addEventListener('alpine:init', () => {
         description: ''
       };
     },
-    
+
     // Feature request functionality
     submitFeatureRequest() {
       if (!this.featureRequest.title || !this.featureRequest.category || !this.featureRequest.description) {
         this.showNotification('Please fill in all required fields', 'error');
         return;
       }
-      
+
       // Add to popular requests (simulation)
       const newRequest = {
         id: this.popularRequests.length + 1,
@@ -427,10 +427,10 @@ document.addEventListener('alpine:init', () => {
         status: 'Under Review',
         voted: true
       };
-      
+
       this.popularRequests.unshift(newRequest);
       this.showNotification('Feature request submitted successfully!', 'success');
-      
+
       // Reset form
       this.featureRequest = {
         title: '',
@@ -438,7 +438,7 @@ document.addEventListener('alpine:init', () => {
         description: ''
       };
     },
-    
+
     voteFeature(requestId) {
       const request = this.popularRequests.find(r => r.id === requestId);
       if (request && !request.voted) {
@@ -447,19 +447,19 @@ document.addEventListener('alpine:init', () => {
         this.showNotification('Thank you for your vote!', 'success');
       }
     },
-    
+
     // System status
     viewSystemStatus() {
       this.showNotification('Opening system status page...', 'info');
       // In a real app, this would open a detailed status page
     },
-    
+
     // Utility functions
     downloadGuide() {
       this.showNotification('Downloading user guide...', 'info');
       // In a real app, this would trigger a PDF download
     },
-    
+
     loadUserPreferences() {
       // Load user's preferred help section from localStorage
       const saved = localStorage.getItem('helpPreferences');
@@ -474,20 +474,20 @@ document.addEventListener('alpine:init', () => {
         }
       }
     },
-    
+
     saveUserPreferences() {
       const prefs = {
         lastSection: this.activeSection,
         savedAt: new Date().toISOString()
       };
-      
+
       localStorage.setItem('helpPreferences', JSON.stringify(prefs));
     },
-    
+
     // Notifications
     showNotification(message, type = 'info') {
       console.log(`[${type.toUpperCase()}] ${message}`);
-      
+
       // Dispatch custom event for global notification system
       document.dispatchEvent(new CustomEvent('showNotification', {
         detail: { message, type }
@@ -499,7 +499,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('searchComponent', () => ({
     query: '',
     results: [],
-    
+
     search() {
       console.log('Searching help articles for:', this.query);
       // Clear results or populate with search results
@@ -510,10 +510,10 @@ document.addEventListener('alpine:init', () => {
           { title: 'FAQ Section', url: '#faq', type: 'Help' },
           { title: 'Documentation', url: '#documentation', type: 'Help' },
           { title: 'Contact Support', url: '#contact', type: 'Help' }
-        ].filter(item => 
+        ].filter(item =>
           item.title.toLowerCase().includes(this.query.toLowerCase())
         );
-        
+
         // Also search FAQ if on FAQ section
         const helpComponent = Alpine.$data(document.querySelector('[x-data="helpComponent"]'));
         if (helpComponent && helpComponent.activeSection === 'faq') {
@@ -528,12 +528,12 @@ document.addEventListener('alpine:init', () => {
 
   Alpine.data('themeSwitch', () => ({
     currentTheme: 'light',
-    
+
     init() {
-      this.currentTheme = document.documentElement.getAttribute('data-bs-theme') || 
-                         localStorage.getItem('theme') || 'light';
+      this.currentTheme = document.documentElement.getAttribute('data-bs-theme') ||
+        localStorage.getItem('theme') || 'light';
     },
-    
+
     toggle() {
       this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-bs-theme', this.currentTheme);
