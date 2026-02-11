@@ -11,8 +11,19 @@
         "preview": {
             "distribution": "internal",
             "channel": "preview",
+            "node": "20.11.1",
             "android": {
                 "buildType": "apk"
+            },
+            "env": {
+                "EXPO_NO_WEB": "1"
+            }
+        },
+        "test": {
+            "distribution": "internal",
+            "android": {
+                "buildType": "apk",
+                "gradleCommand": ":app:assembleDebug"
             }
         },
         "production": {}
