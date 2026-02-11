@@ -160,106 +160,121 @@ export default function HomeScreen({ navigation }) {
     );
 
     const CollectorDashboard = () => (
-        <ScrollView
-            style={styles.container}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-                <RefreshControl
-                    refreshing={isRefetchingPickups}
-                    onRefresh={refetchPickups}
-                />
-            }
-        >
-            {/* Hero Section - Match Seller Design */}
-            <View style={styles.heroSection}>
-                {/* Personalized Greeting */}
-                <View style={styles.greetingCard}>
-                    <View style={styles.greetingContent}>
-                        <View style={styles.greetingRow}>
-                            <View>
-                                <Text style={styles.greetingText}>{getGreeting()},</Text>
-                                <Text style={styles.userName}>Collector</Text>
-                            </View>
-                            <View style={styles.statusBadge}>
-                                <View style={styles.activeDot} />
-                                <Text style={styles.statusText}>Active</Text>
-                            </View>
+        <View style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefetchingPickups}
+                        onRefresh={refetchPickups}
+                    />
+                }
+            >
+                {/* Hero Section - Gradient Background (Unified Design) */}
+                <LinearGradient
+                    colors={['#1B5E20', '#388E3C']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.heroGradient}
+                >
+                    {/* Header Content */}
+                    <View style={styles.headerTop}>
+                        <View>
+                            <Text style={styles.greetingTextLight}>{getGreeting()},</Text>
+                            <Text style={styles.userNameLight}>Collector</Text>
+                        </View>
+                        <View style={[styles.statusBadge, {
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            borderColor: 'rgba(255,255,255,0.3)',
+                            borderWidth: 1
+                        }]}>
+                            <View style={[styles.activeDot, { backgroundColor: '#4CAF50' }]} />
+                            <Text style={[styles.statusText, { color: '#fff' }]}>Active</Text>
                         </View>
                     </View>
-                </View>
 
-                {/* Quick Stats Card - Premium Design */}
-                <View style={styles.statsCardCompact}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>0</Text>
-                        <Text style={styles.statLabel}>Pickups Today</Text>
+                    {/* Stats Display - Glassmorphism */}
+                    <View style={styles.heroStatsContainer}>
+                        <View style={styles.heroStat}>
+                            <Text style={styles.heroStatValue}>0</Text>
+                            <Text style={styles.heroStatLabel}>Pickups Today</Text>
+                        </View>
+                        <View style={styles.heroStatDivider} />
+                        <View style={styles.heroStat}>
+                            <Text style={styles.heroStatValue}>₵0.00</Text>
+                            <Text style={styles.heroStatLabel}>Earnings Today</Text>
+                        </View>
                     </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>₵0.00</Text>
-                        <Text style={styles.statLabel}>Earning Today</Text>
+
+                    {/* Floating "Go Online" Button */}
+                    <TouchableOpacity
+                        style={styles.floatingSellBtn}
+                        onPress={() => navigation.navigate('Pickups')}
+                        activeOpacity={0.9}
+                    >
+                        <LinearGradient
+                            colors={['#FF9800', '#F57C00']}
+                            style={styles.sellBtnGradient}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                        >
+                            <Truck size={24} color="#fff" />
+                            <Text style={styles.sellBtnText}>Go Online</Text>
+                            <ArrowRight size={20} color="#fff" />
+                        </LinearGradient>
+                    </TouchableOpacity>
+                </LinearGradient>
+
+
+                {/* Available Pickups Section */}
+                <View style={[styles.availableSection, { marginTop: -20, paddingHorizontal: 20 }]}>
+                    <View style={styles.sectionHeaderRow}>
+                        <ShoppingCart size={20} color="#2E7D32" />
+                        <Text style={styles.sectionTitle}>Available for Pickup</Text>
                     </View>
-                </View>
 
-                {/* Primary CTA - Go Online */}
-                <TouchableOpacity
-                    style={styles.primaryCTA}
-                    onPress={() => navigation.navigate('Pickups')}
-                    activeOpacity={0.8}
-                >
-                    <Truck size={24} color="#fff" />
-                    <Text style={styles.ctaText}>Go Online</Text>
-                    <ArrowRight size={20} color="#fff" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Available Pickups Section */}
-            <View style={styles.availableSection}>
-                <View style={styles.sectionHeaderRow}>
-                    <ShoppingCart size={20} color="#2E7D32" />
-                    <Text style={styles.sectionTitle}>Available for Pickup</Text>
-                </View>
-
-                {pickupJobs.length === 0 ? (
-                    <View style={styles.emptyBox}>
-                        <Truck size={50} color="#ddd" />
-                        <Text style={styles.emptyText}>No active pickups right now</Text>
-                        <Text style={styles.emptySubtext}>New jobs will appear here when available</Text>
-                    </View>
-                ) : (
-                    <View style={styles.pickupsGrid}>
-                        {pickupJobs.map((job) => (
-                            <TouchableOpacity
-                                key={job.id}
-                                style={styles.jobCard}
-                                onPress={() => navigation.navigate('Pickups')}
-                                activeOpacity={0.9}
-                            >
-                                <View style={styles.jobCardHeader}>
-                                    <View style={[styles.jobStatusBadge, { backgroundColor: job.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
-                                        <Text style={[styles.jobStatusText, { color: job.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>
-                                            {job.status}
-                                        </Text>
+                    {pickupJobs.length === 0 ? (
+                        <View style={styles.emptyBox}>
+                            <Truck size={50} color="#ddd" />
+                            <Text style={styles.emptyText}>No active pickups right now</Text>
+                            <Text style={styles.emptySubtext}>New jobs will appear here when available</Text>
+                        </View>
+                    ) : (
+                        <View style={styles.pickupsGrid}>
+                            {pickupJobs.map((job) => (
+                                <TouchableOpacity
+                                    key={job.id}
+                                    style={styles.jobCard}
+                                    onPress={() => navigation.navigate('Pickups')}
+                                    activeOpacity={0.9}
+                                >
+                                    <View style={styles.jobCardHeader}>
+                                        <View style={[styles.jobStatusBadge, { backgroundColor: job.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
+                                            <Text style={[styles.jobStatusText, { color: job.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>
+                                                {job.status}
+                                            </Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
-                                <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
-                                <View style={styles.jobFooter}>
-                                    <View style={styles.jobLocation}>
-                                        <MapPin size={12} color="#888" />
-                                        <Text style={styles.jobLocationText} numberOfLines={1}>
-                                            {job.pickup_address || job.city || 'Nearby'}
-                                        </Text>
+                                    <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
+                                    <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
+                                    <View style={styles.jobFooter}>
+                                        <View style={styles.jobLocation}>
+                                            <MapPin size={12} color="#888" />
+                                            <Text style={styles.jobLocationText} numberOfLines={1}>
+                                                {job.pickup_address || job.city || 'Nearby'}
+                                            </Text>
+                                        </View>
                                     </View>
-                                </View>
-                                <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                )}
-            </View>
-        </ScrollView>
+                                    <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
+        </View>
     );
 
     if (userRole === 'COLLECTOR') {
