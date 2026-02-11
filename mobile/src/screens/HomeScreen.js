@@ -183,7 +183,9 @@ export default function HomeScreen({ navigation }) {
                     <View style={styles.headerTop}>
                         <View>
                             <Text style={styles.greetingTextLight}>{getGreeting()},</Text>
-                            <Text style={styles.userNameLight}>Collector</Text>
+                            <Text style={styles.userNameLight}>
+                                {user?.first_name || user?.username || 'Collector'}
+                            </Text>
                         </View>
                         <View style={[styles.statusBadge, {
                             backgroundColor: 'rgba(255,255,255,0.2)',
