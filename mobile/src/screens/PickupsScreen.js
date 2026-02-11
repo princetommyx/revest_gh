@@ -76,10 +76,30 @@ export default function PickupsScreen() {
         { id: 'other', label: 'Other reason', icon: '📝' }
     ];
 
+    // Location Selection State
+    const [isSelectingLocation, setIsSelectingLocation] = useState(false);
+    const [mapRegion, setMapRegion] = useState(null);
+
     // Load recent locations on mount
     useEffect(() => {
         loadRecentLocations();
     }, []);
+
+    // Reverse Geocode Function
+    const reverseGeocode = async (lat, lon) => {
+        try {
+            const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
+            if (address) {
+                // Format: "Madina Market, Accra"
+                const street = address.street || address.name || '';
+                const city = address.city || address.subregion || address.region || '';
+                return `${street}, ${city}`.replace(/^, /, '').trim();
+            }
+        } catch (error) {
+            console.log('Reverse geocode error:', error);
+        }
+        return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    };
 
     const loadRecentLocations = async () => {
         try {
@@ -122,13 +142,52 @@ export default function PickupsScreen() {
 
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc.coords);
+
+            // Set initial map region
+            setMapRegion({
+                latitude: loc.coords.latitude,
+                longitude: loc.coords.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+            });
         })();
     }, []);
+
+    // Handle "Set on Map" Flow
+    const startMapSelection = () => {
+        setShowRequestModal(false);
+        setIsSelectingLocation(true);
+        // Ensure map is centered on current location or last known
+        if (mapRef.current && location) {
+            mapRef.current.animateToRegion({
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+            }, 1000);
+        }
+    };
+
+    const confirmMapSelection = async () => {
+        setIsSelectingLocation(false);
+        // Get center of map (managed by onRegionChangeComplete)
+        if (mapRegion) {
+            // Update location state
+            setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
+
+            // Reverse geocode
+            const address = await reverseGeocode(mapRegion.latitude, mapRegion.longitude);
+            setCustomAddress(address);
+
+            // Re-open modal
+            setShowRequestModal(true);
+        }
+    };
 
     // Location tracking for collectors during active jobs
     useEffect(() => {
         if (userRole !== 'COLLECTOR' || !location) return;
-
+        // ... (existing tracking logic)
         // Find if collector has any ACCEPTED jobs
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' && j.collector?.id === user?.id);
 
@@ -181,7 +240,18 @@ export default function PickupsScreen() {
         }
     };
 
+    // Auto-fill address when modal opens if empty
+    useEffect(() => {
+        if (showRequestModal && !customAddress && location) {
+            (async () => {
+                const address = await reverseGeocode(location.latitude, location.longitude);
+                setCustomAddress(address);
+            })();
+        }
+    }, [showRequestModal]);
+
     const handleCreateRequest = async () => {
+        // ... (existing logic)
         if (!location) {
             Toast.show("Location not available", { backgroundColor: '#E74C3C' });
             return;
@@ -403,40 +473,63 @@ export default function PickupsScreen() {
                 initialRegion={{
                     latitude: location?.latitude || 5.6037, // Default Accra
                     longitude: location?.longitude || -0.1870,
-                    latitudeDelta: 0.05,
-                    longitudeDelta: 0.05,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
                 }}
+                onRegionChangeComplete={setMapRegion}
                 showsUserLocation={true}
             >
                 {memoizedMarkers}
+
+                {/* Center Pin for Location Selection */}
+                {isSelectingLocation && (
+                    <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -16, marginTop: -32 }}>
+                        <MapPin size={32} color="#E74C3C" fill="#fff" />
+                    </View>
+                )}
             </MapView>
 
-            <View style={styles.overlay}>
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.headerTitle}>
-                            {userRole === 'COLLECTOR' ? 'Available Pickups' : 'Your Pickups'}
-                        </Text>
+            {/* Map Selection Overlay */}
+            {isSelectingLocation && (
+                <View style={styles.selectionOverlay}>
+                    <View style={styles.selectionHeader}>
+                        <Text style={styles.selectionTitle}>Pick Location</Text>
+                        <Text style={styles.selectionSubtitle}>Drag map to position pin</Text>
                     </View>
-                    {userRole !== 'COLLECTOR' && (
-                        <View style={styles.actionsRow}>
-                            <TouchableOpacity
-                                style={styles.requestButton}
-                                onPress={() => setShowRequestModal(true)}
-                            >
-                                <Navigation size={18} color="#fff" />
-                                <Text style={styles.requestButtonText}>Request Pickup</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.historyBtn}
-                                onPress={() => navigation.navigate('PickupHistory')}
-                            >
-                                <Clock size={20} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <TouchableOpacity style={styles.confirmLocationBtn} onPress={confirmMapSelection}>
+                        <Text style={styles.confirmLocationText}>Confirm Location</Text>
+                    </TouchableOpacity>
                 </View>
-            </View>
+            )}
+
+            {!isSelectingLocation && (
+                <View style={styles.overlay}>
+                    <View style={styles.header}>
+                        <View style={styles.headerRow}>
+                            <Text style={styles.headerTitle}>
+                                {userRole === 'COLLECTOR' ? 'Available Pickups' : 'Your Pickups'}
+                            </Text>
+                        </View>
+                        {userRole !== 'COLLECTOR' && (
+                            <View style={styles.actionsRow}>
+                                <TouchableOpacity
+                                    style={styles.requestButton}
+                                    onPress={() => setShowRequestModal(true)}
+                                >
+                                    <Navigation size={18} color="#fff" />
+                                    <Text style={styles.requestButtonText}>Request Pickup</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.historyBtn}
+                                    onPress={() => navigation.navigate('PickupHistory')}
+                                >
+                                    <Clock size={20} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            )}
 
             {sortedJobs.length > 0 && (
                 <View style={styles.jobListContainer}>
