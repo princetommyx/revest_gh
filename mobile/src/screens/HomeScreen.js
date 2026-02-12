@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image'; // ✅ Faster than react-native Image
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { marketApi } from '../api/market';
 import {
@@ -33,6 +33,7 @@ import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 
 export default function HomeScreen({ navigation }) {
+    const insets = useSafeAreaInsets();
     const { userRole, signOut, user } = useAuth();
     const [filter, setFilter] = useState('');
     const [search, setSearch] = useState('');
@@ -294,7 +295,7 @@ export default function HomeScreen({ navigation }) {
                 colors={['#1B5E20', '#388E3C']} // Deep Green to Vibrant Green
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.heroGradient}
+                style={[styles.heroGradient, { paddingTop: insets.top + 10 }]}
             >
                 {/* Header Content */}
                 <View style={styles.headerTop}>
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
 
     // Hero Section Styles
     heroGradient: {
-        paddingTop: 60, // more padding for status bar
+        // paddingTop removed, handled dynamically
         paddingHorizontal: 20,
         paddingBottom: 40, // space for floating elements
         borderBottomLeftRadius: 30,
@@ -423,7 +424,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 10, // Reduced from 24
     },
     headerIconBg: {
         backgroundColor: 'rgba(255,255,255,0.2)',

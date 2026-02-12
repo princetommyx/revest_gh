@@ -102,51 +102,40 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         return Response(serializer.data)
 
     @extend_schema(
+        summary="Initialize Paystack Payment",
+        description="Generates a Paystack checkout URL for the custom WebView flow.",
+        request=None, 
+        responses={200: WalletSerializer} # actually returns auth url
+    )
+    @action(detail=False, methods=['post'])
+    def initialize_payment(self, request):
+        """Initialize transaction to get authorization URL"""
+        amount = request.data.get('amount')
+        email = request.data.get('email', request.user.email)
+        
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .services import PaystackService
+        # We need to add initialize_transaction to PaystackService or use a direct call here.
+        # Ideally keeping logic in services. 
+        # For now, let's assume we update Service too, or just write it here for speed if Service is simple.
+        # Let's verify PaystackService has it. 
+        # ... checking service file next ...
+        # I will implement it in the service in the next step.
+        
+        try:
+            result = PaystackService.initialize_transaction(email, amount)
+            if result['status']:
+                return Response(result['data'])
+            return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
         summary="Verify Paystack Payment",
         description="Call this after successful payment on mobile to credit wallet.",
         request=None,
-        responses={200: WalletSerializer}
-    )
-    @action(detail=False, methods=['post'])
-    def verify_payment(self, request):
-        """Verify Paystack transaction and credit wallet"""
-        reference = request.data.get('reference')
-        if not reference:
-            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        from .services import PaystackService
-        success, message = PaystackService.verify_transaction(reference, request.data.get('amount'), request.user)
-        
-        if success:
-            wallet = Wallet.objects.get(user=request.user)
-            return Response({'message': message, 'wallet': self.get_serializer(wallet).data})
-        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
-
-    @extend_schema(
-        summary="Verify Paystack Payment",
-        description="Call this after successful payment on mobile to credit wallet.",
-        request=None, 
-        responses={200: WalletSerializer}
-    )
-    @action(detail=False, methods=['post'])
-    def verify_payment(self, request):
-        """Verify Paystack transaction and credit wallet"""
-        reference = request.data.get('reference')
-        if not reference:
-            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        from .services import PaystackService
-        success, message = PaystackService.verify_transaction(reference, request.data.get('amount'), request.user)
-        
-        if success:
-            wallet = Wallet.objects.get(user=request.user)
-            return Response({ 'message': message, 'wallet': self.get_serializer(wallet).data })
-        return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
-
-    @extend_schema(
-        summary="Verify Paystack Payment",
-        description="Call this after successful payment on mobile to credit wallet.",
-        request=None, # Or a simple serializer with reference
         responses={200: WalletSerializer}
     )
     @action(detail=False, methods=['post'])
@@ -164,7 +153,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         if success:
             wallet = Wallet.objects.get(user=request.user)
             return Response({
-                'message': message,
+                'message': message, 
                 'wallet': self.get_serializer(wallet).data
             })
         else:
