@@ -1,13 +1,56 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { Paystack } from 'react-native-paystack-webview';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView, Modal } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useNavigation } from '@react-navigation/native';
-import { CreditCard, ArrowLeft, Wallet } from 'lucide-react-native';
+import { CreditCard, ArrowLeft, Wallet, X } from 'lucide-react-native';
 import apiClient from '../api/client';
 import Toast from 'react-native-root-toast';
 
 // LIVE PUBLIC KEY provided by user
 const PAYSTACK_PUBLIC_KEY = 'pk_live_0ef4887fb63cb118763e8a67e512ced251884658';
+
+// ... (render function is handled by previous tool call) ...
+
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: '#fff' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0'
+    },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
+    content: { flex: 1, padding: 24, alignItems: 'center', paddingTop: 40 },
+    iconContainer: {
+        width: 80, height: 80, borderRadius: 40,
+        backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center',
+        marginBottom: 24
+    },
+    label: { fontSize: 16, color: '#666', marginBottom: 12 },
+    inputContainer: {
+        flexDirection: 'row', alignItems: 'center',
+        borderBottomWidth: 2, borderBottomColor: '#2E7D32',
+        marginBottom: 40, paddingBottom: 8, width: '80%', justifyContent: 'center'
+    },
+    currency: { fontSize: 32, fontWeight: 'bold', color: '#2E7D32', marginRight: 8 },
+    input: { fontSize: 40, fontWeight: 'bold', color: '#1a1a1a', minWidth: 100, textAlign: 'center' },
+    payBtn: {
+        backgroundColor: '#2E7D32', paddingVertical: 16, paddingHorizontal: 32,
+        borderRadius: 30, flexDirection: 'row', alignItems: 'center', gap: 10,
+        width: '100%', justifyContent: 'center', elevation: 3
+    },
+    payBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+    secureText: { marginTop: 20, color: '#999', fontSize: 12 },
+    modalHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        padding: 15, borderBottomWidth: 1, borderBottomColor: '#ddd'
+    },
+    modalTitle: { fontSize: 18, fontWeight: 'bold' },
+    closeBtn: { padding: 5 }
+});
 
 export default function TopUpScreen({ route }) {
     const navigation = useNavigation();
