@@ -1,8 +1,10 @@
-from rest_framework import generics, permissions, status, views
+from rest_framework import generics, permissions, status, views, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, UserProfileSerializer,
-    UserLocationSerializer, ChangePasswordSerializer, PublicUserSerializer
+    UserLocationSerializer, ChangePasswordSerializer, PublicUserSerializer,
+    NotificationSerializer, DeviceTokenSerializer
 )
 from .permissions import IsOwnerOrAdmin
 from django.contrib.auth import get_user_model
@@ -400,3 +402,38 @@ class GoogleLoginView(views.APIView):
         except Exception as e:
             logger.error(f"Google login error: {e}")
             return Response({'error': f'Login failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from .models import Notification
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    serializer_class = NotificationSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+    http_method_names = ['get', 'patch', 'delete']
+
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['patch'])
+    def read(self, request, pk=None):
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response({'status': 'marked as read'})
+
+    @action(detail=False, methods=['patch'])
+    def read_all(self, request):
+        self.get_queryset().update(is_read=True)
+        return Response({'status': 'all marked as read'})
+
+class DeviceTokenView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        serializer = DeviceTokenSerializer(data=request.data)
+        if serializer.is_valid():
+            token = serializer.validated_data['push_token']
+            request.user.expo_push_token = token
+            request.user.save()
+            return Response({'status': 'token updated'})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

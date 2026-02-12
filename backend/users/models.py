@@ -46,9 +46,31 @@ class User(AbstractUser):
 
     # Support Role
     is_support = models.BooleanField(default=False)
+    
+    # Notifications
+    expo_push_token = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 
     def __str__(self):
         return self.username
+
+class Notification(models.Model):
+    class Urgency(models.TextChoices):
+        NORMAL = 'NORMAL', 'Normal'
+        URGENT = 'URGENT', 'Urgent'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=255)
+    body = models.TextField()
+    data = models.JSONField(default=dict, blank=True)
+    urgency = models.CharField(max_length=20, choices=Urgency.choices, default=Urgency.NORMAL)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.user.username}"
 
 class PasswordResetOTP(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

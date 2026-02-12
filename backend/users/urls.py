@@ -5,7 +5,8 @@ from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
     UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
-    DebugEmailView, EmailHealthCheckView, GoogleLoginView
+    DebugEmailView, EmailHealthCheckView, GoogleLoginView,
+    NotificationViewSet, DeviceTokenView
 )
 
 # Authentication endpoints (for /api/v1/auth/)
@@ -29,6 +30,9 @@ user_urlpatterns = [
     path('me/', UserDetailView.as_view(), name='user_detail'),  # Backward compatibility
     path('location/', UpdateLocationView.as_view(), name='update_location'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+    path('push-token/', DeviceTokenView.as_view(), name='update_push_token'),
+    path('notifications/', NotificationViewSet.as_view({'get': 'list', 'patch': 'read_all'}), name='notification_list'),
+    path('notifications/<int:pk>/', NotificationViewSet.as_view({'patch': 'read', 'delete': 'destroy'}), name='notification_detail'),
 ]
 
 # Debug/Health endpoints

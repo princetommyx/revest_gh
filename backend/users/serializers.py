@@ -189,3 +189,15 @@ class UserSerializer(UserProfileSerializer):
             user.save()
         return user
 
+
+from .models import Notification
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = ('id', 'title', 'body', 'data', 'urgency', 'is_read', 'created_at')
+        read_only_fields = ('id', 'created_at')
+
+class DeviceTokenSerializer(serializers.Serializer):
+    push_token = serializers.CharField(required=True)
+

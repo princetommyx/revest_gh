@@ -23,12 +23,16 @@ import SecurityScreen from '../screens/SecurityScreen';
 import HelpScreen from '../screens/HelpScreen';
 import SupportChatScreen from '../screens/SupportChatScreen';
 import PickupHistoryScreen from '../screens/PickupHistoryScreen';
+import NotificationScreen from '../screens/NotificationScreen';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+    const { unreadCount } = useNotifications();
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -58,7 +62,11 @@ function MainTabs() {
             <Tab.Screen name="Pickups" component={PickupsScreen} />
             <Tab.Screen name="Chat" component={ChatScreen} />
             <Tab.Screen name="Wallet" component={WalletScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen
+                name="Profile"
+                component={ProfileScreen}
+                options={{ tabBarBadge: unreadCount > 0 ? unreadCount : null }}
+            />
         </Tab.Navigator>
     );
 }
@@ -117,6 +125,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
+                        <Stack.Screen name="Notifications" component={NotificationScreen} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

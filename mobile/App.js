@@ -2,6 +2,7 @@ import React from 'react';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 
 import Toast from 'react-native-toast-message';
@@ -28,7 +29,9 @@ export default function App() {
         <SafeAreaProvider>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <AppNavigator />
+              <NotificationProvider>
+                <AppNavigator />
+              </NotificationProvider>
             </AuthProvider>
           </QueryClientProvider>
         </SafeAreaProvider>
