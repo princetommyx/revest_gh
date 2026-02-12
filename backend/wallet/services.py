@@ -1,7 +1,71 @@
 import requests
+import uuid
+from decimal import Decimal
 from django.conf import settings
 from .models import Wallet, Transaction
 from django.db import transaction
+
+class WalletService:
+    @staticmethod
+    def check_eligibility_for_job(user):
+        """
+        Check if user (Collector) is eligible to accept a job.
+        For now, returns True. Future: Check min balance.
+        """
+        return True, None
+
+    @staticmethod
+    def request_withdrawal(user, amount):
+        """
+        Request a withdrawal from the user's wallet.
+        """
+        amount = Decimal(str(amount))
+        with transaction.atomic():
+            wallet, created = Wallet.objects.select_for_update().get_or_create(user=user)
+            
+            if wallet.balance < amount:
+                raise ValueError("Insufficient wallet balance.")
+                
+            # Debit wallet immediately for pending withdrawal to reserve funds
+            wallet.balance -= amount
+            wallet.save()
+            
+            # Create Transaction Record
+            return Transaction.objects.create(
+                wallet=wallet,
+                amount=-amount,
+                transaction_type='WITHDRAWAL',
+                status='PENDING',
+                description="Payout Request",
+                reference=uuid.uuid4()
+            )
+
+    @staticmethod
+    def process_job_completion(pickup_request):
+        """
+        Handle payment distribution when a job is completed.
+        """
+        if pickup_request.payment_method == 'DIGITAL' and pickup_request.actual_price:
+             amount = pickup_request.actual_price
+             collector = pickup_request.collector
+             
+             if not collector:
+                 return
+
+             with transaction.atomic():
+                 # Credit Collector
+                 collector_wallet, _ = Wallet.objects.get_or_create(user=collector)
+                 collector_wallet.balance += amount
+                 collector_wallet.save()
+                 
+                 Transaction.objects.create(
+                     wallet=collector_wallet,
+                     pickup=pickup_request,
+                     amount=amount,
+                     transaction_type='JOB_EARNING',
+                     status='COMPLETED',
+                     description=f"Earning for Job #{pickup_request.id}"
+                 )
 
 class PaystackService:
     @staticmethod
