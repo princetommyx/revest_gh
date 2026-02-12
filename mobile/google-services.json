@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "132479987352",
+    "project_id": "revestagh-b98e9",
+    "storage_bucket": "revestagh-b98e9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:132479987352:android:814f2a9b32bab229116aed",
+        "android_client_info": {
+          "package_name": "com.revesta.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCECAkQuAFy8a2F8tnGMRqaFeMl0BO_m24"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

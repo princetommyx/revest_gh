@@ -22,6 +22,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.revesta.mobile",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
