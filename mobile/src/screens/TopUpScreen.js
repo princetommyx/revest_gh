@@ -14,7 +14,13 @@ export default function TopUpScreen({ route }) {
     const { user } = route.params || {}; // Pass user object to pre-fill email/phone
     const [amount, setAmount] = useState('');
     const [loading, setLoading] = useState(false);
+    const [mountPaystack, setMountPaystack] = useState(false);
     const paystackWebViewRef = useRef();
+
+    React.useEffect(() => {
+        const timer = setTimeout(() => setMountPaystack(true), 500);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handlePayPress = () => {
         if (!amount || isNaN(amount) || Number(amount) < 1) {
@@ -23,10 +29,10 @@ export default function TopUpScreen({ route }) {
         }
         try {
             // Start Paystack flow safely
-            if (paystackWebViewRef.current) {
+            if (paystackWebViewRef.current && mountPaystack) {
                 paystackWebViewRef.current.startTransaction();
             } else {
-                Alert.alert('Error', 'Payment component not ready. Please try again.');
+                Alert.alert('Please Wait', 'Payment system initializing...');
             }
         } catch (e) {
             console.error(e);
@@ -121,25 +127,28 @@ export default function TopUpScreen({ route }) {
                 </Text>
             </View>
 
-            <Paystack
-                paystackKey={PAYSTACK_PUBLIC_KEY}
-                amount={amount || '0.00'}
-                billingEmail={user?.email || 'user@revesta.com'}
-                billingName={user?.first_name || 'Revesta User'}
-                billingMobile={user?.phone_number || '0240000000'}
-                currency='GHS'
-                activityIndicatorColor="green"
-                onCancel={handleCancel}
-                onError={(e) => {
-                    console.log('Paystack Error:', e);
-                    // Prevent crash by catching error here
-                    Alert.alert('Payment Error', 'Could not load payment window. ' + (e?.message || ''));
-                }}
-                onSuccess={handleSuccess}
-                ref={paystackWebViewRef}
-                channels={['mobile_money', 'card']}
-                autoStart={false}
-            />
+            {mountPaystack && (
+                <View style={{ height: 1, width: 1, overflow: 'hidden' }}>
+                    <Paystack
+                        paystackKey={PAYSTACK_PUBLIC_KEY}
+                        amount={amount || '0.00'}
+                        billingEmail={user?.email || 'user@revesta.com'}
+                        billingName={user?.first_name || 'Revesta User'}
+                        billingMobile={user?.phone_number || '0240000000'}
+                        currency='GHS'
+                        activityIndicatorColor="green"
+                        onCancel={handleCancel}
+                        onError={(e) => {
+                            console.log('Paystack Error:', e);
+                            Alert.alert('Payment Error', 'Could not load payment window. ' + (e?.message || ''));
+                        }}
+                        onSuccess={handleSuccess}
+                        ref={paystackWebViewRef}
+                        channels={['mobile_money', 'card']}
+                        autoStart={false}
+                    />
+                </View>
+            )}
         </SafeAreaView>
     );
 }
