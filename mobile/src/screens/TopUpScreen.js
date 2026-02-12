@@ -1,81 +1,83 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, Alert, SafeAreaView } from 'react-native';
-import { Paystack } from 'react-native-paystack-webview';
-import { useNavigation } from '@react-navigation/native';
-import { CreditCard, ArrowLeft, Wallet } from 'lucide-react-native';
-import apiClient from '../api/client';
-import Toast from 'react-native-root-toast';
+import {
+    View, Text, StyleSheet, TouchableOpacity,
+    TextInput, ActivityIndicator, Alert, Modal, SafeAreaView
+} from 'react-native';
+import { WebView } from 'react-native-webview';
+import { useAuth } from '../context/AuthContext';
+import { walletApi } from '../api/wallet';
+import { useVerifyPayment } from '../hooks/useWallet';
+import { X, Lock, CreditCard, ChevronLeft } from 'lucide-react-native';
 
-// LIVE PUBLIC KEY provided by user
-const PAYSTACK_PUBLIC_KEY = 'pk_live_0ef4887fb63cb118763e8a67e512ced251884658';
-
-export default function TopUpScreen({ route }) {
-    const navigation = useNavigation();
-    const { user } = route.params || {}; // Pass user object to pre-fill email/phone
+export default function TopUpScreen({ navigation }) {
+    const { user } = useAuth();
     const [amount, setAmount] = useState('');
     const [loading, setLoading] = useState(false);
-    const [mountPaystack, setMountPaystack] = useState(false);
-    const paystackWebViewRef = useRef();
+    const [paystackUrl, setPaystackUrl] = useState(null);
+    const [reference, setReference] = useState(null);
+    const verifyMutation = useVerifyPayment();
 
-    React.useEffect(() => {
-        const timer = setTimeout(() => setMountPaystack(true), 500);
-        return () => clearTimeout(timer);
-    }, []);
-
-    const handlePayPress = () => {
+    const handleStartPayment = async () => {
         if (!amount || isNaN(amount) || Number(amount) < 1) {
             Alert.alert('Invalid Amount', 'Please enter a valid amount (min 1 GHS).');
             return;
         }
-        try {
-            // Start Paystack flow safely
-            if (paystackWebViewRef.current && mountPaystack) {
-                paystackWebViewRef.current.startTransaction();
-            } else {
-                Alert.alert('Please Wait', 'Payment system initializing...');
-            }
-        } catch (e) {
-            console.error(e);
-            Alert.alert('Error', 'Could not start payment.');
-        }
-    };
 
-
-    const handleSuccess = async (res) => {
-        // res structure: { status: "success", transactionRef: { ... }, reference: "..." }
         setLoading(true);
         try {
-            console.log('Paystack success:', res);
-            const reference = res.reference || res.transactionRef?.reference;
+            // 1. Initialize transaction on backend
+            const initResponse = await walletApi.initializePayment(user.email, amount);
 
-            // Call backend to verify and credit wallet
-            const response = await apiClient.post('/wallet/verify_payment/', {
-                reference: reference,
-                amount: Number(amount)
-            });
-
-            Toast.show('Wallet credited successfully!', {
-                duration: Toast.durations.LONG,
-                position: Toast.positions.CENTER,
-                backgroundColor: '#2E7D32',
-                textColor: '#fff'
-            });
-
-            // Go back to wallet
-            navigation.goBack();
-
+            if (initResponse && initResponse.authorization_url) {
+                setReference(initResponse.reference);
+                setPaystackUrl(initResponse.authorization_url);
+            } else {
+                throw new Error(initResponse?.message || 'Could not get payment URL');
+            }
         } catch (error) {
-            console.error('Verification error:', error);
-            Alert.alert('Verification Failed', 'Payment successful but wallet update failed. Please contact support.');
+            console.error(error);
+            Alert.alert('Error', 'Could not initialize payment. ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCancel = () => {
-        Toast.show('Transaction cancelled', {
-            duration: Toast.durations.SHORT,
-            position: Toast.positions.BOTTOM,
+    const handleWebViewNavigation = (navState) => {
+        const { url } = navState;
+
+        // 2. Intercept callback URL (Paystack standard or custom)
+        // Adjust this check based on your Paystack settings or usage of standard callback
+        if (url.includes('paystack.co/close') || url.includes('callback') || url.includes('success')) {
+            // Close WebView
+            setPaystackUrl(null);
+
+            // 3. Verify on backend
+            verifyTransaction();
+        }
+    };
+
+    const verifyTransaction = () => {
+        if (!reference) return;
+
+        setLoading(true);
+        verifyMutation.mutate(reference, {
+            onSuccess: (data) => {
+                setLoading(false);
+                if (data.wallet) { // Check if wallet object is returned
+                    Alert.alert('Success', 'Wallet credited successfully! New Balance: ₵' + data.wallet.balance.toFixed(2), [
+                        { text: 'OK', onPress: () => navigation.goBack() }
+                    ]);
+                } else {
+                    Alert.alert('Pending', 'Payment is processing. Check your balance shortly.');
+                    navigation.goBack();
+                }
+            },
+            onError: (err) => {
+                setLoading(false);
+                // Even if frontend verification fails, webhook might have succeeded.
+                Alert.alert('Verification', 'Please check your wallet balance. Payment is being processed.');
+                navigation.goBack();
+            }
         });
     };
 
@@ -83,108 +85,137 @@ export default function TopUpScreen({ route }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#1a1a1a" />
+                    <ChevronLeft size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Top Up Wallet</Text>
-                <View style={{ width: 24 }} />
             </View>
 
             <View style={styles.content}>
-                <View style={styles.iconContainer}>
-                    <Wallet size={48} color="#2E7D32" />
-                </View>
-
-                <Text style={styles.label}>Enter Amount (GHS)</Text>
-                <View style={styles.inputContainer}>
-                    <Text style={styles.currency}>GH₵</Text>
+                <View style={styles.card}>
+                    <Text style={styles.label}>Enter Amount (GHS)</Text>
                     <TextInput
                         style={styles.input}
+                        placeholder="0.00"
+                        keyboardType="numeric"
                         value={amount}
                         onChangeText={setAmount}
-                        keyboardType="numeric"
-                        placeholder="0.00"
                         autoFocus
                     />
+                    <Text style={styles.helperText}>Minimum deposit: ₵1.00</Text>
                 </View>
 
                 <TouchableOpacity
-                    style={[styles.payBtn, loading && styles.payBtnDisabled]}
-                    onPress={handlePayPress}
-                    disabled={loading || !mountPaystack}
+                    style={[styles.payBtn, loading && styles.disabledBtn]}
+                    onPress={handleStartPayment}
+                    disabled={loading}
                 >
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
                         <>
-                            <CreditCard size={20} color="#fff" />
-                            <Text style={styles.payBtnText}>Pay Now</Text>
+                            <Lock size={18} color="#fff" />
+                            <Text style={styles.payBtnText}>Pay Securely</Text>
                         </>
                     )}
                 </TouchableOpacity>
 
-                <Text style={styles.secureText}>
-                    Secured by Paystack
-                </Text>
+                <View style={styles.footer}>
+                    <CreditCard size={16} color="#888" />
+                    <Text style={styles.footerText}>Secured by Paystack</Text>
+                </View>
             </View>
 
-            {mountPaystack && (
-                <View style={{ height: 1, width: 1, overflow: 'hidden' }}>
-                    <Paystack
-                        paystackKey={PAYSTACK_PUBLIC_KEY}
-                        amount={amount || '0.00'}
-                        billingEmail={user?.email || 'user@revesta.com'}
-                        billingName={user?.first_name || 'Revesta User'}
-                        billingMobile={user?.phone_number || '0240000000'}
-                        currency='GHS'
-                        activityIndicatorColor="green"
-                        onCancel={handleCancel}
-                        onError={(e) => {
-                            console.log('Paystack Error:', e);
-                            Alert.alert('Payment Error', 'Could not load payment window. ' + (e?.message || ''));
-                        }}
-                        onSuccess={handleSuccess}
-                        ref={paystackWebViewRef}
-                        channels={['mobile_money', 'card']}
-                        autoStart={false}
+            {/* Paystack WebView Modal */}
+            <Modal visible={!!paystackUrl} animationType="slide" onRequestClose={() => setPaystackUrl(null)}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+                    <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Complete Payment</Text>
+                        <TouchableOpacity onPress={() => setPaystackUrl(null)} style={styles.closeBtn}>
+                            <X size={24} color="#333" />
+                        </TouchableOpacity>
+                    </View>
+                    <WebView
+                        source={{ uri: paystackUrl }}
+                        style={{ flex: 1 }}
+                        onNavigationStateChange={handleWebViewNavigation}
+                        startInLoadingState
+                        renderLoading={() => <ActivityIndicator size="large" color="#2E7D32" style={styles.loader} />}
                     />
-                </View>
-            )}
+                </SafeAreaView>
+            </Modal>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: '#F8F9FA' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
+        padding: 16,
+        backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0'
+        borderBottomColor: '#eee'
     },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    content: { flex: 1, padding: 24, alignItems: 'center', paddingTop: 40 },
-    iconContainer: {
-        width: 80, height: 80, borderRadius: 40,
-        backgroundColor: '#E8F5E9', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 24
+    backBtn: { padding: 8, marginRight: 8 },
+    headerTitle: { fontSize: 20, fontWeight: 'bold' },
+    content: { padding: 20 },
+    card: {
+        backgroundColor: '#fff',
+        padding: 24,
+        borderRadius: 16,
+        marginBottom: 24,
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4
     },
-    label: { fontSize: 16, color: '#666', marginBottom: 12 },
-    inputContainer: {
-        flexDirection: 'row', alignItems: 'center',
-        borderBottomWidth: 2, borderBottomColor: '#2E7D32',
-        marginBottom: 40, paddingBottom: 8, width: '80%', justifyContent: 'center'
+    label: { fontSize: 14, color: '#666', marginBottom: 8, textTransform: 'uppercase', fontWeight: 'bold' },
+    input: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#333',
+        paddingVertical: 8,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee'
     },
-    currency: { fontSize: 32, fontWeight: 'bold', color: '#2E7D32', marginRight: 8 },
-    input: { fontSize: 40, fontWeight: 'bold', color: '#1a1a1a', minWidth: 100, textAlign: 'center' },
+    helperText: { marginTop: 8, color: '#999', fontSize: 12 },
     payBtn: {
-        backgroundColor: '#2E7D32', paddingVertical: 16, paddingHorizontal: 32,
-        borderRadius: 30, flexDirection: 'row', alignItems: 'center', gap: 10,
-        width: '100%', justifyContent: 'center', elevation: 3
+        backgroundColor: '#2E7D32',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 18,
+        borderRadius: 12,
+        gap: 8,
+        elevation: 4,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8
     },
-    payBtnDisabled: { opacity: 0.7 },
+    disabledBtn: { opacity: 0.7 },
     payBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    secureText: { marginTop: 20, color: '#999', fontSize: 12 }
+    footer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 24,
+        gap: 8
+    },
+    footerText: { color: '#888', fontSize: 12 },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee',
+        backgroundColor: '#fff',
+        elevation: 2
+    },
+    modalTitle: { fontSize: 16, color: '#666', fontWeight: 'bold' },
+    closeBtn: { padding: 8 },
+    loader: { position: 'absolute', top: '50%', left: '50%', marginTop: -25, marginLeft: -25 }
 });

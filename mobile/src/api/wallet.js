@@ -21,5 +21,10 @@ export const walletApi = {
         // data: { amount, phone_number, network, account_name }
         const response = await apiClient.post('/wallet/withdraw/', data);
         return response.data;
+    },
+
+    initializePayment: async (email, amount) => {
+        const response = await apiClient.post('/wallet/initialize_payment/', { email, amount });
+        return response.data;
     }
 };

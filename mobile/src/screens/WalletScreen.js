@@ -49,12 +49,14 @@ export default function WalletScreen() {
     const [pendingTxn, setPendingTxn] = useState(null);
 
     const handleAction = () => {
+        console.log("handleAction called", { modalType, amount, phone, accountName });
+
         if (!amount || isNaN(amount) || parseFloat(amount) < 1) {
-            Toast.show("Minimum amount is 1.00", { backgroundColor: '#E74C3C' });
+            alert("Minimum amount is 1.00"); // Using alert for better visibility
             return;
         }
         if (!phone || phone.length < 10) {
-            Toast.show("Please enter a valid MoMo number", { backgroundColor: '#E74C3C' });
+            alert("Please enter a valid MoMo number");
             return;
         }
 
@@ -76,14 +78,21 @@ export default function WalletScreen() {
                 }
             });
         } else {
+            console.log("Processing withdrawal...");
             if (!accountName) {
-                Toast.show("Account name is required for withdrawal", { backgroundColor: '#E74C3C' });
+                alert("Account name is required for withdrawal");
                 return;
             }
             withdrawMutation.mutate({ ...payload, account_name: accountName }, {
                 onSuccess: () => {
+                    console.log("Withdrawal success");
                     setModalVisible(false);
                     setAmount('');
+                    // Also clear other fields if needed
+                },
+                onError: (e) => {
+                    console.error("Withdrawal error", e);
+                    alert("Withdrawal failed: " + (e.message || "Unknown error"));
                 }
             });
         }
