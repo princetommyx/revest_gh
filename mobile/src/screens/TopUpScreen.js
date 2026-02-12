@@ -21,9 +21,19 @@ export default function TopUpScreen({ route }) {
             Alert.alert('Invalid Amount', 'Please enter a valid amount (min 1 GHS).');
             return;
         }
-        // Start Paystack flow
-        paystackWebViewRef.current.startTransaction();
+        try {
+            // Start Paystack flow safely
+            if (paystackWebViewRef.current) {
+                paystackWebViewRef.current.startTransaction();
+            } else {
+                Alert.alert('Error', 'Payment component not ready. Please try again.');
+            }
+        } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Could not start payment.');
+        }
     };
+
 
     const handleSuccess = async (res) => {
         // res structure: { status: "success", transactionRef: { ... }, reference: "..." }
@@ -113,16 +123,22 @@ export default function TopUpScreen({ route }) {
 
             <Paystack
                 paystackKey={PAYSTACK_PUBLIC_KEY}
-                amount={amount} // Paystack WebView handles conversion or expects GHS directly? Usually expects regular currency unit if configured, checking docs... Library usually takes regular amount.
+                amount={amount || '0.00'}
                 billingEmail={user?.email || 'user@revesta.com'}
                 billingName={user?.first_name || 'Revesta User'}
                 billingMobile={user?.phone_number || '0240000000'}
                 currency='GHS'
                 activityIndicatorColor="green"
                 onCancel={handleCancel}
+                onError={(e) => {
+                    console.log('Paystack Error:', e);
+                    // Prevent crash by catching error here
+                    Alert.alert('Payment Error', 'Could not load payment window. ' + (e?.message || ''));
+                }}
                 onSuccess={handleSuccess}
                 ref={paystackWebViewRef}
-                channels={['mobile_money', 'card']} // Enable MoMo
+                channels={['mobile_money', 'card']}
+                autoStart={false}
             />
         </SafeAreaView>
     );
