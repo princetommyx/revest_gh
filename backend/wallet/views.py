@@ -70,6 +70,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def withdraw(self, request):
+        print(f"💰 Withdrawal Request Data: {request.data} from {request.user}")
         """Request a withdrawal"""
         wallet, _ = Wallet.objects.get_or_create(user=request.user)
         serializer = WithdrawalSerializer(data=request.data, context={'request': request})
@@ -125,7 +126,8 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         # I will implement it in the service in the next step.
         
         try:
-            result = PaystackService.initialize_transaction(email, amount)
+            # Pass request.user to include metadata for better reliability
+            result = PaystackService.initialize_transaction(request.user, amount, email)
             if result['status']:
                 return Response(result['data'])
             return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)

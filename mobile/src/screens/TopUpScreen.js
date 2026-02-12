@@ -1,25 +1,34 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ActivityIndicator, Alert, Modal, SafeAreaView
+    TextInput, ActivityIndicator, Modal, SafeAreaView,
+    KeyboardAvoidingView, Platform, ScrollView
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
-import { useVerifyPayment } from '../hooks/useWallet';
-import { X, Lock, CreditCard, ChevronLeft } from 'lucide-react-native';
+import { useWallet, useVerifyPayment } from '../hooks/useWallet';
+import { X, ChevronLeft, Wallet, CheckCircle2 } from 'lucide-react-native';
+
+const QUICK_AMOUNTS = [10, 20, 50, 100, 200, 500];
 
 export default function TopUpScreen({ navigation }) {
     const { user } = useAuth();
+    const { data: wallet, isLoading: isWalletLoading } = useWallet();
+
     const [amount, setAmount] = useState('');
     const [loading, setLoading] = useState(false);
     const [paystackUrl, setPaystackUrl] = useState(null);
     const [reference, setReference] = useState(null);
     const verifyMutation = useVerifyPayment();
 
+    const handleQuickAmount = (val) => {
+        setAmount(val.toString());
+    };
+
     const handleStartPayment = async () => {
         if (!amount || isNaN(amount) || Number(amount) < 1) {
-            Alert.alert('Invalid Amount', 'Please enter a valid amount (min 1 GHS).');
+            alert('Please enter a valid amount (min 1 GHS).');
             return;
         }
 
@@ -36,7 +45,7 @@ export default function TopUpScreen({ navigation }) {
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'Could not initialize payment. ' + (error.response?.data?.error || error.message));
+            alert('Error: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
@@ -45,13 +54,9 @@ export default function TopUpScreen({ navigation }) {
     const handleWebViewNavigation = (navState) => {
         const { url } = navState;
 
-        // 2. Intercept callback URL (Paystack standard or custom)
-        // Adjust this check based on your Paystack settings or usage of standard callback
+        // 2. Intercept callback URL
         if (url.includes('paystack.co/close') || url.includes('callback') || url.includes('success')) {
-            // Close WebView
             setPaystackUrl(null);
-
-            // 3. Verify on backend
             verifyTransaction();
         }
     };
@@ -63,47 +68,95 @@ export default function TopUpScreen({ navigation }) {
         verifyMutation.mutate(reference, {
             onSuccess: (data) => {
                 setLoading(false);
-                if (data.wallet) { // Check if wallet object is returned
-                    Alert.alert('Success', 'Wallet credited successfully! New Balance: ₵' + data.wallet.balance.toFixed(2), [
-                        { text: 'OK', onPress: () => navigation.goBack() }
-                    ]);
+                if (data.wallet) {
+                    // Success Screen or Alert
+                    alert('Success! Wallet credited.');
+                    navigation.goBack();
                 } else {
-                    Alert.alert('Pending', 'Payment is processing. Check your balance shortly.');
+                    alert('Payment is processing. Check balance shortly.');
                     navigation.goBack();
                 }
             },
             onError: (err) => {
                 setLoading(false);
-                // Even if frontend verification fails, webhook might have succeeded.
-                Alert.alert('Verification', 'Please check your wallet balance. Payment is being processed.');
+                alert('Verification failed, but payment might be processing. Check balance later.');
                 navigation.goBack();
             }
         });
     };
 
+    const currentBalance = parseFloat(wallet?.balance || 0);
+    const isNegative = currentBalance < 0;
+
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ChevronLeft size={24} color="#333" />
+                    <ChevronLeft size={24} color="#1A1A1A" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Top Up Wallet</Text>
+                <Text style={styles.headerTitle}>Add Funds</Text>
+                <View style={{ width: 24 }} />
             </View>
 
-            <View style={styles.content}>
-                <View style={styles.card}>
-                    <Text style={styles.label}>Enter Amount (GHS)</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="0.00"
-                        keyboardType="numeric"
-                        value={amount}
-                        onChangeText={setAmount}
-                        autoFocus
-                    />
-                    <Text style={styles.helperText}>Minimum deposit: ₵1.00</Text>
+            <ScrollView contentContainerStyle={styles.content}>
+
+                {/* Balance Section */}
+                <View style={styles.balanceContainer}>
+                    <Text style={styles.balanceLabel}>Current Balance</Text>
+                    <Text style={[styles.balanceValue, { color: isNegative ? '#D32F2F' : '#2E7D32' }]}>
+                        ₵ {currentBalance.toFixed(2)}
+                    </Text>
+                    {isNegative && (
+                        <View style={styles.warningBox}>
+                            <Text style={styles.warningText}>
+                                You have an outstanding balance. Please top up to continue receiving requests.
+                            </Text>
+                        </View>
+                    )}
                 </View>
 
+                {/* Input Section */}
+                <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>Enter Amount to Add</Text>
+                    <View style={styles.inputWrapper}>
+                        <Text style={styles.currencyPrefix}>₵</Text>
+                        <TextInput
+                            style={styles.amountInput}
+                            placeholder="0.00"
+                            placeholderTextColor="#ccc"
+                            keyboardType="numeric"
+                            value={amount}
+                            onChangeText={setAmount}
+                            autoFocus={false}
+                        />
+                    </View>
+                </View>
+
+                {/* Quick Amounts */}
+                <View style={styles.quickGrid}>
+                    {QUICK_AMOUNTS.map((val) => (
+                        <TouchableOpacity
+                            key={val}
+                            style={[
+                                styles.quickBtn,
+                                amount === val.toString() && styles.quickBtnActive
+                            ]}
+                            onPress={() => handleQuickAmount(val)}
+                        >
+                            <Text style={[
+                                styles.quickBtnText,
+                                amount === val.toString() && styles.quickBtnTextActive
+                            ]}>
+                                ₵{val}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+            </ScrollView>
+
+            {/* Bottom Action Button */}
+            <View style={styles.footer}>
                 <TouchableOpacity
                     style={[styles.payBtn, loading && styles.disabledBtn]}
                     onPress={handleStartPayment}
@@ -112,16 +165,17 @@ export default function TopUpScreen({ navigation }) {
                     {loading ? (
                         <ActivityIndicator color="#fff" />
                     ) : (
-                        <>
-                            <Lock size={18} color="#fff" />
-                            <Text style={styles.payBtnText}>Pay Securely</Text>
-                        </>
+                        <View style={styles.btnContent}>
+                            <Text style={styles.payBtnText}>
+                                {amount ? `Add ₵${parseFloat(amount).toFixed(2)}` : 'Add Funds'}
+                            </Text>
+                        </View>
                     )}
                 </TouchableOpacity>
 
-                <View style={styles.footer}>
-                    <CreditCard size={16} color="#888" />
-                    <Text style={styles.footerText}>Secured by Paystack</Text>
+                <View style={styles.secureBadge}>
+                    <CheckCircle2 size={14} color="#2E7D32" />
+                    <Text style={styles.secureText}>Secured by Paystack</Text>
                 </View>
             </View>
 
@@ -148,47 +202,88 @@ export default function TopUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FA' },
+    container: { flex: 1, backgroundColor: '#fff' },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        backgroundColor: '#fff',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee'
+        borderBottomColor: '#f5f5f5'
     },
-    backBtn: { padding: 8, marginRight: 8 },
-    headerTitle: { fontSize: 20, fontWeight: 'bold' },
-    content: { padding: 20 },
-    card: {
-        backgroundColor: '#fff',
-        padding: 24,
-        borderRadius: 16,
-        marginBottom: 24,
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    backBtn: { padding: 4 },
+
+    content: { padding: 24, paddingBottom: 100 },
+
+    balanceContainer: { alignItems: 'center', marginBottom: 40 },
+    balanceLabel: { fontSize: 14, color: '#666', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
+    balanceValue: { fontSize: 40, fontWeight: 'bold', letterSpacing: -1 },
+    warningBox: {
+        marginTop: 15,
+        backgroundColor: '#FFEBEE',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
     },
-    label: { fontSize: 14, color: '#666', marginBottom: 8, textTransform: 'uppercase', fontWeight: 'bold' },
-    input: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#333',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee'
-    },
-    helperText: { marginTop: 8, color: '#999', fontSize: 12 },
-    payBtn: {
-        backgroundColor: '#2E7D32',
+    warningText: { color: '#D32F2F', fontSize: 13, textAlign: 'center' },
+
+    inputSection: { marginBottom: 30 },
+    inputLabel: { fontSize: 15, fontWeight: '600', color: '#333', marginBottom: 15 },
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 18,
+        borderBottomWidth: 2,
+        borderBottomColor: '#2E7D32',
+        paddingBottom: 8
+    },
+    currencyPrefix: { fontSize: 32, fontWeight: 'bold', color: '#1A1A1A', marginRight: 5 },
+    amountInput: {
+        flex: 1,
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        padding: 0,
+    },
+
+    quickGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+        justifyContent: 'space-between'
+    },
+    quickBtn: {
+        width: '30%',
+        paddingVertical: 14,
         borderRadius: 12,
-        gap: 8,
+        backgroundColor: '#F5F5F5',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#eee'
+    },
+    quickBtnActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#2E7D32'
+    },
+    quickBtnText: { fontSize: 16, fontWeight: '600', color: '#333' },
+    quickBtnTextActive: { color: '#fff' },
+
+    footer: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: 24,
+        backgroundColor: '#fff',
+        borderTopWidth: 1,
+        borderTopColor: '#f5f5f5'
+    },
+    payBtn: {
+        backgroundColor: '#2E7D32',
+        paddingVertical: 18,
+        borderRadius: 30,
+        alignItems: 'center',
         elevation: 4,
         shadowColor: '#2E7D32',
         shadowOffset: { width: 0, height: 4 },
@@ -197,25 +292,26 @@ const styles = StyleSheet.create({
     },
     disabledBtn: { opacity: 0.7 },
     payBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-    footer: {
+
+    secureBadge: {
         flexDirection: 'row',
-        alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 24,
-        gap: 8
+        alignItems: 'center',
+        marginTop: 15,
+        gap: 6
     },
-    footerText: { color: '#888', fontSize: 12 },
+    secureText: { color: '#666', fontSize: 12 },
+
     modalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#eee',
         backgroundColor: '#fff',
-        elevation: 2
+        borderBottomColor: '#eee'
     },
-    modalTitle: { fontSize: 16, color: '#666', fontWeight: 'bold' },
-    closeBtn: { padding: 8 },
+    modalTitle: { fontSize: 16, fontWeight: 'bold' },
+    closeBtn: { padding: 4 },
     loader: { position: 'absolute', top: '50%', left: '50%', marginTop: -25, marginLeft: -25 }
 });

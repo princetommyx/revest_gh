@@ -69,7 +69,7 @@ class WalletService:
 
 class PaystackService:
     @staticmethod
-    def initialize_transaction(email, amount):
+    def initialize_transaction(user, amount, email=None):
         """
         Initialize a transaction with Paystack.
         """
@@ -79,6 +79,9 @@ class PaystackService:
             "Content-Type": "application/json",
         }
         
+        if not email:
+            email = user.email
+
         # Paystack amount is in kobo/pesewas
         amount_kobo = int(float(amount) * 100)
         
@@ -87,8 +90,19 @@ class PaystackService:
             "amount": amount_kobo,
             "currency": "GHS",
             "channels": ["mobile_money", "card"],
-            # "callback_url": "https://standard.paystack.co/close" # Standard close URL
-            # We can use a custom scheme if we wanted deep linking, but standard is fine for interception
+            "callback_url": "https://standard.paystack.co/close",
+            "metadata": {
+                "user_id": user.id,
+                "full_name": user.get_full_name() or user.username,
+                "phone_number": getattr(user, 'phone_number', ''),
+                "custom_fields": [
+                    {
+                        "display_name": "Mobile Number",
+                        "variable_name": "mobile_number",
+                        "value": getattr(user, 'phone_number', '')
+                    }
+                ]
+            }
         }
         
         try:

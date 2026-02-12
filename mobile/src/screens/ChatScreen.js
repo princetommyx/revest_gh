@@ -8,6 +8,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
 import { MessageSquare, User, Clock, ChevronRight, Bot } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
+import { BASE_URL } from '../api/client';
 
 export default function ChatScreen() {
     const navigation = useNavigation();
@@ -54,7 +55,7 @@ export default function ChatScreen() {
     const resolveImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        return `https://revesta-backend.onrender.com${path.startsWith('/') ? '' : '/'}${path}`;
+        return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
     // Generate random pastel color based on name

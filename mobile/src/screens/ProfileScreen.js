@@ -11,6 +11,7 @@ import {
     Star, Wallet, Package, Clock
 } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
+import { BASE_URL } from '../api/client';
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
@@ -30,9 +31,7 @@ export default function ProfileScreen({ navigation }) {
     const resolveImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        // Import BASE_URL logic usually, but user object might have full url
-        // For now, assuming basic paths
-        return `https://revesta-backend.onrender.com${path.startsWith('/') ? '' : '/'}${path}`;
+        return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
     const MenuItem = ({ icon: Icon, title, subtitle, onPress, color = "#1a1a1a", isLast }) => (
