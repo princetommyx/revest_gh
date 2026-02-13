@@ -308,6 +308,7 @@ export default function RegisterScreen() {
                     <TextInput
                         style={styles.input}
                         placeholder="Choose a username"
+                        placeholderTextColor={COLORS.textLight}
                         value={formData.username}
                         onChangeText={(val) => handleChange('username', val)}
                         autoCapitalize="none"
@@ -319,6 +320,7 @@ export default function RegisterScreen() {
                     <TextInput
                         style={styles.input}
                         placeholder="Enter email address"
+                        placeholderTextColor={COLORS.textLight}
                         value={formData.email}
                         onChangeText={(val) => handleChange('email', val)}
                         keyboardType="email-address"
@@ -332,6 +334,7 @@ export default function RegisterScreen() {
                     <TextInput
                         style={styles.input}
                         placeholder="Create a password"
+                        placeholderTextColor={COLORS.textLight}
                         value={formData.password}
                         onChangeText={(val) => handleChange('password', val)}
                         secureTextEntry
@@ -343,6 +346,7 @@ export default function RegisterScreen() {
                     <TextInput
                         style={styles.input}
                         placeholder="Repeat password"
+                        placeholderTextColor={COLORS.textLight}
                         value={formData.confirm_password}
                         onChangeText={(val) => handleChange('confirm_password', val)}
                         secureTextEntry
@@ -359,6 +363,7 @@ export default function RegisterScreen() {
                         <TextInput
                             style={[styles.input, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
                             placeholder="Mobile number"
+                            placeholderTextColor={COLORS.textLight}
                             value={formData.phone_number}
                             onChangeText={(val) => handleChange('phone_number', val)}
                             keyboardType="phone-pad"
@@ -383,6 +388,7 @@ export default function RegisterScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="TRUCK, TRICYCLE, MOTORBIKE..."
+                                placeholderTextColor={COLORS.textLight}
                                 value={formData.vehicle_type}
                                 onChangeText={(val) => handleChange('vehicle_type', val)}
                             />
@@ -392,6 +398,7 @@ export default function RegisterScreen() {
                             <TextInput
                                 style={styles.input}
                                 placeholder="Enter license plate"
+                                placeholderTextColor={COLORS.textLight}
                                 value={formData.license_plate}
                                 onChangeText={(val) => handleChange('license_plate', val)}
                             />
@@ -427,6 +434,7 @@ export default function RegisterScreen() {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Company Name"
+                                        placeholderTextColor={COLORS.textLight}
                                         value={formData.company_name}
                                         onChangeText={(val) => handleChange('company_name', val)}
                                     />
@@ -436,6 +444,7 @@ export default function RegisterScreen() {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Tax ID"
+                                        placeholderTextColor={COLORS.textLight}
                                         value={formData.tax_id}
                                         onChangeText={(val) => handleChange('tax_id', val)}
                                     />
@@ -447,6 +456,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="National ID"
+                                    placeholderTextColor={COLORS.textLight}
                                     value={formData.national_id}
                                     onChangeText={(val) => handleChange('national_id', val)}
                                 />
