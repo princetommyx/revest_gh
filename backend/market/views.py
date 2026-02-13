@@ -57,6 +57,9 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Auto-set seller to current user"""
+        print(f"DEBUG: Creating listing. User: {self.request.user}")
+        print(f"DEBUG: Data: {self.request.data}")
+        print(f"DEBUG: Files: {self.request.FILES}")
         serializer.save(seller=self.request.user)
     
     @extend_schema(

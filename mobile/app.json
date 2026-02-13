@@ -33,7 +33,14 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you upload waste items.",
+          "cameraPermission": "The app accesses your camera to let you take photos of waste items."
+        }
+      ]
     ],
     "extra": {
       "eas": {

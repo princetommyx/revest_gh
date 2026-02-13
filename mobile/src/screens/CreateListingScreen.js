@@ -87,7 +87,8 @@ export default function CreateListingScreen({ navigation }) {
             navigation.goBack();
         } catch (error) {
             console.error("Create Listing Error:", error);
-            Toast.show("Failed to create listing", { backgroundColor: '#E74C3C' });
+            const errorMessage = error.response?.data?.error || error.message || "Failed to create listing";
+            Toast.show(errorMessage, { backgroundColor: '#E74C3C', duration: Toast.durations.LONG });
         } finally {
             setLoading(false);
         }
