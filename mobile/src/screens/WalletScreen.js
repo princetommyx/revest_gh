@@ -210,7 +210,7 @@ export default function WalletScreen() {
                 {/* Quick Actions */}
                 <View style={styles.actionsRow}>
                     {userRole === 'COLLECTOR' && (
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}>
+                        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('TopUp')}>
                             <View style={[styles.actionIconBox, { backgroundColor: COLORS.primary }]}>
                                 <Plus size={24} color="#fff" />
                             </View>

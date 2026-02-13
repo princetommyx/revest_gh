@@ -87,7 +87,29 @@ export default function CreateListingScreen({ navigation }) {
             navigation.goBack();
         } catch (error) {
             console.error("Create Listing Error:", error);
-            const errorMessage = error.response?.data?.error || error.message || "Failed to create listing";
+            console.error("Create Listing Error:", error);
+            let errorMessage = "Failed to create listing";
+
+            if (error.response?.data) {
+                const data = error.response.data;
+                if (typeof data === 'string') {
+                    errorMessage = data;
+                } else if (data.error) {
+                    errorMessage = data.error;
+                } else if (data.detail) {
+                    errorMessage = data.detail;
+                } else {
+                    // Handle field-specific errors (e.g. { image: ["Too large"] })
+                    const messages = Object.keys(data).map(key => {
+                        const val = data[key];
+                        return `${key}: ${Array.isArray(val) ? val.join(', ') : val}`;
+                    });
+                    if (messages.length > 0) errorMessage = messages.join('\n');
+                }
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
             Toast.show(errorMessage, { backgroundColor: '#E74C3C', duration: Toast.durations.LONG });
         } finally {
             setLoading(false);
