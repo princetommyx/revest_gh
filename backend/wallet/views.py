@@ -45,6 +45,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             amount = serializer.validated_data['amount']
             desc = serializer.validated_data.get('description', 'Deposit')
             
+            import uuid
             # Create transaction
             Transaction.objects.create(
                 wallet=wallet,
@@ -52,7 +53,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                 transaction_type='DEPOSIT',
                 status='COMPLETED',
                 description=desc,
-                reference=f"DEP-{status.HTTP_200_OK}" # Fake ref
+                reference=f"DEP-{uuid.uuid4()}" 
             )
             
             # Update balance
@@ -110,30 +111,26 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def initialize_payment(self, request):
-        print("🚀 initialize_payment view CALLED!")
-        """Initialize transaction to get authorization URL"""
-        amount = request.data.get('amount')
-        email = request.data.get('email', request.user.email)
-        
-        if not amount:
-            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        from .services import PaystackService
-        # We need to add initialize_transaction to PaystackService or use a direct call here.
-        # Ideally keeping logic in services. 
-        # For now, let's assume we update Service too, or just write it here for speed if Service is simple.
-        # Let's verify PaystackService has it. 
-        # ... checking service file next ...
-        # I will implement it in the service in the next step.
-        
         try:
+            print("🚀 initialize_payment view CALLED!")
+            """Initialize transaction to get authorization URL"""
+            amount = request.data.get('amount')
+            email = request.data.get('email', request.user.email)
+            
+            if not amount:
+                return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            from .services import PaystackService
+            
             # Pass request.user to include metadata for better reliability
             result = PaystackService.initialize_transaction(request.user, amount, email)
             if result['status']:
                 return Response(result['data'])
             return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            import traceback
+            traceback.print_exc()
+            return Response({'error': f"Internal Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         summary="Verify Paystack Payment",

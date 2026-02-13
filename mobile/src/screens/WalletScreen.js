@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
 import { useAuth } from '../context/AuthContext';
-import { SkeletonWalletCard } from '../components/Skeleton';
+import { SkeletonWalletCard, SkeletonWalletPage } from '../components/Skeleton';
 import {
     Wallet, Plus, ArrowUpRight, ArrowDownLeft,
     History, X, Smartphone, CheckCircle2, AlertCircle,
@@ -176,16 +176,7 @@ export default function WalletScreen() {
     };
 
     if (isLoading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
-                    <Text style={styles.headerTitle}>Wallet</Text>
-                </View>
-                <View style={{ padding: 20 }}>
-                    <ActivityIndicator size="large" color={COLORS.primary} />
-                </View>
-            </SafeAreaView>
-        );
+        return <SkeletonWalletPage />;
     }
 
     const transactions = wallet?.recent_transactions || [];

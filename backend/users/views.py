@@ -294,7 +294,12 @@ class GoogleLoginView(views.APIView):
             id_info = None
             try:
                 print("DEBUG: Attempting to verify token as Google ID Token...")
-                id_info = id_token.verify_oauth2_token(token, requests.Request())
+                # Verify token and check audience matches our Client ID
+                id_info = id_token.verify_oauth2_token(
+                    token, 
+                    requests.Request(), 
+                    audience='132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com'
+                )
                 print("DEBUG: ID Token verification successful")
             except Exception as e:
                 print(f"DEBUG: ID Token verification failed ({e}), attempting Access Token /userinfo fallack...")

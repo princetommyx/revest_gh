@@ -80,7 +80,67 @@ export const SkeletonListItem = () => {
 };
 
 /**
- * Wallet balance skeleton
+ * Wallet Screen Skeleton
+ */
+export const SkeletonWalletPage = () => {
+    const shimmer = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(shimmer, { toValue: 1, duration: 1000, useNativeDriver: true }),
+                Animated.timing(shimmer, { toValue: 0, duration: 1000, useNativeDriver: true })
+            ])
+        ).start();
+    }, []);
+
+    const opacity = shimmer.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.7]
+    });
+
+    return (
+        <View style={{ flex: 1, backgroundColor: '#fff' }}>
+            {/* Header */}
+            <View style={{ padding: 24, paddingVertical: 16 }}>
+                <Animated.View style={{ width: 100, height: 30, backgroundColor: '#E0E0E0', borderRadius: 4, opacity }} />
+            </View>
+
+            {/* Balance Section */}
+            <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <Animated.View style={{ width: 100, height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 16, opacity }} />
+                <Animated.View style={{ width: 200, height: 60, backgroundColor: '#E0E0E0', borderRadius: 8, opacity }} />
+            </View>
+
+            {/* Actions Row */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 32, marginBottom: 40 }}>
+                {[1, 2, 3].map(i => (
+                    <View key={i} style={{ alignItems: 'center', gap: 8 }}>
+                        <Animated.View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E0E0E0', opacity }} />
+                        <Animated.View style={{ width: 40, height: 12, borderRadius: 4, backgroundColor: '#E0E0E0', opacity }} />
+                    </View>
+                ))}
+            </View>
+
+            {/* Transactions */}
+            <View style={{ paddingHorizontal: 24 }}>
+                <Animated.View style={{ width: 150, height: 24, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 24, opacity }} />
+                
+                {[1, 2, 3, 4].map(i => (
+                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 16 }}>
+                        <Animated.View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#E0E0E0', opacity }} />
+                        <View style={{ flex: 1 }}>
+                            <Animated.View style={{ width: '60%', height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 8, opacity }} />
+                            <Animated.View style={{ width: '40%', height: 12, backgroundColor: '#E0E0E0', borderRadius: 4, opacity }} />
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </View>
+    );
+};
+/**
+ * Wallet balance skeleton (Legacy)
  */
 export const SkeletonWalletCard = () => {
     const shimmer = useRef(new Animated.Value(0)).current;

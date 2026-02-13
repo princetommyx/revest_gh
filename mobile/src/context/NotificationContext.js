@@ -93,10 +93,10 @@ export const NotificationProvider = ({ children }) => {
         return () => {
             try {
                 if (notificationListener.current) {
-                    Notifications.removeNotificationSubscription(notificationListener.current);
+                    notificationListener.current.remove();
                 }
                 if (responseListener.current) {
-                    Notifications.removeNotificationSubscription(responseListener.current);
+                    responseListener.current.remove();
                 }
             } catch (err) {
                 console.log("Error cleaning up notification listeners:", err.message);

@@ -88,7 +88,7 @@ class Transaction(models.Model):
     transaction_type = models.CharField(max_length=30, choices=TRANSACTION_TYPES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='COMPLETED')
     description = models.TextField(blank=True)
-    reference = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    reference = models.CharField(max_length=100, unique=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

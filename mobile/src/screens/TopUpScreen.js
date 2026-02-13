@@ -35,12 +35,17 @@ export default function TopUpScreen({ navigation }) {
         setLoading(true);
         try {
             // 1. Initialize transaction on backend
+            console.log('Initializing payment...', { email: user.email, amount });
             const initResponse = await walletApi.initializePayment(user.email, amount);
+            console.log('Init Response:', JSON.stringify(initResponse, null, 2));
 
             if (initResponse && initResponse.authorization_url) {
+                console.log('Setting Paystack URL:', initResponse.authorization_url);
+                console.log('Setting Reference:', initResponse.reference);
                 setReference(initResponse.reference);
                 setPaystackUrl(initResponse.authorization_url);
             } else {
+                console.error('Invalid response structure:', initResponse);
                 throw new Error(initResponse?.message || 'Could not get payment URL');
             }
         } catch (error) {
