@@ -70,7 +70,7 @@ class AdminApp {
 
       // Setup global event listeners
       this.setupEventListeners();
-      
+
       // Initialize navigation
       this.initNavigation();
 
@@ -143,6 +143,8 @@ class AdminApp {
 
     switch (currentPage) {
       case 'dashboard':
+        // Load admin dashboard component for real-time stats
+        await import('./components/admin-dashboard.js');
         this.components.set('dashboard', new DashboardManager());
         break;
       case 'users':
@@ -369,23 +371,23 @@ class AdminApp {
     // Handle submenu state persistence
     const currentPage = window.location.pathname;
     const elementsPages = [
-      '/elements', '/elements-buttons.html', '/elements-alerts.html', 
+      '/elements', '/elements-buttons.html', '/elements-alerts.html',
       '/elements-badges.html', '/elements-cards.html', '/elements-modals.html',
       '/elements-forms.html', '/elements-tables.html'
     ];
-    
+
     // Check if current page is an Elements page
     const isElementsPage = elementsPages.some(page => currentPage.includes(page.replace('.html', '')));
-    
+
     if (isElementsPage) {
       // Expand Elements submenu on Elements pages
       const elementsSubmenu = document.getElementById('elementsSubmenu');
       const elementsToggle = document.querySelector('[data-bs-target="#elementsSubmenu"]');
-      
+
       if (elementsSubmenu && elementsToggle) {
         elementsSubmenu.classList.add('show');
         elementsToggle.setAttribute('aria-expanded', 'true');
-        
+
         // Mark current page as active in submenu
         const activeSubmenuLink = document.querySelector(`.nav-submenu a[href="${currentPage}"]`);
         if (activeSubmenuLink) {
@@ -393,25 +395,25 @@ class AdminApp {
         }
       }
     }
-    
+
     // Handle submenu toggle persistence
     document.addEventListener('click', (e) => {
       const toggleButton = e.target.closest('[data-bs-toggle="collapse"]');
       if (toggleButton) {
         const targetId = toggleButton.getAttribute('data-bs-target');
         const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-        
+
         // Store submenu state
         localStorage.setItem(`submenu-${targetId}`, (!isExpanded).toString());
       }
     });
-    
+
     // Restore submenu states from localStorage
     const submenuToggles = document.querySelectorAll('[data-bs-toggle="collapse"]');
     submenuToggles.forEach(toggle => {
       const targetId = toggle.getAttribute('data-bs-target');
       const savedState = localStorage.getItem(`submenu-${targetId}`);
-      
+
       if (savedState === 'true' && !isElementsPage) {
         const targetElement = document.querySelector(targetId);
         if (targetElement) {
@@ -429,33 +431,33 @@ class AdminApp {
       query: '',
       results: [],
       isLoading: false,
-      
+
       async search() {
         if (this.query.length < 2) {
           this.results = [];
           return;
         }
-        
+
         this.isLoading = true;
         // Simulate API search
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         this.results = [
           { title: 'Dashboard', url: '/', type: 'page' },
           { title: 'Users', url: '/users', type: 'page' },
           { title: 'Settings', url: '/settings', type: 'page' },
           { title: 'Analytics', url: '/analytics', type: 'page' }
-        ].filter(item => 
+        ].filter(item =>
           item.title.toLowerCase().includes(this.query.toLowerCase())
         );
-        
+
         this.isLoading = false;
       }
     }));
 
     Alpine.data('statsCounter', (initialValue = 0, increment = 1) => ({
       value: initialValue,
-      
+
       init() {
         // Auto-increment every 5 seconds
         setInterval(() => {
@@ -466,11 +468,11 @@ class AdminApp {
 
     Alpine.data('themeSwitch', () => ({
       currentTheme: 'light',
-      
+
       init() {
         this.currentTheme = localStorage.getItem('theme') || 'light';
       },
-      
+
       toggle() {
         this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-bs-theme', this.currentTheme);

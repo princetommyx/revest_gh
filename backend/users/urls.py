@@ -8,6 +8,7 @@ from .views import (
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView
 )
+from .admin_stats import admin_dashboard_stats, recent_users
 
 # Authentication endpoints (for /api/v1/auth/)
 auth_urlpatterns = [
@@ -33,6 +34,10 @@ user_urlpatterns = [
     path('push-token/', DeviceTokenView.as_view(), name='update_push_token'),
     path('notifications/', NotificationViewSet.as_view({'get': 'list', 'patch': 'read_all'}), name='notification_list'),
     path('notifications/<int:pk>/', NotificationViewSet.as_view({'patch': 'read', 'delete': 'destroy'}), name='notification_detail'),
+    
+    # Admin endpoints
+    path('admin/stats/', admin_dashboard_stats, name='admin_dashboard_stats'),
+    path('admin/recent-users/', recent_users, name='admin_recent_users'),
 ]
 
 # Debug/Health endpoints

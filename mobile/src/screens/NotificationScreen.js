@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNotifications } from '../context/NotificationContext';
 import { notificationsApi } from '../api/notifications';
-import { formatDistanceToNow } from 'date-fns'; // You might need to install date-fns or use a helper
+
 
 // Simple relative time helper if date-fns is not installed
 const getRelativeTime = (dateString) => {
