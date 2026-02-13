@@ -24,9 +24,9 @@ export default function LoginScreen() {
     const CountryCode = '+233';
 
     const [request, response, promptAsync] = Google.useAuthRequest({
-        webClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com',
-        androidClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Using Web Client ID for ID token flow
-        iosClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Using Web Client ID for ID token flow
+        webClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Web Client ID (for backend verification)
+        androidClientId: '132479987352-0mb8h8gaaj2c8qg8jdebgd7u7nsglau3.apps.googleusercontent.com', // Android Client ID (for native flow)
+        iosClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Use Web Client ID (or specific iOS ID if available)
     });
 
     React.useEffect(() => {
