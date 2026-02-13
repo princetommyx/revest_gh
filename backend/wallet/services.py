@@ -74,6 +74,18 @@ class PaystackService:
         Initialize a transaction with Paystack.
         """
         secret_key = settings.PAYSTACK_SECRET_KEY
+        
+        # Debug logging
+        print(f"🔑 PAYSTACK_SECRET_KEY loaded: {'Yes' if secret_key else 'NO - THIS IS THE PROBLEM!'}")
+        print(f"💰 Initializing payment: amount={amount}, email={email or user.email}")
+        
+        if not secret_key:
+            print("❌ CRITICAL: Paystack secret key is not configured!")
+            return {
+                'status': False, 
+                'message': 'Payment system not configured. Please contact support.'
+            }
+        
         headers = {
             "Authorization": f"Bearer {secret_key}",
             "Content-Type": "application/json",
@@ -106,15 +118,19 @@ class PaystackService:
         }
         
         try:
+            print(f"📤 Sending request to Paystack API...")
             response = requests.post(
                 "https://api.paystack.co/transaction/initialize",
                 headers=headers,
                 json=data
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            print(f"✅ Paystack response: {result.get('status')}, Message: {result.get('message')}")
+            return result
         except requests.exceptions.RequestException as e:
-            return {'status': False, 'message': str(e)}
+            print(f"❌ Paystack API Error: {str(e)}")
+            return {'status': False, 'message': f'Payment initialization failed: {str(e)}'}
 
     @staticmethod
     def verify_transaction(reference, amount, user):

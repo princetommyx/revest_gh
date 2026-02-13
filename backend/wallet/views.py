@@ -110,6 +110,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def initialize_payment(self, request):
+        print("🚀 initialize_payment view CALLED!")
         """Initialize transaction to get authorization URL"""
         amount = request.data.get('amount')
         email = request.data.get('email', request.user.email)
