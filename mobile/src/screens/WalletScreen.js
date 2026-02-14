@@ -87,8 +87,11 @@ export default function WalletScreen() {
                     setPendingTxn(res.transaction);
                     setModalVisible(false);
                     if (res.authorization_url) {
-                        Toast.show({ type: 'info', text1: 'Redirecting...', text2: 'Opening payment page' });
-                        setTimeout(() => Linking.openURL(res.authorization_url), 1000);
+                        setModalVisible(false);
+                        navigation.navigate('PaystackWebView', {
+                            authUrl: res.authorization_url,
+                            reference: res.reference
+                        });
                     }
                 },
                 onError: (err) => {
@@ -210,7 +213,14 @@ export default function WalletScreen() {
                 {/* Quick Actions */}
                 <View style={styles.actionsRow}>
                     {userRole === 'COLLECTOR' && (
-                        <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('TopUp')}>
+                        <TouchableOpacity
+                            style={styles.actionBtn}
+                            onPress={() => {
+                                console.log('Top Up Clicked');
+                                setModalType('DEPOSIT');
+                                setModalVisible(true);
+                            }}
+                        >
                             <View style={[styles.actionIconBox, { backgroundColor: COLORS.primary }]}>
                                 <Plus size={24} color="#fff" />
                             </View>
@@ -218,7 +228,14 @@ export default function WalletScreen() {
                         </TouchableOpacity>
                     )}
 
-                    <TouchableOpacity style={styles.actionBtn} onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}>
+                    <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => {
+                            console.log('Withdraw Clicked');
+                            setModalType('WITHDRAW');
+                            setModalVisible(true);
+                        }}
+                    >
                         <View style={[styles.actionIconBox, { backgroundColor: '#F3F4F6' }]}>
                             <ArrowUpRight size={24} color={COLORS.text} />
                         </View>

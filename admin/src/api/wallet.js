@@ -6,4 +6,10 @@ export const walletApi = {
         const response = await apiClient.get('/wallet/transactions/', { params });
         return response.data;
     },
+
+    // Get wallet details
+    getWallet: async () => {
+        const response = await apiClient.get('/wallet/me/');
+        return response.data;
+    },
 };

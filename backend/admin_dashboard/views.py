@@ -268,3 +268,61 @@ class SystemMetricsView(generics.ListAPIView):
         # Get metrics for the last 24 hours
         time_limit = timezone.now() - timedelta(hours=24)
         return SystemMetrics.objects.filter(timestamp__gte=time_limit).order_by('-timestamp')
+
+
+class SendUserMessageView(views.APIView):
+    """
+    POST /api/admin/users/<id>/send-message/
+    Send a message to a user (Notification + Email).
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        title = request.data.get('title')
+        message = request.data.get('message')
+
+        if not title or not message:
+            return Response({'error': 'Title and message are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # 1. Create In-App Notification using the correct model from users app
+            from users.models import Notification
+            Notification.objects.create(
+                user=user,
+                title=title,
+                body=message,
+                urgency='NORMAL',
+                data={'type': 'ADMIN_MESSAGE', 'admin_id': request.user.id}
+            )
+
+            # 2. Send Email
+            if user.email:
+                send_mail(
+                    subject=f"Revesta: {title}",
+                    message=message,
+                    from_email=None,  # Uses DEFAULT_FROM_EMAIL
+                    recipient_list=[user.email],
+                    fail_silently=True 
+                )
+
+            # 3. Log Activity
+            ActivityLog.objects.create(
+                user=request.user,
+                action='SUPPORT_TICKET_RESOLVED', # Using closest existing action or create new one
+                details={
+                    'target_user': user.username,
+                    'title': title,
+                    'type': 'DIRECT_MESSAGE'
+                }
+            )
+
+            return Response({'status': 'Message sent successfully'})
+
+        except Exception as e:
+            logger.error(f"Error sending user message: {e}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

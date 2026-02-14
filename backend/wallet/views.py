@@ -37,30 +37,34 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     )
     @action(detail=False, methods=['post'])
     def deposit(self, request):
-        """Simulate a deposit (for testing/demo)"""
-        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        """Initialize Paystack deposit"""
         serializer = DepositSerializer(data=request.data)
         
         if serializer.is_valid():
             amount = serializer.validated_data['amount']
-            desc = serializer.validated_data.get('description', 'Deposit')
+            email = request.user.email
             
-            import uuid
-            # Create transaction
-            Transaction.objects.create(
-                wallet=wallet,
-                amount=amount,
-                transaction_type='DEPOSIT',
-                status='COMPLETED',
-                description=desc,
-                reference=f"DEP-{uuid.uuid4()}" 
-            )
+            # Use Paystack Service
+            from .services import PaystackService
+            result = PaystackService.initialize_transaction(request.user, amount, email)
             
-            # Update balance
-            wallet.balance += amount
-            wallet.save()
+            if result.get('status'):
+                # Return format expected by frontend
+                return Response({
+                    'status': True,
+                    'message': result.get('message'),
+                    'authorization_url': result['data']['authorization_url'],
+                    'access_code': result['data']['access_code'],
+                    'reference': result['data']['reference'],
+                    # Frontend expects a 'transaction' object for state
+                    'transaction': {
+                        'reference': result['data']['reference'],
+                        'amount': amount,
+                        'status': 'PENDING'
+                    }
+                })
             
-            return Response(self.get_serializer(wallet).data)
+            return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

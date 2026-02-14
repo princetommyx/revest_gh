@@ -126,6 +126,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
                         <Stack.Screen name="Notifications" component={NotificationScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

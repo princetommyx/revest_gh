@@ -3,12 +3,11 @@ import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
     RefreshControl, SafeAreaView, ActivityIndicator
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Bell, AlertCircle, ArrowLeft, Check } from 'lucide-react-native';
 import { useNotifications } from '../context/NotificationContext';
 import { notificationsApi } from '../api/notifications';
 
-
-// Simple relative time helper if date-fns is not installed
+// Simple relative time helper
 const getRelativeTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -29,8 +28,9 @@ export default function NotificationScreen({ navigation }) {
     const fetchNotifications = async () => {
         try {
             const data = await notificationsApi.getNotifications();
-            // Sort by created_at desc if backend doesn't
-            setNotifications(data.results || data);
+            // Ensure data is array
+            const results = Array.isArray(data) ? data : (data.results || []);
+            setNotifications(results);
         } catch (error) {
             console.error("Failed to load notifications", error);
         } finally {
@@ -62,8 +62,9 @@ export default function NotificationScreen({ navigation }) {
         }
 
         // Handle Deep Linking if data present
-        if (item.data && item.data.screen) {
-            navigation.navigate(item.data.screen, item.data.params);
+        if (item.data && item.data.type === 'ADMIN_MESSAGE') {
+            // Admin message -> maybe show detailed alert or navigate to chat?
+            // For now just stay on screen as message body is visible
         }
     };
 
@@ -83,21 +84,21 @@ export default function NotificationScreen({ navigation }) {
                 ]}
                 onPress={() => handlePress(item)}
             >
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, isUrgent && { backgroundColor: '#FFEBEE' }]}>
                     {isUrgent ? (
-                        <Ionicons name="alert-circle" size={24} color="#D32F2F" />
+                        <AlertCircle size={24} color="#D32F2F" />
                     ) : (
-                        <Ionicons name="notifications" size={24} color="#2E7D32" />
+                        <Bell size={24} color="#2E7D32" />
                     )}
                 </View>
                 <View style={styles.textContainer}>
                     <View style={styles.headerRow}>
-                        <Text style={[styles.title, !item.is_read && styles.unreadText]}>
+                        <Text style={[styles.title, !item.is_read && styles.unreadText]} numberOfLines={1}>
                             {item.title}
                         </Text>
                         <Text style={styles.time}>{getRelativeTime(item.created_at)}</Text>
                     </View>
-                    <Text style={styles.body} numberOfLines={2}>{item.body}</Text>
+                    <Text style={styles.body} numberOfLines={3}>{item.body}</Text>
                 </View>
                 {!item.is_read && <View style={styles.dot} />}
             </TouchableOpacity>
@@ -108,10 +109,11 @@ export default function NotificationScreen({ navigation }) {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Ionicons name="arrow-back" size={24} color="#333" />
+                    <ArrowLeft size={24} color="#333" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Notifications</Text>
-                <TouchableOpacity onPress={handleMarkAllRead}>
+                <TouchableOpacity onPress={handleMarkAllRead} style={styles.readAllBtn}>
+                    <Check size={16} color="#2E7D32" style={{ marginRight: 4 }} />
                     <Text style={styles.markReadText}>Read All</Text>
                 </TouchableOpacity>
             </View>
@@ -128,7 +130,7 @@ export default function NotificationScreen({ navigation }) {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2E7D32']} />}
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
-                            <Ionicons name="notifications-off-outline" size={64} color="#ccc" />
+                            <Bell size={64} color="#ccc" />
                             <Text style={styles.emptyText}>No notifications yet</Text>
                         </View>
                     }
@@ -153,6 +155,7 @@ const styles = StyleSheet.create({
     backBtn: { padding: 4 },
     headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#333' },
     markReadText: { color: '#2E7D32', fontWeight: '600' },
+    readAllBtn: { flexDirection: 'row', alignItems: 'center' },
 
     itemContainer: {
         flexDirection: 'row',
@@ -164,7 +167,14 @@ const styles = StyleSheet.create({
     unreadItem: { backgroundColor: '#F0F8F1' }, // Light green
     urgentItem: { backgroundColor: '#FFEBEE' }, // Light red
 
-    iconContainer: { marginRight: 15 },
+    iconContainer: {
+        marginRight: 15,
+        width: 40, height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0F8F1',
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
     textContainer: { flex: 1 },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
     title: { fontSize: 15, fontWeight: '600', color: '#333' },

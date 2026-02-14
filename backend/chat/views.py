@@ -36,7 +36,12 @@ class MessageViewSet(viewsets.ModelViewSet):
         return MessageSerializer
 
     def perform_create(self, serializer):
-        serializer.save(sender=self.request.user)
+        message = serializer.save(sender=self.request.user)
+        
+        # Send email notification if sender is admin or generally for all messages
+        # For now, let's enable it nicely
+        from users.email_service import send_message_notification_email
+        send_message_notification_email(message.sender, message.receiver, message.content)
     
     @extend_schema(summary="Get conversations")
     @action(detail=False, methods=['get'])

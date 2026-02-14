@@ -9,6 +9,7 @@ urlpatterns = [
     path('users/', views.UserListView.as_view(), name='admin_users_list'),
     path('users/<int:pk>/', views.UserDetailView.as_view(), name='admin_user_detail'),
     path('users/<int:pk>/activity/', views.UserActivityView.as_view(), name='admin_user_activity'),
+    path('users/<int:pk>/send-message/', views.SendUserMessageView.as_view(), name='admin_user_send_message'),
     
     # Activity Logs
     path('activity/', views.ActivityLogListView.as_view(), name='admin_activity_log'),

@@ -12,7 +12,7 @@ import Toast from 'react-native-root-toast';
 
 export default function CreateListingScreen({ navigation }) {
     const [loading, setLoading] = useState(false);
-    const [imageUri, setImageUri] = useState(null);
+    const [selectedAsset, setSelectedAsset] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
         material_type: '',
@@ -28,22 +28,27 @@ export default function CreateListingScreen({ navigation }) {
     };
 
     const pickImage = async () => {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        try {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-        if (permissionResult.granted === false) {
-            Toast.show("Permission to access camera roll is required!", { backgroundColor: '#E74C3C' });
-            return;
-        }
+            if (permissionResult.granted === false) {
+                Toast.show("Permission to access camera roll is required!", { backgroundColor: '#E74C3C' });
+                return;
+            }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaType.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.8,
-        });
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaType.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+            });
 
-        if (!result.canceled) {
-            setImageUri(result.assets[0].uri);
+            if (!result.canceled) {
+                setSelectedAsset(result.assets[0]);
+            }
+        } catch (error) {
+            console.error("PickImage Error:", error);
+            Toast.show("Error picking image", { backgroundColor: '#E74C3C' });
         }
     };
 
@@ -63,14 +68,36 @@ export default function CreateListingScreen({ navigation }) {
             const data = new FormData();
 
             // Add image if selected
-            if (imageUri) {
-                const filename = imageUri.split('/').pop();
-                const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image/jpeg`;
+            if (selectedAsset) {
+                const uri = selectedAsset.uri;
+                let name = selectedAsset.fileName;
+                let type = selectedAsset.mimeType;
+
+                // Fallback if fileName/mimeType are missing (common on Android)
+                if (!name) {
+                    const parts = uri.split('/');
+                    name = parts[parts.length - 1];
+                }
+
+                // Ensure name has an extension
+                if (!name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                    name += '.jpg';
+                }
+
+                // Infer type from extension if missing
+                if (!type) {
+                    const match = /\.(\w+)$/.exec(name);
+                    type = match ? `image/${match[1]}` : `image/jpeg`;
+                }
+
+                // Fix common mimetype issues
+                if (type === 'image/jpg') type = 'image/jpeg';
+
+                console.log('Uploading image:', { uri, name, type });
 
                 data.append('image', {
-                    uri: imageUri,
-                    name: filename || `photo.jpg`,
+                    uri,
+                    name,
                     type
                 });
             }
@@ -87,11 +114,12 @@ export default function CreateListingScreen({ navigation }) {
             navigation.goBack();
         } catch (error) {
             console.error("Create Listing Error:", error);
-            console.error("Create Listing Error:", error);
             let errorMessage = "Failed to create listing";
 
             if (error.response?.data) {
                 const data = error.response.data;
+                console.log("Error Response Data:", data);
+
                 if (typeof data === 'string') {
                     errorMessage = data;
                 } else if (data.error) {
@@ -99,7 +127,7 @@ export default function CreateListingScreen({ navigation }) {
                 } else if (data.detail) {
                     errorMessage = data.detail;
                 } else {
-                    // Handle field-specific errors (e.g. { image: ["Too large"] })
+                    // Handle field-specific errors
                     const messages = Object.keys(data).map(key => {
                         const val = data[key];
                         return `${key}: ${Array.isArray(val) ? val.join(', ') : val}`;
@@ -132,12 +160,12 @@ export default function CreateListingScreen({ navigation }) {
                     style={styles.imageUpload}
                     onPress={pickImage}
                 >
-                    {imageUri ? (
+                    {selectedAsset ? (
                         <View style={styles.imagePreviewContainer}>
-                            <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                            <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
                             <TouchableOpacity
                                 style={styles.removeImageBtn}
-                                onPress={() => setImageUri(null)}
+                                onPress={() => setSelectedAsset(null)}
                             >
                                 <X size={16} color="#fff" />
                             </TouchableOpacity>

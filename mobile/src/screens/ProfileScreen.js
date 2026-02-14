@@ -1,17 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ScrollView, Alert
+    Image, Switch, ScrollView, Alert, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
     User, Settings, Shield, Bell,
     LogOut, ChevronRight, HelpCircle,
-    Star, Wallet, Package, Clock
+    Star, Wallet, Package, Clock, MessageSquare
 } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { BASE_URL } from '../api/client';
+
+const MenuItem = ({ icon: Icon, title, subtitle, onPress, isLast, color = "#2E7D32", iconBg }) => (
+    <TouchableOpacity
+        style={[styles.menuItem, isLast && styles.menuItemLast]}
+        onPress={onPress}
+    >
+        <View style={[styles.iconBox, { backgroundColor: iconBg || `${color}15` }]}>
+            <Icon size={22} color={color} />
+        </View>
+        <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>{title}</Text>
+            {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
+        </View>
+        <ChevronRight size={18} color="#ccc" />
+    </TouchableOpacity>
+);
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
@@ -34,252 +50,296 @@ export default function ProfileScreen({ navigation }) {
         return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
-    const MenuItem = ({ icon: Icon, title, subtitle, onPress, color = "#1a1a1a", isLast }) => (
-        <TouchableOpacity
-            style={[styles.menuItem, isLast && styles.menuItemLast]}
-            onPress={onPress}
-        >
-            <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-                <Icon size={20} color={color} />
-            </View>
-            <View style={styles.menuTextContent}>
-                <Text style={styles.menuTitle}>{title}</Text>
-                {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
-            </View>
-            <ChevronRight size={18} color="#ccc" />
-        </TouchableOpacity>
-    );
-
     return (
         <View style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-                {/* Brand Header */}
-                <View style={styles.headerBackground}>
-                    <SafeAreaView edges={['top']}>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+            >
+                {/* Green Header Section - Matching Home Screen */}
+                <View style={styles.greenHeaderContainer}>
+                    <SafeAreaView edges={['top', 'left', 'right']}>
                         <View style={styles.headerContent}>
-                            <View style={styles.avatarBox}>
-                                {user?.profile_picture_url ? (
-                                    <Image
-                                        source={{ uri: resolveImageUrl(user.profile_picture_url) }}
-                                        style={styles.avatar}
-                                    />
-                                ) : (
-                                    <View style={styles.avatarPlaceholder}>
-                                        <User size={32} color="rgba(255,255,255,0.7)" />
-                                    </View>
-                                )}
-                                <TouchableOpacity
-                                    style={styles.editBadge}
-                                    onPress={() => navigation.navigate('EditProfile')}
-                                >
-                                    <Settings size={14} color="#fff" />
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.userInfo}>
-                                <View style={styles.userNameRow}>
-                                    <Text style={styles.userName}>{user?.username || 'Guest User'}</Text>
-                                    {user?.is_verified && <Shield size={16} color="#FFD700" fill="#FFD700" style={styles.verifiedBadge} />}
+                            <View style={styles.profileRow}>
+                                <View style={styles.avatarContainer}>
+                                    {user?.profile_picture_url ? (
+                                        <Image
+                                            source={{ uri: resolveImageUrl(user.profile_picture_url) }}
+                                            style={styles.avatar}
+                                        />
+                                    ) : (
+                                        <View style={[styles.avatar, styles.placeholderAvatar]}>
+                                            <User size={40} color="#fff" />
+                                        </View>
+                                    )}
+                                    <TouchableOpacity style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')}>
+                                        <Settings size={14} color="#F59E0B" />
+                                    </TouchableOpacity>
                                 </View>
-                                <Text style={styles.userEmail}>{user?.email || 'No email connected'}</Text>
-                                <View style={styles.roleTag}>
-                                    <Text style={styles.roleText}>{userRole || 'MEMBER'}</Text>
+
+                                <View style={styles.userInfo}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
+                                        {userRole === 'COLLECTOR' && (
+                                            <View style={styles.roleBadge}>
+                                                <Text style={styles.roleText}>COLLECTOR</Text>
+                                            </View>
+                                        )}
+                                    </View>
+                                    <Text style={styles.email}>{user?.email || 'No email connected'}</Text>
                                 </View>
                             </View>
                         </View>
                     </SafeAreaView>
                 </View>
 
-                {/* Floating Stats Card */}
-                <View style={styles.statsContainer}>
-                    <View style={styles.statItem}>
-                        <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
-                        <Text style={styles.statLabel}>Pickups</Text>
+                {/* Overlapping Stats Card - Matching Home Screen */}
+                <View style={styles.overlappingCard}>
+                    <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
+                    <Text style={styles.statLabel}>Pickups</Text>
+                </View>
+
+                {/* Account Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>ACCOUNT</Text>
+                    <View style={styles.menuGroup}>
+                        <MenuItem
+                            icon={User}
+                            title="Personal Details"
+                            subtitle="Name, Phone, City"
+                            onPress={() => navigation.navigate('EditProfile')}
+                            color="#2E7D32"
+                            iconBg="#E8F5E9"
+                        />
+                        <MenuItem
+                            icon={Clock}
+                            title="Pickup History"
+                            subtitle="View past requests"
+                            onPress={() => navigation.navigate('PickupHistory')}
+                            color="#4B5563"
+                            iconBg="#F3F4F6"
+                        />
+                        <MenuItem
+                            icon={Wallet}
+                            title="Wallet & Payment"
+                            subtitle="Manage Mobile Money"
+                            onPress={() => navigation.navigate('Wallet')}
+                            color="#D97706"
+                            iconBg="#FEF3C7"
+                        />
+                        <MenuItem
+                            icon={Shield}
+                            title="Security & Privacy"
+                            subtitle="Password, 2FA"
+                            onPress={() => navigation.navigate('Security')}
+                            color="#DC2626"
+                            iconBg="#FEE2E2"
+                            isLast
+                        />
                     </View>
                 </View>
 
-                {/* Account Settings Group */}
-                <Text style={styles.sectionTitle}>Account</Text>
-                <View style={styles.menuGroup}>
-                    <MenuItem
-                        icon={User}
-                        title="Personal Details"
-                        subtitle="Name, Phone, City"
-                        onPress={() => navigation.navigate('EditProfile')}
-                        color="#2E7D32"
-                    />
-                    <MenuItem
-                        icon={Clock}
-                        title="Pickup History"
-                        subtitle="View past requests"
-                        onPress={() => navigation.navigate('PickupHistory')}
-                        color="#5C6BC0"
-                    />
-                    <MenuItem
-                        icon={Wallet}
-                        title="Wallet & Payment"
-                        subtitle="Manage Mobile Money"
-                        onPress={() => navigation.navigate('Wallet')}
-                        color="#F39C12"
-                    />
-                    <MenuItem
-                        icon={Shield}
-                        title="Security & Privacy"
-                        subtitle="Password, 2FA"
-                        onPress={() => navigation.navigate('Security')}
-                        color="#E74C3C"
-                        isLast
-                    />
+                {/* Support Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>SUPPORT</Text>
+                    <View style={styles.menuGroup}>
+                        <MenuItem
+                            icon={Bell}
+                            title="Notifications"
+                            onPress={() => navigation.navigate('Notifications')}
+                            color="#2563EB"
+                            iconBg="#DBEAFE"
+                        />
+                        <MenuItem
+                            icon={MessageSquare}
+                            title="Chat Support"
+                            onPress={() => navigation.navigate('SupportChat')}
+                            color="#8B5CF6"
+                            iconBg="#EDE9FE"
+                            isLast
+                        />
+                    </View>
                 </View>
 
-                {/* Preferences Group */}
-                <Text style={styles.sectionTitle}>Support</Text>
-                <View style={styles.menuGroup}>
-                    <MenuItem
-                        icon={Bell}
-                        title="Notifications"
-                        onPress={() => Alert.alert("Coming Soon", "Notification settings will be available shortly.")}
-                        color="#3498DB"
-                    />
-                    <MenuItem
-                        icon={HelpCircle}
-                        title="Help Center"
-                        onPress={() => navigation.navigate('Help')}
-                        color="#9B59B6"
-                        isLast
-                    />
-                </View>
-
-                {/* Logout Button */}
                 <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-                    <LogOut size={20} color="#E74C3C" />
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
 
-                <Text style={styles.versionText}>ReVesta v1.0.2 • Build 2024</Text>
+                <View style={{ height: 40 }} />
             </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f2f2f7' }, // iOS system gray
+    container: { flex: 1, backgroundColor: '#F3F4F6' },
+    scrollContent: { paddingBottom: 40 },
 
-    headerBackground: {
+    // Header Style from HomeScreen
+    greenHeaderContainer: {
         backgroundColor: '#2E7D32',
-        paddingTop: 20,
-        paddingBottom: 80, // Space for overlapping card
-        paddingHorizontal: 20,
+        paddingBottom: 80, // High padding for overlap
+        paddingTop: 10,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
+        zIndex: 0,
     },
     headerContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 10,
+    },
+    profileRow: {
         flexDirection: 'row',
         alignItems: 'center',
     },
-    avatarBox: {
+    avatarContainer: {
         position: 'relative',
-        marginRight: 20,
+        marginRight: 16,
     },
     avatar: {
-        width: 88, height: 88, borderRadius: 44, borderWidth: 4, borderColor: '#fff',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 }
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.5)',
     },
-    avatarPlaceholder: {
-        width: 80, height: 80, borderRadius: 40, borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
-        backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center'
+    placeholderAvatar: {
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     editBadge: {
-        position: 'absolute', bottom: 0, right: 0,
-        backgroundColor: '#F39C12', width: 26, height: 26,
-        borderRadius: 13, justifyContent: 'center', alignItems: 'center',
-        borderWidth: 2, borderColor: '#2E7D32'
-    },
-    userInfo: { flex: 1 },
-    userNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    userName: { fontSize: 22, fontWeight: 'bold', color: '#fff' },
-    verifiedBadge: { marginTop: 2 },
-    userEmail: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-    roleTag: {
-        backgroundColor: 'rgba(0,0,0,0.25)', paddingHorizontal: 12, paddingVertical: 5,
-        borderRadius: 16, alignSelf: 'flex-start', marginTop: 10
-    },
-    roleText: { color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 },
-
-    // Stats Card (Floating)
-    statsContainer: {
-        marginTop: -50,
-        marginHorizontal: 20,
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
         backgroundColor: '#fff',
-        borderRadius: 24,
-        padding: 24,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.12,
-        shadowRadius: 16,
-        elevation: 8,
-        marginBottom: 28
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
     },
-    statItem: { alignItems: 'center', flex: 1 },
-    statValue: { fontSize: 24, fontWeight: 'bold', color: '#1A1A1A' },
-    statLabel: { fontSize: 13, color: '#666', marginTop: 4 },
-    statDivider: { width: 1, backgroundColor: '#f0f0f0', height: '80%' },
+    userInfo: {
+        flex: 1,
+    },
+    name: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 2,
+    },
+    email: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.8)',
+    },
+    roleBadge: {
+        backgroundColor: '#1B5E20',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 20,
+        marginLeft: 8,
+    },
+    roleText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 10,
+        letterSpacing: 0.5,
+    },
 
-    // Menu Sections
-    scrollContent: { paddingBottom: 40 },
+    // Overlapping Card from HomeScreen
+    overlappingCard: {
+        backgroundColor: '#fff',
+        marginHorizontal: 20,
+        marginTop: -50, // Negative margin to overlap
+        borderRadius: 20,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+        zIndex: 1,
+        marginBottom: 24,
+    },
+    statValue: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 14,
+        color: '#666',
+    },
+
+    section: {
+        marginBottom: 24,
+        paddingHorizontal: 20,
+    },
     sectionTitle: {
-        fontSize: 14, fontWeight: '600', color: '#666',
-        marginLeft: 25, marginBottom: 10, marginTop: 10,
-        textTransform: 'uppercase'
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#6B7280',
+        marginBottom: 12,
+        textTransform: 'uppercase',
     },
     menuGroup: {
         backgroundColor: '#fff',
-        marginHorizontal: 20,
         borderRadius: 20,
-        paddingVertical: 6,
-        marginBottom: 20,
-        elevation: 2,
+        paddingHorizontal: 4,
         shadowColor: '#000',
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 }
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
     },
     menuItem: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingVertical: 15, paddingHorizontal: 15,
-        borderBottomWidth: 1, borderBottomColor: '#f0f0f0'
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6'
     },
-    menuItemLast: { borderBottomWidth: 0 },
-
-    iconContainer: {
-        width: 36, height: 36, borderRadius: 10,
-        justifyContent: 'center', alignItems: 'center', marginRight: 15
+    menuItemLast: {
+        borderBottomWidth: 0,
     },
-    menuTextContent: { flex: 1 },
-    menuTitle: { fontSize: 16, color: '#333', fontWeight: '500' },
-    menuSubtitle: { fontSize: 12, color: '#999', marginTop: 2 },
+    iconBox: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    menuContent: {
+        flex: 1,
+    },
+    menuTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#1F2937',
+        marginBottom: 2,
+    },
+    menuSubtitle: {
+        fontSize: 13,
+        color: '#9CA3AF',
+    },
 
     logoutBtn: {
-        marginHorizontal: 20,
-        backgroundColor: '#fff',
-        padding: 15,
-        borderRadius: 16,
         alignItems: 'center',
-        flexDirection: 'row',
         justifyContent: 'center',
-        gap: 8,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#fee'
+        marginHorizontal: 20,
+        paddingVertical: 16,
     },
-    logoutText: { color: '#E74C3C', fontSize: 16, fontWeight: '600' },
-
-    versionText: { textAlign: 'center', color: '#ccc', fontSize: 12, marginBottom: 30 }
+    logoutText: {
+        color: '#EF4444',
+        fontWeight: '600',
+        fontSize: 16,
+    },
 });

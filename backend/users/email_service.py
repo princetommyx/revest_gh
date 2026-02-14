@@ -324,6 +324,57 @@ def send_password_reset_email(user, reset_url: str) -> None:
     thread.start()
 
 
+def send_message_notification_email(sender, receiver, content) -> None:
+    """
+    Send email notification for a new chat message.
+    Runs in background thread.
+    
+    Args:
+        sender: User model instance (sender)
+        receiver: User model instance (receiver)
+        content: Message content (string)
+    """
+    def _send_task(sender_name: str, receiver_id: int, msg_content: str):
+        try:
+            receiver_obj = User.objects.get(pk=receiver_id)
+            
+            # Don't send if no email or dummy email
+            if not receiver_obj.email or '@example.com' in receiver_obj.email:
+                return
+                
+            # Truncate content for privacy/preview
+            preview = msg_content[:100] + ('...' if len(msg_content) > 100 else '')
+            
+            context = {
+                'user_name': receiver_obj.first_name,
+                'sender_name': sender_name,
+                'message_content': preview,
+            }
+            
+            success = send_transactional_email(
+                to=[receiver_obj.email],
+                subject=f'New Message from {sender_name}',
+                template_name='emails/message_notification.html',
+                text_template_name='emails/message_notification.txt',
+                context=context,
+            )
+            
+            if success:
+                logger.info(f"Message notification sent to {receiver_obj.email}")
+                
+        except Exception as e:
+            logger.error(f"Error sending message notification: {e}")
+    
+    sender_name = sender.first_name if hasattr(sender, 'first_name') else "ReVesta User"
+    if hasattr(sender, 'role') and sender.role == 'ADMIN':
+         sender_name = "ReVesta Support"
+
+    receiver_id = receiver.id if hasattr(receiver, 'id') else receiver
+    
+    thread = threading.Thread(target=_send_task, args=(sender_name, receiver_id, content), daemon=True)
+    thread.start()
+
+
 # =============================================================================
 # Email Health Check
 # =============================================================================
