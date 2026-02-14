@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 from market.views import ListingViewSet
+from market.ai_views import AnalyzeWasteView
 from logistics.views import PickupRequestViewSet
 from chat.views import MessageViewSet
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
@@ -30,6 +31,7 @@ urlpatterns = [
     path('api/v1/users/', include('users.urls')),  # User profiles (will separate later)
     path('api/v1/admin/', include('admin_dashboard.urls')),  # Admin dashboard
     path('api/v1/wallet/', include('wallet.urls')),  # Wallet & transactions
+    path('api/v1/market/analyze-waste/', AnalyzeWasteView.as_view(), name='analyze-waste'), # AI Analysis
     path('api/v1/', include(router_v1.urls)),  # ViewSet routes
     
     # Admin Dashboard Static Files

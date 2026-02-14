@@ -42,6 +42,7 @@ class User(AbstractUser):
         db_index=True
     )
     google_id = models.CharField(max_length=255, blank=True, null=True, db_index=True)
+    profile_picture = models.ImageField(upload_to='profile_pics/', blank=True, null=True)
     profile_picture_url = models.URLField(max_length=500, blank=True, null=True)
 
     # Support Role

@@ -10,7 +10,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { marketApi } from '../api/market';
 import Toast from 'react-native-root-toast';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 export default function CreateListingScreen({ navigation }) {
+    const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState(null);
     const [formData, setFormData] = useState({
@@ -18,6 +21,7 @@ export default function CreateListingScreen({ navigation }) {
         material_type: '',
         description: '',
         quantity: '',
+        weight_kg: 0, // Hidden field for pricing
         price: '',
         is_free: false,
         location: ''
@@ -26,6 +30,33 @@ export default function CreateListingScreen({ navigation }) {
     const handleChange = (name, value) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    // AI Pricing Logic
+    React.useEffect(() => {
+        if (formData.material_type && formData.weight_kg) {
+            const rates = {
+                'Plastics': 1.5,
+                'Metals': 4.0,
+                'Paper': 0.8,
+                'Glass': 0.5,
+                'Electronics': 8.0,
+                'Mixed': 1.0,
+                'Other': 0.5
+            };
+
+            const rate = rates[formData.material_type] || 1.0;
+            // Use AI weight or fallback to 5kg if 0
+            const weight = formData.weight_kg > 0 ? formData.weight_kg : 5;
+            const commission = 0.20;
+
+            const estimatedValue = (rate * weight * (1 - commission)).toFixed(2);
+
+            setFormData(prev => ({ ...prev, price: estimatedValue }));
+        }
+    }, [formData.material_type, formData.weight_kg]);
+
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanResult, setScanResult] = useState(null);
 
     const pickImage = async () => {
         try {
@@ -37,18 +68,51 @@ export default function CreateListingScreen({ navigation }) {
             }
 
             const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaType.Images,
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.7,
             });
 
             if (!result.canceled) {
-                setSelectedAsset(result.assets[0]);
+                const asset = result.assets[0];
+                setSelectedAsset(asset);
+
+                // Start AI Analysis
+                analyzeImage(asset.uri);
             }
         } catch (error) {
             console.error("PickImage Error:", error);
             Toast.show("Error picking image", { backgroundColor: '#E74C3C' });
+        }
+    };
+
+    const analyzeImage = async (uri) => {
+        setIsScanning(true);
+        try {
+            console.log("Starting AI Analysis...");
+            const data = await marketApi.analyzeWaste(uri);
+            console.log("AI Result:", data);
+
+            if (data) {
+                // Auto-fill form
+                setFormData(prev => ({
+                    ...prev,
+                    material_type: data.material_type || prev.material_type,
+                    quantity: data.quantity_estimate || prev.quantity,
+                    weight_kg: data.weight_kg || 0,
+                    title: data.title_suggestion || prev.title,
+                    description: data.description || prev.description,
+                }));
+
+                setScanResult(data);
+                Toast.show("Verified by Revesta AI 🤖", { backgroundColor: '#2E7D32' });
+            }
+        } catch (error) {
+            console.error("AI Analysis Failed:", error);
+            Toast.show("AI Scan failed - please enter details manually", { backgroundColor: '#F39C12' });
+        } finally {
+            setIsScanning(false);
         }
     };
 
@@ -109,7 +173,16 @@ export default function CreateListingScreen({ navigation }) {
                 }
             });
 
+            // Add verification status if scanned
+            if (scanResult && scanResult.confidence > 0.8) {
+                data.append('is_verified_waste', 'true');
+            }
+
             await marketApi.createListing(data);
+
+            // Invalidate listings query to refresh Home Screen
+            queryClient.invalidateQueries(['listings']);
+
             Toast.show("Listing created successfully!", { backgroundColor: '#2E7D32' });
             navigation.goBack();
         } catch (error) {
@@ -163,6 +236,23 @@ export default function CreateListingScreen({ navigation }) {
                     {selectedAsset ? (
                         <View style={styles.imagePreviewContainer}>
                             <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
+
+                            {/* Scanning Overlay */}
+                            {isScanning && (
+                                <View style={styles.scanningOverlay}>
+                                    <ActivityIndicator size="large" color="#fff" />
+                                    <Text style={styles.scanningText}>Revesta AI Analyzing...</Text>
+                                    <Text style={styles.scanningSubtext}>Detecting material & quality</Text>
+                                </View>
+                            )}
+
+                            {/* Scan Result Badge */}
+                            {!isScanning && scanResult && (
+                                <View style={styles.verifiedBadge}>
+                                    <Text style={styles.verifiedText}>AI Verified ✓</Text>
+                                </View>
+                            )}
+
                             <TouchableOpacity
                                 style={styles.removeImageBtn}
                                 onPress={() => setSelectedAsset(null)}
@@ -215,7 +305,7 @@ export default function CreateListingScreen({ navigation }) {
                         <Text style={styles.label}>Quantity *</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="e.g. 2 Bags"
+                            placeholder="e.g. 1 Fridge, 5kg"
                             value={formData.quantity}
                             onChangeText={(val) => handleChange('quantity', val)}
                         />
@@ -242,26 +332,21 @@ export default function CreateListingScreen({ navigation }) {
                     onChangeText={(val) => handleChange('location', val)}
                 />
 
-                {/* Price */}
-                <Text style={styles.label}>Price (GHS)</Text>
-                <View style={styles.priceContainer}>
+                {/* Revesta AI Price Offer */}
+                <Text style={styles.label}>Revesta Offer (GHS)</Text>
+                <View style={styles.aiPriceContainer}>
+                    <View style={styles.aiBadge}>
+                        <Text style={styles.aiBadgeText}>✨ AI Rate</Text>
+                    </View>
                     <TextInput
-                        style={[styles.input, styles.priceInput, formData.is_free && styles.disabledInput]}
+                        style={[styles.input, styles.priceInput, styles.disabledInput, { color: '#2E7D32', fontWeight: 'bold' }]}
                         placeholder="0.00"
                         value={formData.price}
-                        onChangeText={(val) => handleChange('price', val)}
-                        keyboardType="decimal-pad"
-                        editable={!formData.is_free}
+                        editable={false}
                     />
-                    <TouchableOpacity
-                        style={styles.freeCheckbox}
-                        onPress={() => handleChange('is_free', !formData.is_free)}
-                    >
-                        <View style={[styles.checkbox, formData.is_free && styles.checkboxActive]}>
-                            {formData.is_free && <Text style={styles.checkmark}>✓</Text>}
-                        </View>
-                        <Text style={styles.freeLabel}>Free</Text>
-                    </TouchableOpacity>
+                    <Text style={styles.priceSubtext}>
+                        Based on quality & market rates
+                    </Text>
                 </View>
 
                 {/* Submit Button */}
@@ -383,5 +468,63 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 5
     },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' }
+    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+
+    aiPriceContainer: {
+        position: 'relative',
+        marginBottom: 10
+    },
+    aiBadge: {
+        position: 'absolute',
+        top: -10,
+        right: 10,
+        backgroundColor: '#F39C12',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+        zIndex: 1
+    },
+    aiBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+    priceSubtext: { fontSize: 11, color: '#888', marginTop: 4, fontStyle: 'italic' },
+
+    scanningOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(46, 125, 50, 0.85)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderRadius: 12,
+        zIndex: 10
+    },
+    scanningText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        marginTop: 10,
+        fontSize: 14
+    },
+    scanningSubtext: {
+        color: 'rgba(255,255,255,0.8)',
+        fontSize: 12,
+        marginTop: 5
+    },
+    verifiedBadge: {
+        position: 'absolute',
+        bottom: 10,
+        left: 10,
+        backgroundColor: '#2E7D32',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#fff',
+        zIndex: 5
+    },
+    verifiedText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 12
+    }
 });

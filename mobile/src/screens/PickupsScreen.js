@@ -33,10 +33,15 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     return R * c; // Distance in km
 };
 
-export default function PickupsScreen() {
+export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
     const queryClient = useQueryClient();
+
+    // Check for params from ListingDetail
+    const pickupData = route?.params?.pickupData;
+
+    // ... rest of checking logic can go in useEffect
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
@@ -153,6 +158,21 @@ export default function PickupsScreen() {
         })();
     }, []);
 
+    // Handle incoming pickup request from listing
+    useEffect(() => {
+        if (pickupData) {
+            setRequestForm(prev => ({
+                ...prev,
+                material_type: pickupData.material_type || prev.material_type,
+                quantity_estimate: pickupData.quantity_estimate || prev.quantity_estimate
+            }));
+            setShowRequestModal(true);
+
+            // Clear params to prevent reopening on generic refresh (optional, but good practice)
+            navigation.setParams({ pickupData: null });
+        }
+    }, [pickupData]);
+
     // Handle "Set on Map" Flow
     const startMapSelection = () => {
         setShowRequestModal(false);
@@ -240,15 +260,48 @@ export default function PickupsScreen() {
         }
     };
 
-    // Auto-fill address when modal opens if empty
+    // AI Value Estimator
     useEffect(() => {
-        if (showRequestModal && !customAddress && location) {
-            (async () => {
-                const address = await reverseGeocode(location.latitude, location.longitude);
-                setCustomAddress(address);
-            })();
-        }
-    }, [showRequestModal]);
+        calculateWasteValue();
+    }, [requestForm.material_type, requestForm.quantity_estimate]);
+
+    const calculateWasteValue = () => {
+        const { material_type, quantity_estimate } = requestForm;
+        if (!material_type || !quantity_estimate) return;
+
+        // Base rates per kg (GHS)
+        const rates = {
+            'Plastics': 1.5,
+            'Metals': 4.0,
+            'Paper': 0.8,
+            'Electronics': 8.0,
+            'Glass': 0.5,
+            'Mixed': 1.0
+        };
+
+        // Estimated weights (kg)
+        const weights = {
+            '1-2 Bags': 10,
+            '3-5 Bags': 25,
+            'Tricycle Load': 100,
+            'Pickup Truck Load': 300
+        };
+
+        const rate = rates[material_type] || 1.0;
+        const weight = weights[quantity_estimate] || 10; // Default to small qty
+
+        // Calculate estimated value logic
+        const baseValue = rate * weight;
+        const commission = 0.20; // 20% platform fee
+        const estimatedValue = baseValue * (1 - commission);
+
+        // Update form with AI estimate if not manually set
+        // We set a range or a specific value. specific for now.
+        setRequestForm(prev => ({
+            ...prev,
+            estimated_price: estimatedValue.toFixed(2)
+        }));
+    };
 
     const handleCreateRequest = async () => {
         // ... (existing logic)
@@ -767,41 +820,73 @@ export default function PickupsScreen() {
 
                             <Text style={styles.label}>Material Type</Text>
                             <View style={styles.pickerContainer}>
-                                {['Plastics', 'Metals', 'Paper', 'Mixed'].map(type => (
-                                    <TouchableOpacity
-                                        key={type}
-                                        style={[
-                                            styles.pickerItem,
-                                            requestForm.material_type === type && styles.pickerItemActive
-                                        ]}
-                                        onPress={() => setRequestForm({ ...requestForm, material_type: type })}
-                                    >
-                                        <Text style={[
-                                            styles.pickerItemText,
-                                            requestForm.material_type === type && styles.pickerItemTextActive
-                                        ]}>{type}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                {(() => {
+                                    const defaultTypes = ['Plastics', 'Metals', 'Paper', 'Mixed'];
+                                    // If current type is not in defaults, add it
+                                    const types2 = requestForm.material_type && !defaultTypes.includes(requestForm.material_type)
+                                        ? [...defaultTypes, requestForm.material_type]
+                                        : defaultTypes;
+
+                                    return types2.map(type => (
+                                        <TouchableOpacity
+                                            key={type}
+                                            style={[
+                                                styles.pickerItem,
+                                                requestForm.material_type === type && styles.pickerItemActive
+                                            ]}
+                                            onPress={() => setRequestForm({ ...requestForm, material_type: type })}
+                                        >
+                                            <Text style={[
+                                                styles.pickerItemText,
+                                                requestForm.material_type === type && styles.pickerItemTextActive
+                                            ]}>{type}</Text>
+                                        </TouchableOpacity>
+                                    ));
+                                })()}
                             </View>
 
                             <Text style={styles.label}>Estimated Quantity</Text>
                             <View style={styles.pickerContainer}>
-                                {['1-2 Bags', '3-5 Bags', 'Pickup Truck Load', 'Tricycle Load'].map(qty => (
-                                    <TouchableOpacity
-                                        key={qty}
-                                        style={[
-                                            styles.pickerItem,
-                                            requestForm.quantity_estimate === qty && styles.pickerItemActive
-                                        ]}
-                                        onPress={() => setRequestForm({ ...requestForm, quantity_estimate: qty })}
-                                    >
-                                        <Text style={[
-                                            styles.pickerItemText,
-                                            requestForm.quantity_estimate === qty && styles.pickerItemTextActive
-                                        ]}>{qty}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                {(() => {
+                                    const defaultQtys = ['1-2 Bags', '3-5 Bags', 'Pickup Truck Load', 'Tricycle Load'];
+                                    // If current qty is not in defaults, add it
+                                    const qtys2 = requestForm.quantity_estimate && !defaultQtys.includes(requestForm.quantity_estimate)
+                                        ? [requestForm.quantity_estimate, ...defaultQtys]
+                                        : defaultQtys;
+
+                                    return qtys2.map(qty => (
+                                        <TouchableOpacity
+                                            key={qty}
+                                            style={[
+                                                styles.pickerItem,
+                                                requestForm.quantity_estimate === qty && styles.pickerItemActive
+                                            ]}
+                                            onPress={() => setRequestForm({ ...requestForm, quantity_estimate: qty })}
+                                        >
+                                            <Text style={[
+                                                styles.pickerItemText,
+                                                requestForm.quantity_estimate === qty && styles.pickerItemTextActive
+                                            ]}>{qty}</Text>
+                                        </TouchableOpacity>
+                                    ));
+                                })()}
                             </View>
+
+
+                            {/* AI Estimate Display */}
+                            {requestForm.estimated_price && (
+                                <View style={styles.aiEstimateBox}>
+                                    <View style={styles.aiHeader}>
+                                        <Text style={styles.aiLabel}>✨ Revesta AI Valuation</Text>
+                                    </View>
+                                    <Text style={styles.aiValue}>
+                                        Est. Earn: ₵{requestForm.estimated_price}
+                                    </Text>
+                                    <Text style={styles.aiSubtext}>
+                                        Based on real-time market rates for {requestForm.material_type}
+                                    </Text>
+                                </View>
+                            )}
 
                             <Text style={styles.label}>Payment Method</Text>
                             <View style={styles.pickerContainer}>
@@ -1410,10 +1495,35 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 8
     },
-    cancelModalTitle: {
-        fontSize: 22,
+    aiEstimateBox: {
+        backgroundColor: '#E8F5E9',
+        padding: 15,
+        borderRadius: 12,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: '#C8E6C9',
+        alignItems: 'center'
+    },
+    aiHeader: {
+        marginBottom: 5,
+    },
+    aiLabel: {
+        fontSize: 12,
         fontWeight: 'bold',
-        color: '#1a1a1a'
+        color: '#2E7D32',
+        textTransform: 'uppercase',
+        letterSpacing: 1
+    },
+    aiValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1B5E20',
+        marginBottom: 2
+    },
+    aiSubtext: {
+        fontSize: 11,
+        color: '#66bb6a',
+        fontStyle: 'italic'
     },
     cancelModalClose: {
         padding: 4

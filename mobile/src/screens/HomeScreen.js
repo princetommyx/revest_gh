@@ -34,34 +34,45 @@ export default function HomeScreen({ navigation }) {
     const [search, setSearch] = useState('');
     const [location, setLocation] = useState(null);
 
-    // For collectors: Use pickup jobs instead of marketplace listings
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Debounce search input
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 500);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [search]);
+
+    // For collectors: Use pickup jobs
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups, isRefetching: isRefetchingPickups } = usePickups(location);
 
-    // For sellers/recyclers: Use marketplace listings
-    const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings();
+    // For sellers/recyclers: Use marketplace listings with server-side search & filtering
+    const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings({
+        search: debouncedSearch,
+        material_type: filter
+    });
 
-    // Get location for collectors
-    useEffect(() => {
-        if (userRole === 'COLLECTOR') {
-            (async () => {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') return;
-                let loc = await Location.getCurrentPositionAsync({});
-                setLocation(loc.coords);
-            })();
-        }
-    }, [userRole]);
+    // Server now handles filtering
+    const filteredListings = listings;
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
-    };
 
-    const filteredListings = listings.filter(l =>
-        (!filter || l.material_type === filter) &&
-        (!search || l.title.toLowerCase().includes(search.toLowerCase()))
-    );
+        // Ensure path starts with /
+        let cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+        // Add /media prefix if missing
+        if (!cleanPath.startsWith('/media/')) {
+            cleanPath = `/media${cleanPath}`;
+        }
+
+        return `${BASE_URL}${cleanPath}`;
+    };
 
     const renderCategory = (item) => {
         const isActive = filter === item.id;

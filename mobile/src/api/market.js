@@ -37,5 +37,34 @@ export const marketApi = {
     getMyListings: async () => {
         const response = await apiClient.get('/market/listings/my_listings/');
         return response.data;
+    },
+
+    analyzeWaste: async (imageUri) => {
+        const data = new FormData();
+        let name = imageUri.split('/').pop();
+        let match = /\.(\w+)$/.exec(name);
+
+        // Fallback for missing extensions
+        if (!match) {
+            name += '.jpg';
+            match = ['jpg', 'jpg'];
+        }
+
+        let type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : `image/jpeg`;
+
+        data.append('image', {
+            uri: imageUri,
+            name,
+            type
+        });
+
+        const response = await apiClient.post('/market/analyze-waste/', data, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+            transformRequest: (data) => data, // crucial for FormData
+            timeout: 15000 // Give AI some time
+        });
+        return response.data;
     }
 };

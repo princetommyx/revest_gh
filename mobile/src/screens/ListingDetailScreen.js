@@ -4,7 +4,7 @@ import {
     Image, ActivityIndicator, ScrollView, Linking, Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, User, MessageSquare, Phone, ShieldCheck, AlertTriangle } from 'lucide-react-native';
+import { ArrowLeft, MapPin, User, MessageSquare, Phone, ShieldCheck, AlertTriangle, Truck } from 'lucide-react-native';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-root-toast';
@@ -22,8 +22,10 @@ export default function ListingDetailScreen({ route, navigation }) {
     }, [listingId]);
 
     const fetchListing = async () => {
+        console.log("Fetching listing with ID:", listingId);
         try {
             const data = await marketApi.getListing(listingId);
+            console.log("Listing data received:", data ? "Found" : "Null");
             setListing(data);
         } catch (error) {
             console.error("Fetch Listing Error:", error);
@@ -36,7 +38,16 @@ export default function ListingDetailScreen({ route, navigation }) {
     const resolveImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+
+        // Ensure path starts with /
+        let cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+        // Add /media prefix if missing
+        if (!cleanPath.startsWith('/media/')) {
+            cleanPath = `/media${cleanPath}`;
+        }
+
+        return `${BASE_URL}${cleanPath}`;
     };
 
     const handleContactSeller = () => {
@@ -177,23 +188,43 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
 
                         <View style={styles.actionButtons}>
-                            <TouchableOpacity
-                                style={[styles.actionBtn, styles.callBtn]}
-                                onPress={handleCallSeller}
-                            >
-                                <Phone size={20} color="#fff" />
-                                <Text style={styles.actionBtnText}>
-                                    {revealPhone ? listing.seller_phone : 'Show Contact'}
-                                </Text>
-                            </TouchableOpacity>
+                            {user?.id === listing.seller.id ? (
+                                <TouchableOpacity
+                                    style={[styles.actionBtn, styles.callBtn, { backgroundColor: '#F39C12' }]}
+                                    onPress={() => navigation.navigate('Main', {
+                                        screen: 'Pickups',
+                                        params: {
+                                            pickupData: {
+                                                material_type: listing.material_type,
+                                                quantity_estimate: listing.quantity,
+                                            }
+                                        }
+                                    })}
+                                >
+                                    <Truck size={20} color="#fff" />
+                                    <Text style={styles.actionBtnText}>Request Pickup</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.callBtn]}
+                                        onPress={handleCallSeller}
+                                    >
+                                        <Phone size={20} color="#fff" />
+                                        <Text style={styles.actionBtnText}>
+                                            {revealPhone ? listing.seller_phone : 'Show Contact'}
+                                        </Text>
+                                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[styles.actionBtn, styles.chatBtn]}
-                                onPress={handleContactSeller}
-                            >
-                                <MessageSquare size={20} color="#2E7D32" />
-                                <Text style={[styles.actionBtnText, styles.chatBtnText]}>Chat</Text>
-                            </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.chatBtn]}
+                                        onPress={handleContactSeller}
+                                    >
+                                        <MessageSquare size={20} color="#2E7D32" />
+                                        <Text style={[styles.actionBtnText, styles.chatBtnText]}>Chat</Text>
+                                    </TouchableOpacity>
+                                </>
+                            )}
                         </View>
                     </View>
 

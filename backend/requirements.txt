@@ -18,3 +18,4 @@ google-auth
 requests
 gunicorn
 exponent_server_sdk
+google-generativeai

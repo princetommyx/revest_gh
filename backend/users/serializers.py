@@ -90,7 +90,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             # Location
             'current_lat', 'current_lon',
             # Authentication Provider tracking
-            'auth_provider', 'google_id', 'profile_picture_url',
+            'auth_provider', 'google_id', 'profile_picture_url', 'profile_picture',
             # Admin flags (read-only)
             'is_staff', 'is_superuser', 'is_support',
             # Timestamps
@@ -107,6 +107,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         Customize representation based on user role
         """
         data = super().to_representation(instance)
+        
+        # Prefer uploaded profile picture over URL field
+        if instance.profile_picture:
+            try:
+                data['profile_picture_url'] = instance.profile_picture.url
+            except Exception:
+                pass
         
         # Remove role-specific fields that don't apply
         if instance.role != 'COLLECTOR':
