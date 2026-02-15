@@ -90,7 +90,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 wallet.save()
                 
                 # Save request first to get ID
-                request = serializer.save(provider=provider, actual_price=total_cost) // Store total as actual_price for reference
+                request = serializer.save(provider=provider, actual_price=total_cost) # Store total as actual_price for reference
                 
                 # Create Transaction Record
                 Transaction.objects.create(

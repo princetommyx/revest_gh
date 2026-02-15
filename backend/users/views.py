@@ -118,6 +118,8 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+
 @extend_schema(
     tags=['users'],
     summary="Get/Update user profile",
@@ -126,9 +128,17 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 class UserProfileView(generics.RetrieveUpdateAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = (permissions.IsAuthenticated, IsOwnerOrAdmin)
+    parser_classes = (MultiPartParser, FormParser, JSONParser)  # Explicitly allow file uploads
 
     def get_object(self):
         return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        print(f"DEBUG: UserProfileView update called by {request.user.username}")
+        print(f"DEBUG: Content-Type: {request.content_type}")
+        print(f"DEBUG: request.data keys: {list(request.data.keys())}")
+        print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}")
+        return super().update(request, *args, **kwargs)
 
 
 @extend_schema(

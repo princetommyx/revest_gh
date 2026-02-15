@@ -33,6 +33,6 @@ export const usePickups = (location) => {
         retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
         refetchOnWindowFocus: false, // Don't refetch on every focus (performance)
         refetchOnReconnect: true, // Do refetch when network reconnects
-        refetchInterval: 10000, // Auto-refresh every 10 seconds for real-time updates
+        refetchInterval: 30000, // Auto-refresh every 30 seconds (reduced from 10s for performance)
     });
 };

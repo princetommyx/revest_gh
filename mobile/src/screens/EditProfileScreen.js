@@ -10,7 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-root-toast';
-import { BASE_URL } from '../api/client';
+import apiClient, { BASE_URL } from '../api/client';
 
 export default function EditProfileScreen({ navigation }) {
     const { user, setUser } = useAuth();
@@ -63,6 +63,10 @@ export default function EditProfileScreen({ navigation }) {
     const handleSave = async () => {
         setLoading(true);
         try {
+            // BEACON 1: Start
+            console.log("BEACON: Starting Save");
+            apiClient.get('/users/profile/', { params: { beacon: '1_START_SAVE', has_image: !!image } }).catch(e => console.log("Beacon 1 fail", e));
+
             const data = new FormData();
 
             // Append fields only if they have values
@@ -72,7 +76,7 @@ export default function EditProfileScreen({ navigation }) {
 
             if (image) {
                 const filename = image.split('/').pop();
-                const match = /\.(\\w+)$/.exec(filename);
+                const match = /\.(\w+)$/.exec(filename);
                 const type = match ? `image/${match[1]}` : `image`;
 
                 console.log('[Profile Update] Uploading image:', { filename, type, uri: image });
@@ -84,14 +88,27 @@ export default function EditProfileScreen({ navigation }) {
                 });
             }
 
+            // BEACON 2: Before API Call
+            console.log("BEACON: Before API Call");
+            apiClient.get('/users/profile/', { params: { beacon: '2_PRE_UPDATE' } }).catch(e => console.log("Beacon 2 fail", e));
+
             console.log('[Profile Update] Sending data...');
             const updatedUser = await authApi.updateProfile(data);
+
+            // BEACON 3: Success
+            console.log("BEACON: Success");
+            apiClient.get('/users/profile/', { params: { beacon: '3_SUCCESS' } }).catch(e => console.log("Beacon 3 fail", e));
+
             console.log('[Profile Update] Success:', updatedUser);
 
             setUser(updatedUser); // Update local user state
             Toast.show("Profile updated successfully!", { backgroundColor: '#2E7D32' });
             navigation.goBack();
         } catch (error) {
+            // BEACON 4: Error
+            console.error("BEACON: Error", error.message);
+            apiClient.get('/users/profile/', { params: { beacon: '4_ERROR', msg: error.message } }).catch(e => console.log("Beacon 4 fail", e));
+
             console.error("[Profile Update] Error details:", {
                 message: error.message,
                 response: error.response?.data,

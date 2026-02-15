@@ -31,7 +31,7 @@ class ListingViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
     # Filtering
-    filterset_fields = ['material_type', 'is_free', 'seller__city']
+    filterset_fields = ['material_type', 'is_free', 'seller__city', 'location']
     
     # Search
     search_fields = ['title', 'description', 'material_type', 'location']

@@ -9,20 +9,24 @@ import { useAuth } from './AuthContext';
 const NotificationContext = createContext();
 
 // 1. Configure how notifications appear when app is in foreground
-Notifications.setNotificationHandler({
-    handleNotification: async (notification) => {
-        // Check urgency from data
-        const urgency = notification.request.content.data?.urgency;
-        const isUrgent = urgency === 'URGENT';
+try {
+    Notifications.setNotificationHandler({
+        handleNotification: async (notification) => {
+            // Check urgency from data
+            const urgency = notification.request.content.data?.urgency;
+            const isUrgent = urgency === 'URGENT';
 
-        return {
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: true,
-            priority: isUrgent ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.DEFAULT,
-        };
-    },
-});
+            return {
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: true,
+                priority: isUrgent ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.DEFAULT,
+            };
+        },
+    });
+} catch (error) {
+    console.warn("Notifications.setNotificationHandler failed (likely in Expo Go):", error.message);
+}
 
 export const NotificationProvider = ({ children }) => {
     const { user } = useAuth();
@@ -35,6 +39,12 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         // Wrap all async operations in try-catch to prevent crashes
         const initializeNotifications = async () => {
+            // Skip notification setup entirely in Expo Go on Android
+            if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
+                console.log('Skipping notification fetch in Expo Go (Android)');
+                return;
+            }
+
             if (user) {
                 try {
                     const token = await registerForPushNotificationsAsync();
@@ -124,6 +134,12 @@ export const useNotifications = () => useContext(NotificationContext);
 
 async function registerForPushNotificationsAsync() {
     let token;
+
+    // Check for Expo Go on Android (where notifications are not supported in SDK 53+)
+    if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
+        console.log('Skipping Push Notification setup in Expo Go (Android)');
+        return null;
+    }
 
     try {
         if (Platform.OS === 'android') {

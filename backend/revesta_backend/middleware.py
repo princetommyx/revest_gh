@@ -1,44 +1,57 @@
+import logging
+from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
-from rest_framework_simplejwt.tokens import UntypedToken
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-from jwt import decode as jwt_decode
-from django.conf import settings
+from rest_framework_simplejwt.tokens import AccessToken
+from django.contrib.auth import get_user_model
 from urllib.parse import parse_qs
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 @database_sync_to_async
-def get_user(validated_token):
+def get_user(token_key):
     try:
-        user = User.objects.get(id=validated_token["user_id"])
+        token = AccessToken(token_key)
+        user = User.objects.get(id=token['user_id'])
         return user
-    except User.DoesNotExist:
+    except Exception as e:
+        logger.error(f"JWT Auth Middleware Error: {e}")
         return AnonymousUser()
 
-class JwtAuthMiddleware:
-    def __init__(self, app):
-        self.app = app
+class JwtAuthMiddleware(BaseMiddleware):
+    def __init__(self, inner):
+        super().__init__(inner)
 
     async def __call__(self, scope, receive, send):
-        # Get the token
-        query_string = scope.get("query_string", b"").decode("utf-8")
-        qs = parse_qs(query_string)
-        token = qs.get("token", [None])[0]
+        try:
+            # Get token from query string
+            query_string = scope.get('query_string', b'').decode()
+            query_params = parse_qs(query_string)
+            token = query_params.get('token', [None])[0]
+            
+            if token:
+                scope['user'] = await get_user(token)
+            else:
+                scope['user'] = AnonymousUser()
+        except Exception as e:
+            logger.error(f"Middleware Error: {e}")
+            scope['user'] = AnonymousUser()
+            
+        return await super().__call__(scope, receive, send)
 
-        if token is None:
-            scope["user"] = AnonymousUser()
-        else:
-            try:
-                # Validate the token
-                UntypedToken(token)
-                # Decode the token
-                decoded_data = jwt_decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-                # Get the user
-                scope["user"] = await get_user(decoded_data)
-            except (InvalidToken, TokenError, Exception) as e:
-                print(f"JWT Auth Error: {e}")
-                scope["user"] = AnonymousUser()
+class RequestLoggingMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
 
-        return await self.app(scope, receive, send)
+    def __call__(self, request):
+        # Log request method, path and content type
+        print(f"DEBUG_MW: {request.method} {request.path} | Content-Type: {request.content_type}")
+        
+        # If it's the profile update, log more
+        if request.path == '/api/v1/users/profile/' and request.method == 'PATCH':
+            print("DEBUG_MW: Profile Update Detected!")
+            print(f"DEBUG_MW: FILES: {list(request.FILES.keys())}")
+            
+        response = self.get_response(request)
+        return response

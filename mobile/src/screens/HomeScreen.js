@@ -47,17 +47,47 @@ export default function HomeScreen({ navigation }) {
         };
     }, [search]);
 
+    // Fetch Location
+    useEffect(() => {
+        (async () => {
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    console.log('Permission to access location was denied');
+                    return;
+                }
+
+                let loc = await Location.getCurrentPositionAsync({});
+                setLocation({
+                    latitude: loc.coords.latitude,
+                    longitude: loc.coords.longitude,
+                });
+            } catch (error) {
+                console.log("Error fetching location:", error);
+            }
+        })();
+    }, []);
+
     // For collectors: Use pickup jobs
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups, isRefetching: isRefetchingPickups } = usePickups(location);
 
     // For sellers/recyclers: Use marketplace listings with server-side search & filtering
+    const [locationFilter, setLocationFilter] = useState('');
     const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings({
         search: debouncedSearch,
-        material_type: filter
+        material_type: filter,
+        location: locationFilter // Add location filter
     });
 
     // Server now handles filtering
     const filteredListings = listings;
+
+    // 16 Regions of Ghana
+    const AVAILABLE_LOCATIONS = [
+        'Ahafo', 'Ashanti', 'Bono', 'Bono East', 'Central', 'Eastern',
+        'Greater Accra', 'North East', 'Northern', 'Oti', 'Savannah',
+        'Upper East', 'Upper West', 'Volta', 'Western', 'Western North'
+    ];
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
@@ -108,6 +138,84 @@ export default function HomeScreen({ navigation }) {
         if (diff < 86400) return 'Today';
         if (diff < 172800) return 'Yesterday';
         return date.toLocaleDateString();
+    };
+
+    const PromoCarousel = () => {
+        // Hide promo cards when searching
+        if (search.length > 0) return null;
+
+        return (
+            <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.promoContainer}
+                decelerationRate="fast"
+                snapToInterval={310} // card width + margin
+            >
+                {/* --- SELLER / DISPOSER CARDS --- */}
+                {userRole !== 'RECYCLER' && (
+                    <>
+                        <View style={styles.promoCard}>
+                            <Image
+                                source={require('../../assets/promo_ghana_money.png')}
+                                style={styles.promoBgImage}
+                                contentFit="cover"
+                                contentPosition={{ top: 0, right: 0.5 }} // Focus on top-center to show face, hands are likely visible in the center area
+                                cachePolicy="memory-disk"
+                                transition={500}
+                            />
+                            <View style={styles.promoOverlay} />
+                            <View style={styles.promoContent}>
+                                <View style={[styles.promoBadge, { backgroundColor: '#F39C12' }]}>
+                                    <Text style={styles.promoBadgeText}>Instant Cash</Text>
+                                </View>
+                                <Text style={styles.promoTitle}>Cash for Your Waste</Text>
+                                <Text style={styles.promoSubtitle}>Turn your waste into wealth right from your phone.</Text>
+                            </View>
+                        </View>
+
+                        <View style={styles.promoCard}>
+                            <Image
+                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=60' }}
+                                style={styles.promoBgImage}
+                                contentFit="cover"
+                                cachePolicy="memory-disk"
+                                transition={500}
+                            />
+                            <View style={styles.promoOverlay} />
+                            <View style={styles.promoContent}>
+                                <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
+                                    <Text style={styles.promoBadgeText}>Go Green</Text>
+                                </View>
+                                <Text style={styles.promoTitle}>Clean Your Community</Text>
+                                <Text style={styles.promoSubtitle}>Join others making a difference today.</Text>
+                            </View>
+                        </View>
+                    </>
+                )}
+
+                {/* --- RECYCLER CARDS --- */}
+                {userRole === 'RECYCLER' && (
+                    <View style={styles.promoCard}>
+                        <Image
+                            source={{ uri: 'https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?w=400&q=60' }}
+                            style={styles.promoBgImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={500}
+                        />
+                        <View style={styles.promoOverlay} />
+                        <View style={styles.promoContent}>
+                            <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
+                                <Text style={styles.promoBadgeText}>Business Supply</Text>
+                            </View>
+                            <Text style={styles.promoTitle}>Source Recyclables</Text>
+                            <Text style={styles.promoSubtitle}>Connect easily to get steady recyclable waste for your company.</Text>
+                        </View>
+                    </View>
+                )}
+            </ScrollView>
+        );
     };
 
     const renderListing = ({ item }) => (
@@ -275,7 +383,13 @@ export default function HomeScreen({ navigation }) {
                             </Text>
                             <Text style={styles.userNameWhite}>{user?.username || 'Seller'}</Text>
                         </View>
-                        {/* Notification Icon could go here */}
+                        <TouchableOpacity
+                            style={styles.notificationBtn}
+                            onPress={() => navigation.navigate('Chat')} // Or Notifications screen if exists
+                        >
+                            <View style={styles.notificationBadge} />
+                            <Ionicons name="notifications-outline" size={24} color="#fff" />
+                        </TouchableOpacity>
                     </View>
                 </SafeAreaView>
             </View>
@@ -318,6 +432,30 @@ export default function HomeScreen({ navigation }) {
                     </View>
                 </View>
 
+                {/* Location Filter Chips */}
+                {/* Location Filter Chips - Only show when searching or filtering */}
+                {(search.length > 0 || filter !== '') && (
+                    <View style={styles.locationFilterContainer}>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
+                            <TouchableOpacity
+                                style={[styles.locChip, locationFilter === '' && styles.locChipActive]}
+                                onPress={() => setLocationFilter('')}
+                            >
+                                <Text style={[styles.locChipText, locationFilter === '' && styles.locChipTextActive]}>All Regions</Text>
+                            </TouchableOpacity>
+                            {AVAILABLE_LOCATIONS.map(loc => (
+                                <TouchableOpacity
+                                    key={loc}
+                                    style={[styles.locChip, locationFilter === loc && styles.locChipActive]}
+                                    onPress={() => setLocationFilter(loc)}
+                                >
+                                    <Text style={[styles.locChipText, locationFilter === loc && styles.locChipTextActive]}>{loc}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </View>
+                )}
+
                 {loading ? (
                     <FlatList
                         data={Array(6).fill({})}
@@ -351,9 +489,11 @@ export default function HomeScreen({ navigation }) {
                                     {CATEGORIES.map(renderCategory)}
                                 </ScrollView>
 
+                                <PromoCarousel />
+
                                 <View style={styles.listHeader}>
                                     <Text style={styles.listHeaderTitle}>Available Near You</Text>
-                                    <Text style={styles.listHeaderSubtitle}>Fresh listings from your area</Text>
+                                    <Text style={styles.listHeaderSubtitle}>Recently posted items nearby</Text>
                                 </View>
                             </View>
                         )}
@@ -415,6 +555,26 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         color: '#fff',
+    },
+    notificationBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    notificationBadge: {
+        position: 'absolute',
+        top: 8,
+        right: 10,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#FF3B30',
+        zIndex: 1,
+        borderWidth: 1.5,
+        borderColor: '#2E7D32',
     },
     overlappingCard: {
         backgroundColor: '#fff',
@@ -506,6 +666,98 @@ const styles = StyleSheet.create({
         marginLeft: 12,
         fontSize: 15,
         color: '#333',
+    },
+
+    // Location Filter
+    locationFilterContainer: {
+        marginBottom: 10,
+    },
+    locChip: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        marginRight: 10,
+        borderWidth: 1,
+        borderColor: '#eee',
+    },
+    locChipActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#2E7D32',
+    },
+    locChipText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '500',
+    },
+    locChipTextActive: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+
+    // Promo Cards
+    promoContainer: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
+    },
+    promoCard: {
+        width: 300,
+        height: 160,
+        borderRadius: 24,
+        marginRight: 15,
+        overflow: 'hidden',
+        position: 'relative',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        backgroundColor: '#eee', // placeholder
+    },
+    promoBgImage: {
+        ...StyleSheet.absoluteFillObject,
+        width: '100%',
+        height: '100%',
+    },
+    promoOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.4)', // Darken image for text readability
+    },
+    promoContent: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        padding: 20,
+        zIndex: 2,
+    },
+    promoBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+    },
+    promoBadgeText: {
+        color: '#fff',
+        fontSize: 11,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    promoTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#fff',
+        marginBottom: 4,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
+    promoSubtitle: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.95)',
+        lineHeight: 18,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
 
     // Category Pills

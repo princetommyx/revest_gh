@@ -2,6 +2,7 @@ import apiClient from './client';
 
 export const chatApi = {
     getConversations: async () => {
+        // Correct endpoint: /chat/messages/conversations/
         const response = await apiClient.get('/chat/messages/conversations/');
         return response.data;
     },

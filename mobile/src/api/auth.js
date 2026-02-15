@@ -34,9 +34,23 @@ export const authApi = {
     },
 
     updateProfile: async (data) => {
-        // data can be FormData for image upload
+        // Let Axios handle Content-Type for FormData (it needs to set the boundary)
         const headers = data instanceof FormData ? { 'Content-Type': 'multipart/form-data' } : {};
-        const response = await apiClient.patch('/users/profile/', data, { headers });
+        // actually, for React Native Axios, sometimes we DO need to let it set boundary automatically.
+        // But in many RN versions, passing 'multipart/form-data' manually WITHOUT boundary fails.
+        // Best practice: Don't set Content-Type header manually for FormData, let the instance handle it.
+
+        const config = {};
+        if (data instanceof FormData) {
+            // Explicitly unset Content-Type so the browser/adapter sets it with the boundary
+            config.headers = { 'Content-Type': null };
+            config.transformRequest = (data, headers) => {
+                return data; // Prevent Axios from stringifying FormData
+            };
+        }
+
+        console.log('[AuthAPI] Updating profile...', { hasFormData: data instanceof FormData });
+        const response = await apiClient.patch('/users/profile/', data, config);
         return response.data;
     },
 
