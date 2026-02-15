@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePickups } from '../hooks/usePickups';
@@ -53,14 +53,23 @@ export default function PickupsScreen({ route }) {
     const [requestForm, setRequestForm] = useState({
         material_type: 'Plastics',
         quantity_estimate: '1-2 Bags',
-        estimated_price: null,
+        material_type: 'Plastics',
+        quantity_estimate: '1-2 Bags',
+        delivery_fee: null,
+        waste_value: null,
         distance_km: null,
         duration_min: null,
-        payment_method: 'CASH'
+        payment_method: 'DIGITAL_WALLET',
+        listing_id: null
     });
     const [useCustomLocation, setUseCustomLocation] = useState(false);
     const [customAddress, setCustomAddress] = useState('');
     const [recentLocations, setRecentLocations] = useState([]);
+
+    // Destination State
+    const [destinationAddress, setDestinationAddress] = useState('');
+    const [destinationLocation, setDestinationLocation] = useState(null);
+    const [selectionMode, setSelectionMode] = useState('PICKUP'); // 'PICKUP' or 'DESTINATION'
 
     // Cancel request state
     const [showCancelModal, setShowCancelModal] = useState(false);
@@ -159,13 +168,38 @@ export default function PickupsScreen({ route }) {
     }, []);
 
     // Handle incoming pickup request from listing
+    // Handle incoming pickup request from listing
     useEffect(() => {
         if (pickupData) {
             setRequestForm(prev => ({
                 ...prev,
                 material_type: pickupData.material_type || prev.material_type,
-                quantity_estimate: pickupData.quantity_estimate || prev.quantity_estimate
+                quantity_estimate: pickupData.quantity_estimate || prev.quantity_estimate,
+                waste_value: pickupData.waste_price || null,
+                listing_id: pickupData.listing_id || null,
+                payment_method: 'DIGITAL_WALLET'
             }));
+
+            // Pre-fill Seller Location
+            if (pickupData.seller_location) {
+                const { latitude, longitude, address } = pickupData.seller_location;
+                if (latitude && longitude) {
+                    setLocation({
+                        latitude: parseFloat(latitude),
+                        longitude: parseFloat(longitude)
+                    });
+                    setCustomAddress(address || '');
+
+                    // Center map on seller's location
+                    setMapRegion({
+                        latitude: parseFloat(latitude),
+                        longitude: parseFloat(longitude),
+                        latitudeDelta: 0.005,
+                        longitudeDelta: 0.005,
+                    });
+                }
+            }
+
             setShowRequestModal(true);
 
             // Clear params to prevent reopening on generic refresh (optional, but good practice)
@@ -192,12 +226,16 @@ export default function PickupsScreen({ route }) {
         setIsSelectingLocation(false);
         // Get center of map (managed by onRegionChangeComplete)
         if (mapRegion) {
-            // Update location state
-            setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
-
             // Reverse geocode
             const address = await reverseGeocode(mapRegion.latitude, mapRegion.longitude);
-            setCustomAddress(address);
+
+            if (selectionMode === 'PICKUP') {
+                setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
+                setCustomAddress(address);
+            } else {
+                setDestinationLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
+                setDestinationAddress(address);
+            }
 
             // Re-open modal
             setShowRequestModal(true);
@@ -248,7 +286,7 @@ export default function PickupsScreen({ route }) {
 
             setRequestForm(prev => ({
                 ...prev,
-                estimated_price: estimate.estimated_price,
+                delivery_fee: estimate.estimated_price, // API returns the rider fare/delivery fee
                 distance_km: estimate.distance_km,
                 duration_min: estimate.duration_min
             }));
@@ -262,7 +300,10 @@ export default function PickupsScreen({ route }) {
 
     // AI Value Estimator
     useEffect(() => {
-        calculateWasteValue();
+        // If waste_value passed from listing (via pickupData), don't overwrite it immediately unless user changes quantity/material
+        if (!pickupData?.waste_price) {
+            calculateWasteValue();
+        }
     }, [requestForm.material_type, requestForm.quantity_estimate]);
 
     const calculateWasteValue = () => {
@@ -297,9 +338,11 @@ export default function PickupsScreen({ route }) {
 
         // Update form with AI estimate if not manually set
         // We set a range or a specific value. specific for now.
+        // Update form with AI estimate if not manually set
+        // We set a range or a specific value. specific for now.
         setRequestForm(prev => ({
             ...prev,
-            estimated_price: estimatedValue.toFixed(2)
+            waste_value: estimatedValue.toFixed(2)
         }));
     };
 
@@ -311,7 +354,7 @@ export default function PickupsScreen({ route }) {
         }
 
         // Ensure price is calculated
-        if (!requestForm.estimated_price) {
+        if (!requestForm.delivery_fee) {
             fetchEstimate();
             return;
         }
@@ -320,8 +363,16 @@ export default function PickupsScreen({ route }) {
         try {
             const requestData = {
                 ...requestForm,
+                estimated_price: parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0), // Total for API (if needed as single field, or adjust backend to accept strict split)
+                waste_price: parseFloat(requestForm.waste_value || 0),
+                delivery_fee: parseFloat(requestForm.delivery_fee || 0),
+                listing: requestForm.listing_id,  // Send listing ID as 'listing' field
                 latitude: location.latitude,
-                longitude: location.longitude
+                longitude: location.longitude,
+                // Add Destination Data
+                destination_address: destinationAddress,
+                destination_latitude: destinationLocation?.latitude,
+                destination_longitude: destinationLocation?.longitude
             };
 
             // Add custom address if provided
@@ -336,10 +387,34 @@ export default function PickupsScreen({ route }) {
             Toast.show("Pickup request created!", { backgroundColor: '#2E7D32' });
             setShowRequestModal(false);
             setCustomAddress('');
+            setDestinationAddress(''); // Reset destination
+            setDestinationLocation(null);
             refetch();
         } catch (error) {
             console.error("Create Request Error:", error);
-            Toast.show("Failed to create request", { backgroundColor: '#E74C3C' });
+            const errorData = error.response?.data;
+
+            // Check for Insufficient Funds (Standard DRF Validation Error structure)
+            if (errorData?.detail === 'Insufficient funds' || errorData?.code === 'insufficient_funds') {
+                const required = errorData.required || (parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0));
+
+                Alert.alert(
+                    "Insufficient Funds",
+                    `This order costs ₵${required}. Please top up your wallet to proceed.`,
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Top Up Now",
+                            onPress: () => {
+                                setShowRequestModal(false);
+                                navigation.navigate('TopUp'); // Navigate to TopUp screen
+                            }
+                        }
+                    ]
+                );
+            } else {
+                Toast.show("Failed to create request: " + (errorData?.detail || "Unknown error"), { backgroundColor: '#E74C3C' });
+            }
         } finally {
             setRequestLoading(false);
         }
@@ -818,6 +893,28 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             )}
 
+                            {/* Destination Section */}
+                            <Text style={styles.label}>Destination (Recycling Company)</Text>
+                            <View style={{ marginBottom: 20 }}>
+                                <TextInput
+                                    style={styles.addressInput}
+                                    placeholder="Enter destination (e.g., Zoomlion, Accra)"
+                                    placeholderTextColor="#999"
+                                    value={destinationAddress}
+                                    onChangeText={setDestinationAddress}
+                                />
+                                <TouchableOpacity
+                                    style={styles.mapSelectBtn}
+                                    onPress={() => {
+                                        setSelectionMode('DESTINATION');
+                                        startMapSelection();
+                                    }}
+                                >
+                                    <MapPin size={18} color="#2E7D32" />
+                                    <Text style={styles.mapSelectText}>Set on Map</Text>
+                                </TouchableOpacity>
+                            </View>
+
                             <Text style={styles.label}>Material Type</Text>
                             <View style={styles.pickerContainer}>
                                 {(() => {
@@ -874,77 +971,52 @@ export default function PickupsScreen({ route }) {
 
 
                             {/* AI Estimate Display */}
-                            {requestForm.estimated_price && (
-                                <View style={styles.aiEstimateBox}>
-                                    <View style={styles.aiHeader}>
-                                        <Text style={styles.aiLabel}>✨ Revesta AI Valuation</Text>
-                                    </View>
-                                    <Text style={styles.aiValue}>
-                                        Est. Earn: ₵{requestForm.estimated_price}
-                                    </Text>
-                                    <Text style={styles.aiSubtext}>
-                                        Based on real-time market rates for {requestForm.material_type}
-                                    </Text>
-                                </View>
-                            )}
+
 
                             <Text style={styles.label}>Payment Method</Text>
                             <View style={styles.pickerContainer}>
-                                {[
-                                    { id: 'CASH', label: 'Cash' },
-                                    { id: 'DIGITAL', label: 'Digital Wallet' }
-                                ].map(method => (
-                                    <TouchableOpacity
-                                        key={method.id}
-                                        style={[
-                                            styles.pickerItem,
-                                            requestForm.payment_method === method.id && styles.pickerItemActive
-                                        ]}
-                                        onPress={() => setRequestForm({ ...requestForm, payment_method: method.id })}
-                                    >
-                                        <Text style={[
-                                            styles.pickerItemText,
-                                            requestForm.payment_method === method.id && styles.pickerItemTextActive
-                                        ]}>{method.label}</Text>
-                                    </TouchableOpacity>
-                                ))}
+                                <View style={[styles.pickerItem, styles.pickerItemActive]}>
+                                    <Text style={styles.pickerItemTextActive}>Digital Wallet</Text>
+                                </View>
                             </View>
 
                             {/* Price Estimate Section */}
                             <View style={styles.estimateContainer}>
-                                <Text style={styles.label}>Fare Estimate</Text>
+                                <Text style={styles.label}>Order Estimate</Text>
                                 {requestLoading ? (
                                     <View style={styles.estimateLoading}>
                                         <ActivityIndicator size="small" color="#2E7D32" />
-                                        <Text style={styles.estimateLoadingText}>Calculating fare...</Text>
+                                        <Text style={styles.estimateLoadingText}>Calculating costs...</Text>
                                     </View>
-                                ) : requestForm.estimated_price ? (
+                                ) : (requestForm.delivery_fee && requestForm.waste_value) ? (
                                     <View style={styles.estimateBox}>
                                         <View style={styles.estimateRow}>
-                                            <Text style={styles.estimateLabel}>Base Price</Text>
-                                            <Text style={styles.estimateValue}>₵10.00</Text>
+                                            <Text style={styles.estimateLabel}>Order Price (Waste)</Text>
+                                            <Text style={styles.estimateValue}>₵{requestForm.waste_value}</Text>
                                         </View>
                                         <View style={styles.estimateRow}>
-                                            <Text style={styles.estimateLabel}>Distance ({requestForm.distance_km}km)</Text>
-                                            <Text style={styles.estimateValue}>₵{(requestForm.distance_km * 2.5).toFixed(2)}</Text>
+                                            <Text style={styles.estimateLabel}>Delivery Fee</Text>
+                                            <Text style={styles.estimateValue}>₵{requestForm.delivery_fee}</Text>
                                         </View>
-                                        <View style={styles.estimateRow}>
-                                            <Text style={styles.estimateLabel}>Time Estimate ({Math.round(requestForm.duration_min)} min)</Text>
-                                            <Text style={styles.estimateValue}>₵{(requestForm.duration_min * 0.5).toFixed(2)}</Text>
-                                        </View>
+
                                         <View style={styles.divider} />
+
                                         <View style={styles.estimateTotalRow}>
-                                            <Text style={styles.estimateTotalLabel}>Total Estimated Price</Text>
-                                            <Text style={styles.estimateTotalValue}>₵{requestForm.estimated_price}</Text>
+                                            <Text style={styles.estimateTotalLabel}>Total</Text>
+                                            <Text style={styles.estimateTotalValue}>
+                                                ₵{(parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee)).toFixed(2)}
+                                            </Text>
                                         </View>
                                         <Text style={styles.estimateNote}>
-                                            *Final price may vary slightly based on traffic.
+                                            Includes waste cost & rider delivery fee
                                         </Text>
                                     </View>
                                 ) : (
-                                    <TouchableOpacity style={styles.calcBtn} onPress={fetchEstimate}>
-                                        <Text style={styles.calcBtnText}>Calculate Estimate</Text>
-                                    </TouchableOpacity>
+                                    <View style={styles.estimateBox}>
+                                        <Text style={{ color: '#999', textAlign: 'center' }}>
+                                            Enter materials & location to see estimate
+                                        </Text>
+                                    </View>
                                 )}
                             </View>
 
@@ -1393,10 +1465,22 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         marginBottom: 20
     },
-    currentLocationText: {
-        fontSize: 13,
+
+    mapSelectBtn: {
+        position: 'absolute',
+        right: 10,
+        top: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+        backgroundColor: '#E8F5E9',
+        padding: 8,
+        borderRadius: 8
+    },
+    mapSelectText: {
+        fontSize: 12,
         color: '#2E7D32',
-        fontWeight: '500'
+        fontWeight: 'bold'
     },
 
     // Bolt-style "Where to?" and Recent Locations

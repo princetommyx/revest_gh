@@ -5,7 +5,11 @@ export const useListings = (params = {}) => {
     return useQuery({
         queryKey: ['listings', params],
         queryFn: async () => {
-            const data = await marketApi.getListings(params);
+            // Remove empty keys
+            const cleanParams = Object.fromEntries(
+                Object.entries(params).filter(([_, v]) => v != null && v !== '')
+            );
+            const data = await marketApi.getListings(cleanParams);
             return Array.isArray(data) ? data : (data.results || []);
         },
         keepPreviousData: true,

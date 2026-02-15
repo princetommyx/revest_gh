@@ -212,21 +212,19 @@ export default function WalletScreen() {
 
                 {/* Quick Actions */}
                 <View style={styles.actionsRow}>
-                    {userRole === 'COLLECTOR' && (
-                        <TouchableOpacity
-                            style={styles.actionBtn}
-                            onPress={() => {
-                                console.log('Top Up Clicked');
-                                setModalType('DEPOSIT');
-                                setModalVisible(true);
-                            }}
-                        >
-                            <View style={[styles.actionIconBox, { backgroundColor: COLORS.primary }]}>
-                                <Plus size={24} color="#fff" />
-                            </View>
-                            <Text style={styles.actionLabel}>Top Up</Text>
-                        </TouchableOpacity>
-                    )}
+                    <TouchableOpacity
+                        style={styles.actionBtn}
+                        onPress={() => {
+                            console.log('Top Up Clicked');
+                            setModalType('DEPOSIT');
+                            setModalVisible(true);
+                        }}
+                    >
+                        <View style={[styles.actionIconBox, { backgroundColor: COLORS.primary }]}>
+                            <Plus size={24} color="#fff" />
+                        </View>
+                        <Text style={styles.actionLabel}>Top Up</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                         style={styles.actionBtn}

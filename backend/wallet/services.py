@@ -15,7 +15,7 @@ class WalletService:
         return True, None
 
     @staticmethod
-    def request_withdrawal(user, amount):
+    def request_withdrawal(user, amount, phone_number, network, account_name):
         """
         Request a withdrawal from the user's wallet.
         """
@@ -30,13 +30,15 @@ class WalletService:
             wallet.balance -= amount
             wallet.save()
             
+            description = f"Payout to {phone_number} ({network}) - {account_name}"
+            
             # Create Transaction Record
             return Transaction.objects.create(
                 wallet=wallet,
                 amount=-amount,
                 transaction_type='WITHDRAWAL',
                 status='PENDING',
-                description="Payout Request",
+                description=description,
                 reference=uuid.uuid4()
             )
 
@@ -45,27 +47,60 @@ class WalletService:
         """
         Handle payment distribution when a job is completed.
         """
-        if pickup_request.payment_method == 'DIGITAL' and pickup_request.actual_price:
-             amount = pickup_request.actual_price
-             collector = pickup_request.collector
+        if pickup_request.payment_method == 'DIGITAL':
+             # Use split pricing if available, fall back to actual_price
+             # Assuming 'waste_price' and 'delivery_fee' were set during creation/update
+             waste_amount = pickup_request.waste_price or 0
+             delivery_amount = pickup_request.delivery_fee or 0
              
-             if not collector:
+             # If no split pricing, use actual_price as total and give all to collector (legacy)
+             total_amount = pickup_request.actual_price or (waste_amount + delivery_amount)
+             
+             if total_amount == 0:
+                 return
+
+             provider = pickup_request.provider # Recycler (Payer)
+             collector = pickup_request.collector # Rider (Paid for delivery)
+             listing = pickup_request.listing # Originally posted by Seller (Paid for waste)
+             seller = listing.seller if listing else None
+             
+             if not provider:
                  return
 
              with transaction.atomic():
-                 # Credit Collector
-                 collector_wallet, _ = Wallet.objects.get_or_create(user=collector)
-                 collector_wallet.balance += amount
-                 collector_wallet.save()
+                 # 1. Debit Provider (Recycler) - ALREADY DONE VIA ESCROW IN PERFROM_CREATE
+                 # We just assume money is in the system.
+                 # If we wanted to be strict, we'd have a 'holding' wallet, but for now we just verify logic.
                  
-                 Transaction.objects.create(
-                     wallet=collector_wallet,
-                     pickup=pickup_request,
-                     amount=amount,
-                     transaction_type='JOB_EARNING',
-                     status='COMPLETED',
-                     description=f"Earning for Job #{pickup_request.id}"
-                 )
+                 # 2. Credit Collector (Delivery Fee)
+                 if collector and delivery_amount > 0:
+                     collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
+                     collector_wallet.balance += delivery_amount
+                     collector_wallet.save()
+                     
+                     Transaction.objects.create(
+                         wallet=collector_wallet,
+                         pickup=pickup_request,
+                         amount=delivery_amount,
+                         transaction_type='JOB_EARNING',
+                         status='COMPLETED',
+                         description=f"Delivery Fee for Job #{pickup_request.id}"
+                     )
+
+                 # 3. Credit Seller (Waste Price)
+                 if seller and waste_amount > 0:
+                     seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=seller)
+                     seller_wallet.balance += waste_amount
+                     seller_wallet.save()
+                     
+                     Transaction.objects.create(
+                         wallet=seller_wallet,
+                         pickup=pickup_request,  # Ensure Transaction model has pickup FK or generic relation
+                         amount=waste_amount,
+                         transaction_type='SALE_EARNING', # New type? Or rely on description
+                         status='COMPLETED',
+                         description=f"Sale of {pickup_request.material_type} (Job #{pickup_request.id})"
+                     )
 
 class PaystackService:
     @staticmethod

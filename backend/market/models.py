@@ -10,6 +10,8 @@ class Listing(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Null if free
     is_free = models.BooleanField(default=False)
     location = models.CharField(max_length=255) # Text location for now
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     image = models.ImageField(upload_to='listings/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

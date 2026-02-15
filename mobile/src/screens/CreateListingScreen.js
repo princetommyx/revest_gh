@@ -7,6 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Upload, Camera } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
 import Toast from 'react-native-root-toast';
 
@@ -24,7 +25,10 @@ export default function CreateListingScreen({ navigation }) {
         weight_kg: 0, // Hidden field for pricing
         price: '',
         is_free: false,
-        location: ''
+        is_free: false,
+        location: '',
+        latitude: null,
+        longitude: null
     });
 
     const handleChange = (name, value) => {
@@ -54,6 +58,25 @@ export default function CreateListingScreen({ navigation }) {
             setFormData(prev => ({ ...prev, price: estimatedValue }));
         }
     }, [formData.material_type, formData.weight_kg]);
+
+    // Get Location on Mount
+    React.useEffect(() => {
+        (async () => {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                Toast.show('Permission to access location was denied', { backgroundColor: '#E74C3C' });
+                return;
+            }
+
+            let location = await Location.getCurrentPositionAsync({});
+            setFormData(prev => ({
+                ...prev,
+                latitude: location.coords.latitude,
+                longitude: location.coords.longitude
+            }));
+            console.log("Captured Location:", location.coords);
+        })();
+    }, []);
 
     const [isScanning, setIsScanning] = useState(false);
     const [scanResult, setScanResult] = useState(null);

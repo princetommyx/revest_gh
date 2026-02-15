@@ -34,7 +34,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         model = Listing
         fields = (
             'id', 'title', 'material_type', 'description', 'quantity', 
-            'price', 'is_free', 'location', 'image', 'created_at',
+            'price', 'is_free', 'location', 'latitude', 'longitude', 'image', 'created_at',
             'seller', 'seller_name', 'seller_phone'
         )
         read_only_fields = ('seller', 'created_at')
@@ -56,7 +56,7 @@ class ListingCreateSerializer(serializers.ModelSerializer):
         model = Listing
         fields = (
             'id', 'title', 'material_type', 'description', 'quantity',
-            'price', 'is_free', 'location', 'image'
+            'price', 'is_free', 'location', 'latitude', 'longitude', 'image'
         )
     
     def validate_image(self, value):

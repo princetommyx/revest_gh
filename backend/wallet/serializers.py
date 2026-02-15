@@ -57,6 +57,9 @@ class WithdrawalSerializer(serializers.Serializer):
     """
     amount = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal('1.00'))
     description = serializers.CharField(max_length=200, required=False, allow_blank=True)
+    phone_number = serializers.CharField(max_length=15)
+    network = serializers.CharField(max_length=20)
+    account_name = serializers.CharField(max_length=100)
     
     def validate_amount(self, value):
         if value < Decimal('1.00'):

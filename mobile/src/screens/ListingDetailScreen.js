@@ -129,7 +129,6 @@ export default function ListingDetailScreen({ route, navigation }) {
                         <Text style={styles.price}>
                             {listing.is_free ? 'FREE' : `₵${listing.price}`}
                         </Text>
-                        {!listing.is_free && <Text style={styles.negotiable}>Negotiable</Text>}
                     </View>
 
                     {/* Meta Data */}
@@ -188,43 +187,36 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
 
                         <View style={styles.actionButtons}>
-                            {user?.id === listing.seller.id ? (
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, styles.callBtn, { backgroundColor: '#F39C12' }]}
-                                    onPress={() => navigation.navigate('Main', {
-                                        screen: 'Pickups',
-                                        params: {
-                                            pickupData: {
-                                                material_type: listing.material_type,
-                                                quantity_estimate: listing.quantity,
-                                            }
+                            <TouchableOpacity
+                                style={[styles.actionBtn, styles.callBtn]}
+                                onPress={() => navigation.navigate('Main', {
+                                    screen: 'Pickups',
+                                    params: {
+                                        pickupData: {
+                                            material_type: listing.material_type,
+                                            quantity_estimate: listing.quantity,
+                                            seller_location: {
+                                                latitude: listing.latitude,
+                                                longitude: listing.longitude,
+                                                address: listing.location
+                                            },
+                                            waste_price: listing.price, // Pass the price as waste value
+                                            listing_id: listing.id
                                         }
-                                    })}
-                                >
-                                    <Truck size={20} color="#fff" />
-                                    <Text style={styles.actionBtnText}>Request Pickup</Text>
-                                </TouchableOpacity>
-                            ) : (
-                                <>
-                                    <TouchableOpacity
-                                        style={[styles.actionBtn, styles.callBtn]}
-                                        onPress={handleCallSeller}
-                                    >
-                                        <Phone size={20} color="#fff" />
-                                        <Text style={styles.actionBtnText}>
-                                            {revealPhone ? listing.seller_phone : 'Show Contact'}
-                                        </Text>
-                                    </TouchableOpacity>
+                                    }
+                                })}
+                            >
+                                <Truck size={20} color="#fff" />
+                                <Text style={styles.actionBtnText}>Request Pickup</Text>
+                            </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        style={[styles.actionBtn, styles.chatBtn]}
-                                        onPress={handleContactSeller}
-                                    >
-                                        <MessageSquare size={20} color="#2E7D32" />
-                                        <Text style={[styles.actionBtnText, styles.chatBtnText]}>Chat</Text>
-                                    </TouchableOpacity>
-                                </>
-                            )}
+                            <TouchableOpacity
+                                style={[styles.actionBtn, styles.chatBtn]}
+                                onPress={handleContactSeller}
+                            >
+                                <MessageSquare size={20} color="#2E7D32" />
+                                <Text style={[styles.actionBtnText, styles.chatBtnText]}>Chat</Text>
+                            </TouchableOpacity>
                         </View>
                     </View>
 

@@ -1,5 +1,6 @@
 from django.db import models
 from rest_framework import viewsets, permissions, filters, status
+from decimal import Decimal
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -59,7 +60,50 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         return PickupRequestDetailSerializer
 
     def perform_create(self, serializer):
-        request = serializer.save(provider=self.request.user)
+        # Calculate total estimated cost
+        waste_price = serializer.validated_data.get('waste_price', 0) or 0
+        delivery_fee = serializer.validated_data.get('delivery_fee', 0) or 0
+        
+        # Ensure we have valid numbers
+        try:
+            total_cost = float(waste_price) + float(delivery_fee)
+        except (ValueError, TypeError):
+            total_cost = 0
+
+        provider = self.request.user
+        
+        # Payment Check & Escrow Debit
+        if serializer.validated_data.get('payment_method') == 'DIGITAL_WALLET' and total_cost > 0:
+            from wallet.models import Wallet, Transaction
+            from django.db import transaction
+            
+            with transaction.atomic():
+                wallet, _ = Wallet.objects.select_for_update().get_or_create(user=provider)
+                if wallet.balance < total_cost:
+                    # Return 402 Payment Required (or 400 with specific code)
+                    raise serializers.ValidationError(
+                        {"detail": "Insufficient funds", "code": "insufficient_funds", "required": total_cost, "balance": wallet.balance}
+                    )
+                
+                # Debit Escrow
+                wallet.balance -= Decimal(str(total_cost))
+                wallet.save()
+                
+                # Save request first to get ID
+                request = serializer.save(provider=provider, actual_price=total_cost) // Store total as actual_price for reference
+                
+                # Create Transaction Record
+                Transaction.objects.create(
+                    wallet=wallet,
+                    pickup=request,
+                    amount=-Decimal(str(total_cost)),
+                    transaction_type='PAYMENT',
+                    status='COMPLETED',
+                    description=f"Escrow Payment for Job #{request.id}"
+                )
+        else:
+            request = serializer.save(provider=provider)
+            
         # Logic to find nearby collectors
         self.notify_nearby_collectors(request)
 
@@ -135,6 +179,33 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'CANCELLED'
         pickup_request.save()
         
+        # Refund Logic (If paid via Digital Wallet)
+        if pickup_request.payment_method == 'DIGITAL_WALLET':
+             from wallet.models import Wallet, Transaction
+             from django.db import transaction
+             from decimal import Decimal
+             
+             # Calculate refundable amount (Escrowed amount)
+             # We can't easily track exactly what was debited without a link, but we can reconstruct or check existing transactions
+             # detailed_amount = pickup_request.actual_price or (pickup_request.waste_price + pickup_request.delivery_fee)
+             # Simpler: If we debited actual_price, we refund actual_price
+             refund_amount = pickup_request.actual_price
+             
+             if refund_amount and refund_amount > 0:
+                 with transaction.atomic():
+                     provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=pickup_request.provider)
+                     provider_wallet.balance += refund_amount
+                     provider_wallet.save()
+                     
+                     Transaction.objects.create(
+                         wallet=provider_wallet,
+                         pickup=pickup_request,
+                         amount=refund_amount,
+                         transaction_type='REFUND',
+                         status='COMPLETED',
+                         description=f"Refund for Cancelled Job #{pickup_request.id}"
+                     )
+
         # Notify other party
         if request.user == pickup_request.provider and pickup_request.collector:
              self._notify_user(pickup_request.collector, 'job_cancelled_by_provider', pickup_request)

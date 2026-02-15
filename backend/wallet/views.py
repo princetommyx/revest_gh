@@ -86,7 +86,13 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             try:
                 # Use Service
                 from .services import WalletService
-                WalletService.request_withdrawal(request.user, amount)
+                WalletService.request_withdrawal(
+                    request.user, 
+                    amount,
+                    serializer.validated_data['phone_number'],
+                    serializer.validated_data['network'],
+                    serializer.validated_data['account_name']
+                )
                 
                 # Refresh wallet to show updated balance (if we deducted immediately)
                 wallet.refresh_from_db()
@@ -94,7 +100,13 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             except Exception as e:
                  return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Flatten errors for simpler frontend handling
+        errors = []
+        for field, messages in serializer.errors.items():
+            for msg in messages:
+                errors.append(f"{msg}")
+        
+        return Response({'error': " ".join(errors)}, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(summary="List transactions")
     @action(detail=False, methods=['get'])
