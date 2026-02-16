@@ -5,9 +5,9 @@ import { Platform } from 'react-native';
 // Detect environment based on release channel or simple manual switch
 // For Android Emulator use 10.0.2.2, for iOS/Physical use your machine's IP
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_API_URL = 'http://10.52.16.79:8000/api/v1';
+const LOCAL_API_URL = 'http://10.52.16.79:8000/api/v1/';
 
-const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1';
+const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
 
 // Set this to true when building for production
 // Auto-detect environment

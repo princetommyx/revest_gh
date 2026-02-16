@@ -21,4 +21,28 @@ export const chatApi = {
         const response = await apiClient.get('/chat/messages/conversations/');
         return response.data;
     },
+
+    // Get support sessions
+    getSupportSessions: async () => {
+        const response = await apiClient.get('/chat/support-sessions/');
+        return response.data;
+    },
+
+    // Get support session details
+    getSupportSession: async (id) => {
+        const response = await apiClient.get(`/chat/support-sessions/${id}/`);
+        return response.data;
+    },
+
+    // Claim a support session
+    claimSession: async (id) => {
+        const response = await apiClient.post(`/chat/support-sessions/${id}/claim/`);
+        return response.data;
+    },
+
+    // Resolve a support session
+    resolveSession: async (id) => {
+        const response = await apiClient.post(`/chat/support-sessions/${id}/resolve/`);
+        return response.data;
+    },
 };

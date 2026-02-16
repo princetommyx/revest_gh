@@ -3,17 +3,17 @@ import apiClient from './client';
 export const chatApi = {
     getConversations: async () => {
         // Correct endpoint: /chat/messages/conversations/
-        const response = await apiClient.get('/chat/messages/conversations/');
+        const response = await apiClient.get('chat/messages/conversations/');
         return response.data;
     },
 
     getMessages: async (userId) => {
-        const response = await apiClient.get(`/chat/messages/with/${userId}/`);
+        const response = await apiClient.get(`chat/messages/with/${userId}/`);
         return response.data;
     },
 
     sendMessage: async (receiverId, content) => {
-        const response = await apiClient.post('/chat/messages/', {
+        const response = await apiClient.post('chat/messages/', {
             receiver: receiverId,
             content
         });

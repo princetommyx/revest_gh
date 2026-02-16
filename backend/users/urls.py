@@ -6,45 +6,38 @@ from .views import (
     UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
-    NotificationViewSet, DeviceTokenView
+    NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
 
 # Authentication endpoints (for /api/v1/auth/)
-auth_urlpatterns = [
+urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('google/', GoogleLoginView.as_view(), name='google_login'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-]
-
-# Admin registration enabled in all environments for now
-auth_urlpatterns.append(
-    path('admin-register/', AdminRegisterView.as_view(), name='admin_register')
-)
-
-# User profile endpoints (for /api/v1/users/)
-user_urlpatterns = [
+    path('phone/send-otp/', SendOTPView.as_view(), name='send_otp'),
+    path('phone/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('admin-register/', AdminRegisterView.as_view(), name='admin_register'),
+    
+    # User Profile & Management
     path('profile/', UserProfileView.as_view(), name='user_profile'),
-    path('me/', UserDetailView.as_view(), name='user_detail'),  # Backward compatibility
+    path('me/', UserDetailView.as_view(), name='user_detail'),
     path('location/', UpdateLocationView.as_view(), name='update_location'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
     path('push-token/', DeviceTokenView.as_view(), name='update_push_token'),
     path('notifications/', NotificationViewSet.as_view({'get': 'list', 'patch': 'read_all'}), name='notification_list'),
     path('notifications/<int:pk>/', NotificationViewSet.as_view({'patch': 'read', 'delete': 'destroy'}), name='notification_detail'),
     
-    # Admin endpoints
+    # Admin stats
     path('admin/stats/', admin_dashboard_stats, name='admin_dashboard_stats'),
     path('admin/recent-users/', recent_users, name='admin_recent_users'),
-]
-
-# Debug/Health endpoints
-debug_urlpatterns = [
+    
+    # Debug
     path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
 ]
 
-# Main urlpatterns - combine all
-urlpatterns = auth_urlpatterns + user_urlpatterns + debug_urlpatterns
+

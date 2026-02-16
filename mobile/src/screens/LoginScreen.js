@@ -202,14 +202,14 @@ export default function LoginScreen() {
                             )}
                         </TouchableOpacity>
 
-                        {/* Divider */}
+                        {/* Google Button - Hidden for now */}
+                        {/* 
                         <View style={styles.dividerContainer}>
                             <View style={styles.dividerLine} />
                             <Text style={styles.dividerText}>Or continue with</Text>
                             <View style={styles.dividerLine} />
                         </View>
 
-                        {/* Google Button */}
                         <TouchableOpacity
                             style={styles.googleButton}
                             onPress={() => promptAsync()}
@@ -220,7 +220,8 @@ export default function LoginScreen() {
                                 style={styles.googleIcon}
                             />
                             <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                        </TouchableOpacity>
+                        </TouchableOpacity> 
+                        */}
 
                         <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.signupContainer}>
                             <Text style={styles.signupText}>

@@ -9,7 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
-    Package, ShoppingCart
+    Package, ShoppingCart, User
 } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BASE_URL } from '../api/client';
@@ -110,7 +110,13 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
                 key={item.id}
                 style={styles.catBtn}
-                onPress={() => setFilter(item.id)}
+                onPress={() => {
+                    if (userRole === 'RECYCLER') {
+                        navigation.navigate('Pickups', { category: item.id });
+                    } else {
+                        setFilter(item.id);
+                    }
+                }}
                 activeOpacity={0.7}
             >
                 <View style={[
@@ -144,6 +150,62 @@ export default function HomeScreen({ navigation }) {
         // Hide promo cards when searching
         if (search.length > 0) return null;
 
+        if (userRole === 'RECYCLER') {
+            return (
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.promoContainer}
+                    decelerationRate="fast"
+                    snapToInterval={315} // card width + margin
+                >
+                    <TouchableOpacity
+                        style={styles.promoCard}
+                        onPress={() => navigation.navigate('Pickups')}
+                        activeOpacity={0.9}
+                    >
+                        <Image
+                            source={require('../../assets/promo_recycler.jpg')}
+                            style={styles.promoBgImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={500}
+                        />
+                        <View style={styles.promoOverlay} />
+                        <View style={styles.promoContent}>
+                            <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
+                                <Text style={styles.promoBadgeText}>Special Offer</Text>
+                            </View>
+                            <Text style={styles.promoTitle}>Source Recyclables</Text>
+                            <Text style={styles.promoSubtitle}>Get steady waste for your company easily.</Text>
+                        </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.promoCard}
+                        onPress={() => navigation.navigate('Pickups')}
+                        activeOpacity={0.9}
+                    >
+                        <Image
+                            source={require('../../assets/promo_bottles.jpg')}
+                            style={styles.promoBgImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={500}
+                        />
+                        <View style={styles.promoOverlay} />
+                        <View style={styles.promoContent}>
+                            <View style={[styles.promoBadge, { backgroundColor: '#3498DB' }]}>
+                                <Text style={styles.promoBadgeText}>Marketplace</Text>
+                            </View>
+                            <Text style={styles.promoTitle}>Browse Materials</Text>
+                            <Text style={styles.promoSubtitle}>Find a wide variety of recyclable materials.</Text>
+                        </View>
+                    </TouchableOpacity>
+                </ScrollView>
+            );
+        }
+
         return (
             <ScrollView
                 horizontal
@@ -153,67 +215,42 @@ export default function HomeScreen({ navigation }) {
                 snapToInterval={310} // card width + margin
             >
                 {/* --- SELLER / DISPOSER CARDS --- */}
-                {userRole !== 'RECYCLER' && (
-                    <>
-                        <View style={styles.promoCard}>
-                            <Image
-                                source={require('../../assets/promo_ghana_money.png')}
-                                style={styles.promoBgImage}
-                                contentFit="cover"
-                                contentPosition={{ top: 0, right: 0.5 }} // Focus on top-center to show face, hands are likely visible in the center area
-                                cachePolicy="memory-disk"
-                                transition={500}
-                            />
-                            <View style={styles.promoOverlay} />
-                            <View style={styles.promoContent}>
-                                <View style={[styles.promoBadge, { backgroundColor: '#F39C12' }]}>
-                                    <Text style={styles.promoBadgeText}>Instant Cash</Text>
-                                </View>
-                                <Text style={styles.promoTitle}>Cash for Your Waste</Text>
-                                <Text style={styles.promoSubtitle}>Turn your waste into wealth right from your phone.</Text>
-                            </View>
+                <View style={styles.promoCard}>
+                    <Image
+                        source={require('../../assets/promo_ghana_money.png')}
+                        style={styles.promoBgImage}
+                        contentFit="cover"
+                        contentPosition={{ top: 0, right: 0.5 }} // Focus on top-center to show face, hands are likely visible in the center area
+                        cachePolicy="memory-disk"
+                        transition={500}
+                    />
+                    <View style={styles.promoOverlay} />
+                    <View style={styles.promoContent}>
+                        <View style={[styles.promoBadge, { backgroundColor: '#F39C12' }]}>
+                            <Text style={styles.promoBadgeText}>Instant Cash</Text>
                         </View>
-
-                        <View style={styles.promoCard}>
-                            <Image
-                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=60' }}
-                                style={styles.promoBgImage}
-                                contentFit="cover"
-                                cachePolicy="memory-disk"
-                                transition={500}
-                            />
-                            <View style={styles.promoOverlay} />
-                            <View style={styles.promoContent}>
-                                <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
-                                    <Text style={styles.promoBadgeText}>Go Green</Text>
-                                </View>
-                                <Text style={styles.promoTitle}>Clean Your Community</Text>
-                                <Text style={styles.promoSubtitle}>Join others making a difference today.</Text>
-                            </View>
-                        </View>
-                    </>
-                )}
-
-                {/* --- RECYCLER CARDS --- */}
-                {userRole === 'RECYCLER' && (
-                    <View style={styles.promoCard}>
-                        <Image
-                            source={{ uri: 'https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?w=400&q=60' }}
-                            style={styles.promoBgImage}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                            transition={500}
-                        />
-                        <View style={styles.promoOverlay} />
-                        <View style={styles.promoContent}>
-                            <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
-                                <Text style={styles.promoBadgeText}>Business Supply</Text>
-                            </View>
-                            <Text style={styles.promoTitle}>Source Recyclables</Text>
-                            <Text style={styles.promoSubtitle}>Connect easily to get steady recyclable waste for your company.</Text>
-                        </View>
+                        <Text style={styles.promoTitle}>Cash for Your Waste</Text>
+                        <Text style={styles.promoSubtitle}>Turn your waste into wealth right from your phone.</Text>
                     </View>
-                )}
+                </View>
+
+                <View style={styles.promoCard}>
+                    <Image
+                        source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=60' }}
+                        style={styles.promoBgImage}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                        transition={500}
+                    />
+                    <View style={styles.promoOverlay} />
+                    <View style={styles.promoContent}>
+                        <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
+                            <Text style={styles.promoBadgeText}>Go Green</Text>
+                        </View>
+                        <Text style={styles.promoTitle}>Clean Your Community</Text>
+                        <Text style={styles.promoSubtitle}>Join others making a difference today.</Text>
+                    </View>
+                </View>
             </ScrollView>
         );
     };
@@ -277,8 +314,23 @@ export default function HomeScreen({ navigation }) {
                 {/* Green Header Background */}
                 <View style={styles.greenHeaderContainer}>
                     <SafeAreaView edges={['top']}>
-                        <View style={styles.headerContent}>
-                            <View>
+                        <View style={styles.headerTopRow}>
+                            <TouchableOpacity
+                                style={styles.profileAvatarBtn}
+                                onPress={() => navigation.navigate('Profile')}
+                            >
+                                {user?.profile_photo ? (
+                                    <Image
+                                        source={{ uri: resolveImageUrl(user.profile_photo) }}
+                                        style={styles.avatarImage}
+                                    />
+                                ) : (
+                                    <View style={styles.avatarPlaceholder}>
+                                        <User size={20} color="#2E7D32" />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                            <View style={styles.greetingBox}>
                                 <Text style={styles.greetingTextWhite}>
                                     Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
                                 </Text>
@@ -286,9 +338,11 @@ export default function HomeScreen({ navigation }) {
                                     {user?.first_name || user?.username || 'Collector'}
                                 </Text>
                             </View>
-                            <View style={styles.statusBadgeWhite}>
-                                <View style={styles.activeDot} />
-                                <Text style={styles.statusTextWhite}>Online</Text>
+                            <View style={styles.headerRightActions}>
+                                <View style={styles.statusBadgeWhite}>
+                                    <View style={styles.activeDot} />
+                                    <Text style={styles.statusTextWhite}>Online</Text>
+                                </View>
                             </View>
                         </View>
                     </SafeAreaView>
@@ -377,15 +431,32 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.greenHeaderContainer}>
                 <SafeAreaView edges={['top', 'left', 'right']}>
                     <View style={styles.headerContent}>
-                        <View>
-                            <Text style={styles.greetingTextWhite}>
-                                Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
-                            </Text>
-                            <Text style={styles.userNameWhite}>{user?.username || 'Seller'}</Text>
+                        <View style={styles.headerInfo}>
+                            <TouchableOpacity
+                                style={styles.profileAvatarBtn}
+                                onPress={() => navigation.navigate('Profile')}
+                            >
+                                {user?.profile_photo ? (
+                                    <Image
+                                        source={{ uri: resolveImageUrl(user.profile_photo) }}
+                                        style={styles.avatarImage}
+                                    />
+                                ) : (
+                                    <View style={styles.avatarPlaceholder}>
+                                        <User size={20} color="#2E7D32" />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                            <View style={styles.greetingBox}>
+                                <Text style={styles.greetingTextWhite}>
+                                    Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'},
+                                </Text>
+                                <Text style={styles.userNameWhite}>{user?.first_name || user?.username || (userRole === 'RECYCLER' ? 'Recycler' : 'Seller')}</Text>
+                            </View>
                         </View>
                         <TouchableOpacity
                             style={styles.notificationBtn}
-                            onPress={() => navigation.navigate('Chat')} // Or Notifications screen if exists
+                            onPress={() => navigation.navigate('Chat', { tab: 'Notifications' })}
                         >
                             <View style={styles.notificationBadge} />
                             <Ionicons name="notifications-outline" size={24} color="#fff" />
@@ -398,8 +469,8 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.overlappingCard}>
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statValue}>₵0.00</Text>
-                        <Text style={styles.statLabel}>Total Earnings</Text>
+                        <Text style={styles.statValue}>₵{user?.wallet_balance || '0.00'}</Text>
+                        <Text style={styles.statLabel}>{userRole === 'RECYCLER' ? 'Wallet Balance' : 'Total Earnings'}</Text>
                     </View>
                     <View style={styles.statDivider} />
                     <View style={styles.statItem}>
@@ -410,10 +481,16 @@ export default function HomeScreen({ navigation }) {
 
                 <TouchableOpacity
                     style={styles.actionButton}
-                    onPress={() => navigation.navigate('CreateListing')}
+                    onPress={() => navigation.navigate(userRole === 'RECYCLER' ? 'Pickups' : 'CreateListing')}
                 >
-                    <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
-                    <Text style={styles.actionButtonText}>Sell Waste Now</Text>
+                    {userRole === 'RECYCLER' ? (
+                        <Truck size={20} color="#fff" style={{ marginRight: 8 }} />
+                    ) : (
+                        <Plus size={20} color="#fff" style={{ marginRight: 8 }} />
+                    )}
+                    <Text style={styles.actionButtonText}>
+                        {userRole === 'RECYCLER' ? 'Request for Pickup' : 'Sell Waste Now'}
+                    </Text>
                 </TouchableOpacity>
             </View>
 
@@ -426,7 +503,18 @@ export default function HomeScreen({ navigation }) {
                             style={styles.searchInput}
                             placeholder="Search waste materials..."
                             value={search}
-                            onChangeText={setSearch}
+                            onChangeText={(text) => {
+                                if (userRole === 'RECYCLER') {
+                                    navigation.navigate('Pickups', { searchQuery: text });
+                                } else {
+                                    setSearch(text);
+                                }
+                            }}
+                            onFocus={() => {
+                                if (userRole === 'RECYCLER') {
+                                    navigation.navigate('Pickups');
+                                }
+                            }}
                             placeholderTextColor="#999"
                         />
                     </View>
@@ -464,10 +552,11 @@ export default function HomeScreen({ navigation }) {
                         numColumns={2}
                         contentContainerStyle={styles.list}
                         columnWrapperStyle={styles.columnWrapper}
+                        ListHeaderComponent={<View style={{ height: insets.top + (search.length > 0 || filter !== '' ? 120 : 60) }} />}
                     />
                 ) : (
                     <FlatList
-                        data={filteredListings}
+                        data={userRole === 'RECYCLER' ? [] : filteredListings}
                         renderItem={renderListing}
                         keyExtractor={item => item.id.toString()}
                         numColumns={2}
@@ -480,31 +569,102 @@ export default function HomeScreen({ navigation }) {
                         updateCellsBatchingPeriod={50}
                         ListHeaderComponent={() => (
                             <View>
-                                <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    style={styles.catRow}
-                                    contentContainerStyle={styles.catContent}
-                                >
-                                    {CATEGORIES.map(renderCategory)}
-                                </ScrollView>
+                                {userRole !== 'RECYCLER' && (
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        style={styles.catRow}
+                                        contentContainerStyle={styles.catContent}
+                                    >
+                                        {CATEGORIES.map(renderCategory)}
+                                    </ScrollView>
+                                )}
 
                                 <PromoCarousel />
 
-                                <View style={styles.listHeader}>
-                                    <Text style={styles.listHeaderTitle}>Available Near You</Text>
-                                    <Text style={styles.listHeaderSubtitle}>Recently posted items nearby</Text>
-                                </View>
+                                {userRole === 'RECYCLER' && (
+                                    <>
+                                        <View style={[styles.listHeader, { marginTop: 0 }]}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Text style={styles.listHeaderTitle}>Category</Text>
+                                                <TouchableOpacity onPress={() => navigation.navigate('Pickups')}>
+                                                    <Text style={{ color: '#2E7D32', fontWeight: 'bold' }}>See All</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={styles.catRow}
+                                            contentContainerStyle={styles.catContent}
+                                        >
+                                            {CATEGORIES.map(renderCategory)}
+                                        </ScrollView>
+
+                                        <View style={styles.listHeader}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                    <Text style={styles.listHeaderTitle}>Flash Sale</Text>
+                                                    <Text style={{ marginLeft: 10, color: '#888', fontSize: 12 }}>Closing in: <Text style={{ color: '#F39C12' }}>02:12:56</Text></Text>
+                                                </View>
+                                                <TouchableOpacity onPress={() => navigation.navigate('Pickups')}>
+                                                    <Text style={{ color: '#2E7D32', fontWeight: 'bold' }}>See All</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+
+                                        <ScrollView
+                                            horizontal
+                                            showsHorizontalScrollIndicator={false}
+                                            style={{ paddingLeft: 20 }}
+                                            contentContainerStyle={{ paddingRight: 20, paddingBottom: 20 }}
+                                        >
+                                            {listings.slice(0, 5).map((item) => (
+                                                <TouchableOpacity
+                                                    key={item.id}
+                                                    style={[styles.listingCard, { width: 160, marginRight: 15, marginBottom: 0 }]}
+                                                    onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
+                                                >
+                                                    <View style={[styles.imageBox, { height: 120 }]}>
+                                                        {item.image ? (
+                                                            <Image
+                                                                source={{ uri: resolveImageUrl(item.image) }}
+                                                                style={styles.image}
+                                                                contentFit="cover"
+                                                                cachePolicy="memory-disk"
+                                                            />
+                                                        ) : (
+                                                            <Package size={24} color="#ccc" />
+                                                        )}
+                                                        <View style={[styles.freeBadge, { backgroundColor: '#F39C12', paddingHorizontal: 6, paddingVertical: 2 }]}>
+                                                            <Text style={[styles.freeText, { fontSize: 9 }]}>{Math.floor(Math.random() * 50) + 10}% OFF</Text>
+                                                        </View>
+                                                    </View>
+                                                    <View style={[styles.listingContent, { padding: 8 }]}>
+                                                        <Text style={[styles.listingTitle, { fontSize: 13 }]} numberOfLines={1}>{item.title}</Text>
+                                                        <Text style={[styles.listingPrice, { fontSize: 14, color: '#2E7D32' }]}>₵{item.price}</Text>
+                                                        <View style={[styles.locationBox, { marginTop: 4 }]}>
+                                                            <MapPin size={10} color="#888" />
+                                                            <Text style={[styles.locationText, { fontSize: 10 }]} numberOfLines={1}>{item.location}</Text>
+                                                        </View>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </>
+                                )}
                             </View>
                         )}
                         ListEmptyComponent={
-                            <View style={styles.emptyBox}>
-                                <ShoppingCart size={50} color="#eee" />
-                                <Text style={styles.emptyText}>No listings found</Text>
-                                <TouchableOpacity style={styles.postBtnEmpty} onPress={() => navigation.navigate('CreateListing')}>
-                                    <Text style={styles.postBtnText}>Post Your First Ad</Text>
-                                </TouchableOpacity>
-                            </View>
+                            userRole === 'RECYCLER' ? null : (
+                                <View style={styles.emptyBox}>
+                                    <ShoppingCart size={50} color="#eee" />
+                                    <Text style={styles.emptyText}>No listings found</Text>
+                                    <TouchableOpacity style={styles.postBtnEmpty} onPress={() => navigation.navigate('CreateListing')}>
+                                        <Text style={styles.postBtnText}>Post Your First Ad</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )
                         }
                         onRefresh={refetch}
                         refreshing={isRefetching}
@@ -529,8 +689,54 @@ const styles = StyleSheet.create({
     headerContent: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         marginBottom: 10,
+    },
+    headerTopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        marginBottom: 10,
+    },
+    headerInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    profileAvatarBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#fff',
+        overflow: 'hidden',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+    },
+    avatarPlaceholder: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#E8F5E9',
+    },
+    greetingBox: {
+        flexDirection: 'column',
+    },
+    headerRightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     greetingTextWhite: {
         fontSize: 14,
@@ -1009,5 +1215,108 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#2E7D32',
+    },
+
+    // Recycler Info Card
+    recyclerInfoCard: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 30,
+        alignItems: 'center',
+        marginTop: 20,
+        width: '100%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    infoTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginTop: 16,
+        marginBottom: 8,
+    },
+    infoSubtitle: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 20,
+        marginBottom: 24,
+        paddingHorizontal: 10,
+    },
+    browseBtn: {
+        backgroundColor: '#2E7D32',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 14,
+        borderRadius: 16,
+    },
+    browseBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    promoBtnInline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    promoBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    promoGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    promoCardGrid: {
+        width: '48%',
+        height: 160,
+        borderRadius: 24,
+        overflow: 'hidden',
+        marginBottom: 15,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    promoContentSmall: {
+        flex: 1,
+        justifyContent: 'flex-end',
+        padding: 12,
+        zIndex: 2,
+    },
+    promoBadgeSmall: {
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+        alignSelf: 'flex-start',
+        marginBottom: 4,
+    },
+    promoBadgeTextSmall: {
+        color: '#fff',
+        fontSize: 9,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    promoTitleSmall: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
     },
 });

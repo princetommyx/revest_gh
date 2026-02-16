@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Message
+from .models import Message, SupportSession
 from users.serializers import PublicUserSerializer
 
 
@@ -12,7 +12,7 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ('id', 'sender', 'receiver', 'content', 'timestamp')
+        fields = ('id', 'sender', 'receiver', 'content', 'timestamp', 'is_read')
         read_only_fields = ('sender', 'timestamp')
 
 
@@ -32,3 +32,13 @@ class MessageCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Message is too long (max 1000 characters).")
         return value
 
+        return value
+
+class SupportSessionSerializer(serializers.ModelSerializer):
+    user = PublicUserSerializer(read_only=True)
+    admin = PublicUserSerializer(read_only=True)
+    
+    class Meta:
+        model = SupportSession
+        fields = ('id', 'user', 'admin', 'status', 'created_at', 'resolved_at')
+        read_only_fields = ('created_at', 'resolved_at')

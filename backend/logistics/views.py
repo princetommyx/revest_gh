@@ -138,6 +138,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'ARRIVED'
         pickup_request.save()
         
+        # Process Seller Payout if payment via digital wallet
+        if pickup_request.payment_method == 'DIGITAL_WALLET':
+            try:
+                WalletService.payout_seller_for_waste(pickup_request)
+            except Exception as e:
+                print(f"Error processing seller payout for job {pickup_request.id}: {e}")
+
         self.notify_provider(pickup_request, 'driver_arrived')
         return Response({'status': 'driver arrived'})
 
@@ -151,13 +158,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'COMPLETED'
         pickup_request.save()
         
-        # Process Financials
+        # Process Collector Payout
         try:
-            WalletService.process_job_completion(pickup_request)
+            WalletService.payout_collector_for_delivery(pickup_request)
         except Exception as e:
-            # Log error but don't fail the request (or maybe do?)
-            # Ideally we want to be transactional, but logistics is primary here.
-            print(f"Error processing transaction for job {pickup_request.id}: {e}")
+            # Log error but don't fail the request
+            print(f"Error processing collector payout for job {pickup_request.id}: {e}")
         
         self.notify_provider(pickup_request, 'job_completed')
         return Response({'status': 'job completed'})

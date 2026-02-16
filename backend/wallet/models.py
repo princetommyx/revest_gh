@@ -68,6 +68,7 @@ class Transaction(models.Model):
         ('DEPOSIT', 'Deposit'), # Manual top-up
         ('WITHDRAWAL', 'Withdrawal'), # Payout to user
         ('JOB_EARNING', 'Job Earning'), # Net earning from digital payment
+        ('SALE_EARNING', 'Sale Earning'), # Earning from selling waste
         ('COMMISSION_DEDUCTION', 'Commission Deduction'), # Revesta's cut (from Cash or Digital)
         ('PENALTY', 'Penalty'), # Admin fine
         ('REFUND', 'Refund'),

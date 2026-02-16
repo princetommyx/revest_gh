@@ -81,13 +81,17 @@ export default function ProfileScreen({ navigation }) {
                                 </View>
 
                                 <View style={styles.userInfo}>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
                                         <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
-                                        {userRole === 'COLLECTOR' && (
-                                            <View style={styles.roleBadge}>
-                                                <Text style={styles.roleText}>COLLECTOR</Text>
-                                            </View>
-                                        )}
+                                        <View style={[
+                                            styles.roleBadge,
+                                            userRole === 'RECYCLER' && { backgroundColor: '#0284c7' }, // Blue for Recycler
+                                            userRole === 'SELLER' && { backgroundColor: '#ea580c' }    // Orange for Disposer
+                                        ]}>
+                                            <Text style={styles.roleText}>
+                                                {userRole === 'SELLER' ? 'DISPOSER' : userRole || 'USER'}
+                                            </Text>
+                                        </View>
                                     </View>
                                     <Text style={styles.email}>{user?.email || 'No email connected'}</Text>
                                 </View>
@@ -146,13 +150,6 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>SUPPORT</Text>
                     <View style={styles.menuGroup}>
-                        <MenuItem
-                            icon={Bell}
-                            title="Notifications"
-                            onPress={() => navigation.navigate('Notifications')}
-                            color="#2563EB"
-                            iconBg="#DBEAFE"
-                        />
                         <MenuItem
                             icon={MessageSquare}
                             title="Chat Support"

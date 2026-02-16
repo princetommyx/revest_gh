@@ -3,8 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from .models import Message
-from .serializers import MessageSerializer, MessageCreateSerializer
+from .models import Message, SupportSession
+from .serializers import MessageSerializer, MessageCreateSerializer, SupportSessionSerializer
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -104,3 +104,32 @@ class MessageViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
+
+class SupportSessionViewSet(viewsets.ModelViewSet):
+    queryset = SupportSession.objects.all()
+    serializer_class = SupportSessionSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff or user.is_support or user.role == 'ADMIN':
+            return SupportSession.objects.all().order_by('-created_at')
+        return SupportSession.objects.filter(user=user).order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def claim(self, request, pk=None):
+        session = self.get_object()
+        if not (request.user.is_staff or request.user.is_support or request.user.role == 'ADMIN'):
+            return Response({'error': 'Not authorized'}, status=403)
+        
+        session.admin = request.user
+        session.save()
+        return Response({'status': 'claimed'})
+
+    @action(detail=True, methods=['post'])
+    def resolve(self, request, pk=None):
+        session = self.get_object()
+        session.status = SupportSession.Status.RESOLVED
+        session.resolved_at = timezone.now()
+        session.save()
+        return Response({'status': 'resolved'})

@@ -850,12 +850,16 @@ export default function PickupsScreen({ route }) {
 
                             {/* Address Input */}
                             <TextInput
-                                style={styles.addressInput}
+                                style={[styles.addressInput, pickupData ? styles.disabledInput : null]}
                                 placeholder="Enter pickup address (e.g., Madina Market, Accra)"
                                 placeholderTextColor="#999"
                                 value={customAddress}
                                 onChangeText={setCustomAddress}
+                                editable={!pickupData}
                             />
+                            {pickupData && (
+                                <Text style={styles.inputNote}>Location locked to listing address</Text>
+                            )}
 
                             {/* Recent Locations List */}
                             {recentLocations.length > 0 && (
@@ -1008,7 +1012,9 @@ export default function PickupsScreen({ route }) {
                                             </Text>
                                         </View>
                                         <Text style={styles.estimateNote}>
-                                            Includes waste cost & rider delivery fee
+                                            {userRole === 'RECYCLER'
+                                                ? "Funds will be held in escrow and released to Seller & Collector upon arrival."
+                                                : "Includes waste cost & rider delivery fee"}
                                         </Text>
                                     </View>
                                 ) : (
@@ -1028,7 +1034,9 @@ export default function PickupsScreen({ route }) {
                                 {requestLoading ? (
                                     <ActivityIndicator color="#fff" />
                                 ) : (
-                                    <Text style={styles.submitRequestBtnText}>Confirm Request</Text>
+                                    <Text style={styles.submitRequestBtnText}>
+                                        {userRole === 'RECYCLER' ? 'Confirm & Pay' : 'Confirm Request'}
+                                    </Text>
                                 )}
                             </TouchableOpacity>
                         </ScrollView>
@@ -1455,6 +1463,19 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#333',
         marginBottom: 20
+    },
+    disabledInput: {
+        backgroundColor: '#f5f5f5',
+        borderColor: '#eee',
+        color: '#999',
+    },
+    inputNote: {
+        fontSize: 12,
+        color: '#2E7D32',
+        marginTop: -15,
+        marginBottom: 20,
+        marginLeft: 4,
+        fontWeight: '500'
     },
     currentLocationBox: {
         flexDirection: 'row',

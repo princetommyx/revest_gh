@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
 from .models import User
+from admin_dashboard.serializers import UserSummarySerializer
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated, IsAdminUser])
@@ -75,14 +76,5 @@ def recent_users(request):
     """
     users = User.objects.order_by('-date_joined')[:10]
     
-    users_data = [{
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'role': user.role,
-        'date_joined': user.date_joined,
-        'is_verified': user.is_verified,
-        'is_online': user.is_online
-    } for user in users]
-    
-    return Response(users_data)
+    serializer = UserSummarySerializer(users, many=True)
+    return Response(serializer.data)

@@ -6,17 +6,22 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
-import { MessageSquare, User, Clock, ChevronRight, Bot } from 'lucide-react-native';
+import { MessageSquare, User, Clock, ChevronRight, Bot, Bell, AlertCircle, Check } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
+import { notificationsApi } from '../api/notifications';
+import { useNotifications } from '../context/NotificationContext';
 
-export default function ChatScreen() {
+export default function ChatScreen({ route }) {
     const navigation = useNavigation();
+    const { markAllRead } = useNotifications();
     const [conversations, setConversations] = useState([]);
     const [filteredConversations, setFilteredConversations] = useState([]);
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('All');
+    const [refreshing, setRefreshing] = useState(false);
 
     const fetchConversations = async () => {
         try {
@@ -26,16 +31,38 @@ export default function ChatScreen() {
         } catch (error) {
             console.error("Conversations Load Error:", error);
             Toast.show("Failed to load conversations", { backgroundColor: '#E74C3C' });
-        } finally {
-            setLoading(false);
         }
+    };
+
+    const fetchNotifications = async () => {
+        try {
+            const data = await notificationsApi.getNotifications();
+            const results = Array.isArray(data) ? data : (data.results || []);
+            setNotifications(results);
+        } catch (error) {
+            console.error("Failed to load notifications", error);
+        }
+    };
+
+    const loadData = async () => {
+        setLoading(true);
+        await Promise.all([fetchConversations(), fetchNotifications()]);
+        setLoading(false);
+        setRefreshing(false);
     };
 
     useFocusEffect(
         useCallback(() => {
-            fetchConversations();
+            loadData();
         }, [])
     );
+
+    // Handle initial tab from navigation params
+    useEffect(() => {
+        if (route.params?.tab) {
+            setActiveTab(route.params.tab);
+        }
+    }, [route.params?.tab]);
 
     // Filter logic
     useEffect(() => {
@@ -80,8 +107,30 @@ export default function ChatScreen() {
         return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
     };
 
-    const renderConversation = ({ item }) => {
+    const handleMarkAllRead = async () => {
+        try {
+            await markAllRead();
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            Toast.show("All notifications marked as read", { backgroundColor: '#2E7D32' });
+        } catch (e) {
+            console.log("Error marking read", e);
+        }
+    };
 
+    const handleNotificationPress = async (item) => {
+        if (!item.is_read) {
+            try {
+                await notificationsApi.markAsRead(item.id);
+                setNotifications(prev => prev.map(n =>
+                    n.id === item.id ? { ...n, is_read: true } : n
+                ));
+            } catch (e) {
+                console.log("Error marking read", e);
+            }
+        }
+    };
+
+    const renderConversation = ({ item }) => {
         const avatarColor = getAvatarColor(item.contact_username || 'User');
         const profileImg = resolveImageUrl(item.contact_profile_image);
 
@@ -103,7 +152,7 @@ export default function ChatScreen() {
                     )}
                     {item.unread_count > 0 && (
                         <View style={styles.unreadBadge}>
-                            <Text style={styles.unreadText}>{item.unread_count}</Text>
+                            <View style={styles.unreadDot} />
                         </View>
                     )}
                 </View>
@@ -123,6 +172,38 @@ export default function ChatScreen() {
                         {item.last_message || 'Start a conversation...'}
                     </Text>
                 </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const renderNotification = ({ item }) => {
+        const isUrgent = item.urgency === 'URGENT';
+        return (
+            <TouchableOpacity
+                style={[
+                    styles.notifCard,
+                    !item.is_read && styles.unreadNotif,
+                    isUrgent && styles.urgentNotif
+                ]}
+                onPress={() => handleNotificationPress(item)}
+            >
+                <View style={[styles.notifIconBox, isUrgent && { backgroundColor: '#FFEBEE' }]}>
+                    {isUrgent ? (
+                        <AlertCircle size={24} color="#D32F2F" />
+                    ) : (
+                        <Bell size={24} color="#2E7D32" />
+                    )}
+                </View>
+                <View style={styles.notifContent}>
+                    <View style={styles.notifHeader}>
+                        <Text style={[styles.notifTitle, !item.is_read && styles.unreadTitle]} numberOfLines={1}>
+                            {item.title}
+                        </Text>
+                        <Text style={styles.notifTime}>{formatSmartTime(item.created_at)}</Text>
+                    </View>
+                    <Text style={styles.notifBody} numberOfLines={2}>{item.body}</Text>
+                </View>
+                {!item.is_read && <View style={styles.notifDot} />}
             </TouchableOpacity>
         );
     };
@@ -161,55 +242,86 @@ export default function ChatScreen() {
 
                 {/* Tabs */}
                 <View style={styles.tabsContainer}>
-                    {['All', 'Unread', 'Spam'].map(tab => (
-                        <TouchableOpacity
-                            key={tab}
-                            style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
-                            onPress={() => setActiveTab(tab)}
-                        >
-                            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                                {tab}
-                            </Text>
-                            {activeTab === 'Unread' && (
-                                <View style={styles.badgeCommon}>
-                                    <Text style={styles.badgeTextCommon}>3</Text>
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                    ))}
+                    {['All', 'Unread', 'Notifications'].map(tab => {
+                        const isNotif = tab === 'Notifications';
+                        const unreadNotifs = notifications.filter(n => !n.is_read).length;
+                        const unreadMsgs = conversations.filter(c => c.unread_count > 0).length;
+
+                        return (
+                            <TouchableOpacity
+                                key={tab}
+                                style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
+                                onPress={() => setActiveTab(tab)}
+                            >
+                                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                                    {tab}
+                                </Text>
+                                {isNotif && unreadNotifs > 0 && (
+                                    <View style={styles.badgeCommon}>
+                                        <Text style={styles.badgeTextCommon}>{unreadNotifs}</Text>
+                                    </View>
+                                )}
+                                {tab === 'Unread' && unreadMsgs > 0 && (
+                                    <View style={[styles.badgeCommon, { backgroundColor: '#2E7D32' }]}>
+                                        <Text style={styles.badgeTextCommon}>{unreadMsgs}</Text>
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             </View>
 
-            {/* Chat List */}
+            {/* List Header Actions for Notifications */}
+            {activeTab === 'Notifications' && notifications.length > 0 && (
+                <TouchableOpacity style={styles.markReadAll} onPress={handleMarkAllRead}>
+                    <Check size={16} color="#2E7D32" />
+                    <Text style={styles.markReadText}>Mark all as read</Text>
+                </TouchableOpacity>
+            )}
+
+            {/* Chat/Notification List */}
             <FlatList
-                data={filteredConversations}
-                renderItem={renderConversation}
-                keyExtractor={item => item.contact_id.toString()}
+                data={activeTab === 'Notifications' ? notifications : filteredConversations}
+                renderItem={activeTab === 'Notifications' ? renderNotification : renderConversation}
+                keyExtractor={item => (activeTab === 'Notifications' ? `notif-${item.id}` : `conv-${item.contact_id}`)}
                 contentContainerStyle={styles.listContent}
                 ListHeaderComponent={
-                    <TouchableOpacity
-                        style={styles.aiSupportRow}
-                        onPress={() => navigation.navigate('SupportChat')}
-                    >
-                        <View style={styles.aiIconBox}>
-                            <Bot size={24} color="#fff" />
-                        </View>
-                        <View style={styles.aiInfo}>
-                            <Text style={styles.aiTitle}>AI Assistant</Text>
-                            <Text style={styles.aiSubtitle}>Need help? Ask our bot instantly.</Text>
-                        </View>
-                        <ChevronRight size={20} color="#ccc" />
-                    </TouchableOpacity>
+                    activeTab !== 'Notifications' && (
+                        <TouchableOpacity
+                            style={styles.aiSupportRow}
+                            onPress={() => navigation.navigate('SupportChat')}
+                        >
+                            <View style={styles.aiIconBox}>
+                                <Bot size={24} color="#fff" />
+                            </View>
+                            <View style={styles.aiInfo}>
+                                <Text style={styles.aiTitle}>AI Assistant</Text>
+                                <Text style={styles.aiSubtitle}>Need help? Ask our bot instantly.</Text>
+                            </View>
+                            <ChevronRight size={20} color="#ccc" />
+                        </TouchableOpacity>
+                    )
                 }
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
-                        <MessageSquare size={48} color="#ccc" />
-                        <Text style={styles.emptyTitle}>No messages yet</Text>
-                        <Text style={styles.emptySubtitle}>Chats with sellers and buyers will appear here.</Text>
+                        {activeTab === 'Notifications' ? (
+                            <>
+                                <Bell size={48} color="#ccc" />
+                                <Text style={styles.emptyTitle}>All caught up!</Text>
+                                <Text style={styles.emptySubtitle}>System alerts and updates will appear here.</Text>
+                            </>
+                        ) : (
+                            <>
+                                <MessageSquare size={48} color="#ccc" />
+                                <Text style={styles.emptyTitle}>No messages yet</Text>
+                                <Text style={styles.emptySubtitle}>Chats with sellers and buyers will appear here.</Text>
+                            </>
+                        )}
                     </View>
                 }
-                onRefresh={fetchConversations}
-                refreshing={loading}
+                onRefresh={loadData}
+                refreshing={refreshing || loading}
             />
         </View>
     );
@@ -327,11 +439,14 @@ const styles = StyleSheet.create({
 
     unreadBadge: {
         position: 'absolute',
-        top: 0, right: 0,
-        backgroundColor: '#2E7D32',
-        width: 14, height: 14,
-        borderRadius: 7,
-        borderWidth: 2, borderColor: '#fff'
+        top: -2, right: -2,
+        backgroundColor: '#fff',
+        width: 12, height: 12,
+        borderRadius: 6,
+        justifyContent: 'center', alignItems: 'center'
+    },
+    unreadDot: {
+        width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32'
     },
     unreadText: { display: 'none' },
 
@@ -354,6 +469,47 @@ const styles = StyleSheet.create({
     emptyContainer: { flex: 1, alignItems: 'center', marginTop: 100 },
     emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginTop: 15 },
     emptySubtitle: { color: '#999', marginTop: 5 },
+
+    // Notifications Styling
+    notifCard: {
+        padding: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderBottomWidth: 1,
+        borderBottomColor: '#f0f0f0',
+        backgroundColor: '#fff'
+    },
+    unreadNotif: { backgroundColor: '#F0F8F1' },
+    urgentNotif: { backgroundColor: '#FFEBEE' },
+    notifIconBox: {
+        width: 40, height: 40, borderRadius: 20,
+        backgroundColor: '#F0F8F1', justifyContent: 'center', alignItems: 'center',
+        marginRight: 15
+    },
+    notifContent: { flex: 1 },
+    notifHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
+    notifTitle: { fontSize: 15, fontWeight: '600', color: '#333' },
+    unreadTitle: { fontWeight: 'bold', color: '#000' },
+    notifTime: { fontSize: 11, color: '#999' },
+    notifBody: { fontSize: 13, color: '#666', lineHeight: 18 },
+    notifDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32', marginLeft: 10 },
+
+    markReadAll: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'flex-end',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        backgroundColor: '#F9F9F9',
+        borderBottomWidth: 1,
+        borderBottomColor: '#eee'
+    },
+    markReadText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginLeft: 4
+    },
 
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

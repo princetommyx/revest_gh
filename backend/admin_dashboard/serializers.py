@@ -129,7 +129,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
     def get_total_rides(self, obj):
         if obj.role == 'COLLECTOR':
             return PickupRequest.objects.filter(collector=obj).count()
-        elif obj.role == 'SELLER':
+        elif obj.role in ['SELLER', 'RECYCLER']:
             return PickupRequest.objects.filter(provider=obj).count()
         return 0
     

@@ -12,6 +12,7 @@ import PickupsPage from './pages/PickupsPage';
 import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
+import SupportPage from './pages/SupportPage';
 import { authApi } from './api/auth';
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ function App() {
                             <Route path="pickups" element={<PickupsPage />} />
                             <Route path="wallet" element={<TransactionsPage />} />
                             <Route path="profile" element={<ProfilePage />} />
+                            <Route path="support" element={<SupportPage />} />
                             <Route path="settings" element={<SettingsPage />} />
                         </Route>
                     </Routes>

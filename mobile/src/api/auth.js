@@ -2,7 +2,7 @@ import apiClient from './client';
 
 export const authApi = {
     login: async (username, password) => {
-        const response = await apiClient.post('/auth/login/', { username, password });
+        const response = await apiClient.post('auth/login/', { username, password });
         return response.data;
     },
 
@@ -11,7 +11,7 @@ export const authApi = {
         const isFormData = userData instanceof FormData;
         const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
 
-        const response = await apiClient.post('/auth/register/', userData, {
+        const response = await apiClient.post('auth/register/', userData, {
             headers,
             timeout: 120000 // 120 seconds for registration
         });
@@ -19,7 +19,7 @@ export const authApi = {
     },
 
     googleLogin: async (token) => {
-        const response = await apiClient.post('/auth/google/', { token });
+        const response = await apiClient.post('auth/google/', { token });
         return response.data;
     },
 
@@ -29,7 +29,7 @@ export const authApi = {
     },
 
     getProfile: async () => {
-        const response = await apiClient.get('/users/profile/');
+        const response = await apiClient.get('users/profile/');
         return response.data;
     },
 
@@ -50,17 +50,17 @@ export const authApi = {
         }
 
         console.log('[AuthAPI] Updating profile...', { hasFormData: data instanceof FormData });
-        const response = await apiClient.patch('/users/profile/', data, config);
+        const response = await apiClient.patch('users/profile/', data, config);
         return response.data;
     },
 
     changePassword: async (data) => {
-        const response = await apiClient.post('/users/change-password/', data);
+        const response = await apiClient.post('users/change-password/', data);
         return response.data;
     },
 
     requestPasswordReset: async (email) => {
-        const response = await apiClient.post('/auth/password-reset/', { email });
+        const response = await apiClient.post('auth/password-reset/', { email });
         return response.data;
     }
 };

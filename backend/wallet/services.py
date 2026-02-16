@@ -43,64 +43,70 @@ class WalletService:
             )
 
     @staticmethod
+    def payout_seller_for_waste(pickup_request):
+        """
+        Transfers waste price from escrow to seller when collector arrives.
+        """
+        waste_amount = pickup_request.waste_price or 0
+        if waste_amount <= 0:
+            return
+
+        listing = pickup_request.listing
+        seller = listing.seller if listing else None
+        
+        if not seller:
+            return
+
+        with transaction.atomic():
+            seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=seller)
+            seller_wallet.balance += waste_amount
+            seller_wallet.save()
+            
+            Transaction.objects.create(
+                wallet=seller_wallet,
+                pickup=pickup_request,
+                amount=waste_amount,
+                transaction_type='SALE_EARNING',
+                status='COMPLETED',
+                description=f"Waste pickup confirmed (Job #{pickup_request.id})"
+            )
+
+    @staticmethod
+    def payout_collector_for_delivery(pickup_request):
+        """
+        Transfers delivery fee from escrow to collector when job is completed.
+        """
+        delivery_amount = pickup_request.delivery_fee or 0
+        if delivery_amount <= 0:
+            return
+
+        collector = pickup_request.collector
+        if not collector:
+            return
+
+        with transaction.atomic():
+            collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
+            collector_wallet.balance += delivery_amount
+            collector_wallet.save()
+            
+            Transaction.objects.create(
+                wallet=collector_wallet,
+                pickup=pickup_request,
+                amount=delivery_amount,
+                transaction_type='JOB_EARNING',
+                status='COMPLETED',
+                description=f"Delivery Fee for Job #{pickup_request.id}"
+            )
+
+    @staticmethod
     def process_job_completion(pickup_request):
         """
-        Handle payment distribution when a job is completed.
+        Legacy method or for non-split flows. 
+        In the new flow, we call the granular methods above.
         """
-        if pickup_request.payment_method == 'DIGITAL':
-             # Use split pricing if available, fall back to actual_price
-             # Assuming 'waste_price' and 'delivery_fee' were set during creation/update
-             waste_amount = pickup_request.waste_price or 0
-             delivery_amount = pickup_request.delivery_fee or 0
-             
-             # If no split pricing, use actual_price as total and give all to collector (legacy)
-             total_amount = pickup_request.actual_price or (waste_amount + delivery_amount)
-             
-             if total_amount == 0:
-                 return
-
-             provider = pickup_request.provider # Recycler (Payer)
-             collector = pickup_request.collector # Rider (Paid for delivery)
-             listing = pickup_request.listing # Originally posted by Seller (Paid for waste)
-             seller = listing.seller if listing else None
-             
-             if not provider:
-                 return
-
-             with transaction.atomic():
-                 # 1. Debit Provider (Recycler) - ALREADY DONE VIA ESCROW IN PERFROM_CREATE
-                 # We just assume money is in the system.
-                 # If we wanted to be strict, we'd have a 'holding' wallet, but for now we just verify logic.
-                 
-                 # 2. Credit Collector (Delivery Fee)
-                 if collector and delivery_amount > 0:
-                     collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
-                     collector_wallet.balance += delivery_amount
-                     collector_wallet.save()
-                     
-                     Transaction.objects.create(
-                         wallet=collector_wallet,
-                         pickup=pickup_request,
-                         amount=delivery_amount,
-                         transaction_type='JOB_EARNING',
-                         status='COMPLETED',
-                         description=f"Delivery Fee for Job #{pickup_request.id}"
-                     )
-
-                 # 3. Credit Seller (Waste Price)
-                 if seller and waste_amount > 0:
-                     seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=seller)
-                     seller_wallet.balance += waste_amount
-                     seller_wallet.save()
-                     
-                     Transaction.objects.create(
-                         wallet=seller_wallet,
-                         pickup=pickup_request,  # Ensure Transaction model has pickup FK or generic relation
-                         amount=waste_amount,
-                         transaction_type='SALE_EARNING', # New type? Or rely on description
-                         status='COMPLETED',
-                         description=f"Sale of {pickup_request.material_type} (Job #{pickup_request.id})"
-                     )
+        # For safety/backward compatibility, we just call the collector payout here
+        # since seller payout should have happened at 'ARRIVED'
+        WalletService.payout_collector_for_delivery(pickup_request)
 
 class PaystackService:
     @staticmethod

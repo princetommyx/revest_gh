@@ -14,6 +14,7 @@ import HomeScreen from '../screens/HomeScreen';
 import PickupsScreen from '../screens/PickupsScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ChatDetailScreen from '../screens/ChatDetailScreen';
+import MarketplaceScreen from '../screens/MarketplaceScreen';
 import WalletScreen from '../screens/WalletScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreateListingScreen from '../screens/CreateListingScreen';
@@ -23,7 +24,6 @@ import SecurityScreen from '../screens/SecurityScreen';
 import HelpScreen from '../screens/HelpScreen';
 import SupportChatScreen from '../screens/SupportChatScreen';
 import PickupHistoryScreen from '../screens/PickupHistoryScreen';
-import NotificationScreen from '../screens/NotificationScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -31,6 +31,7 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+    const { userRole } = useAuth();
     const { unreadCount } = useNotifications();
 
     return (
@@ -44,12 +45,12 @@ function MainTabs() {
                         iconName = focused ? 'home' : 'home-outline';
                     } else if (route.name === 'Pickups') {
                         iconName = focused ? 'map' : 'map-outline';
+                    } else if (route.name === 'Marketplace') {
+                        iconName = focused ? 'storefront' : 'storefront-outline';
                     } else if (route.name === 'Chat') {
                         iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
                     } else if (route.name === 'Wallet') {
                         iconName = focused ? 'wallet' : 'wallet-outline';
-                    } else if (route.name === 'Profile') {
-                        iconName = focused ? 'person' : 'person-outline';
                     }
 
                     return <Ionicons name={iconName} size={size} color={color} />;
@@ -59,14 +60,28 @@ function MainTabs() {
             })}
         >
             <Tab.Screen name="Home" component={HomeScreen} />
-            <Tab.Screen name="Pickups" component={PickupsScreen} />
-            <Tab.Screen name="Chat" component={ChatScreen} />
-            <Tab.Screen name="Wallet" component={WalletScreen} />
+
+            {userRole === 'RECYCLER' && (
+                <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
+            )}
+
             <Tab.Screen
-                name="Profile"
-                component={ProfileScreen}
-                options={{ tabBarBadge: unreadCount > 0 ? unreadCount : null }}
+                name="Pickups"
+                component={PickupsScreen}
+                options={{
+                    tabBarLabel: 'Pickups'
+                }}
             />
+
+            <Tab.Screen
+                name="Chat"
+                component={ChatScreen}
+                options={{
+                    tabBarBadge: unreadCount > 0 ? unreadCount : null
+                }}
+            />
+
+            <Tab.Screen name="Wallet" component={WalletScreen} />
         </Tab.Navigator>
     );
 }
@@ -116,6 +131,7 @@ export default function AppNavigator() {
                 ) : (
                     <>
                         <Stack.Screen name="Main" component={MainTabs} />
+                        <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false }} />
@@ -125,7 +141,6 @@ export default function AppNavigator() {
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
-                        <Stack.Screen name="Notifications" component={NotificationScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false }} />
                     </>
                 )}

@@ -5,9 +5,9 @@ from django.conf.urls.static import static
 from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 from market.views import ListingViewSet
-from market.ai_views import AnalyzeWasteView
+from market.ai_views import AnalyzeWasteView, SupportAIChatView
 from logistics.views import PickupRequestViewSet
-from chat.views import MessageViewSet
+from chat.views import MessageViewSet, SupportSessionViewSet
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 import os
 
@@ -16,6 +16,7 @@ router_v1 = DefaultRouter()
 router_v1.register(r'market/listings', ListingViewSet, basename='listing')
 router_v1.register(r'logistics/pickups', PickupRequestViewSet, basename='pickup')
 router_v1.register(r'chat/messages', MessageViewSet, basename='message')
+router_v1.register(r'chat/support-sessions', SupportSessionViewSet, basename='support-session')
 
 urlpatterns = [
     # Django Admin
@@ -32,6 +33,7 @@ urlpatterns = [
     path('api/v1/admin/', include('admin_dashboard.urls')),  # Admin dashboard
     path('api/v1/wallet/', include('wallet.urls')),  # Wallet & transactions
     path('api/v1/market/analyze-waste/', AnalyzeWasteView.as_view(), name='analyze-waste'), # AI Analysis
+    path('api/v1/support/chat/', SupportAIChatView.as_view(), name='support-ai-chat'),
     path('api/v1/', include(router_v1.urls)),  # ViewSet routes
     
     # Admin Dashboard Static Files

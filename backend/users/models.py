@@ -85,3 +85,16 @@ class PasswordResetOTP(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.username}"
+
+class PhoneVerification(models.Model):
+    phone_number = models.CharField(max_length=20, db_index=True)
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def is_valid(self):
+        from django.utils import timezone
+        return self.otp and self.expires_at > timezone.now()
+
+    def __str__(self):
+        return f"Verification for {self.phone_number}"

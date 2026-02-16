@@ -142,15 +142,15 @@ export default function UserDetailPage() {
                             <Shield className="w-4 h-4 mr-1" />
                             {user.role}
                         </span>
-                        {user.is_active ? (
+                        {user.is_verified ? (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                 <CheckCircle className="w-4 h-4 mr-1" />
-                                Active
+                                Phone Verified
                             </span>
                         ) : (
                             <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
                                 <XCircle className="w-4 h-4 mr-1" />
-                                Inactive
+                                Not Verified
                             </span>
                         )}
                     </div>
@@ -218,6 +218,56 @@ export default function UserDetailPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Role Specific Details */}
+                        {(user.role === 'COLLECTOR' || user.role === 'RECYCLER') && (
+                            <div className="mt-8 space-y-4">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
+                                    <Shield className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+                                    <span>{user.role === 'COLLECTOR' ? 'Vehicle Details' : 'Business Details'}</span>
+                                </h3>
+                                <div className="space-y-3">
+                                    {user.role === 'COLLECTOR' ? (
+                                        <>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle Type</label>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{user.vehicle_type || 'Not specified'}</p>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">License Plate</label>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1 font-mono uppercase tracking-widest">{user.license_plate || 'Not specified'}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Company Name</label>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{user.company_name || 'Individual'}</p>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Tax ID (TIN)</label>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{user.tax_id || 'Not specified'}</p>
+                                            </div>
+                                            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">National ID</label>
+                                                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">{user.national_id || 'Not specified'}</p>
+                                            </div>
+                                            {user.business_certification && (
+                                                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4">
+                                                    <label className="text-xs font-medium text-gray-500 uppercase tracking-wider block mb-2">Business Certification</label>
+                                                    <img
+                                                        src={user.business_certification}
+                                                        alt="Business Certification"
+                                                        className="w-full h-auto rounded-lg shadow-sm border border-gray-200 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
+                                                        onClick={() => window.open(user.business_certification, '_blank')}
+                                                    />
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Activity Statistics */}
@@ -229,23 +279,27 @@ export default function UserDetailPage() {
                                 <div className="flex items-center justify-between">
                                     <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
                                 </div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">0</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Listings</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{user.total_orders || 0}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    {user.role === 'SELLER' ? 'Listings' : 'Waste Purchased'}
+                                </p>
                             </div>
 
                             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800/30">
                                 <div className="flex items-center justify-between">
                                     <Truck className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">0</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Pickups</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{user.total_rides || 0}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                    {user.role === 'COLLECTOR' ? 'Completed Pickups' : 'Pickups Requested'}
+                                </p>
                             </div>
 
                             <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-100 dark:border-green-800/30">
                                 <div className="flex items-center justify-between">
                                     <Wallet className="w-8 h-8 text-green-600 dark:text-green-400" />
                                 </div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">$0</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">0</p>
                                 <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Balance</p>
                             </div>
 
@@ -253,8 +307,8 @@ export default function UserDetailPage() {
                                 <div className="flex items-center justify-between">
                                     <CheckCircle className="w-8 h-8 text-orange-600 dark:text-orange-400" />
                                 </div>
-                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">0</p>
-                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Completed</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{user.is_verified ? '100%' : '50%'}</p>
+                                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Trust Score</p>
                             </div>
                         </div>
                     </div>

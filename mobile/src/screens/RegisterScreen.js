@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Image as ImageIcon } from 'lucide-react-native';
 import apiClient from '../api/client';
 import * as ImagePicker from 'expo-image-picker';
+import { PhoneAuth } from '../services/PhoneAuth';
 
 import Toast from 'react-native-toast-message';
 
@@ -49,6 +50,12 @@ export default function RegisterScreen() {
     });
     const [certificationImage, setCertificationImage] = useState(null);
 
+    // Phone Verification State
+    const [verificationCode, setVerificationCode] = useState('');
+    const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [verifying, setVerifying] = useState(false);
+
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -72,6 +79,54 @@ export default function RegisterScreen() {
         setTimeout(() => setStep(2), 200);
     };
 
+    const sendVerification = async () => {
+        if (!formData.phone_number || formData.phone_number.length < 9) {
+            Alert.alert('Invalid Number', 'Please enter a valid phone number');
+            return;
+        }
+        setVerifying(true);
+        try {
+            // Normalize phone number for backend
+            const formattedPhone = formData.phone_number.startsWith('+')
+                ? formData.phone_number
+                : `+233${formData.phone_number.replace(/^0+/, '')}`;
+
+            await PhoneAuth.signInWithPhoneNumber(formattedPhone);
+            setShowOtpModal(true);
+            Toast.show({
+                type: 'success',
+                text1: 'Code Sent',
+                text2: 'Check the backend console for the OTP code!'
+            });
+        } catch (error) {
+            Toast.show({ type: 'error', text1: 'Verification Failed', text2: error.message });
+        } finally {
+            setVerifying(false);
+        }
+    };
+
+    const confirmCode = async () => {
+        if (!verificationCode || verificationCode.length < 6) {
+            Alert.alert('Invalid Code', 'Please enter the 6-digit code');
+            return;
+        }
+        setVerifying(true);
+        try {
+            const formattedPhone = formData.phone_number.startsWith('+')
+                ? formData.phone_number
+                : `+233${formData.phone_number.replace(/^0+/, '')}`;
+
+            await PhoneAuth.confirmCode(formattedPhone, verificationCode);
+            setIsPhoneVerified(true);
+            setShowOtpModal(false);
+            Toast.show({ type: 'success', text1: 'Phone Verified', text2: 'You can now proceed' });
+        } catch (error) {
+            Toast.show({ type: 'error', text1: 'Invalid Code', text2: error.message });
+        } finally {
+            setVerifying(false);
+        }
+    };
+
     const handleRegister = async () => {
         // Validation
         if (formData.password !== formData.confirm_password) {
@@ -84,6 +139,12 @@ export default function RegisterScreen() {
         }
         if (!formData.termsAccepted) {
             Alert.alert('Error', 'You must accept the Terms and Conditions');
+            return;
+        }
+
+        // Enforce Phone Verification
+        if (!isPhoneVerified) {
+            Alert.alert('Verification Required', 'Please verify your phone number to continue.');
             return;
         }
 
@@ -365,11 +426,60 @@ export default function RegisterScreen() {
                             placeholder="Mobile number"
                             placeholderTextColor={COLORS.textLight}
                             value={formData.phone_number}
-                            onChangeText={(val) => handleChange('phone_number', val)}
+                            onChangeText={(val) => {
+                                handleChange('phone_number', val);
+                                setIsPhoneVerified(false); // Reset if changed
+                            }}
                             keyboardType="phone-pad"
                         />
+                        {/* Verification Button */}
+                        {isPhoneVerified ? (
+                            <View style={styles.verifiedBadge}>
+                                <Check size={16} color="#fff" />
+                            </View>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.verifyBtn}
+                                onPress={sendVerification}
+                                disabled={verifying || !formData.phone_number}
+                            >
+                                {verifying ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyText}>Verify</Text>}
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
+
+                {/* OTP Modal */}
+                <Modal visible={showOtpModal} transparent animationType="slide">
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <Text style={styles.modalTitle}>Enter Verification Code</Text>
+                            <Text style={styles.modalSub}>Code sent to {formData.phone_number}</Text>
+
+                            <TextInput
+                                style={styles.otpInput}
+                                placeholder="123456"
+                                value={verificationCode}
+                                onChangeText={setVerificationCode}
+                                keyboardType="number-pad"
+                                maxLength={6}
+                                autoFocus
+                            />
+
+                            <TouchableOpacity
+                                style={styles.modalBtn}
+                                onPress={confirmCode}
+                                disabled={verifying}
+                            >
+                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalBtnText}>Confirm Code</Text>}
+                            </TouchableOpacity>
+
+                            <TouchableOpacity onPress={() => setShowOtpModal(false)} style={styles.cancelLink}>
+                                <Text style={styles.cancelText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
 
                 <View style={styles.formGroup}>
                     <Text style={styles.label}>City</Text>
@@ -740,5 +850,81 @@ const styles = StyleSheet.create({
         color: COLORS.textLight,
         fontSize: 12,
         fontWeight: '500',
+    },
+    // Verification Styles
+    verifyBtn: {
+        backgroundColor: COLORS.secondary,
+        paddingHorizontal: 16,
+        justifyContent: 'center',
+        paddingVertical: 10,
+        borderRadius: 8,
+        marginLeft: 8,
+        marginTop: 4,
+        marginRight: 4,
+    },
+    verifyText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 12,
+    },
+    verifiedBadge: {
+        backgroundColor: COLORS.primary,
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+        alignSelf: 'center',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 24,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        padding: 24,
+        borderRadius: 24,
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    modalSub: {
+        color: COLORS.textLight,
+        marginBottom: 24,
+    },
+    otpInput: {
+        width: '100%',
+        height: 56,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        borderRadius: 12,
+        fontSize: 24,
+        textAlign: 'center',
+        marginBottom: 24,
+        letterSpacing: 8,
+    },
+    modalBtn: {
+        backgroundColor: COLORS.primary,
+        width: '100%',
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+    },
+    modalBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    cancelLink: {
+        marginTop: 16,
+    },
+    cancelText: {
+        color: COLORS.textLight,
     },
 });
