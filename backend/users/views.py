@@ -136,10 +136,20 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
     def update(self, request, *args, **kwargs):
+        with open('profile_debug.log', 'a') as f:
+            f.write(f"\n--- Update at {timezone.now()} ---\n")
+            f.write(f"User: {request.user.username}\n")
+            f.write(f"Content-Type: {request.content_type}\n")
+            f.write(f"Data: {request.data}\n")
+            f.write(f"Files: {request.FILES}\n")
+            if 'profile_picture' in request.FILES:
+                file = request.FILES['profile_picture']
+                f.write(f"Profile Picture: {file.name}, size: {file.size}\n")
+        
         print(f"DEBUG: UserProfileView update called by {request.user.username}")
-        print(f"DEBUG: Content-Type: {request.content_type}")
-        print(f"DEBUG: request.data keys: {list(request.data.keys())}")
-        print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}")
+        # print(f"DEBUG: Content-Type: {request.content_type}")
+        # print(f"DEBUG: request.data keys: {list(request.data.keys())}")
+        # print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}")
         return super().update(request, *args, **kwargs)
 
 
@@ -251,6 +261,26 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Trigger login alert
         send_login_alert(self.user)
         
+        # Security: Device Binding & Alerts
+        request = self.context.get('request')
+        if request:
+             device_id = request.data.get('device_id')
+             if device_id:
+                 from admin_dashboard.utils import log_activity
+                 if self.user.last_device_id and self.user.last_device_id != device_id:
+                     # New Device Detected
+                     log_activity(
+                         self.user, 
+                         'SECURITY_ALERT', 
+                         details={'event': 'NEW_DEVICE_LOGIN', 'old_device': self.user.last_device_id, 'new_device': device_id},
+                         request=request
+                     )
+                     # In a full MFA flow, we would require OTP here. 
+                     # For now, we alert and bind the new device.
+                 
+                 self.user.last_device_id = device_id
+                 self.user.save(update_fields=['last_device_id'])
+
         return data
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -469,29 +499,41 @@ class SendOTPView(views.APIView):
         # Normalize phone number (remove spaces, etc.)
         phone_number = "".join(phone_number.split())
         
-        # Generate 6-digit OTP
+        # Internal OTP Generation (More reliable than Managed Verification for many accounts)
         otp_code = str(random.randint(100000, 999999))
-        
-        # Set expiry (10 minutes)
         expires_at = timezone.now() + timedelta(minutes=10)
         
-        # Save or update verification
+        # Save or update verification in our DB
+        from .models import PhoneVerification
         PhoneVerification.objects.update_or_create(
             phone_number=phone_number,
             defaults={'otp': otp_code, 'expires_at': expires_at}
         )
         
-        # CRITICAL: Print to console for user to test on Expo Go
+        # CRITICAL: Print to console for testing
         print("\n" + "="*40)
         print(f"VERIFICATION CODE FOR {phone_number}: {otp_code}")
         print("="*40 + "\n")
         
-        # In a real app, you would send via SMS here (e.g., Arkesel)
-        
-        return Response({
-            'status': 'success',
-            'message': 'OTP sent successfully (Check backend console during testing)'
-        })
+        # Send via Hubtel SMS (Standard SMS API)
+        try:
+            from .sms_service import send_otp_sms
+            send_otp_sms(phone_number, otp_code)
+            
+            return Response({
+                'status': 'success',
+                'message': 'Verification code sent (Internal Logic + Hubtel SMS)'
+            })
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            logger.error(f"Failed to trigger SMS for {phone_number}: {e}")
+            return Response({
+                'status': 'error',
+                'error': str(e),
+                'message': 'Failed to send SMS. Please check your credentials and number format.',
+                'traceback': error_details
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPView(views.APIView):
     permission_classes = (permissions.AllowAny,)
@@ -502,22 +544,96 @@ class VerifyOTPView(views.APIView):
         
         if not phone_number or not otp_code:
             return Response({'error': 'Phone number and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         # Normalize
         phone_number = "".join(phone_number.split())
         
+        # Test Bypass for local testing if needed
+        if otp_code == '123456':
+             return Response({'status': 'success', 'message': 'Phone verified (Test Bypass)'})
+
         try:
+            from .models import PhoneVerification
             verification = PhoneVerification.objects.get(phone_number=phone_number)
             
             if not verification.is_valid():
                 return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
                 
-            if verification.otp == otp_code or otp_code == '123456':
-                # Mark as verified or just return success
-                # For now, success is enough as frontend will proceed to registration
-                return Response({'status': 'success', 'message': 'Phone verified'})
+            if verification.otp == otp_code:
+                # Mark as verified (optional: update user model if linked)
+                return Response({'status': 'success', 'message': 'Phone verified internally'})
             else:
-                return Response({'error': 'Invalid OTP code'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({
+                    'status': 'error',
+                    'error': 'Invalid OTP code',
+                    'message': 'The code you entered is incorrect.'
+                }, status=status.HTTP_400_BAD_REQUEST)
                 
         except PhoneVerification.DoesNotExist:
-            return Response({'error': 'No verification request found for this number'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'status': 'error',
+                'error': 'No verification request found for this number',
+                'message': 'Please request a new OTP.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Internal verification error: {e}")
+            return Response({'error': f'Verification error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class TestSMSView(views.APIView):
+    """
+    Temporary endpoint to test Hubtel SMS integration.
+    """
+    permission_classes = (permissions.IsAdminUser,) # Restricted to admins
+    
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        content = request.data.get('content', 'This is a test message from Revesta Hubtel Integration.')
+        
+        if not phone_number:
+            return Response({'error': 'phone_number is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .sms_service import HubtelSMSService
+        service = HubtelSMSService()
+        success = service.send(phone_number, content)
+        
+        if success:
+            return Response({'status': 'success', 'message': f'SMS sent to {phone_number}'})
+        else:
+            return Response({'status': 'error', 'message': 'Failed to send SMS. Check backend logs.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class HubtelTestView(views.APIView):
+    """
+    Dedicated endpoint to test Hubtel features directly.
+    """
+    permission_classes = (permissions.IsAdminUser,)
+    
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        mode = request.data.get('mode', 'sms') # 'sms' or 'managed'
+        test_sender = request.data.get('sender_id')
+        
+        if not phone_number:
+            return Response({'error': 'phone_number is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .sms_service import HubtelSMSService
+        service = HubtelSMSService()
+        if test_sender:
+            service.sender = test_sender
+        
+        if mode == 'managed':
+            success = service.request_otp(phone_number)
+            method = "Managed Verification"
+        else:
+            success = service.send(phone_number, "Test message from Revesta Hubtel Hub.")
+            method = "Standard SMS"
+            
+        if success:
+            return Response({
+                'status': 'success', 
+                'message': f'Test successful using {method}'
+            })
+        else:
+            return Response({
+                'status': 'error', 
+                'message': f'Test failed using {method}. Check backend logs.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

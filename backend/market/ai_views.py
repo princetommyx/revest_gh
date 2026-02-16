@@ -5,6 +5,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 import google.generativeai as genai
 import os
 import json
+import traceback
+from datetime import datetime
 from django.conf import settings
 import logging
 
@@ -149,47 +151,37 @@ class SupportAIChatView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
+        user_message = request.data.get('message')
         api_key = os.environ.get("GEMINI_API_KEY")
+        
         if not api_key:
             return Response({
                 "reply": "I'm currently working in offline mode, but I can still answer basic questions! How can I help?",
                 "handoff": False
             })
 
-        user_message = request.data.get('message')
         if not user_message:
             return Response({"error": "No message provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
             
             chat_context = """
             You are 'ReVesta AI', the official support assistant for ReVesta.
-            
-            CONTEXT:
-            - ReVesta connects Recyclers (buyers) and Sellers (disposers) in Ghana.
-            - We handle payments via Wallet/MoMo and logistics via Collectors.
-            
-            OBJECTIVE:
-            1. Help users with basic queries.
-            2. DETECT if the user needs HUMAN support. If they say "human", "agent", "person", "speak to someone", "help me now", or seem very frustrated, you MUST respond with a specific trigger.
-            
-            TRIGGER RULE:
-            If user needs a human, start your response EXACTLY with '[HANDOFF_TRIGGER]'. 
-            Then add a friendly confirmation message.
-            
-            Example: "[HANDOFF_TRIGGER] I understand. I'm connecting you to a human agent right now. Please wait a moment."
-            
-            Otherwise, respond normally. Keep it concise.
+            Help users with basic queries concisely. Detect if the user needs human support.
+            If they need a human, start your response with '[HANDOFF_TRIGGER]'.
+            Speak like a helpful, modern Ghanaian assistant.
             """
             
-            response = model.generate_content([
-                {"role": "user", "parts": [chat_context]},
-                {"role": "user", "parts": [f"User asks: {user_message}"]}
-            ])
+            # Using 2.5-flash as it's the confirmed functional model with available quota
+            model = genai.GenerativeModel(
+                model_name='models/gemini-2.5-flash',
+                system_instruction=chat_context
+            )
             
+            response = model.generate_content(user_message)
             ai_reply = response.text
+            
             handoff_active = "[HANDOFF_TRIGGER]" in ai_reply
             clean_reply = ai_reply.replace("[HANDOFF_TRIGGER]", "").strip()
             session_id = None
@@ -203,7 +195,7 @@ class SupportAIChatView(APIView):
                 session_id = session.id
                 
                 if created:
-                    # ... notify admins logic ...
+                    # Notify admins
                     from users.models import User
                     from django.db.models import Q
                     admins = User.objects.filter(Q(is_staff=True) | Q(is_support=True) | Q(role='ADMIN'))
@@ -215,14 +207,6 @@ class SupportAIChatView(APIView):
                             data={"type": "SUPPORT_REQUEST", "session_id": session.id, "user_id": request.user.id},
                             urgency=Notification.Urgency.URGENT
                         )
-                        # Also create AdminNotification for dashboard integration
-                        AdminNotification.objects.create(
-                            admin=admin,
-                            notification_type='SUPPORT_TICKET',
-                            title=f"Support Request: {request.user.username}",
-                            message=f"User needs human assistance. Phone: {request.user.phone_number}",
-                            link=f"/dashboard/support?session={session.id}"
-                        )
             
             return Response({
                 "reply": clean_reply,
@@ -231,7 +215,16 @@ class SupportAIChatView(APIView):
             })
 
         except Exception as e:
-            logger.error(f"Support AI Error: {str(e)}")
+            error_str = str(e)
+            logger.error(f"Support AI Error: {error_str}")
+
+            # User-friendly responses for common API issues
+            if "429" in error_str or "quota" in error_str.lower():
+                return Response({
+                    "reply": "I'm a bit overwhelmed with questions right now! Please wait a few seconds and try again, or ask for a human agent.",
+                    "handoff": False
+                })
+            
             return Response({
                 "reply": "I'm having a bit of trouble connecting to my brain right now. Please try again or email support@revesta.com!",
                 "handoff": False

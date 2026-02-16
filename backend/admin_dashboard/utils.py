@@ -27,3 +27,28 @@ def send_admin_notification(title, message, type='INFO', link='', data=None):
             }
         }
     )
+
+def log_activity(user, action, details=None, request=None):
+    """
+    Utility to record an activity log entry.
+    """
+    from .models import ActivityLog
+    
+    ip = None
+    ua = ''
+    if request:
+        # Simple IP detection
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        ua = request.META.get('HTTP_USER_AGENT', '')
+
+    ActivityLog.objects.create(
+        user=user,
+        action=action,
+        details=details or {},
+        ip_address=ip,
+        user_agent=ua
+    )

@@ -22,8 +22,26 @@ class Wallet(models.Model):
     currency = models.CharField(max_length=3, default='GHS')
     is_frozen = models.BooleanField(default=False, help_text="Lock wallet for suspicious activity")
     trust_score = models.IntegerField(default=100, help_text="0-100 score based on payment history")
+    
+    # Security Fields
+    pin = models.CharField(max_length=128, blank=True, null=True, help_text="Hashed wallet PIN")
+    pin_attempts = models.IntegerField(default=0)
+    pin_locked_until = models.DateTimeField(null=True, blank=True)
+    last_pin_change = models.DateTimeField(null=True, blank=True)
+    
+    # Limits
+    daily_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=5000.00)
+    transaction_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=2000.00)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_pin_locked(self):
+        from django.utils import timezone
+        if self.pin_locked_until and self.pin_locked_until > timezone.now():
+            return True
+        return False
 
     def __str__(self):
         return f"{self.user.username}'s Wallet ({self.currency} {self.balance})"

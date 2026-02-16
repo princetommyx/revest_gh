@@ -20,6 +20,10 @@ class ActivityLog(models.Model):
         ('USER_SUSPENDED', 'User Suspended'),
         ('SUPPORT_TICKET_CREATED', 'Support Ticket Created'),
         ('SUPPORT_TICKET_RESOLVED', 'Support Ticket Resolved'),
+        ('WALLET_PIN_CHANGED', 'Wallet PIN Changed'),
+        ('WITHDRAWAL_REQUESTED', 'WithdrawAL Requested'),
+        ('SECURITY_ALERT', 'Security Alert'),
+        ('ADMIN_ACTION', 'Admin Action'),
     ]
     
     user = models.ForeignKey(

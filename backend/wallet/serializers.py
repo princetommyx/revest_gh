@@ -60,6 +60,8 @@ class WithdrawalSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=15)
     network = serializers.CharField(max_length=20)
     account_name = serializers.CharField(max_length=100)
+    pin = serializers.CharField(max_length=6, write_only=True)
+    otp = serializers.CharField(max_length=6, write_only=True, required=False) # Optional for now, will enforce later
     
     def validate_amount(self, value):
         if value < Decimal('1.00'):
@@ -75,5 +77,19 @@ class WithdrawalSerializer(serializers.Serializer):
                  raise serializers.ValidationError("Wallet is frozen. Cannot withdraw.")
             if wallet.balance < attrs['amount']:
                 raise serializers.ValidationError("Insufficient balance")
+        return attrs
+
+
+class WalletPinSerializer(serializers.Serializer):
+    """
+    Serializer for setting or updating wallet PIN
+    """
+    old_pin = serializers.CharField(max_length=6, required=False)
+    new_pin = serializers.CharField(max_length=6, min_length=4)
+    confirm_pin = serializers.CharField(max_length=6)
+
+    def validate(self, attrs):
+        if attrs['new_pin'] != attrs['confirm_pin']:
+            raise serializers.ValidationError("PINs do not match")
         return attrs
 

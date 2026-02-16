@@ -6,7 +6,8 @@ from .views import (
     UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
-    NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView
+    NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
+    TestSMSView, HubtelTestView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
 
@@ -38,6 +39,8 @@ urlpatterns = [
     # Debug
     path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
+    path('test-sms/', TestSMSView.as_view(), name='test_sms'),
+    path('test-hubtel/', HubtelTestView.as_view(), name='test_hubtel'),
 ]
 
 

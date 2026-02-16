@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { chatApi } from '../api/chat';
+import { authApi } from '../api/auth';
 import {
     MessageSquare,
     User,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import { formatDistanceToNow } from 'date-fns';
+import Toast from '../components/common/Toast';
 
 export default function SupportPage() {
     const [searchParams] = useSearchParams();
@@ -23,29 +25,50 @@ export default function SupportPage() {
     const [selectedSession, setSelectedSession] = useState(null);
     const [messageText, setMessageText] = useState('');
     const [chatMessages, setChatMessages] = useState([]);
+    const [toast, setToast] = useState(null);
     const queryClient = useQueryClient();
     const chatEndRef = useRef(null);
     const pollInterval = useRef(null);
 
+    // Fetch current admin profile
+    useQuery({
+        queryKey: ['profile'],
+        queryFn: authApi.getCurrentUser,
+    });
+
     // Fetch support sessions
-    const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
+    const { data: sessionsData, isLoading: sessionsLoading } = useQuery({
         queryKey: ['support-sessions'],
         queryFn: chatApi.getSupportSessions,
         refetchInterval: 5000, // Poll sessions every 5s
         onSuccess: (data) => {
+            const sessionList = data?.results || data || [];
             // If we have a sessionIdParam and no selectedSession, find and select it
             if (sessionIdParam && !selectedSession) {
-                const session = data.find(s => s.id.toString() === sessionIdParam);
+                const session = sessionList.find(s => s.id.toString() === sessionIdParam);
                 if (session) setSelectedSession(session);
             }
         }
     });
 
+    const sessionsList = sessionsData?.results || sessionsData || [];
+
     // Claim session mutation
     const claimMutation = useMutation({
         mutationFn: (id) => chatApi.claimSession(id),
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries(['support-sessions']);
+            // Update selected session with the claimed admin info from response or cache
+            const currentProfile = queryClient.getQueryData(['profile']);
+            setSelectedSession(prev => ({
+                ...prev,
+                admin: data.admin || currentProfile || { username: 'Admin' }
+            }));
+            setToast({ type: 'success', message: 'Session claimed successfully!' });
+        },
+        onError: (error) => {
+            console.error('Claim error:', error);
+            setToast({ type: 'error', message: 'Failed to claim session.' });
         }
     });
 
@@ -55,15 +78,20 @@ export default function SupportPage() {
         onSuccess: () => {
             queryClient.invalidateQueries(['support-sessions']);
             setSelectedSession(null);
+            setToast({ type: 'success', message: 'Session resolved!' });
         }
     });
 
     // Send message mutation
     const sendMessageMutation = useMutation({
-        mutationFn: () => chatApi.sendMessage(selectedSession.user.id, messageText),
+        mutationFn: ({ userId, text }) => chatApi.sendMessage(userId, text),
         onSuccess: (newMsg) => {
             setMessageText('');
             setChatMessages(prev => [...prev, newMsg]);
+        },
+        onError: (err) => {
+            console.error('Send error:', err);
+            setToast({ type: 'error', message: 'Failed to send message.' });
         }
     });
 
@@ -100,8 +128,11 @@ export default function SupportPage() {
 
     const handleSend = (e) => {
         e.preventDefault();
-        if (messageText.trim() && !sendMessageMutation.isLoading) {
-            sendMessageMutation.mutate();
+        if (messageText.trim() && !sendMessageMutation.isLoading && selectedSession) {
+            sendMessageMutation.mutate({
+                userId: selectedSession.user.id,
+                text: messageText
+            });
         }
     };
 
@@ -120,14 +151,14 @@ export default function SupportPage() {
                         <div className="flex items-center justify-center p-8">
                             <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
                         </div>
-                    ) : sessions.length === 0 ? (
+                    ) : sessionsList.length === 0 ? (
                         <div className="text-center p-12 text-gray-500">
                             <Headphones className="w-12 h-12 mx-auto mb-3 opacity-20" />
                             <p className="text-sm">No active support sessions</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-50">
-                            {sessions.map((session) => (
+                            {sessionsList.map((session) => (
                                 <button
                                     key={session.id}
                                     onClick={() => setSelectedSession(session)}
@@ -213,8 +244,8 @@ export default function SupportPage() {
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
                             {chatMessages.map((msg, index) => {
-                                const isMe = msg.sender.username === queryClient.getQueryData(['profile'])?.username;
-                                const isBot = msg.sender.role === 'AI' || msg.sender.username === 'ai'; // Assuming AI has a special role or username
+                                const isMe = msg.sender?.username === queryClient.getQueryData(['profile'])?.username;
+                                const isBot = msg.sender?.role === 'AI' || msg.sender?.username === 'ai';
 
                                 return (
                                     <div
@@ -274,6 +305,14 @@ export default function SupportPage() {
                     </div>
                 )}
             </div>
+            {/* Toast Notification */}
+            {toast && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     );
 }

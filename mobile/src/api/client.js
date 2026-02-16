@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // Detect environment based on release channel or simple manual switch
 // For Android Emulator use 10.0.2.2, for iOS/Physical use your machine's IP
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_API_URL = 'http://10.52.16.79:8000/api/v1/';
+const LOCAL_API_URL = 'http://192.168.100.7:8000/api/v1/';
 
 const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
 
@@ -51,41 +51,38 @@ apiClient.interceptors.response.use(
 
         // If 401 (Unauthorized) and not already retrying
         if (error.response?.status === 401 && !originalRequest._retry) {
+            console.log(`[API] 401 detected for ${originalRequest.url}. Attempting token refresh...`);
             originalRequest._retry = true;
 
             try {
                 const refresh = await authStorage.getRefreshToken();
                 if (refresh) {
-                    const response = await axios.post(`${baseURL}/auth/token/refresh/`, {
+                    console.log('[API] Refresh token found, calling refresh endpoint...');
+                    const response = await axios.post(`${baseURL}auth/token/refresh/`, {
                         refresh,
                     });
 
                     const newAccess = response.data.access;
-
-                    // Note: We need the full user/role data to use storeSession fully, 
-                    // but here we only have the new access token.
-                    // Ideally we'd fetch the user again or just patch the access token. 
-                    // For now, we'll expose a helper or just manually use SecureStore via the util if needed, 
-                    // BUT authStorage has `storeSession` which expects all args.
-                    // Let's assume we can grab the existing role/user and re-save, OR
-                    // better yet, we can add a specific method to authStorage for updating just the token,
-                    // or just use storeSession with existing data.
+                    const newRefresh = response.data.refresh || refresh; // Use new refresh token if provided
+                    console.log('[API] Token refreshed successfully!');
 
                     // Fetch existing data to re-store securely
                     const role = await authStorage.getUserRole();
                     const user = await authStorage.getUserData();
 
-                    await authStorage.storeSession(newAccess, refresh, role, user);
+                    await authStorage.storeSession(newAccess, newRefresh, role, user);
 
                     // Retry original request with new token
                     originalRequest.headers.Authorization = `Bearer ${newAccess}`;
                     return apiClient(originalRequest);
+                } else {
+                    console.log('[API] No refresh token available in storage.');
                 }
             } catch (refreshError) {
                 // Refresh failed, logout user
+                console.error('[API] Token refresh failed:', refreshError.response?.data || refreshError.message);
                 await authStorage.clearSession();
-                console.log('Session expired, please login again');
-                // Logic to redirect to login would trigger here (via event or state)
+                console.warn('Session expired - Please login again');
             }
         }
 

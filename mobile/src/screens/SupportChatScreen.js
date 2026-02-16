@@ -86,7 +86,7 @@ export default function SupportChatScreen() {
                 setMessages(prev => {
                     const existingIds = new Set(prev.map(m => m.id));
                     const newMsgs = latest
-                        .filter(m => !existingIds.has(m.id.toString()) && m.sender.role === 'ADMIN')
+                        .filter(m => !existingIds.has(m.id.toString()) && (m.sender.role === 'ADMIN' || m.sender.is_staff || m.sender.is_support))
                         .map(m => ({
                             id: m.id.toString(),
                             text: m.content,
@@ -159,30 +159,28 @@ export default function SupportChatScreen() {
         return (
             <View style={[
                 styles.msgRow,
-                isUser ? styles.msgRowUser : (isSystem ? styles.msgRowSystem : styles.msgRowAi)
+                isUser ? styles.msgRowUser : (isSystem ? styles.msgRowSystem : styles.msgRowSupport)
             ]}>
-                {isAi && (
-                    <View style={styles.botAvatar}>
-                        <Bot size={20} color="#fff" />
-                    </View>
-                )}
-                {isHuman && (
-                    <View style={[styles.botAvatar, { backgroundColor: '#1976D2' }]}>
-                        <User size={20} color="#fff" />
+                {(isAi || isHuman) && (
+                    <View style={[
+                        styles.supportAvatar,
+                        isHuman && { backgroundColor: '#FF8F00' }
+                    ]}>
+                        {isAi ? <Bot size={16} color="#fff" /> : <User size={16} color="#fff" />}
                     </View>
                 )}
                 <View style={[
                     styles.msgBubble,
-                    isUser ? styles.bubbleUser : (isHuman ? styles.bubbleHuman : (isSystem ? styles.bubbleSystem : styles.bubbleAi))
+                    isUser ? styles.bubbleUser : (isSystem ? styles.bubbleSystem : styles.bubbleSupport)
                 ]}>
                     <Text style={[
                         styles.msgText,
-                        isUser ? styles.textUser : (isSystem ? styles.textSystem : styles.textAi)
+                        isUser ? styles.textUser : (isSystem ? styles.textSystem : styles.textSupport)
                     ]}>
                         {item.text}
                     </Text>
                     {!isSystem && (
-                        <Text style={[styles.msgTime, isUser ? styles.timeUser : styles.timeAi]}>
+                        <Text style={[styles.msgTime, isUser ? styles.timeUser : styles.timeSupport]}>
                             {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </Text>
                     )}
@@ -279,33 +277,41 @@ const styles = StyleSheet.create({
     yellowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F39C12', marginRight: 5 },
     onlineText: { fontSize: 12, color: '#2E7D32', fontWeight: '500' },
     list: { padding: 15, paddingBottom: 20 },
-    msgRow: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-end' },
-    msgRowUser: { justifyContent: 'flex-end' },
-    msgRowAi: { justifyContent: 'flex-start' },
+    msgRow: { flexDirection: 'row', marginBottom: 16, alignItems: 'flex-end' },
+    msgRowUser: { justifyContent: 'flex-end', paddingLeft: 60 },
+    msgRowSupport: { justifyContent: 'flex-start', paddingRight: 60 },
     msgRowSystem: { justifyContent: 'center' },
-    botAvatar: {
-        width: 32, height: 32, borderRadius: 16, backgroundColor: '#2E7D32',
-        justifyContent: 'center', alignItems: 'center', marginRight: 8
+    supportAvatar: {
+        width: 28, height: 28, borderRadius: 14, backgroundColor: '#FF8F00',
+        justifyContent: 'center', alignItems: 'center', marginRight: 8,
+        marginBottom: 2
     },
     msgBubble: {
-        maxWidth: '80%', padding: 12, borderRadius: 16,
+        maxWidth: '100%', padding: 12, borderRadius: 18,
         elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1, shadowRadius: 2
     },
-    bubbleUser: { backgroundColor: '#2E7D32', borderBottomRightRadius: 2 },
-    bubbleAi: { backgroundColor: '#fff', borderBottomLeftRadius: 2 },
-    bubbleHuman: { backgroundColor: '#E3F2FD', borderBottomLeftRadius: 2 },
+    bubbleUser: {
+        backgroundColor: '#2E7D32',
+        borderBottomRightRadius: 4,
+        borderTopRightRadius: 18
+    },
+    bubbleSupport: {
+        backgroundColor: '#FFB300',
+        borderBottomLeftRadius: 4,
+        borderTopLeftRadius: 18
+    },
     bubbleSystem: { backgroundColor: '#FFF3E0', alignSelf: 'center', borderRadius: 8, borderBottomWidth: 0 },
-    msgText: { fontSize: 15, lineHeight: 22 },
+    msgText: { fontSize: 16, lineHeight: 22 },
     textUser: { color: '#fff' },
-    textAi: { color: '#333' },
+    textSupport: { color: '#333' },
     textSystem: { color: '#E65100', fontSize: 12, fontWeight: '500' },
     msgTime: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
     timeUser: { color: 'rgba(255,255,255,0.7)' },
-    timeAi: { color: '#999' },
+    timeSupport: { color: 'rgba(0,0,0,0.4)' },
     typingBox: { flexDirection: 'row', alignItems: 'center', marginLeft: 40, marginBottom: 10 },
     typingText: { fontSize: 12, color: '#666', marginLeft: 8, fontStyle: 'italic' },
-    quickReplies: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginLeft: 40, marginTop: 10, marginBottom: 10 },
+    quickReplies: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, marginBottom: 10 },
     quickReplyChip: {
         backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 8,
         borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9'

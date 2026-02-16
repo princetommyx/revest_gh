@@ -5,7 +5,8 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Wallet, Transaction
 from .serializers import (
     WalletSerializer, TransactionSerializer, 
-    DepositSerializer, WithdrawalSerializer
+    DepositSerializer, WithdrawalSerializer,
+    WalletPinSerializer
 )
 from decimal import Decimal
 
@@ -18,6 +19,7 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     permission_classes = [permissions.IsAuthenticated]
     queryset = Wallet.objects.all()
     serializer_class = WalletSerializer
+    throttle_scope = 'wallet'
 
     def get_queryset(self):
         return Wallet.objects.filter(user=self.request.user)
@@ -91,7 +93,18 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
                     amount,
                     serializer.validated_data['phone_number'],
                     serializer.validated_data['network'],
-                    serializer.validated_data['account_name']
+                    serializer.validated_data['account_name'],
+                    pin=serializer.validated_data.get('pin'),
+                    otp=serializer.validated_data.get('otp')
+                )
+                
+                # Audit Log
+                from admin_dashboard.utils import log_activity
+                log_activity(
+                    request.user, 
+                    'WITHDRAWAL_REQUESTED', 
+                    details={'amount': str(amount), 'network': serializer.validated_data['network']},
+                    request=request
                 )
                 
                 # Refresh wallet to show updated balance (if we deducted immediately)
@@ -174,3 +187,45 @@ class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             })
         else:
             return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        summary="Set/Update Wallet PIN",
+        request=WalletPinSerializer,
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def set_pin(self, request):
+        """Set or update the user's wallet PIN"""
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        serializer = WalletPinSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            from .services import WalletService
+            
+            # If PIN already exists, require old PIN
+            if wallet.pin:
+                old_pin = serializer.validated_data.get('old_pin')
+                if not old_pin:
+                     return Response({'error': 'Current PIN is required to set a new one'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                try:
+                    if not WalletService.verify_pin(wallet, old_pin):
+                        return Response({'error': 'Current PIN is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+                except ValueError as e:
+                    return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Set new PIN
+            WalletService.set_pin(wallet, serializer.validated_data['new_pin'])
+            
+            # Audit Log
+            from admin_dashboard.utils import log_activity
+            log_activity(
+                request.user, 
+                'WALLET_PIN_CHANGED', 
+                details={'action': 'pin_set_or_updated'},
+                request=request
+            )
+            
+            return Response({'status': 'success', 'message': 'Wallet PIN updated successfully'})
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

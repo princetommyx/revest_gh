@@ -165,7 +165,7 @@ AUTH_USER_MODEL = 'users.User'
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000"]
 if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
 if RAILWAY_STATIC_URL:
@@ -197,6 +197,7 @@ REST_FRAMEWORK = {
         'user': '1000/day',   # Limit for authenticated users
         'register': '5/minute', # Strict limit for registration
         'login': '10/minute',    # Strict limit for login (check token endpoint)
+        'wallet': '10/minute',   # Limit for wallet transactions/PIN setting
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_RENDERER_CLASSES': [
@@ -252,6 +253,11 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Paystack
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+
+# Hubtel SMS
+HUBTEL_CLIENT_ID = os.environ.get('HUBTEL_CLIENT_ID')
+HUBTEL_CLIENT_SECRET = os.environ.get('HUBTEL_CLIENT_SECRET')
+HUBTEL_FROM = os.environ.get('HUBTEL_FROM', 'Revesta')
 
 # Email Configuration
 # Use Resend if API key is available (bypasses SMTP port blocking)

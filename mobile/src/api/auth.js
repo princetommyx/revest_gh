@@ -42,11 +42,17 @@ export const authApi = {
 
         const config = {};
         if (data instanceof FormData) {
-            // Explicitly unset Content-Type so the browser/adapter sets it with the boundary
-            config.headers = { 'Content-Type': null };
-            config.transformRequest = (data, headers) => {
-                return data; // Prevent Axios from stringifying FormData
+            // In React Native, do NOT set Content-Type: null or undefined.
+            // Just ensure there is NO Content-Type header in the request config
+            // and Axios will automatically set it to multipart/form-data with the boundary.
+            // However, since our instance has a default 'application/json', we must override/remove it.
+            config.headers = {
+                'Accept': 'application/json',
             };
+            // delete config.headers['Content-Type']; // Not enough if merging defaults
+            // Instead, we can use a fresh headers object without Content-Type
+            // to let the FormData adapter handle it.
+            config.transformRequest = (d) => d;
         }
 
         console.log('[AuthAPI] Updating profile...', { hasFormData: data instanceof FormData });

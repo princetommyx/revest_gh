@@ -136,6 +136,29 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = UserDetailSerializer
     queryset = User.objects.all()
 
+    def perform_update(self, serializer):
+        # Admin OTP Check (Pseudo-implementation)
+        otp = self.request.data.get('otp')
+        if not otp and self.request.user.role == 'ADMIN':
+             # In production, we'd raise a 403 or 400 requiring OTP
+             # raise serializers.ValidationError("Admin OTP required for this action")
+             pass
+
+        user = serializer.save()
+        
+        # Audit Log
+        from .utils import log_activity
+        log_activity(
+            self.request.user, 
+            'ADMIN_ACTION', 
+            details={
+                'action': 'UPDATE_USER_PROFILE',
+                'target_user': user.username,
+                'changed_fields': list(self.request.data.keys())
+            },
+            request=self.request
+        )
+
 
 class UserActivityView(generics.ListAPIView):
     """
@@ -311,14 +334,16 @@ class SendUserMessageView(views.APIView):
                 )
 
             # 3. Log Activity
-            ActivityLog.objects.create(
-                user=request.user,
-                action='SUPPORT_TICKET_RESOLVED', # Using closest existing action or create new one
+            from .utils import log_activity
+            log_activity(
+                request.user, 
+                'ADMIN_ACTION', 
                 details={
+                    'action': 'SEND_DIRECT_MESSAGE',
                     'target_user': user.username,
-                    'title': title,
-                    'type': 'DIRECT_MESSAGE'
-                }
+                    'title': title
+                },
+                request=request
             )
 
             return Response({'status': 'Message sent successfully'})
@@ -326,3 +351,41 @@ class SendUserMessageView(views.APIView):
         except Exception as e:
             logger.error(f"Error sending user message: {e}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from wallet.models import SystemConfig
+
+class SystemConfigView(views.APIView):
+    """
+    GET/POST /api/admin/system/config/
+    Manage system configuration settings (Kill switches, limits, etc.)
+    """
+    permission_classes = [IsSuperAdmin] # Restricted to Super Admins
+    
+    def get(self, request):
+        configs = SystemConfig.objects.all()
+        data = {c.key: c.value for c in configs}
+        return Response(data)
+
+    def post(self, request):
+        key = request.data.get('key')
+        value = str(request.data.get('value'))
+        
+        if not key:
+            return Response({'error': 'Key is required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        config, _ = SystemConfig.objects.update_or_create(
+            key=key,
+            defaults={'value': value}
+        )
+        
+        # Audit Log
+        from .utils import log_activity
+        log_activity(
+            request.user, 
+            'ADMIN_ACTION', 
+            details={'action': 'UPDATE_SYSTEM_CONFIG', 'key': key, 'value': value},
+            request=request
+        )
+        
+        return Response({'status': 'success', 'key': config.key, 'value': config.value})

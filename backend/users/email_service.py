@@ -273,6 +273,14 @@ def send_login_alert(user) -> None:
                 logger.info(f"Login alert sent to {user_obj.email}")
             else:
                 logger.warning(f"Login alert may have failed for {user_obj.email}")
+            
+            # Send SMS Alert
+            if user_obj.phone_number:
+                try:
+                    from .sms_service import send_login_sms
+                    send_login_sms(user_obj.phone_number, user_obj.username)
+                except Exception as sms_error:
+                    logger.error(f"Failed to send login SMS alert to {user_obj.phone_number}: {sms_error}")
                 
         except User.DoesNotExist:
             logger.error(f"Cannot send login alert: User {user_id} not found")

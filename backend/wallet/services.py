@@ -15,14 +15,106 @@ class WalletService:
         return True, None
 
     @staticmethod
-    def request_withdrawal(user, amount, phone_number, network, account_name):
+    def verify_pin(wallet, pin):
+        """
+        Verify wallet PIN using Django's hasher.
+        """
+        from django.contrib.auth.hashers import check_password
+        from django.utils import timezone
+        
+        if wallet.is_pin_locked:
+            raise ValueError(f"Wallet PIN is locked until {wallet.pin_locked_until}. Too many failed attempts.")
+            
+        if not wallet.pin:
+            raise ValueError("Wallet PIN is not set.")
+            
+        if check_password(pin, wallet.pin):
+            # Reset attempts on success
+            if wallet.pin_attempts > 0:
+                wallet.pin_attempts = 0
+                wallet.save()
+            return True
+        
+        # Increment attempts on failure
+        wallet.pin_attempts += 1
+        if wallet.pin_attempts >= 5:
+            # Lock for 30 minutes
+            wallet.pin_locked_until = timezone.now() + timezone.timedelta(minutes=30)
+            wallet.save()
+            raise ValueError("Too many failed attempts. Wallet PIN locked for 30 minutes.")
+        
+        wallet.save()
+        return False
+
+    @staticmethod
+    def set_pin(wallet, pin):
+        """
+        Set or update wallet PIN.
+        """
+        from django.contrib.auth.hashers import make_password
+        from django.utils import timezone
+        wallet.pin = make_password(pin)
+        wallet.last_pin_change = timezone.now()
+        wallet.save()
+
+    @staticmethod
+    def request_withdrawal(user, amount, phone_number, network, account_name, pin=None, otp=None):
         """
         Request a withdrawal from the user's wallet.
         """
+        from .models import SystemConfig
+        if not SystemConfig.get_bool('GLOBAL_WITHDRAWAL_ENABLED', default=True):
+            raise ValueError("Withdrawals are temporarily disabled by the system administrator.")
+            
+        from django.utils import timezone
+        from django.db.models import Sum
+        
         amount = Decimal(str(amount))
+        
         with transaction.atomic():
             wallet, created = Wallet.objects.select_for_update().get_or_create(user=user)
             
+            if wallet.is_frozen:
+                raise ValueError("Your wallet is frozen. Please contact support.")
+
+            # 4. Cooldown Checks
+            # Rule: After PIN change (24h cooldown)
+            if wallet.last_pin_change:
+                cooldown_end = wallet.last_pin_change + timezone.timedelta(hours=24)
+                if timezone.now() < cooldown_end:
+                     raise ValueError(f"Withdrawal cooled down until {cooldown_end} due to recent PIN change.")
+
+            # Rule: New Account Cooldown (e.g., 48h)
+            account_cooldown_end = user.date_joined + timezone.timedelta(hours=48)
+            if timezone.now() < account_cooldown_end:
+                 raise ValueError(f"New accounts must wait 48 hours before first withdrawal. Cooldown ends {account_cooldown_end}.")
+
+            # 1. Verify PIN
+            if not WalletService.verify_pin(wallet, pin):
+                 raise ValueError("Invalid wallet PIN.")
+            
+            # 2. Verify OTP (Logic to be implemented/called here)
+            # if not verify_withdrawal_otp(user, otp):
+            #     raise ValueError("Invalid withdrawal OTP.")
+
+            # 3. Check Limits
+            if amount > wallet.transaction_withdrawal_limit:
+                raise ValueError(f"Amount exceeds per-transaction limit of {wallet.currency} {wallet.transaction_withdrawal_limit}")
+
+            # Check daily limit
+            today_start = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            daily_total = Transaction.objects.filter(
+                wallet=wallet,
+                transaction_type='WITHDRAWAL',
+                created_at__gte=today_start,
+                status__in=['PENDING', 'COMPLETED']
+            ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            
+            # amount is positive here, but stored as negative in DB for withdrawals
+            # so we use abs() or just be careful
+            if (abs(daily_total) + amount) > wallet.daily_withdrawal_limit:
+                 raise ValueError(f"Daily withdrawal limit of {wallet.currency} {wallet.daily_withdrawal_limit} exceeded.")
+
             if wallet.balance < amount:
                 raise ValueError("Insufficient wallet balance.")
                 
@@ -33,7 +125,7 @@ class WalletService:
             description = f"Payout to {phone_number} ({network}) - {account_name}"
             
             # Create Transaction Record
-            return Transaction.objects.create(
+            txn =  Transaction.objects.create(
                 wallet=wallet,
                 amount=-amount,
                 transaction_type='WITHDRAWAL',
@@ -41,6 +133,16 @@ class WalletService:
                 description=description,
                 reference=uuid.uuid4()
             )
+
+            # Send SMS Notification
+            try:
+                from users.sms_service import send_withdrawal_sms
+                send_withdrawal_sms(phone_number, amount, wallet.currency)
+            except Exception as e:
+                # Log but don't fail the transaction if SMS fails
+                logger.error(f"Failed to send withdrawal SMS to {phone_number}: {e}")
+
+            return txn
 
     @staticmethod
     def payout_seller_for_waste(pickup_request):

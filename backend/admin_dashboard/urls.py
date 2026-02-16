@@ -25,4 +25,5 @@ urlpatterns = [
     
     # System Metrics
     path('metrics/', views.SystemMetricsView.as_view(), name='admin_metrics'),
+    path('system/config/', views.SystemConfigView.as_view(), name='system_config'),
 ]
