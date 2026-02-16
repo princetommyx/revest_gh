@@ -189,6 +189,7 @@ class SupportAIChatView(APIView):
                 {"role": "user", "parts": [f"User asks: {user_message}"]}
             ])
             
+            ai_reply = response.text
             handoff_active = "[HANDOFF_TRIGGER]" in ai_reply
             clean_reply = ai_reply.replace("[HANDOFF_TRIGGER]", "").strip()
             session_id = None
@@ -204,7 +205,8 @@ class SupportAIChatView(APIView):
                 if created:
                     # ... notify admins logic ...
                     from users.models import User
-                    admins = User.objects.filter(models.Q(is_staff=True) | models.Q(is_support=True) | models.Q(role='ADMIN'))
+                    from django.db.models import Q
+                    admins = User.objects.filter(Q(is_staff=True) | Q(is_support=True) | Q(role='ADMIN'))
                     for admin in admins:
                         Notification.objects.create(
                             user=admin,

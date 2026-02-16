@@ -71,10 +71,13 @@ export default function CreateListingScreen({ navigation }) {
             let location = await Location.getCurrentPositionAsync({});
             setFormData(prev => ({
                 ...prev,
-                latitude: location.coords.latitude,
-                longitude: location.coords.longitude
+                latitude: parseFloat(location.coords.latitude.toFixed(6)),
+                longitude: parseFloat(location.coords.longitude.toFixed(6))
             }));
-            console.log("Captured Location:", location.coords);
+            console.log("Captured Location (Rounded):", {
+                lat: location.coords.latitude.toFixed(6),
+                lng: location.coords.longitude.toFixed(6)
+            });
         })();
     }, []);
 
