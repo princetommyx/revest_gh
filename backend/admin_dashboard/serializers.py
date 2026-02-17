@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
 from users.models import User
 from market.models import Listing
 from logistics.models import PickupRequest
@@ -138,3 +138,13 @@ class UserDetailSerializer(serializers.ModelSerializer):
             user=obj,
             status__in=['OPEN', 'IN_PROGRESS']
         ).count()
+
+
+class PromoCardSerializer(serializers.ModelSerializer):
+    """
+    Serializer for promotional cards.
+    """
+    class Meta:
+        model = PromoCard
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']

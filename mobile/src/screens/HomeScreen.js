@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
@@ -12,7 +12,7 @@ import {
     Package, ShoppingCart, User
 } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BASE_URL } from '../api/client';
+import apiClient, { BASE_URL } from '../api/client';
 import * as Location from 'expo-location';
 import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
@@ -146,65 +146,50 @@ export default function HomeScreen({ navigation }) {
         return date.toLocaleDateString();
     };
 
+    const [promos, setPromos] = useState([]);
+    const [promosLoading, setPromosLoading] = useState(false);
+
+    const fetchPromos = useCallback(async () => {
+        if (!userRole) {
+            console.log("[HomeScreen] Skipping fetchPromos: userRole is null");
+            return;
+        }
+        console.log(`[HomeScreen] Attempting to fetch promos for role: ${userRole}`);
+        setPromosLoading(true);
+        try {
+            const response = await apiClient.get(`admin/promos/public/?role=${userRole}`);
+            const data = response.data;
+
+            // Debug log
+            console.log(`[HomeScreen] Promos fetch success! Count:`, Array.isArray(data) ? data.length : (data?.results?.length || 0));
+
+            const items = Array.isArray(data) ? data : (data?.results || []);
+            setPromos(items);
+        } catch (error) {
+            console.error("[HomeScreen] Error fetching promos:", error.response?.data || error.message);
+            // We keep the old promos on error so they don't "vanish"
+        } finally {
+            setPromosLoading(false);
+        }
+    }, [userRole]);
+
+    useEffect(() => {
+        fetchPromos();
+    }, [fetchPromos]);
+
+    const handleRefresh = async () => {
+        console.log("[HomeScreen] Refreshing both listings and promos...");
+        await Promise.all([
+            refetch(),
+            fetchPromos()
+        ]);
+    };
+
     const PromoCarousel = () => {
         // Hide promo cards when searching
         if (search.length > 0) return null;
-
-        if (userRole === 'RECYCLER') {
-            return (
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.promoContainer}
-                    decelerationRate="fast"
-                    snapToInterval={315} // card width + margin
-                >
-                    <TouchableOpacity
-                        style={styles.promoCard}
-                        onPress={() => navigation.navigate('Pickups')}
-                        activeOpacity={0.9}
-                    >
-                        <Image
-                            source={require('../../assets/promo_recycler.jpg')}
-                            style={styles.promoBgImage}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                            transition={500}
-                        />
-                        <View style={styles.promoOverlay} />
-                        <View style={styles.promoContent}>
-                            <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
-                                <Text style={styles.promoBadgeText}>Special Offer</Text>
-                            </View>
-                            <Text style={styles.promoTitle}>Source Recyclables</Text>
-                            <Text style={styles.promoSubtitle}>Get steady waste for your company easily.</Text>
-                        </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={styles.promoCard}
-                        onPress={() => navigation.navigate('Pickups')}
-                        activeOpacity={0.9}
-                    >
-                        <Image
-                            source={require('../../assets/promo_bottles.jpg')}
-                            style={styles.promoBgImage}
-                            contentFit="cover"
-                            cachePolicy="memory-disk"
-                            transition={500}
-                        />
-                        <View style={styles.promoOverlay} />
-                        <View style={styles.promoContent}>
-                            <View style={[styles.promoBadge, { backgroundColor: '#3498DB' }]}>
-                                <Text style={styles.promoBadgeText}>Marketplace</Text>
-                            </View>
-                            <Text style={styles.promoTitle}>Browse Materials</Text>
-                            <Text style={styles.promoSubtitle}>Find a wide variety of recyclable materials.</Text>
-                        </View>
-                    </TouchableOpacity>
-                </ScrollView>
-            );
-        }
+        if (promosLoading) return <ActivityIndicator size="large" color="#2E7D32" style={{ marginVertical: 20 }} />;
+        if (promos.length === 0) return null;
 
         return (
             <ScrollView
@@ -212,45 +197,50 @@ export default function HomeScreen({ navigation }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.promoContainer}
                 decelerationRate="fast"
-                snapToInterval={310} // card width + margin
+                snapToInterval={315} // card width + margin
             >
-                {/* --- SELLER / DISPOSER CARDS --- */}
-                <View style={styles.promoCard}>
-                    <Image
-                        source={require('../../assets/promo_ghana_money.png')}
-                        style={styles.promoBgImage}
-                        contentFit="cover"
-                        contentPosition={{ top: 0, right: 0.5 }} // Focus on top-center to show face, hands are likely visible in the center area
-                        cachePolicy="memory-disk"
-                        transition={500}
-                    />
-                    <View style={styles.promoOverlay} />
-                    <View style={styles.promoContent}>
-                        <View style={[styles.promoBadge, { backgroundColor: '#F39C12' }]}>
-                            <Text style={styles.promoBadgeText}>Instant Cash</Text>
-                        </View>
-                        <Text style={styles.promoTitle}>Cash for Your Waste</Text>
-                        <Text style={styles.promoSubtitle}>Turn your waste into wealth right from your phone.</Text>
-                    </View>
-                </View>
+                {promos.map((promo) => (
+                    <TouchableOpacity
+                        key={promo.id}
+                        style={styles.promoCard}
+                        onPress={() => {
+                            if (promo.action_type === 'NAVIGATE') {
+                                // Check if screen exists in state to avoid crash
+                                const state = navigation.getState();
+                                const screenExists = state?.routeNames?.includes(promo.action_value) ||
+                                    navigation.getParent()?.getState()?.routeNames?.includes(promo.action_value);
 
-                <View style={styles.promoCard}>
-                    <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=60' }}
-                        style={styles.promoBgImage}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        transition={500}
-                    />
-                    <View style={styles.promoOverlay} />
-                    <View style={styles.promoContent}>
-                        <View style={[styles.promoBadge, { backgroundColor: '#2E7D32' }]}>
-                            <Text style={styles.promoBadgeText}>Go Green</Text>
+                                if (screenExists) {
+                                    navigation.navigate(promo.action_value);
+                                } else {
+                                    console.warn(`[Promo] Screen "${promo.action_value}" not found in navigator`);
+                                }
+                            } else if (promo.action_type === 'URL') {
+                                // Linking would require import, keeping it simple
+                                console.log("Open URL:", promo.action_value);
+                            }
+                        }}
+                        activeOpacity={0.9}
+                    >
+                        <Image
+                            source={{ uri: resolveImageUrl(promo.image) }}
+                            style={styles.promoBgImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                            transition={500}
+                        />
+                        <View style={styles.promoOverlay} />
+                        <View style={styles.promoContent}>
+                            {promo.badge_text ? (
+                                <View style={[styles.promoBadge, { backgroundColor: promo.badge_color || '#2E7D32' }]}>
+                                    <Text style={styles.promoBadgeText}>{promo.badge_text}</Text>
+                                </View>
+                            ) : null}
+                            <Text style={styles.promoTitle}>{promo.title}</Text>
+                            <Text style={styles.promoSubtitle}>{promo.subtitle}</Text>
                         </View>
-                        <Text style={styles.promoTitle}>Clean Your Community</Text>
-                        <Text style={styles.promoSubtitle}>Join others making a difference today.</Text>
-                    </View>
-                </View>
+                    </TouchableOpacity>
+                ))}
             </ScrollView>
         );
     };
@@ -666,7 +656,7 @@ export default function HomeScreen({ navigation }) {
                                 </View>
                             )
                         }
-                        onRefresh={refetch}
+                        onRefresh={handleRefresh}
                         refreshing={isRefetching}
                     />
                 )}

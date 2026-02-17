@@ -13,6 +13,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import ProfilePage from './pages/ProfilePage';
 import SettingsPage from './pages/SettingsPage';
 import SupportPage from './pages/SupportPage';
+import PromoCardsPage from './pages/PromoCardsPage';
 import { authApi } from './api/auth';
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ function App() {
                             <Route path="profile" element={<ProfilePage />} />
                             <Route path="support" element={<SupportPage />} />
                             <Route path="settings" element={<SettingsPage />} />
+                            <Route path="promos" element={<PromoCardsPage />} />
                         </Route>
                     </Routes>
                 </BrowserRouter>

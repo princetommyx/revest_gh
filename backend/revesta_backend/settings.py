@@ -187,17 +187,17 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
-        'rest_framework.throttling.ScopedRateThrottle',
-    ],
+    # 'DEFAULT_THROTTLE_CLASSES': [
+    #     'rest_framework.throttling.AnonRateThrottle',
+    #     'rest_framework.throttling.UserRateThrottle',
+    #     'rest_framework.throttling.ScopedRateThrottle',
+    # ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '20/minute',  # Limit for unauthenticated users
-        'user': '1000/day',   # Limit for authenticated users
+        'user': '10000/day',   # Increased for polling admin dashboard
         'register': '5/minute', # Strict limit for registration
-        'login': '10/minute',    # Strict limit for login (check token endpoint)
-        'wallet': '10/minute',   # Limit for wallet transactions/PIN setting
+        'login': '20/minute',    # Strict limit for login
+        'wallet': '100/minute',   # Increased for usability
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_RENDERER_CLASSES': [

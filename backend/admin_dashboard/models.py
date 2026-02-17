@@ -203,5 +203,37 @@ class SystemMetrics(models.Model):
         ordering = ['-timestamp']
         verbose_name_plural = 'System Metrics'
     
+
+class PromoCard(models.Model):
+    """
+    Dynamic promotional cards displayed on the mobile app home screen.
+    """
+    ROLE_CHOICES = [
+        ('ALL', 'All Users'),
+        ('SELLER', 'Sellers/Disposers'),
+        ('COLLECTOR', 'Collectors'),
+        ('RECYCLER', 'Recyclers'),
+    ]
+
+    title = models.CharField(max_length=100)
+    subtitle = models.CharField(max_length=200)
+    image = models.ImageField(upload_to='promos/', null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True, help_text="Alternative to uploaded image")
+    badge_text = models.CharField(max_length=50, blank=True)
+    badge_color = models.CharField(max_length=20, default='#2E7D32')
+    target_role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='ALL')
+    
+    # Navigation logic
+    action_type = models.CharField(max_length=50, default='NAVIGATE', help_text="e.g., NAVIGATE, URL")
+    action_value = models.CharField(max_length=100, help_text="e.g., Pickups, ListingDetail, https://google.com")
+    
+    is_active = models.BooleanField(default=True, db_index=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', '-created_at']
+
     def __str__(self):
-        return f"Metrics at {self.timestamp}"
+        return self.title

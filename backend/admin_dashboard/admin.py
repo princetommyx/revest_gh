@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
 
 
 @admin.register(ActivityLog)
@@ -36,3 +36,11 @@ class SystemMetricsAdmin(admin.ModelAdmin):
     list_filter = ['timestamp']
     readonly_fields = ['timestamp']
     date_hierarchy = 'timestamp'
+
+
+@admin.register(PromoCard)
+class PromoCardAdmin(admin.ModelAdmin):
+    list_display = ['title', 'target_role', 'is_active', 'order', 'created_at']
+    list_filter = ['target_role', 'is_active', 'created_at']
+    search_fields = ['title', 'subtitle', 'action_value']
+    list_editable = ['order', 'is_active']

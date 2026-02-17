@@ -8,7 +8,8 @@ import {
     Settings,
     Recycle,
     Shield,
-    MessageSquare
+    MessageSquare,
+    Megaphone
 } from 'lucide-react';
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
     { to: '/pickups', icon: Truck, label: 'Pickups' },
     { to: '/wallet', icon: Wallet, label: 'Transactions' },
     { to: '/support', icon: MessageSquare, label: 'Support Inbox' },
+    { to: '/promos', icon: Megaphone, label: 'Promo Cards' },
     { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

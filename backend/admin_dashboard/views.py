@@ -1,4 +1,4 @@
-from rest_framework import generics, status, views
+from rest_framework import generics, status, permissions, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django.db.models import Q, Count, F
@@ -6,11 +6,12 @@ from django.utils import timezone
 from datetime import timedelta
 import logging
 
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
 from .serializers import (
     ActivityLogSerializer, SupportTicketSerializer,
     AdminNotificationSerializer, SystemMetricsSerializer,
-    DashboardStatsSerializer, UserDetailSerializer, UserSummarySerializer
+    DashboardStatsSerializer, UserDetailSerializer, UserSummarySerializer,
+    PromoCardSerializer
 )
 from .permissions import IsAdminUser, IsSuperAdmin
 from users.models import User
@@ -389,3 +390,48 @@ class SystemConfigView(views.APIView):
         )
         
         return Response({'status': 'success', 'key': config.key, 'value': config.value})
+
+
+from rest_framework import viewsets
+
+class PromoCardViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing promo cards. Restricted to admins.
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = PromoCardSerializer
+    queryset = PromoCard.objects.all().order_by('order', '-created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
+        # Audit Log
+        from .utils import log_activity
+        log_activity(
+            self.request.user, 
+            'ADMIN_ACTION', 
+            details={'action': 'CREATE_PROMO_CARD', 'title': serializer.validated_data.get('title')},
+            request=self.request
+        )
+
+
+class PublicPromoCardListView(generics.ListAPIView):
+    """
+    GET /api/v1/admin/promos/public/
+    Public endpoint for mobile app to fetch active promo cards.
+    """
+    serializer_class = PromoCardSerializer
+    permission_classes = [permissions.AllowAny] # Open for mobile app
+    pagination_class = None
+
+    def get_queryset(self):
+        role = self.request.query_params.get('role', 'ALL').upper()
+        queryset = PromoCard.objects.filter(is_active=True)
+        
+        # Filter by role: show targeted role or ALL
+        if role != 'ALL':
+            queryset = queryset.filter(Q(target_role=role) | Q(target_role='ALL'))
+        else:
+            # If role is ALL, we show everything targeted to ALL
+            queryset = queryset.filter(target_role='ALL')
+            
+        return queryset.order_by('order', '-created_at')

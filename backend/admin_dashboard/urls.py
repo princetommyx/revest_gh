@@ -26,4 +26,9 @@ urlpatterns = [
     # System Metrics
     path('metrics/', views.SystemMetricsView.as_view(), name='admin_metrics'),
     path('system/config/', views.SystemConfigView.as_view(), name='system_config'),
+    
+    # Promo Cards
+    path('promos/', views.PromoCardViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_promos_list'),
+    path('promos/<int:pk>/', views.PromoCardViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='admin_promo_detail'),
+    path('promos/public/', views.PublicPromoCardListView.as_view(), name='public_promos_list'),
 ]

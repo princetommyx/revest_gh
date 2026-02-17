@@ -2,18 +2,27 @@ import axios from 'axios';
 import { authStorage } from '../utils/authStorage';
 import { Platform } from 'react-native';
 
+import * as Device from 'expo-device';
+
 // Detect environment based on release channel or simple manual switch
-// For Android Emulator use 10.0.2.2, for iOS/Physical use your machine's IP
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_API_URL = 'http://192.168.100.7:8000/api/v1/';
+const LOCAL_IP = '192.168.100.7';
+const EMULATOR_IP = '10.0.2.2';
+
+const getLocalURL = () => {
+    // If it's a physical device, always use the LAN IP
+    if (Device.isDevice) {
+        return `http://${LOCAL_IP}:8000/api/v1/`;
+    }
+
+    // For emulators, Android needs 10.0.2.2, iOS can use localhost
+    return Platform.OS === 'android' ? `http://${EMULATOR_IP}:8000/api/v1/` : `http://${LOCAL_IP}:8000/api/v1/`;
+};
 
 const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
+const IS_PROD = !__DEV__;
 
-// Set this to true when building for production
-// Auto-detect environment
-const IS_PROD = !__DEV__; // Automatically true in release builds
-
-const baseURL = IS_PROD ? PROD_API_URL : LOCAL_API_URL;
+const baseURL = IS_PROD ? PROD_API_URL : getLocalURL();
 
 const apiClient = axios.create({
     baseURL,
@@ -31,7 +40,8 @@ apiClient.interceptors.request.use(
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
-            console.log(`[API] Request: ${config.method.toUpperCase()} ${config.url}`, config.headers['Content-Type']);
+            const fullUrl = `${config.baseURL}${config.url}`;
+            console.log(`[API] Request: ${config.method.toUpperCase()} ${fullUrl}`, config.headers['Content-Type']);
         } catch (error) {
             console.error('[API] Error in request interceptor:', error);
         }

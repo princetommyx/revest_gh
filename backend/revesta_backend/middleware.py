@@ -54,4 +54,9 @@ class RequestLoggingMiddleware:
             print(f"DEBUG_MW: FILES: {list(request.FILES.keys())}")
             
         response = self.get_response(request)
+        
+        # Log 400 and 429 errors for promos
+        if response.status_code in [400, 429] and '/api/v1/admin/promos/' in request.path:
+            print(f"DEBUG_MW: {response.status_code} ERROR at {request.path}: {response.content.decode() if response.status_code == 400 else 'Rate Limited'}")
+            
         return response
