@@ -106,9 +106,24 @@ export default function ListingDetailScreen({ route, navigation }) {
                 {/* Overlapping Content Card */}
                 <View style={styles.contentCard}>
                     <View style={styles.priceRow}>
-                        <Text style={styles.price}>{listing.is_free ? 'GIVEAWAY' : `₵${listing.price}`}</Text>
-                        <View style={styles.categoryBadge}>
-                            <Text style={styles.categoryText}>{listing.material_type}</Text>
+                        <View>
+                            <Text style={styles.priceLabel}>
+                                {listing.track === 'B' ? 'Buyback Value' : 'Disposal Fee'}
+                            </Text>
+                            <Text style={styles.price}>
+                                {listing.is_free ? 'GIVEAWAY' : `₵${listing.price}`}
+                            </Text>
+                        </View>
+                        <View style={[
+                            styles.trackBadge,
+                            { backgroundColor: listing.track === 'B' ? '#DCFCE7' : '#FEE2E2' }
+                        ]}>
+                            <Text style={[
+                                styles.trackText,
+                                { color: listing.track === 'B' ? '#166534' : '#DC2626' }
+                            ]}>
+                                {listing.track === 'B' ? 'Track B' : 'Track A'}
+                            </Text>
                         </View>
                     </View>
 
@@ -190,7 +205,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                                     address: listing.location
                                 },
                                 waste_price: listing.price,
-                                listing_id: listing.id
+                                listing_id: listing.id,
+                                track_type: listing.track,
+                                estimated_price: listing.price
                             }
                         }
                     })}
@@ -471,5 +488,20 @@ const styles = StyleSheet.create({
     errorText: {
         fontSize: 16,
         color: '#999',
+    },
+    priceLabel: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginBottom: 2,
+        fontWeight: '500',
+    },
+    trackBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    trackText: {
+        fontSize: 12,
+        fontWeight: 'bold',
     },
 });

@@ -81,6 +81,28 @@ class SystemConfig(models.Model):
     def __str__(self):
         return f"{self.key}: {self.value}" 
 
+class Escrow(models.Model):
+    """
+    Holds funds in suspense during a pickup job.
+    """
+    STATUS_CHOICES = (
+        ('HELD', 'Held in Escrow'),
+        ('RELEASED', 'Released to Payee'),
+        ('REFUNDED', 'Refunded to Payer'),
+    )
+
+    pickup = models.OneToOneField('logistics.PickupRequest', on_delete=models.CASCADE, related_name='escrow')
+    payer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='outgoing_escrows')
+    payee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='incoming_escrows')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='HELD')
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Escrow {self.id}: {self.amount} ({self.status})"
+
 class Transaction(models.Model):
     TRANSACTION_TYPES = (
         ('DEPOSIT', 'Deposit'), # Manual top-up
@@ -90,6 +112,9 @@ class Transaction(models.Model):
         ('COMMISSION_DEDUCTION', 'Commission Deduction'), # Revesta's cut (from Cash or Digital)
         ('PENALTY', 'Penalty'), # Admin fine
         ('REFUND', 'Refund'),
+        ('ESCROW_LOCK', 'Escrow Lock'), # Funds moved to escrow
+        ('ESCROW_RELEASE', 'Escrow Release'), # Funds moved from escrow to wallet
+        ('SERVICE_FEE', 'Service Fee'), # Fee for Track A
     )
     
     STATUS_CHOICES = (

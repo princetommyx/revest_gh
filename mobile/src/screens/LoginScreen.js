@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { Modal, ActivityIndicator as RNActivityIndicator } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -117,6 +118,10 @@ export default function LoginScreen() {
         <View style={styles.container}>
             {/* Curved Header Background */}
             <View style={styles.headerBackground}>
+                <LinearGradient
+                    colors={['#2E7D32', '#1B5E20']}
+                    style={StyleSheet.absoluteFill}
+                />
                 <View style={styles.curvedShape} />
                 <SafeAreaView style={styles.headerContent}>
                     <Text style={styles.greetingText}>Hello!</Text>

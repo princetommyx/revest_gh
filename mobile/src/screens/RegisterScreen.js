@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Mail, Lock, Phone, User } from 'lucide-react-native';
+import {
+    ArrowLeft, Truck, Trash2, Recycle, Check, Upload,
+    Mail, Lock, Phone, User, FileText, Smartphone
+} from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
 import Toast from 'react-native-toast-message';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -128,6 +132,25 @@ export default function RegisterScreen() {
             return;
         }
 
+        // Role-specific validation
+        if (formData.role === 'COLLECTOR') {
+            if (!formData.vehicle_type || !formData.license_plate) {
+                Alert.alert('Required Fields', 'Vehicle Type and License Plate are required for Collectors.');
+                return;
+            }
+        }
+
+        if (formData.role === 'RECYCLER') {
+            if (formData.recycler_type === 'COMPANY' && !formData.company_name) {
+                Alert.alert('Required Fields', 'Company Name is required for Company Recyclers.');
+                return;
+            }
+            if (!certificationImage) {
+                Alert.alert('Certification Required', 'Please upload your business certification or national ID.');
+                return;
+            }
+        }
+
         setLoading(true);
         try {
             const payload = {
@@ -234,6 +257,10 @@ export default function RegisterScreen() {
 
     const renderHeader = () => (
         <View style={styles.headerBackground}>
+            <LinearGradient
+                colors={['#2E7D32', '#1B5E20']}
+                style={StyleSheet.absoluteFill}
+            />
             <View style={styles.curvedShape} />
             <SafeAreaView style={styles.headerContent}>
                 <View style={styles.headerRow}>
@@ -409,7 +436,7 @@ export default function RegisterScreen() {
                                     </View>
                                     <View style={[styles.inputWrapper, { marginTop: 15 }]}>
                                         <View style={styles.iconContainer}>
-                                            <Check size={20} color="#666" />
+                                            <FileText size={20} color="#666" />
                                         </View>
                                         <TextInput
                                             style={styles.input}
@@ -548,6 +575,7 @@ export default function RegisterScreen() {
                     </View>
                 </View>
             </Modal>
+            <Toast />
         </View>
     );
 }

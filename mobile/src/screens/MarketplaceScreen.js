@@ -110,9 +110,22 @@ export default function MarketplaceScreen({ navigation, route }) {
                 )}
             </View>
             <View style={styles.listingDetails}>
-                <Text style={styles.listingPrice}>
-                    {item.is_free ? 'Giveaway' : `₵${item.price}`}
-                </Text>
+                <View style={styles.priceRowMain}>
+                    <Text style={styles.listingPrice}>
+                        {item.is_free ? 'Free' : `₵${item.price}`}
+                    </Text>
+                    <View style={[
+                        styles.trackBadgeMini,
+                        { backgroundColor: item.track === 'B' ? '#DCFCE7' : '#FEE2E2' }
+                    ]}>
+                        <Text style={[
+                            styles.trackTextMini,
+                            { color: item.track === 'B' ? '#166534' : '#DC2626' }
+                        ]}>
+                            {item.track === 'B' ? 'B' : 'A'}
+                        </Text>
+                    </View>
+                </View>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
                 <View style={styles.listingMeta}>
                     <MapPin size={12} color="#999" />
@@ -412,7 +425,21 @@ const styles = StyleSheet.create({
         fontSize: 17,
         fontWeight: 'bold',
         color: '#2E7D32',
+    },
+    priceRowMain: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 4,
+    },
+    trackBadgeMini: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    trackTextMini: {
+        fontSize: 9,
+        fontWeight: 'bold',
     },
     listingTitle: {
         fontSize: 14,

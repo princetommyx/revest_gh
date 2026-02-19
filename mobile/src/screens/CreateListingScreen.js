@@ -26,6 +26,7 @@ export default function CreateListingScreen({ navigation }) {
         quantity: '',
         weight_kg: 0,
         price: '',
+        track_type: 'A', // Default to Track A
         is_free: false,
         location: '',
         latitude: null,
@@ -36,27 +37,31 @@ export default function CreateListingScreen({ navigation }) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // AI Pricing Logic
+    // AI Pricing Logic (Updated for Track A/B)
     React.useEffect(() => {
         if (formData.material_type && formData.weight_kg) {
-            const rates = {
-                'Plastics': 1.5,
-                'Metals': 4.0,
-                'Paper': 0.8,
-                'Glass': 0.5,
-                'Electronics': 8.0,
-                'Mixed': 1.0,
-                'Other': 0.5
-            };
-            const rate = rates[formData.material_type] || 1.0;
-            const weight = formData.weight_kg > 0 ? formData.weight_kg : 5;
-            const commission = 0.20;
-            const estimatedValue = (rate * weight * (1 - commission)).toFixed(2);
-            setFormData(prev => ({ ...prev, price: estimatedValue }));
+            // Only auto-calculate if AI didn't already provide a specific estimate
+            // OR if user manually changes material/weight after scan
+            if (!scanResult || scanResult.material_type !== formData.material_type) {
+                const rates = {
+                    'PET': 1.5,
+                    'Plastics': 1.2,
+                    'Metals': 4.0,
+                    'Paper': 0.8,
+                    'Glass': 0.5,
+                    'Electronics': 8.0,
+                    'Organic': 1.0,
+                    'Other': 0.5
+                };
+                const rate = rates[formData.material_type] || 1.0;
+                const weight = formData.weight_kg > 0 ? formData.weight_kg : 5;
+                const estimatedValue = (rate * weight).toFixed(2);
+                setFormData(prev => ({ ...prev, price: estimatedValue }));
+            }
         }
     }, [formData.material_type, formData.weight_kg]);
 
-    // Get Location on Mount
+    // ... Get Location on Mount ...
     React.useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
@@ -101,16 +106,23 @@ export default function CreateListingScreen({ navigation }) {
         try {
             const data = await marketApi.analyzeWaste(uri);
             if (data) {
+                const isTrackA = data.track_type === 'A';
                 setFormData(prev => ({
                     ...prev,
                     material_type: data.material_type || prev.material_type,
                     quantity: data.quantity_estimate || prev.quantity,
-                    weight_kg: data.weight_kg || 0,
+                    weight_kg: data.suggested_weight_kg || prev.weight_kg,
                     title: data.title_suggestion || prev.title,
                     description: data.description || prev.description,
+                    track_type: data.track_type || 'A',
+                    price: isTrackA ? (data.estimated_cost || '10.00') : (data.estimated_earnings || '5.00')
                 }));
                 setScanResult(data);
-                Toast.show({ type: 'success', text1: 'AI Verified ✓', text2: 'Waste analysis complete' });
+                Toast.show({
+                    type: 'success',
+                    text1: isTrackA ? 'General Waste Identified' : 'Recyclables Detected',
+                    text2: isTrackA ? 'Estimated disposal fee calculated' : 'Estimated buyback value calculated'
+                });
             }
         } catch (error) {
             Toast.show({ type: 'error', text1: 'AI Scan failed', text2: 'Could not analyze waste' });
@@ -146,11 +158,19 @@ export default function CreateListingScreen({ navigation }) {
                 let type = selectedAsset.mimeType || 'image/jpeg';
                 data.append('image', { uri, name, type });
             }
+
+            // Append formatted data
             Object.keys(formData).forEach(key => {
                 if (formData[key] !== null && formData[key] !== undefined) {
                     data.append(key, formData[key].toString());
                 }
             });
+
+            // Specific mapping if backend expects 'track' instead of 'track_type'
+            // My backend change used 'track' for Listing but PickupRequest used 'track_type'.
+            // In market/models.py I used 'track'.
+            data.append('track', formData.track_type);
+
             if (scanResult && scanResult.confidence > 0.8) data.append('is_verified_waste', 'true');
 
             await marketApi.createListing(data);
@@ -268,6 +288,24 @@ export default function CreateListingScreen({ navigation }) {
                             </View>
                         </View>
 
+                        <Text style={styles.label}>Track</Text>
+                        <View style={styles.trackContainer}>
+                            <TouchableOpacity
+                                style={[styles.trackBtn, formData.track_type === 'A' && styles.trackBtnActiveA]}
+                                onPress={() => handleChange('track_type', 'A')}
+                            >
+                                <Info size={16} color={formData.track_type === 'A' ? '#fff' : '#666'} />
+                                <Text style={[styles.trackBtnText, formData.track_type === 'A' && styles.trackBtnTextActive]}>Paid Disposal</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.trackBtn, formData.track_type === 'B' && styles.trackBtnActiveB]}
+                                onPress={() => handleChange('track_type', 'B')}
+                            >
+                                <Tag size={16} color={formData.track_type === 'B' ? '#fff' : '#666'} />
+                                <Text style={[styles.trackBtnText, formData.track_type === 'B' && styles.trackBtnTextActive]}>Value Buyback</Text>
+                            </TouchableOpacity>
+                        </View>
+
                         <Text style={styles.label}>Description</Text>
                         <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
                             <TextInput
@@ -281,18 +319,30 @@ export default function CreateListingScreen({ navigation }) {
                         </View>
 
                         {/* AI Price Offer */}
-                        <View style={styles.offerCard}>
+                        <View style={[
+                            styles.offerCard,
+                            formData.track_type === 'A' ? styles.offerCardA : styles.offerCardB
+                        ]}>
                             <View style={styles.offerHeader}>
                                 <View style={styles.offerBadge}>
                                     <Text style={styles.offerBadgeText}>✨ AI ESTIMATE</Text>
                                 </View>
-                                <Text style={styles.offerTitle}>Recommended Price</Text>
+                                <Text style={styles.offerTitle}>
+                                    {formData.track_type === 'A' ? 'Estimated Cost to' : 'Estimated Cash to'}
+                                </Text>
                             </View>
                             <View style={styles.offerValueRow}>
                                 <Text style={styles.currencyPrefix}>₵</Text>
                                 <Text style={styles.offerValue}>{formData.price || '0.00'}</Text>
+                                <Text style={styles.trackIndicator}>
+                                    {formData.track_type === 'A' ? ' (Debit)' : ' (Earn)'}
+                                </Text>
                             </View>
-                            <Text style={styles.offerSub}>Based on market rates and quality analysis</Text>
+                            <Text style={styles.offerSub}>
+                                {formData.track_type === 'A'
+                                    ? 'Flat fee for safe disposal and logistics'
+                                    : 'Market buyback value after commission'}
+                            </Text>
                         </View>
 
                         <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>

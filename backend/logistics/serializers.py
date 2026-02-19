@@ -13,16 +13,20 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     provider = PublicUserSerializer(read_only=True)
     collector_name = serializers.CharField(source='collector.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     
     class Meta:
         model = PickupRequest
         fields = (
-            'id', 'material_type', 'quantity_estimate', 'status', 'status_display',
+            'id', 'material_type', 'track_type', 'track_type_display',
+            'bag_size', 'weight_kg', 'quantity_estimate', 
+            'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector', 'collector_name',
             'estimated_price', 'actual_price', 'payment_method',
-            'waste_price', 'delivery_fee', 'listing'
+            'waste_price', 'delivery_fee', 'listing',
+            'is_verified'
         )
         read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
 
@@ -34,17 +38,21 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
     provider = PublicUserSerializer(read_only=True)
     collector =PublicUserSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     
     class Meta:
         model = PickupRequest
         fields = (
-            'id', 'material_type', 'quantity_estimate', 'status', 'status_display',
+            'id', 'material_type', 'track_type', 'track_type_display',
+            'bag_size', 'weight_kg', 'quantity_estimate', 
+            'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing',
-            'distance_km', 'duration_min'
+            'distance_km', 'duration_min',
+            'verification_photo', 'manual_weight', 'ai_verified_weight', 'is_verified'
         )
         read_only_fields = ('provider', 'collector', 'created_at')
 
@@ -57,8 +65,8 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupRequest
         fields = (
-            'id', 'material_type', 'quantity_estimate', 
-            'latitude', 'longitude', 'estimated_price',
+            'id', 'material_type', 'track_type', 'bag_size', 'weight_kg',
+            'quantity_estimate', 'latitude', 'longitude', 'estimated_price',
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
             'destination_latitude', 'destination_longitude', 'destination_address'

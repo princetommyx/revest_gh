@@ -55,28 +55,28 @@ class AnalyzeWasteView(APIView):
 
             # 5. Define Prompt (Once)
             prompt = """
-            You are an expert, high-precision waste auditing AI. 
+            You are an expert, high-precision waste auditing AI for 'Revesta'.
             Analyze this image with EXTREME ATTENTION TO DETAIL.
             
-            OBJECTIVE: Identify the item and classify it into the correct recycling category.
-            
-            HIERARCHY RULES (Must Follow):
-            1. **Electronics (Highest Priority):** Any device with a circuit board, battery, plug, screen, or complex mechanism equals 'Electronics'.
-               - Laptops, Phones, Fridges, Washing Machines, Microwaves.
-            2. **Metals:** Simple non-electronic scrap (Pipes, Cans, Sheets).
-            3. **Plastics:** Containers, bottles, crates.
-            
-            Allowed Material Types: 'Electronics', 'Plastics', 'Metals', 'Paper', 'Glass', 'Mixed', 'Other'
+            OBJECTIVE: 
+            1. Identify the item and classify it into Track A or Track B.
+            2. Extract material details and estimate metrics.
+
+            CLASSIFICATION LOGIC:
+            - **Track A (Paid Disposal):** Organic waste, diapers, food scraps, mixed household trash that cannot be easily recycled.
+            - **Track B (Value Buyback):** High-value recyclables like PET (bottles), HDPE (containers), Aluminum (cans), Paper/Cardboard, Electronics, or Scrap Metal.
+
+            Allowed Material Types: 'PET', 'HDPE', 'Aluminum', 'Paper', 'Electronics', 'Metals', 'Mixed', 'Organic', 'Other'
 
             Return ONLY valid JSON:
             {
-                "reasoning": "String (Why you chose this category)",
-                "is_waste": boolean,
+                "track_type": "A" or "B",
+                "reasoning": "String (Why you chose this track and category)",
                 "material_type": "String (Exact match from Allowed Types)",
-                "quantity_estimate": "String (Natural description e.g. '1 Fridge', '3 Bags of Cans', '50kg Pile')",
-                "weight_kg": number (Estimated weight in KG. Crucial for pricing.),
-                "quality_score": number (1-10),
-                "title_suggestion": "String (e.g. 'Scrap Fridge')",
+                "quantity_estimate": "String (e.g. '3 Large Bags', '10kg Pile')",
+                "suggested_bag_size": "SMALL", "MEDIUM", "LARGE", or "XLARGE" (Track A only, otherwise null),
+                "suggested_weight_kg": number (Track B only, estimated weight in KG, otherwise null),
+                "title_suggestion": "String (e.g. 'PET Bottle Collection')",
                 "description": "String (Short assessment)",
                 "confidence": number (0.0-1.0)
             }
@@ -108,40 +108,66 @@ class AnalyzeWasteView(APIView):
             json_str = raw_text.replace('```json', '').replace('```', '').strip()
             data = json.loads(json_str)
             
+            # Enrich with Estimated Financials
+            from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings
+            if data.get('track_type') == 'A':
+                bag_size = data.get('suggested_bag_size', 'MEDIUM')
+                category = data.get('material_type', 'General')
+                data['estimated_cost'] = float(calculate_track_a_fee(category=category, bag_size=bag_size))
+            elif data.get('track_type') == 'B':
+                weight = data.get('suggested_weight_kg', 0)
+                material = data.get('material_type', 'PET')
+                data['estimated_earnings'] = float(calculate_track_b_earnings(material, weight))
+
             return Response(data)
 
         except Exception as e:
             logger.error(f"AI Analysis Failed: {str(e)}")
             logger.warning(f"!!! DEBUG: AI Analysis Failed with error: {str(e)}")
-            import traceback
-            # traceback.print_exc() # Logger handles trace usually, or we can format it
-            # Fallback to simulation if AI fails (e.g. quota exceeded) to keep app working
             return self.simulation_fallback()
 
     def simulation_fallback(self):
         """Returns a simulated successful response if AI unavailable"""
         import random
         import time
+        from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings
         
         logger.warning("!!! DEBUG: Triggering Simulation Fallback")
-        
-        # Simulate processing time
         time.sleep(1.5)
         
-        # Removed 'Paper' and 'Mixed' to prevent insulting fallback for laptops during demo
-        materials = ['Electronics', 'Metals'] 
-        selected = random.choice(materials)
+        tracks = ['A', 'B']
+        track = random.choice(tracks)
         
-        return Response({
-            "is_waste": True,
-            "material_type": selected,
-            "quantity_estimate": "1-2 Bags",
-            "quality_score": 8,
-            "title_suggestion": f"Simulated {selected} Waste",
-            "description": "Simulation: Real AI failed (check backend logs).",
-            "confidence": 0.95,
-            "simulated": True
-        })
+        if track == 'A':
+            bag_size = random.choice(['SMALL', 'MEDIUM', 'LARGE'])
+            category = 'General'
+            return Response({
+                "track_type": "A",
+                "material_type": category,
+                "quantity_estimate": f"1 {bag_size.title()} Bag",
+                "suggested_bag_size": bag_size,
+                "suggested_weight_kg": None,
+                "estimated_cost": float(calculate_track_a_fee(category=category, bag_size=bag_size)),
+                "title_suggestion": "General Waste Pickup",
+                "description": "Simulation: Household trash identified.",
+                "confidence": 0.85,
+                "simulated": True
+            })
+        else:
+            material = random.choice(['PET', 'Aluminum', 'Electronics'])
+            weight = random.uniform(5.0, 25.0)
+            return Response({
+                "track_type": "B",
+                "material_type": material,
+                "quantity_estimate": f"{weight:.1f}kg of {material}",
+                "suggested_bag_size": None,
+                "suggested_weight_kg": round(weight, 1),
+                "estimated_earnings": float(calculate_track_b_earnings(material.upper(), weight)),
+                "title_suggestion": f"{material} Recycling",
+                "description": f"Simulation: {material} recyclables detected.",
+                "confidence": 0.92,
+                "simulated": True
+            })
 
 from chat.models import SupportSession
 from users.models import Notification

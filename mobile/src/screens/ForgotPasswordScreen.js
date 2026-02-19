@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Dimensions, StatusBar } from 'react-native';
-import { ArrowLeft, Mail, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, Mail, Smartphone, Lock, CheckCircle2, Eye, EyeOff } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -10,36 +10,192 @@ const { width } = Dimensions.get('window');
 
 export default function ForgotPasswordScreen() {
     const navigation = useNavigation();
-    const [email, setEmail] = useState('');
+    const [step, setStep] = useState(1); // 1: Identifier, 2: OTP, 3: New Password
+    const [identifier, setIdentifier] = useState('');
+    const [otp, setOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const handleSendResetLink = async () => {
-        if (!email) {
-            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter your email' });
+    const handleRequestOTP = async () => {
+        if (!identifier) {
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter your email or phone number' });
             return;
         }
         setLoading(true);
         try {
-            await authApi.requestPasswordReset(email);
-            Toast.show({ type: 'success', text1: 'Email Sent', text2: 'Check your inbox for the reset link.' });
-            setTimeout(() => navigation.goBack(), 2000);
+            await authApi.requestPasswordReset(identifier);
+            Toast.show({
+                type: 'success',
+                text1: 'Verification Sent',
+                text2: 'If an account exists, you will receive a code.'
+            });
+            setStep(2);
         } catch (error) {
-            Toast.show({ type: 'error', text1: 'Request Failed', text2: 'Could not send link.' });
+            Toast.show({
+                type: 'error',
+                text1: 'Request Failed',
+                text2: error.response?.data?.error || 'Could not send verification code.'
+            });
         } finally {
             setLoading(false);
         }
     };
 
+    const handleResetPassword = async () => {
+        if (!otp || otp.length < 6) {
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter the 6-digit code' });
+            return;
+        }
+        if (!newPassword || newPassword.length < 6) {
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Password must be at least 6 characters' });
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Passwords do not match' });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            await authApi.confirmPasswordReset({
+                identifier,
+                otp,
+                new_password: newPassword,
+                confirm_password: confirmPassword
+            });
+            Toast.show({
+                type: 'success',
+                text1: 'Password Reset',
+                text2: 'Your password has been changed successfully.'
+            });
+            setTimeout(() => navigation.navigate('Login'), 2000);
+        } catch (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Reset Failed',
+                text2: error.response?.data?.error || 'Invalid or expired code.'
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderStep1 = () => (
+        <>
+            <View style={styles.iconCircle}>
+                <Smartphone size={40} color="#2E7D32" />
+            </View>
+            <Text style={styles.heroTitle}>Forgot Password?</Text>
+            <Text style={styles.heroSub}>
+                Enter the email or phone number associated with your account to receive a reset code.
+            </Text>
+
+            <View style={styles.inputSection}>
+                <View style={styles.inputWrapper}>
+                    <Mail size={20} color="#9BAA9B" />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Email or phone number"
+                        value={identifier}
+                        onChangeText={setIdentifier}
+                        autoCapitalize="none"
+                        placeholderTextColor="#9BAA9B"
+                    />
+                </View>
+            </View>
+
+            <TouchableOpacity
+                style={[styles.mainBtn, loading && styles.btnDisabled]}
+                onPress={handleRequestOTP}
+                disabled={loading}
+            >
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Send Code</Text>}
+            </TouchableOpacity>
+        </>
+    );
+
+    const renderStep2 = () => (
+        <>
+            <View style={styles.iconCircle}>
+                <Lock size={40} color="#2E7D32" />
+            </View>
+            <Text style={styles.heroTitle}>Verification Code</Text>
+            <Text style={styles.heroSub}>
+                Enter the 6-digit code sent to your {identifier.includes('@') ? 'email' : 'phone'}.
+            </Text>
+
+            <View style={styles.inputSection}>
+                <View style={styles.inputWrapper}>
+                    <CheckCircle2 size={20} color="#9BAA9B" />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Enter 6-digit code"
+                        value={otp}
+                        onChangeText={setOtp}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                        placeholderTextColor="#9BAA9B"
+                        letterSpacing={step === 2 ? 5 : 0}
+                    />
+                </View>
+
+                <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                    <Lock size={20} color="#9BAA9B" />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="New Password"
+                        value={newPassword}
+                        onChangeText={setNewPassword}
+                        secureTextEntry={!showPassword}
+                        placeholderTextColor="#9BAA9B"
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                        {showPassword ? <EyeOff size={20} color="#9BAA9B" /> : <Eye size={20} color="#9BAA9B" />}
+                    </TouchableOpacity>
+                </View>
+
+                <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                    <Lock size={20} color="#9BAA9B" />
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Confirm New Password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        secureTextEntry={!showPassword}
+                        placeholderTextColor="#9BAA9B"
+                    />
+                </View>
+            </View>
+
+            <TouchableOpacity
+                style={[styles.mainBtn, loading && styles.btnDisabled]}
+                onPress={handleResetPassword}
+                disabled={loading}
+            >
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Reset Password</Text>}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={styles.backTextBtn}
+                onPress={() => setStep(1)}
+                disabled={loading}
+            >
+                <Text style={styles.backText}>Change email/phone number</Text>
+            </TouchableOpacity>
+        </>
+    );
+
     return (
         <View style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-            {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
                 <View style={styles.curvedShape} />
                 <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
                     <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <TouchableOpacity onPress={() => step === 1 ? navigation.goBack() : setStep(1)} style={styles.backBtn}>
                             <ArrowLeft size={24} color="#fff" />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>Password Reset</Text>
@@ -51,43 +207,15 @@ export default function ForgotPasswordScreen() {
             <View style={styles.contentWrap}>
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
-                        <View style={styles.iconCircle}>
-                            <Mail size={40} color="#2E7D32" />
-                        </View>
-                        <Text style={styles.heroTitle}>Forgot Password?</Text>
-                        <Text style={styles.heroSub}>
-                            Don't worry! Enter the email address associated with your account and we'll send you instructions to reset your password.
-                        </Text>
+                        {step === 1 ? renderStep1() : renderStep2()}
 
-                        <View style={styles.inputSection}>
-                            <View style={styles.inputWrapper}>
-                                <Mail size={20} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.input}
-                                    placeholder="Enter your email"
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    autoCapitalize="none"
-                                    keyboardType="email-address"
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
-
-                        <TouchableOpacity
-                            style={[styles.mainBtn, loading && styles.btnDisabled]}
-                            onPress={handleSendResetLink}
-                            disabled={loading}
-                        >
-                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Send Reset Link</Text>}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.backTextBtn} onPress={() => navigation.goBack()}>
+                        <TouchableOpacity style={styles.backTextBtn} onPress={() => navigation.navigate('Login')}>
                             <Text style={styles.backText}>Remember password? <Text style={styles.backLink}>Login</Text></Text>
                         </TouchableOpacity>
                     </ScrollView>
                 </KeyboardAvoidingView>
             </View>
+            <Toast />
         </View>
     );
 }

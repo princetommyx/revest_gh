@@ -24,12 +24,32 @@ class WalletSerializer(serializers.ModelSerializer):
     Serializer for wallet with recent transactions
     """
     recent_transactions = serializers.SerializerMethodField()
+    held_escrow = serializers.SerializerMethodField()
+    pending_earnings = serializers.SerializerMethodField()
     
     class Meta:
         model = Wallet
-        fields = ('id', 'balance', 'currency', 'is_frozen', 'created_at', 'updated_at', 'recent_transactions')
+        fields = (
+            'id', 'balance', 'currency', 'is_frozen', 
+            'created_at', 'updated_at', 'recent_transactions',
+            'held_escrow', 'pending_earnings'
+        )
         read_only_fields = ('balance', 'currency', 'is_frozen', 'created_at', 'updated_at')
     
+    def get_held_escrow(self, obj):
+        """Funds held in escrow where the user is the payer"""
+        from .models import Escrow
+        from django.db.models import Sum
+        return Escrow.objects.filter(payer=obj.user, status='HELD').aggregate(total=Sum('amount'))['total'] or 0
+
+    def get_pending_earnings(self, obj):
+        """Expected earnings from active jobs (HELD in escrow) where the user is the payee"""
+        # This is tricky because escrow might not have payee assigned yet for some jobs
+        # But for Track B, the Disposer is the payee. For Track A, the Collector is the payee.
+        from .models import Escrow
+        from django.db.models import Sum
+        return Escrow.objects.filter(payee=obj.user, status='HELD').aggregate(total=Sum('amount'))['total'] or 0
+
     def get_recent_transactions(self, obj):
         """Get last 5 transactions"""
         transactions = obj.transactions.all()[:5]

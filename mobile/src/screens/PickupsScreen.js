@@ -10,11 +10,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import {
     Truck, MapPin, Navigation,
-    CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar, ChevronRight, Activity
+    CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
+    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
 import MapView, { Marker, Polyline } from 'react-native-maps';
+import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -77,6 +80,10 @@ export default function PickupsScreen({ route }) {
     // Waste confirmation modal for collectors
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [confirmingJob, setConfirmingJob] = useState(null);
+    const [manualWeight, setManualWeight] = useState('');
+    const [verificationPhoto, setVerificationPhoto] = useState(null);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verificationResult, setVerificationResult] = useState(null);
 
     const CANCEL_REASONS = [
         { id: 'long_wait', label: 'Long pickup time', icon: '⏱️' },
@@ -412,16 +419,79 @@ export default function PickupsScreen({ route }) {
         });
     };
 
+    const pickVerificationImage = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+            if (permissionResult.granted === false) {
+                Toast.show({ type: 'error', text1: 'Permission denied', text2: 'Camera access required' });
+                return;
+            }
+            const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+            });
+            if (!result.canceled) {
+                setVerificationPhoto(result.assets[0]);
+                setVerificationResult(null); // Reset result if new photo
+            }
+        } catch (error) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Could not capture photo' });
+        }
+    };
+
+    const handleVerifyWeight = async () => {
+        if (!manualWeight || !verificationPhoto) {
+            Toast.show({ type: 'error', text1: 'Missing Info', text2: 'Please enter weight and take a photo' });
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const data = new FormData();
+            const uri = verificationPhoto.uri;
+            let name = verificationPhoto.fileName || uri.split('/').pop();
+            if (!name.includes('.')) name += '.jpg';
+            let type = verificationPhoto.mimeType || 'image/jpeg';
+
+            data.append('verification_photo', { uri, name, type });
+            data.append('manual_weight', manualWeight);
+
+            const result = await logisticsApi.verifyWeight(confirmingJob.id, data);
+            setVerificationResult(result);
+
+            if (result.is_verified) {
+                Toast.show({ type: 'success', text1: 'Weight Verified ✓', text2: `AI Estimate: ${result.ai_weight_estimate}kg` });
+            } else {
+                Toast.show({ type: 'error', text1: 'Verification Failed', text2: result.reasoning });
+            }
+        } catch (error) {
+            console.error("Verification Error:", error);
+            Toast.show({ type: 'error', text1: 'Verification Error', text2: 'Failed to connect to AI server' });
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
     const handleCompleteJob = async (jobId) => {
         const job = jobs.find(j => j.id === jobId);
         if (job) {
             setConfirmingJob(job);
+            setManualWeight('');
+            setVerificationPhoto(null);
+            setVerificationResult(null);
             setShowConfirmModal(true);
         }
     };
 
     const confirmAndCompleteJob = async () => {
         if (!confirmingJob) return;
+
+        // Force verification for Track B
+        if (confirmingJob.track_type === 'B' && !verificationResult?.is_verified) {
+            Toast.show({ type: 'error', text1: 'Verification Required', text2: 'Please verify the waste weight first' });
+            return;
+        }
 
         try {
             await logisticsApi.updateStatus(confirmingJob.id, 'COMPLETED');
@@ -996,22 +1066,86 @@ export default function PickupsScreen({ route }) {
                         <Text style={styles.cancelModalTitle}>Complete Job</Text>
 
                         {confirmingJob && (
-                            <View style={{ marginVertical: 20 }}>
-                                <Text style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
-                                    Job Details:
-                                </Text>
-                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>
-                                    • Material: {confirmingJob.material_type}
-                                </Text>
-                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>
-                                    • Quantity: {confirmingJob.quantity_estimate}
-                                </Text>
-                                <Text style={{ fontSize: 14, color: '#333', marginBottom: 12 }}>
-                                    • Location: {confirmingJob.pickup_address || confirmingJob.city}
-                                </Text>
-                                <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2E7D32', marginTop: 8 }}>
-                                    Earnings: ₵{confirmingJob.estimated_price || '0.00'}
-                                </Text>
+                            <View style={{ marginVertical: 15 }}>
+                                <View style={styles.jobDetailRow}>
+                                    <Package size={16} color="#666" />
+                                    <Text style={styles.jobDetailText}>
+                                        {confirmingJob.material_type} ({confirmingJob.quantity_estimate})
+                                    </Text>
+                                </View>
+
+                                <View style={styles.trackBadgeContainer}>
+                                    <View style={[
+                                        styles.trackTag,
+                                        { backgroundColor: confirmingJob.track_type === 'A' ? '#FEE2E2' : '#DCFCE7' }
+                                    ]}>
+                                        <Text style={[
+                                            styles.trackTagText,
+                                            { color: confirmingJob.track_type === 'A' ? '#DC2626' : '#166534' }
+                                        ]}>
+                                            {confirmingJob.track_type === 'A' ? 'Track A: Paid Disposal' : 'Track B: Value Buyback'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                {confirmingJob.track_type === 'B' && (
+                                    <View style={styles.verificationSection}>
+                                        <Text style={styles.verificationLabel}>Scale Verification (Required)</Text>
+
+                                        <View style={styles.weightInputRow}>
+                                            <TextInput
+                                                style={styles.manualWeightInput}
+                                                placeholder="Actual Weight (kg)"
+                                                keyboardType="numeric"
+                                                value={manualWeight}
+                                                onChangeText={setManualWeight}
+                                            />
+                                            <TouchableOpacity
+                                                style={[styles.verifyIconButton, verificationPhoto && { backgroundColor: '#E8F5E9' }]}
+                                                onPress={pickVerificationImage}
+                                            >
+                                                <Camera size={20} color={verificationPhoto ? '#2E7D32' : '#666'} />
+                                            </TouchableOpacity>
+                                        </View>
+
+                                        {verificationPhoto && (
+                                            <View style={styles.photoPreviewRow}>
+                                                <Image source={{ uri: verificationPhoto.uri }} style={styles.photoPreviewSmall} />
+                                                <TouchableOpacity
+                                                    style={[
+                                                        styles.aiVerifyBtn,
+                                                        verificationResult?.is_verified && { backgroundColor: '#2E7D32' }
+                                                    ]}
+                                                    onPress={handleVerifyWeight}
+                                                    disabled={isVerifying}
+                                                >
+                                                    {isVerifying ? (
+                                                        <ActivityIndicator size="small" color="#fff" />
+                                                    ) : (
+                                                        <Text style={styles.aiVerifyBtnText}>
+                                                            {verificationResult?.is_verified ? 'Verified ✓' : 'Run AI Verify'}
+                                                        </Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
+
+                                        {verificationResult && !verificationResult.is_verified && (
+                                            <Text style={styles.verificationErrorText}>
+                                                {verificationResult.reasoning}
+                                            </Text>
+                                        )}
+                                    </View>
+                                )}
+
+                                <View style={styles.earningsSummary}>
+                                    <Text style={styles.earningsLabel}>Your Logistics Share:</Text>
+                                    <Text style={styles.earningsAmount}>
+                                        ₵{(confirmingJob.track_type === 'A'
+                                            ? (parseFloat(confirmingJob.actual_price || 0) * 0.8)
+                                            : (parseFloat(confirmingJob.actual_price || 0) * 0.3)).toFixed(2)}
+                                    </Text>
+                                </View>
                             </View>
                         )}
 
@@ -1028,10 +1162,15 @@ export default function PickupsScreen({ route }) {
                             </TouchableOpacity>
 
                             <TouchableOpacity
-                                style={[styles.cancelModalConfirmBtn, { backgroundColor: '#2E7D32' }]}
+                                style={[
+                                    styles.cancelModalConfirmBtn,
+                                    { backgroundColor: '#2E7D32' },
+                                    (confirmingJob?.track_type === 'B' && !verificationResult?.is_verified) && { backgroundColor: '#ccc' }
+                                ]}
                                 onPress={confirmAndCompleteJob}
+                                disabled={confirmingJob?.track_type === 'B' && !verificationResult?.is_verified}
                             >
-                                <Text style={styles.cancelModalConfirmText}>Complete Job</Text>
+                                <Text style={styles.cancelModalConfirmText}>Complete & Get Paid</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -1550,4 +1689,114 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     separatorText: { fontSize: 12, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 },
+
+    // Verification Styles
+    jobDetailRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+    },
+    jobDetailText: {
+        fontSize: 15,
+        color: '#1A1A1A',
+        fontWeight: '500',
+    },
+    trackBadgeContainer: {
+        marginBottom: 15,
+    },
+    trackTag: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    trackTagText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+    },
+    verificationSection: {
+        backgroundColor: '#F9FAFB',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        marginBottom: 15,
+    },
+    verificationLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#374151',
+        marginBottom: 8,
+    },
+    weightInputRow: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    manualWeightInput: {
+        flex: 1,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        fontSize: 14,
+    },
+    verifyIconButton: {
+        width: 44,
+        height: 44,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#D1D5DB',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    photoPreviewRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 10,
+        gap: 10,
+    },
+    photoPreviewSmall: {
+        width: 50,
+        height: 50,
+        borderRadius: 6,
+    },
+    aiVerifyBtn: {
+        flex: 1,
+        backgroundColor: '#3498DB',
+        paddingVertical: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+    },
+    aiVerifyBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    verificationErrorText: {
+        fontSize: 11,
+        color: '#DC2626',
+        marginTop: 8,
+    },
+    earningsSummary: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 5,
+        paddingTop: 10,
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+    },
+    earningsLabel: {
+        fontSize: 14,
+        color: '#6B7280',
+    },
+    earningsAmount: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+    },
 });

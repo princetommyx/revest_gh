@@ -135,11 +135,13 @@ export default function WalletScreen() {
     };
 
     const renderTransaction = ({ item }) => {
-        const isCredit = ['DEPOSIT', 'JOB_EARNING'].includes(item.transaction_type);
-        const amountColor = isCredit ? COLORS.success : COLORS.text;
-        const iconBg = isCredit ? '#ECFDF5' : '#F3F4F6';
-        const Icon = isCredit ? ArrowDownLeft : ArrowUpRight;
-        const iconColor = isCredit ? COLORS.success : COLORS.textLight;
+        const isCredit = ['DEPOSIT', 'JOB_EARNING', 'ESCROW_RELEASE', 'SALE_EARNING'].includes(item.transaction_type);
+        const isEscrow = ['ESCROW_LOCK', 'ESCROW_RELEASE'].includes(item.transaction_type);
+
+        const amountColor = isCredit ? COLORS.success : (isEscrow ? COLORS.warning : COLORS.text);
+        const iconBg = isCredit ? '#ECFDF5' : (isEscrow ? '#FFFBEB' : '#F3F4F6');
+        const Icon = isCredit ? ArrowDownLeft : (isEscrow ? History : ArrowUpRight);
+        const iconColor = isCredit ? COLORS.success : (isEscrow ? COLORS.warning : COLORS.textLight);
 
         return (
             <View style={styles.txnItem}>
@@ -180,6 +182,8 @@ export default function WalletScreen() {
 
     const transactions = wallet?.recent_transactions || [];
     const balance = parseFloat(wallet?.balance || 0);
+    const heldEscrow = parseFloat(wallet?.held_escrow || 0);
+    const pendingEarnings = parseFloat(wallet?.pending_earnings || 0);
 
     return (
         <View style={styles.container}>
@@ -205,6 +209,22 @@ export default function WalletScreen() {
                                 <Text style={styles.currencySymbol}>₵ </Text>
                                 {balance.toFixed(2)}
                             </Text>
+
+                            {/* Escrow Badges */}
+                            <View style={styles.escrowContainer}>
+                                {heldEscrow > 0 && (
+                                    <View style={styles.escrowBadge}>
+                                        <AlertCircle size={12} color="#fff" />
+                                        <Text style={styles.escrowText}>Held: ₵{heldEscrow.toFixed(2)}</Text>
+                                    </View>
+                                )}
+                                {pendingEarnings > 0 && (
+                                    <View style={[styles.escrowBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                                        <CheckCircle2 size={12} color="#fff" />
+                                        <Text style={styles.escrowText}>Pending: ₵{pendingEarnings.toFixed(2)}</Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
                     </SafeAreaView>
                 </View>

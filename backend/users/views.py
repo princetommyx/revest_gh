@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import generics, permissions, status, views, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -219,44 +220,132 @@ class PasswordResetRequestView(views.APIView):
     throttle_scope = 'anon'
 
     def post(self, request):
-        email = request.data.get('email')
-        if not email:
+        identifier = request.data.get('identifier') # Can be email or phone
+        if not identifier:
             return Response(
-                {'error': 'Email is required'}, 
+                {'error': 'Email or phone number is required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
             
-        try:
-            user = User.objects.get(email=email)
-            # Generate reset token (using simplejwt or default token generator)
-            # For simplicity, we'll use a placeholder logic or a proper token
-            # In production, use django.contrib.auth.tokens.default_token_generator
+        # Normalize identifier
+        identifier = "".join(identifier.split())
+        
+        # Try to find user by email or phone
+        user = User.objects.filter(models.Q(email=identifier) | models.Q(phone_number__icontains=identifier.lstrip('+'))).first()
+        
+        if user:
+            # Generate OTP
+            otp_code = str(random.randint(100000, 999999))
+            expires_at = timezone.now() + timedelta(minutes=15)
             
-            # Send email
-            send_mail(
-                'Password Reset Request',
-                'Click here to reset your password: (link)',
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
-            )
-            return Response({'status': 'Password reset email sent'})
-        except User.DoesNotExist:
-            # Don't reveal user existence
-            return Response({'status': 'Password reset email sent'})
-        except Exception as e:
-            logger.error(f"Password reset error: {e}")
-            return Response(
-                {'error': 'Failed to send email'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            # Save OTP
+            from .models import PasswordResetOTP
+            PasswordResetOTP.objects.filter(user=user).delete()
+            PasswordResetOTP.objects.create(user=user, otp=otp_code, expires_at=expires_at)
+            
+            # Send OTP via available methods
+            sent_to = []
+            
+            # 1. Email
+            if user.email:
+                try:
+                    def _async_mail(email, otp):
+                        send_mail(
+                            'Revesta Password Reset',
+                            f'Your password reset verification code is: {otp}',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [email],
+                            fail_silently=True
+                        )
+                    threading.Thread(target=_async_mail, args=(user.email, otp_code), daemon=True).start()
+                    sent_to.append("email")
+                except Exception as e:
+                    logger.error(f"Failed to send reset email: {e}")
+
+            # 2. SMS (if phone exists)
+            if user.phone_number:
+                try:
+                    from .sms_service import send_otp_sms
+                    send_otp_sms(user.phone_number, otp_code)
+                    sent_to.append("SMS")
+                except Exception as e:
+                    logger.error(f"Failed to send reset SMS: {e}")
+
+            # 3. Push
+            if user.expo_push_token:
+                try:
+                    from .notifications import send_push_notification
+                    send_push_notification(
+                        user,
+                        "Password Reset",
+                        f"Your reset code is: {otp_code}",
+                        data={"type": "password_reset", "otp": otp_code},
+                        urgency='URGENT'
+                    )
+                    sent_to.append("push notification")
+                except Exception as e:
+                    logger.error(f"Failed to send reset push: {e}")
+
+            # CRITICAL: Print to console for testing
+            print("\n" + "*"*40)
+            print(f"PASSWORD RESET CODE FOR {user.username} ({identifier}): {otp_code}")
+            print("*"*40 + "\n")
+
+            return Response({
+                'status': 'success',
+                'message': f"Verification code sent via {', '.join(sent_to)}",
+                'identifier': identifier
+            })
+        
+        # Security: Don't reveal user existence, but let them know we processed the request
+        return Response({
+            'status': 'success',
+            'message': 'If an account exists with that identifier, a reset code has been sent.'
+        })
 
 class PasswordResetConfirmView(views.APIView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request):
-        # Implementation for password reset confirmation
-        return Response({'status': 'Password reset successful'})
+        identifier = request.data.get('identifier')
+        otp = request.data.get('otp')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+
+        if not all([identifier, otp, new_password, confirm_password]):
+            return Response({'error': 'All fields are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_password != confirm_password:
+            return Response({'error': 'Passwords do not match'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normalize identifier
+        identifier = "".join(identifier.split())
+
+        # Find user
+        user = User.objects.filter(models.Q(email=identifier) | models.Q(phone_number__icontains=identifier.lstrip('+'))).first()
+        if not user:
+            return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify OTP
+        from .models import PasswordResetOTP
+        reset_otp = PasswordResetOTP.objects.filter(user=user, otp=otp).first()
+        
+        if not reset_otp or not reset_otp.is_valid():
+            return Response({'error': 'Invalid or expired verification code'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update password
+        user.set_password(new_password)
+        user.save()
+
+        # Delete OTP
+        reset_otp.delete()
+
+        logger.info(f"Password reset successful for user {user.username}")
+
+        return Response({
+            'status': 'success',
+            'message': 'Your password has been reset successfully. You can now login.'
+        })
 
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer

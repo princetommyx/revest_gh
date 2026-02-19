@@ -277,7 +277,20 @@ export default function HomeScreen({ navigation }) {
                 )}
             </View>
             <View style={styles.listingContent}>
-                <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+                <View style={styles.listingTitleRow}>
+                    <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+                    <View style={[
+                        styles.trackBadgeTiny,
+                        { backgroundColor: item.track === 'B' ? '#DCFCE7' : '#FEE2E2' }
+                    ]}>
+                        <Text style={[
+                            styles.trackTextTiny,
+                            { color: item.track === 'B' ? '#166534' : '#DC2626' }
+                        ]}>
+                            {item.track === 'B' ? 'B' : 'A'}
+                        </Text>
+                    </View>
+                </View>
                 <Text style={styles.listingPrice}>
                     {item.is_free ? 'Contact for details' : `₵${item.price}`}
                 </Text>
@@ -415,9 +428,23 @@ export default function HomeScreen({ navigation }) {
                                                 {job.status}
                                             </Text>
                                         </View>
+                                        <View style={[
+                                            styles.trackTagSmall,
+                                            { backgroundColor: job.track_type === 'A' ? '#FEE2E2' : '#DCFCE7' }
+                                        ]}>
+                                            <Text style={[
+                                                styles.trackTagTextSmall,
+                                                { color: job.track_type === 'A' ? '#DC2626' : '#166534' }
+                                            ]}>
+                                                Track {job.track_type}
+                                            </Text>
+                                        </View>
                                     </View>
                                     <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
-                                    <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
+                                    <View style={styles.jobRow}>
+                                        <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
+                                        <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
+                                    </View>
                                     <View style={styles.jobFooter}>
                                         <View style={styles.jobLocation}>
                                             <MapPin size={12} color="#888" />
@@ -426,7 +453,6 @@ export default function HomeScreen({ navigation }) {
                                             </Text>
                                         </View>
                                     </View>
-                                    <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
                                 </TouchableOpacity>
                             ))}
                         </View>
@@ -1110,10 +1136,24 @@ const styles = StyleSheet.create({
     listingTitle: {
         fontSize: 14,
         color: '#1A1A1A',
-        marginBottom: 6,
-        fontWeight: '600',
-        lineHeight: 18,
-        height: 36,
+        fontWeight: '700',
+        flex: 1,
+    },
+    listingTitleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 6,
+        marginBottom: 4,
+    },
+    trackBadgeTiny: {
+        paddingHorizontal: 4,
+        paddingVertical: 1,
+        borderRadius: 4,
+    },
+    trackTextTiny: {
+        fontSize: 8,
+        fontWeight: 'bold',
     },
     listingPrice: {
         fontSize: 16,
@@ -1351,5 +1391,20 @@ const styles = StyleSheet.create({
         textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 0, height: 1 },
         textShadowRadius: 4,
+    },
+    jobRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    trackTagSmall: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+    },
+    trackTagTextSmall: {
+        fontSize: 9,
+        fontWeight: 'bold',
     },
 });

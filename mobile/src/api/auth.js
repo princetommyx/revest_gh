@@ -73,8 +73,13 @@ export const authApi = {
         return response.data;
     },
 
-    requestPasswordReset: async (email) => {
-        const response = await apiClient.post('auth/password-reset/', { email });
+    requestPasswordReset: async (identifier) => {
+        const response = await apiClient.post('auth/password-reset/', { identifier });
+        return response.data;
+    },
+
+    confirmPasswordReset: async (data) => {
+        const response = await apiClient.post('auth/password-reset/confirm/', data);
         return response.data;
     }
 };

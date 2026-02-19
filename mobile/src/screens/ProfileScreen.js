@@ -141,7 +141,7 @@ export default function ProfileScreen({ navigation }) {
                             icon={Wallet}
                             title="Wallet & Payment"
                             subtitle="Manage Mobile Money"
-                            onPress={() => navigation.navigate('Wallet')}
+                            onPress={() => navigation.navigate('Main', { screen: 'Wallet' })}
                             color="#D97706"
                             iconBg="#FEF3C7"
                         />

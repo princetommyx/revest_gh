@@ -210,6 +210,140 @@ class WalletService:
         # since seller payout should have happened at 'ARRIVED'
         WalletService.payout_collector_for_delivery(pickup_request)
 
+    @staticmethod
+    def lock_escrow(pickup_request, payer, amount, track_type='A'):
+        """
+        Locks funds in escrow for a pickup request.
+        """
+        from .models import Escrow, Transaction
+        from django.db import transaction
+        
+        with transaction.atomic():
+            payer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=payer)
+            
+            # For Track A, the provider (disposer) is the payer
+            # For Track B, usually a Recycler or a System fund is the payer (to be expanded)
+            
+            if payer_wallet.balance < amount:
+                raise ValueError("Insufficient funds to lock in escrow.")
+                
+            payer_wallet.balance -= amount
+            payer_wallet.save()
+            
+            escrow = Escrow.objects.create(
+                pickup=pickup_request,
+                payer=payer,
+                amount=amount,
+                status='HELD',
+                description=f"Escrow for {'Disposal' if track_type == 'A' else 'Recycling'} Job #{pickup_request.id}"
+            )
+            
+            Transaction.objects.create(
+                wallet=payer_wallet,
+                pickup=pickup_request,
+                amount=-amount,
+                transaction_type='ESCROW_LOCK',
+                status='COMPLETED',
+                description=f"Locked funds in escrow for Job #{pickup_request.id}"
+            )
+            return escrow
+
+    @staticmethod
+    def process_track_a_completion(pickup_request):
+        """
+        Track A - Paid Disposal Logic:
+        Release escrow: Collector (80%) + Platform (20%).
+        """
+        from .models import Escrow, Transaction
+        
+        try:
+            escrow = Escrow.objects.get(pickup=pickup_request, status='HELD')
+        except Escrow.DoesNotExist:
+            # Fallback if no escrow but job completed (e.g. manual payment handled elsewhere)
+            return
+
+        total_fee = escrow.amount
+        collector_share = (total_fee * Decimal('0.80')).quantize(Decimal('0.01'))
+        platform_commission = total_fee - collector_share
+
+        collector = pickup_request.collector
+        if not collector:
+            return
+
+        with transaction.atomic():
+            # Payout Collector
+            collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
+            collector_wallet.balance += collector_share
+            collector_wallet.save()
+            
+            Transaction.objects.create(
+                wallet=collector_wallet,
+                pickup=pickup_request,
+                amount=collector_share,
+                transaction_type='ESCROW_RELEASE',
+                status='COMPLETED',
+                description=f"Logistics Share for Job #{pickup_request.id} (Track A)"
+            )
+            
+            # Mark Escrow as Released
+            escrow.status = 'RELEASED'
+            escrow.payee = collector
+            escrow.save()
+
+    @staticmethod
+    def process_track_b_completion(pickup_request):
+        """
+        Track B - Value Buyback Logic:
+        Release escrow: Disposer (60%) + Collector (30%) + Platform (10%).
+        """
+        from .models import Escrow, Transaction
+        
+        try:
+            escrow = Escrow.objects.get(pickup=pickup_request, status='HELD')
+        except Escrow.DoesNotExist:
+            return
+
+        total_value = escrow.amount
+        disposer_incentive = (total_value * Decimal('0.60')).quantize(Decimal('0.01'))
+        collector_logistics = (total_value * Decimal('0.30')).quantize(Decimal('0.01'))
+        platform_commission = total_value - disposer_incentive - collector_logistics
+
+        disposer = pickup_request.provider
+        collector = pickup_request.collector
+
+        with transaction.atomic():
+            # 1. Payout Disposer
+            disposer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=disposer)
+            disposer_wallet.balance += disposer_incentive
+            disposer_wallet.save()
+            Transaction.objects.create(
+                wallet=disposer_wallet,
+                pickup=pickup_request,
+                amount=disposer_incentive,
+                transaction_type='ESCROW_RELEASE',
+                status='COMPLETED',
+                description=f"Waste Incentive for Job #{pickup_request.id} (Track B)"
+            )
+
+            # 2. Payout Collector
+            if collector:
+                collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
+                collector_wallet.balance += collector_logistics
+                collector_wallet.save()
+                Transaction.objects.create(
+                    wallet=collector_wallet,
+                    pickup=pickup_request,
+                    amount=collector_logistics,
+                    transaction_type='ESCROW_RELEASE',
+                    status='COMPLETED',
+                    description=f"Logistics Share for Job #{pickup_request.id} (Track B)"
+                )
+            
+            # Mark Escrow as Released
+            escrow.status = 'RELEASED'
+            escrow.payee = disposer # Principal payee is the disposer for Track B
+            escrow.save()
+
 class PaystackService:
     @staticmethod
     def initialize_transaction(user, amount, email=None):

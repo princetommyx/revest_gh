@@ -10,9 +10,36 @@ class PickupRequest(models.Model):
         ('CANCELLED', 'Cancelled'),
     )
 
+    TRACK_CHOICES = (
+        ('A', 'Paid Disposal (General Waste)'),
+        ('B', 'Value Buyback (Recyclables)'),
+    )
+
+    BAG_SIZE_CHOICES = (
+        ('SMALL', 'Small Bag'),
+        ('MEDIUM', 'Medium Bag'),
+        ('LARGE', 'Large Bag'),
+        ('XLARGE', 'Extra Large / Bulk'),
+    )
+
     provider = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pickup_requests')
     collector = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_pickups')
     material_type = models.CharField(max_length=100)
+    track_type = models.CharField(max_length=1, choices=TRACK_CHOICES, default='A')
+    
+    # Track A Fields
+    bag_size = models.CharField(max_length=20, choices=BAG_SIZE_CHOICES, null=True, blank=True)
+    
+    # Track B Fields
+    weight_kg = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    
+    # Verification Fields
+    verification_photo = models.ImageField(upload_to='verifications/', null=True, blank=True)
+    manual_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    ai_verified_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_verified = models.BooleanField(default=False)
+    verification_data = models.JSONField(null=True, blank=True) # AI analysis results
+    
     quantity_estimate = models.CharField(max_length=100)
     latitude = models.FloatField()
     longitude = models.FloatField()
@@ -47,4 +74,4 @@ class PickupRequest(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='CASH')
 
     def __str__(self):
-        return f"{self.material_type} - {self.status}"
+        return f"{self.get_track_type_display()} - {self.material_type} - {self.status}"
