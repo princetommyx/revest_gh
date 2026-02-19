@@ -4,16 +4,15 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Notification
 
-# Try to import SDK, but don't crash if not installed yet (for local dev)
-try:
-    from exponent_server_sdk import (
-        PushClient,
-        PushMessage,
-        PushServerError,
-        DeviceNotRegisteredError,
-    )
-except ImportError:
-    PushClient = None
+# Professional Push Notification SDK
+from exponent_server_sdk import (
+    PushClient,
+    PushMessage,
+    PushServerError,
+    DeviceNotRegisteredError,
+)
+import threading
+from requests.exceptions import ConnectionError, HTTPError
 
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
@@ -31,32 +30,53 @@ def send_push_notification(user, title, body, data=None, urgency='NORMAL'):
         urgency=urgency
     )
 
-    # 2. Send to Expo
-    token = user.expo_push_token
-    if not token or not PushClient:
-        if not PushClient:
-            print("WARNING: expo-server-sdk not installed.")
-        return notification
-
-    try:
-        # Urgency Logic
-        priority = 'high' if urgency == 'URGENT' else 'default'
-        sound = 'default' # customize if needed
-        
-        response = PushClient().publish(
-            PushMessage(
-                to=token,
-                title=title,
-                body=body,
-                data=data,
-                priority=priority,
-                sound=sound,
-                channel_id='urgent-alerts' if urgency == 'URGENT' else 'default',
+    def _send_task(user_id, token, title, body, data, urgency):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            user = User.objects.get(id=user_id)
+            # Urgency Logic
+            priority = 'high' if urgency == 'URGENT' else 'default'
+            sound = 'default'
+            
+            response = PushClient().publish(
+                PushMessage(
+                    to=token,
+                    title=title,
+                    body=body,
+                    data=data,
+                    priority=priority,
+                    sound=sound,
+                    channel_id='urgent-alerts' if urgency == 'URGENT' else 'default',
+                )
             )
+            
+            # Check for errors in the individual response
+            try:
+                response.validate_response()
+            except DeviceNotRegisteredError:
+                user.expo_push_token = None
+                user.save(update_fields=['expo_push_token'])
+                print(f"DEBUG: Token {token} no longer valid. Removed from user.")
+            except Exception as exc:
+                print(f"DEBUG: Push notification delivery failed for {token}: {exc}")
+                
+        except (PushServerError, ConnectionError, HTTPError) as exc:
+            print(f"ERROR: Expo Push Server error: {exc}")
+        except Exception as exc:
+            print(f"ERROR: Unexpected error sending push: {exc}")
+
+    # 2. Send to Expo via background thread
+    token = user.expo_push_token
+    if token:
+        thread = threading.Thread(
+            target=_send_task, 
+            args=(user.id, token, title, body, data, urgency),
+            daemon=True
         )
-        # We can inspect response here if needed
-    except Exception as exc:
-        print(f"Error sending push notification: {exc}")
+        thread.start()
+        
+    return notification
         
     return notification
 

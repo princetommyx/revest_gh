@@ -1,27 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
-
-import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Image as ImageIcon } from 'lucide-react-native';
-import apiClient from '../api/client';
+import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Mail, Lock, Phone, User } from 'lucide-react-native';
+import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
-
 import Toast from 'react-native-toast-message';
 
-const COLORS = {
-    primary: '#27AE60', // Matching Web
-    secondary: '#2980B9',
-    background: '#F4F6F8',
-    text: '#1F2937',
-    textLight: '#6B7280',
-    white: '#FFFFFF',
-    border: '#E5E7EB',
-};
-
-import { useAuth } from '../context/AuthContext';
+const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
     const navigation = useNavigation();
@@ -38,11 +25,9 @@ export default function RegisterScreen() {
         phone_number: '',
         city: 'Accra',
         role: '',
-        // Collector
         vehicle_type: '',
         license_plate: '',
-        // Recycler
-        recycler_type: 'INDIVIDUAL', // INDIVIDUAL or COMPANY
+        recycler_type: 'INDIVIDUAL',
         company_name: '',
         tax_id: '',
         national_id: '',
@@ -75,7 +60,6 @@ export default function RegisterScreen() {
 
     const handleRoleSelect = (role) => {
         handleChange('role', role);
-        // Small delay for UI feedback
         setTimeout(() => setStep(2), 200);
     };
 
@@ -86,7 +70,6 @@ export default function RegisterScreen() {
         }
         setVerifying(true);
         try {
-            // Normalize phone number for backend
             const formattedPhone = formData.phone_number.startsWith('+')
                 ? formData.phone_number
                 : `+233${formData.phone_number.replace(/^0+/, '')}`;
@@ -128,7 +111,6 @@ export default function RegisterScreen() {
     };
 
     const handleRegister = async () => {
-        // Validation
         if (formData.password !== formData.confirm_password) {
             Alert.alert('Error', 'Passwords do not match');
             return;
@@ -141,8 +123,6 @@ export default function RegisterScreen() {
             Alert.alert('Error', 'You must accept the Terms and Conditions');
             return;
         }
-
-        // Enforce Phone Verification
         if (!isPhoneVerified) {
             Alert.alert('Verification Required', 'Please verify your phone number to continue.');
             return;
@@ -150,7 +130,6 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            // Construct payload matching frontend structure
             const payload = {
                 username: formData.username,
                 email: formData.email,
@@ -159,7 +138,6 @@ export default function RegisterScreen() {
                 phone_number: formData.phone_number,
                 city: formData.city,
                 role: formData.role,
-                // Spread role specific fields
                 ...(formData.role === 'COLLECTOR' && {
                     vehicle_type: formData.vehicle_type,
                     license_plate: formData.license_plate
@@ -172,20 +150,16 @@ export default function RegisterScreen() {
                 })
             };
 
-            // Convert to FormData if image is present or simply to handle file upload standard
-            // We'll use FormData if it's a Recycler Company
             let actualPayload = payload;
 
             if (formData.role === 'RECYCLER' && formData.recycler_type === 'COMPANY') {
                 const data = new FormData();
-                // Append all text fields
                 Object.keys(payload).forEach(key => {
                     if (payload[key] !== undefined && payload[key] !== null) {
                         data.append(key, payload[key]);
                     }
                 });
 
-                // Append file
                 if (certificationImage) {
                     const localUri = certificationImage.uri;
                     const filename = localUri.split('/').pop();
@@ -197,16 +171,10 @@ export default function RegisterScreen() {
                         name: filename,
                         type,
                     });
-                } else {
-                    // Optional: Validation if certification is mandatory
-                    // For now, let's make it optional or warn
                 }
                 actualPayload = data;
             }
 
-            // Show progress message
-
-            // Show progress message
             Toast.show({
                 type: 'info',
                 text1: 'Creating Account',
@@ -222,47 +190,11 @@ export default function RegisterScreen() {
             });
         } catch (error) {
             console.log("Registration Error Detail:", error);
-
-            let msg = 'Registration failed';
-            let shouldRetryLogin = false;
-
-            if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-                msg = "Server is taking longer than expected. Your account may have been created. Try logging in instead.";
-                shouldRetryLogin = true;
-            } else if (!error.response) {
-                // Network error (no response received)
-                msg = "Network Error. Is the backend running at " + apiClient.defaults.baseURL + "?";
-                if (error.message) msg += " (" + error.message + ")";
-            } else if (error.response?.data) {
-                const errorData = error.response.data;
-
-                // Check if account already exists
-                const errorStr = JSON.stringify(errorData).toLowerCase();
-                if (errorStr.includes('already exists') || errorStr.includes('duplicate')) {
-                    msg = "Account already exists. Please try logging in.";
-                    shouldRetryLogin = true;
-                } else {
-                    const firstValue = Object.values(errorData)[0];
-                    if (Array.isArray(firstValue)) {
-                        msg = firstValue[0];
-                    } else if (typeof firstValue === 'string') {
-                        msg = firstValue;
-                    } else {
-                        msg = JSON.stringify(errorData);
-                    }
-                }
-            }
-
             Toast.show({
-                type: shouldRetryLogin ? 'info' : 'error',
-                text1: shouldRetryLogin ? 'Try Logging In' : 'Registration Failed',
-                text2: msg
+                type: 'error',
+                text1: 'Registration Failed',
+                text2: error.response?.data?.detail || 'Something went wrong'
             });
-
-            // If account might exist, nav to login after delay
-            if (shouldRetryLogin) {
-                setTimeout(() => navigation.navigate('Login'), 2000);
-            }
         } finally {
             setLoading(false);
         }
@@ -275,7 +207,7 @@ export default function RegisterScreen() {
                 onPress={() => handleRoleSelect(role)}
                 style={[
                     styles.roleCard,
-                    isSelected && { borderColor: COLORS.primary, backgroundColor: '#F0FDF4' }
+                    isSelected && { borderColor: '#2E7D32', backgroundColor: '#F0FDF4' }
                 ]}
             >
                 <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
@@ -285,646 +217,661 @@ export default function RegisterScreen() {
                     <Text style={styles.roleTitle}>{title}</Text>
                     <Text style={styles.roleDesc}>{desc}</Text>
                 </View>
-                {isSelected && <Check size={20} color={COLORS.primary} />}
+                {isSelected && <Check size={20} color="#2E7D32" />}
             </TouchableOpacity>
         );
     };
 
     const handleBack = () => {
-        if (navigation.canGoBack()) {
+        if (step === 2) {
+            setStep(1);
+        } else if (navigation.canGoBack()) {
             navigation.goBack();
         } else {
-            navigation.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-            });
+            navigation.navigate('Login');
         }
     };
 
-    // Step 1: Role Selection
+    const renderHeader = () => (
+        <View style={styles.headerBackground}>
+            <View style={styles.curvedShape} />
+            <SafeAreaView style={styles.headerContent}>
+                <View style={styles.headerRow}>
+                    <TouchableOpacity onPress={handleBack} style={styles.backButton}>
+                        <ArrowLeft size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+                <Text style={styles.greetingText}>Sign Up</Text>
+                <Text style={styles.welcomeText}>Join Revesta today</Text>
+            </SafeAreaView>
+        </View>
+    );
+
     if (step === 1) {
         return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                        <ArrowLeft size={24} color="#000" />
-                    </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Register</Text>
-                    <View style={{ width: 24 }} />
-                </View>
-
-                <View style={styles.content}>
-                    <Text style={styles.stepTitle}>Choose your role</Text>
-
-                    <View style={styles.rolesContainer}>
-                        <RoleCard
-                            role="COLLECTOR"
-                            title="Become a Collector"
-                            desc="Pick up waste and earn money"
-                            icon={Truck}
-                            color={COLORS.primary}
-                            bgColor="#DCFCE7" // green-100
-                        />
-
-                        <RoleCard
-                            role="SELLER"
-                            title="Become a Disposer"
-                            desc="Dispose of waste responsibly"
-                            icon={Trash2}
-                            color="#2563EB" // blue-600
-                            bgColor="#DBEAFE" // blue-100
-                        />
-
-                        <RoleCard
-                            role="RECYCLER"
-                            title="Become a Recycler"
-                            desc="Buy and process recyclables"
-                            icon={Recycle}
-                            color="#EA580C" // orange-600
-                            bgColor="#FFEDD5" // orange-100
-                        />
+            <View style={styles.container}>
+                {renderHeader()}
+                <View style={styles.contentContainer}>
+                    <View style={styles.formCard}>
+                        <Text style={styles.cardTitle}>Choose your role</Text>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <View style={styles.rolesContainer}>
+                                <RoleCard
+                                    role="COLLECTOR"
+                                    title="Become a Collector"
+                                    desc="Pick up waste and earn money"
+                                    icon={Truck}
+                                    color="#2E7D32"
+                                    bgColor="#DCFCE7"
+                                />
+                                <RoleCard
+                                    role="SELLER"
+                                    title="Become a Disposer"
+                                    desc="Dispose of waste responsibly"
+                                    icon={Trash2}
+                                    color="#2563EB"
+                                    bgColor="#DBEAFE"
+                                />
+                                <RoleCard
+                                    role="RECYCLER"
+                                    title="Become a Recycler"
+                                    desc="Buy and process recyclables"
+                                    icon={Recycle}
+                                    color="#EA580C"
+                                    bgColor="#FFEDD5"
+                                />
+                            </View>
+                        </ScrollView>
                     </View>
                 </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
-    // Step 2: Details Form
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => setStep(1)} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#000" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Details</Text>
-                <View style={{ width: 24 }} />
-            </View>
+        <View style={styles.container}>
+            {renderHeader()}
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.stepTitle}>Create Account</Text>
-                <Text style={styles.subTitle}>Registering as {formData.role.toLowerCase()}</Text>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.contentContainer}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.formCard}>
+                        <Text style={styles.cardTitle}>Create Account</Text>
+                        <Text style={styles.roleLabel}>Registering as {formData.role.toLowerCase()}</Text>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Username</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Choose a username"
-                        placeholderTextColor={COLORS.textLight}
-                        value={formData.username}
-                        onChangeText={(val) => handleChange('username', val)}
-                        autoCapitalize="none"
-                    />
-                </View>
-
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Email</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter email address"
-                        placeholderTextColor={COLORS.textLight}
-                        value={formData.email}
-                        onChangeText={(val) => handleChange('email', val)}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                    />
-                </View>
-
-                {/* Password Fields */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Create a password"
-                        placeholderTextColor={COLORS.textLight}
-                        value={formData.password}
-                        onChangeText={(val) => handleChange('password', val)}
-                        secureTextEntry
-                    />
-                </View>
-
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Confirm Password</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Repeat password"
-                        placeholderTextColor={COLORS.textLight}
-                        value={formData.confirm_password}
-                        onChangeText={(val) => handleChange('confirm_password', val)}
-                        secureTextEntry
-                    />
-                </View>
-
-                {/* Phone & City */}
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Phone Number</Text>
-                    <View style={styles.phoneContainer}>
-                        <View style={styles.phonePrefix}>
-                            <Text>🇬🇭 +233</Text>
-                        </View>
-                        <TextInput
-                            style={[styles.input, { flex: 1, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }]}
-                            placeholder="Mobile number"
-                            placeholderTextColor={COLORS.textLight}
-                            value={formData.phone_number}
-                            onChangeText={(val) => {
-                                handleChange('phone_number', val);
-                                setIsPhoneVerified(false); // Reset if changed
-                            }}
-                            keyboardType="phone-pad"
-                        />
-                        {/* Verification Button */}
-                        {isPhoneVerified ? (
-                            <View style={styles.verifiedBadge}>
-                                <Check size={16} color="#fff" />
-                            </View>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.verifyBtn}
-                                onPress={sendVerification}
-                                disabled={verifying || !formData.phone_number}
-                            >
-                                {verifying ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.verifyText}>Verify</Text>}
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                </View>
-
-                {/* OTP Modal */}
-                <Modal visible={showOtpModal} transparent animationType="slide">
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                            <Text style={styles.modalTitle}>Enter Verification Code</Text>
-                            <Text style={styles.modalSub}>Code sent to {formData.phone_number}</Text>
-
-                            <TextInput
-                                style={styles.otpInput}
-                                placeholder="123456"
-                                value={verificationCode}
-                                onChangeText={setVerificationCode}
-                                keyboardType="number-pad"
-                                maxLength={6}
-                                autoFocus
-                            />
-
-                            <TouchableOpacity
-                                style={styles.modalBtn}
-                                onPress={confirmCode}
-                                disabled={verifying}
-                            >
-                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalBtnText}>Confirm Code</Text>}
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => setShowOtpModal(false)} style={styles.cancelLink}>
-                                <Text style={styles.cancelText}>Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </Modal>
-
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>City</Text>
-                    {/* Simplified dropdown via simple view for now, could use Picker or Modal */}
-                    <View style={styles.pickerFake}>
-                        <Text>{formData.city}</Text>
-                    </View>
-                </View>
-
-                {/* Conditional Fields: Collector */}
-                {formData.role === 'COLLECTOR' && (
-                    <>
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Vehicle Type</Text>
-                            {/* Placeholder for Picker */}
-                            <TextInput
-                                style={styles.input}
-                                placeholder="TRUCK, TRICYCLE, MOTORBIKE..."
-                                placeholderTextColor={COLORS.textLight}
-                                value={formData.vehicle_type}
-                                onChangeText={(val) => handleChange('vehicle_type', val)}
-                            />
-                        </View>
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>License Plate</Text>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter license plate"
-                                placeholderTextColor={COLORS.textLight}
-                                value={formData.license_plate}
-                                onChangeText={(val) => handleChange('license_plate', val)}
-                            />
-                        </View>
-                    </>
-                )}
-
-                {/* Conditional Fields: Recycler */}
-                {formData.role === 'RECYCLER' && (
-                    <>
-                        <View style={styles.formGroup}>
-                            <Text style={styles.label}>Recycler Type</Text>
-                            <View style={{ flexDirection: 'row', gap: 10 }}>
-                                <TouchableOpacity
-                                    style={[styles.chip, formData.recycler_type === 'INDIVIDUAL' && styles.chipActive]}
-                                    onPress={() => handleChange('recycler_type', 'INDIVIDUAL')}
-                                >
-                                    <Text style={[styles.chipText, formData.recycler_type === 'INDIVIDUAL' && styles.chipTextActive]}>Individual</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.chip, formData.recycler_type === 'COMPANY' && styles.chipActive]}
-                                    onPress={() => handleChange('recycler_type', 'COMPANY')}
-                                >
-                                    <Text style={[styles.chipText, formData.recycler_type === 'COMPANY' && styles.chipTextActive]}>Company</Text>
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {formData.recycler_type === 'COMPANY' ? (
-                            <>
-                                <View style={styles.formGroup}>
-                                    <Text style={styles.label}>Company Name</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Company Name"
-                                        placeholderTextColor={COLORS.textLight}
-                                        value={formData.company_name}
-                                        onChangeText={(val) => handleChange('company_name', val)}
-                                    />
+                        <View style={styles.formFields}>
+                            <View style={styles.inputWrapper}>
+                                <View style={styles.iconContainer}>
+                                    <User size={20} color="#666" />
                                 </View>
-                                <View style={styles.formGroup}>
-                                    <Text style={styles.label}>Tax ID</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Tax ID"
-                                        placeholderTextColor={COLORS.textLight}
-                                        value={formData.tax_id}
-                                        onChangeText={(val) => handleChange('tax_id', val)}
-                                    />
-                                </View>
-                            </>
-                        ) : (
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>National ID</Text>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="National ID"
-                                    placeholderTextColor={COLORS.textLight}
-                                    value={formData.national_id}
-                                    onChangeText={(val) => handleChange('national_id', val)}
+                                    placeholder="Username"
+                                    placeholderTextColor="#999"
+                                    value={formData.username}
+                                    onChangeText={(val) => handleChange('username', val)}
+                                    autoCapitalize="none"
                                 />
                             </View>
-                        )}
 
-                        {formData.recycler_type === 'COMPANY' && (
-                            <View style={styles.formGroup}>
-                                <Text style={styles.label}>Business Certification</Text>
-                                <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-                                    {certificationImage ? (
-                                        <View style={styles.uploadContent}>
-                                            <Image source={{ uri: certificationImage.uri }} style={styles.uploadedPreview} />
-                                            <Text style={styles.filename} numberOfLines={1}>
-                                                {certificationImage.uri.split('/').pop()}
-                                            </Text>
-                                            <View style={styles.changeBadge}>
-                                                <Text style={styles.changeText}>Change</Text>
-                                            </View>
+                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                <View style={styles.iconContainer}>
+                                    <Mail size={20} color="#666" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Email Address"
+                                    placeholderTextColor="#999"
+                                    value={formData.email}
+                                    onChangeText={(val) => handleChange('email', val)}
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                />
+                            </View>
+
+                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                <View style={styles.iconContainer}>
+                                    <Phone size={20} color="#666" />
+                                </View>
+                                <View style={styles.phoneLabel}>
+                                    <Text style={styles.countryCode}>🇬🇭 +233</Text>
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Mobile number"
+                                    placeholderTextColor="#999"
+                                    value={formData.phone_number}
+                                    onChangeText={(val) => {
+                                        handleChange('phone_number', val);
+                                        setIsPhoneVerified(false);
+                                    }}
+                                    keyboardType="phone-pad"
+                                />
+                                {isPhoneVerified ? (
+                                    <Check size={20} color="#2E7D32" />
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.verifySmallBtn}
+                                        onPress={sendVerification}
+                                        disabled={verifying || !formData.phone_number}
+                                    >
+                                        <Text style={styles.verifySmallText}>{verifying ? '...' : 'Verify'}</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+
+                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                <View style={styles.iconContainer}>
+                                    <Lock size={20} color="#666" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Password"
+                                    placeholderTextColor="#999"
+                                    value={formData.password}
+                                    onChangeText={(val) => handleChange('password', val)}
+                                    secureTextEntry
+                                />
+                            </View>
+
+                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                <View style={styles.iconContainer}>
+                                    <Lock size={20} color="#666" />
+                                </View>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Confirm Password"
+                                    placeholderTextColor="#999"
+                                    value={formData.confirm_password}
+                                    onChangeText={(val) => handleChange('confirm_password', val)}
+                                    secureTextEntry
+                                />
+                            </View>
+
+                            {formData.role === 'COLLECTOR' && (
+                                <>
+                                    <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                        <View style={styles.iconContainer}>
+                                            <Truck size={20} color="#666" />
                                         </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Vehicle Type (e.g. TRUCK)"
+                                            placeholderTextColor="#999"
+                                            value={formData.vehicle_type}
+                                            onChangeText={(val) => handleChange('vehicle_type', val)}
+                                        />
+                                    </View>
+                                    <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                        <View style={styles.iconContainer}>
+                                            <Check size={20} color="#666" />
+                                        </View>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="License Plate"
+                                            placeholderTextColor="#999"
+                                            value={formData.license_plate}
+                                            onChangeText={(val) => handleChange('license_plate', val)}
+                                        />
+                                    </View>
+                                </>
+                            )}
+
+                            {formData.role === 'RECYCLER' && (
+                                <View style={{ marginTop: 15 }}>
+                                    <Text style={styles.fieldTitle}>Recycler Type</Text>
+                                    <View style={styles.chipRow}>
+                                        <TouchableOpacity
+                                            style={[styles.smallChip, formData.recycler_type === 'INDIVIDUAL' && styles.smallChipActive]}
+                                            onPress={() => handleChange('recycler_type', 'INDIVIDUAL')}
+                                        >
+                                            <Text style={[styles.smallChipText, formData.recycler_type === 'INDIVIDUAL' && styles.smallChipTextActive]}>Individual</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.smallChip, formData.recycler_type === 'COMPANY' && styles.smallChipActive]}
+                                            onPress={() => handleChange('recycler_type', 'COMPANY')}
+                                        >
+                                            <Text style={[styles.smallChipText, formData.recycler_type === 'COMPANY' && styles.smallChipTextActive]}>Company</Text>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {formData.recycler_type === 'COMPANY' ? (
+                                        <>
+                                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Company Name"
+                                                    placeholderTextColor="#999"
+                                                    value={formData.company_name}
+                                                    onChangeText={(val) => handleChange('company_name', val)}
+                                                />
+                                            </View>
+                                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Tax ID"
+                                                    placeholderTextColor="#999"
+                                                    value={formData.tax_id}
+                                                    onChangeText={(val) => handleChange('tax_id', val)}
+                                                />
+                                            </View>
+                                            <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+                                                {certificationImage ? (
+                                                    <View style={styles.uploadRow}>
+                                                        <Image source={{ uri: certificationImage.uri }} style={styles.miniPreview} />
+                                                        <Text style={styles.uploadInfo} numberOfLines={1}>{certificationImage.uri.split('/').pop()}</Text>
+                                                        <Text style={styles.changeLink}>Change</Text>
+                                                    </View>
+                                                ) : (
+                                                    <View style={styles.uploadRow}>
+                                                        <Upload size={20} color="#2E7D32" />
+                                                        <Text style={styles.uploadInfo}>Business Certificate</Text>
+                                                    </View>
+                                                )}
+                                            </TouchableOpacity>
+                                        </>
                                     ) : (
-                                        <View style={styles.uploadPlaceholder}>
-                                            <Upload size={24} color={COLORS.primary} />
-                                            <Text style={styles.uploadText}>Upload Business Certificate</Text>
+                                        <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="National ID"
+                                                placeholderTextColor="#999"
+                                                value={formData.national_id}
+                                                onChangeText={(val) => handleChange('national_id', val)}
+                                            />
                                         </View>
                                     )}
-                                </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+
+                        <TouchableOpacity
+                            style={styles.termsWrapper}
+                            onPress={() => handleChange('termsAccepted', !formData.termsAccepted)}
+                        >
+                            <View style={[styles.checkbox, formData.termsAccepted && styles.checkboxActive]}>
+                                {formData.termsAccepted && <Check size={12} color="#fff" />}
                             </View>
-                        )}
+                            <Text style={styles.termsText}>I accept the Terms and Conditions</Text>
+                        </TouchableOpacity>
 
-                    </>
-                )}
+                        <TouchableOpacity
+                            style={styles.registerButton}
+                            onPress={handleRegister}
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.registerButtonText}>Create Account</Text>
+                            )}
+                        </TouchableOpacity>
 
-                <View style={styles.termsContainer}>
-                    <TouchableOpacity
-                        style={[styles.checkbox, formData.termsAccepted && styles.checkboxActive]}
-                        onPress={() => handleChange('termsAccepted', !formData.termsAccepted)}
-                    >
-                        {formData.termsAccepted && <Check size={14} color="#fff" />}
-                    </TouchableOpacity>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.termsText}>
-                            By registering, you agree to our <Text style={styles.linkText}>Terms of Service</Text> and <Text style={styles.linkText}>Privacy policy</Text>, commit to comply with obligations under the European Union and local legislation and provide only legal services and content on the Revesta Platform.
-                        </Text>
-                        <Text style={[styles.termsText, { marginTop: 8 }]}>
-                            Once you've become a {formData.role.toLowerCase()}, we will occasionally send you offers and promotions related to our services. You can always unsubscribe by changing your communication preferences.
-                        </Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.footerLink}>
+                            <Text style={styles.footerText}>
+                                Already have account? <Text style={styles.footerLinkBold}>Login</Text>
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+
+            <Modal visible={showOtpModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>Verification Code</Text>
+                        <Text style={styles.modalDesc}>Sent to {formData.phone_number}</Text>
+                        <TextInput
+                            style={styles.otpInput}
+                            placeholder="000000"
+                            placeholderTextColor="#CCC"
+                            value={verificationCode}
+                            onChangeText={setVerificationCode}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                        />
+                        <TouchableOpacity
+                            style={styles.modalBtn}
+                            onPress={confirmCode}
+                            disabled={verifying}
+                        >
+                            {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalBtnText}>Confirm</Text>}
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setShowOtpModal(false)}>
+                            <Text style={styles.modalCancel}>Cancel</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
-
-                <TouchableOpacity
-                    style={styles.submitButton}
-                    onPress={handleRegister}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.submitButtonText}>Create Account</Text>
-                    )}
-                </TouchableOpacity>
-
-            </ScrollView>
-        </SafeAreaView>
+            </Modal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.white,
+        backgroundColor: '#F0F7F4',
     },
-    header: {
-        flexDirection: 'row',
+    headerBackground: {
+        height: 240,
+        backgroundColor: '#2E7D32',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -120,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
+    },
+    headerContent: {
+        paddingHorizontal: 25,
+        paddingTop: 20,
+    },
+    headerRow: {
+        marginBottom: 20,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border,
+        justifyContent: 'center',
     },
-    headerTitle: {
-        fontSize: 18,
+    greetingText: {
+        fontSize: 36,
         fontWeight: 'bold',
-        color: COLORS.text,
+        color: '#fff',
     },
-    content: {
-        padding: 24,
+    welcomeText: {
+        fontSize: 16,
+        color: 'rgba(255, 255, 255, 0.8)',
+        marginTop: 5,
+        fontWeight: '500',
+    },
+    contentContainer: {
+        flex: 1,
+        marginTop: -50,
     },
     scrollContent: {
-        padding: 24,
-        paddingBottom: 50,
+        flexGrow: 1,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
     },
-    stepTitle: {
-        fontSize: 24,
+    formCard: {
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        padding: 30,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    cardTitle: {
+        fontSize: 22,
         fontWeight: 'bold',
-        color: COLORS.text,
-        textAlign: 'center',
-        marginBottom: 24,
+        color: '#2E7D32',
+        marginBottom: 8,
     },
-    subTitle: {
-        fontSize: 16,
-        color: COLORS.textLight,
-        textAlign: 'center',
-        marginBottom: 24,
-        marginTop: -16,
+    roleLabel: {
+        fontSize: 14,
+        color: '#999',
+        marginBottom: 25,
+        fontWeight: '500',
     },
     rolesContainer: {
-        gap: 16,
+        gap: 15,
+        paddingBottom: 20,
     },
     roleCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 15,
         borderWidth: 2,
-        borderColor: COLORS.border,
-        borderRadius: 16,
-        backgroundColor: COLORS.white,
+        borderColor: '#EEE',
+        borderRadius: 18,
+        backgroundColor: '#fff',
     },
     iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 15,
     },
     roleInfo: {
         flex: 1,
     },
     roleTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: 'bold',
-        color: COLORS.text,
-        marginBottom: 4,
+        color: '#333',
+        marginBottom: 2,
     },
     roleDesc: {
-        fontSize: 14,
-        color: COLORS.textLight,
+        fontSize: 12,
+        color: '#999',
     },
-    formGroup: {
-        marginBottom: 16,
+    formFields: {
+        marginBottom: 20,
     },
-    label: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: COLORS.text,
-        marginBottom: 8,
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 15,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        height: 56,
+        paddingHorizontal: 15,
+    },
+    iconContainer: {
+        marginRight: 10,
     },
     input: {
-        backgroundColor: COLORS.background,
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 16,
-        borderWidth: 1,
-        borderColor: 'transparent',
+        flex: 1,
+        fontSize: 15,
+        color: '#333',
+        height: '100%',
     },
-    phoneContainer: {
-        flexDirection: 'row',
+    phoneLabel: {
+        marginRight: 10,
+        borderRightWidth: 1,
+        borderRightColor: '#EEE',
+        paddingRight: 10,
     },
-    phonePrefix: {
-        backgroundColor: COLORS.background,
-        paddingHorizontal: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderTopLeftRadius: 12,
-        borderBottomLeftRadius: 12,
-        marginRight: 1,
+    countryCode: {
+        fontSize: 15,
+        color: '#333',
+        fontWeight: '600',
     },
-    pickerFake: {
-        backgroundColor: COLORS.background,
-        borderRadius: 12,
-        padding: 16,
+    verifySmallBtn: {
+        backgroundColor: '#E8F5E9',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
-    chip: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        backgroundColor: COLORS.background,
-    },
-    chipActive: {
-        backgroundColor: COLORS.primary,
-    },
-    chipText: {
-        color: COLORS.text,
-        fontWeight: '500',
-    },
-    chipTextActive: {
-        color: COLORS.white,
-    },
-    submitButton: {
-        backgroundColor: COLORS.primary,
-        padding: 18,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginTop: 24,
-        shadowColor: COLORS.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    submitButtonText: {
-        color: COLORS.white,
-        fontSize: 18,
+    verifySmallText: {
+        color: '#2E7D32',
+        fontSize: 12,
         fontWeight: 'bold',
     },
-    termsContainer: {
+    fieldTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#666',
+        marginBottom: 10,
+        marginLeft: 5,
+    },
+    chipRow: {
         flexDirection: 'row',
-        marginTop: 20,
-        gap: 12,
-        alignItems: 'flex-start',
+        gap: 10,
+        marginBottom: 5,
+    },
+    smallChip: {
+        paddingHorizontal: 15,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: '#F5F5F5',
+    },
+    smallChipActive: {
+        backgroundColor: '#2E7D32',
+    },
+    smallChipText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '600',
+    },
+    smallChipTextActive: {
+        color: '#fff',
+    },
+    uploadBox: {
+        marginTop: 15,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        borderRadius: 15,
+        backgroundColor: '#F9FAFB',
+        padding: 15,
+        borderStyle: 'dashed',
+    },
+    uploadRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    miniPreview: {
+        width: 30,
+        height: 30,
+        borderRadius: 5,
+        marginRight: 10,
+    },
+    uploadInfo: {
+        flex: 1,
+        fontSize: 13,
+        color: '#666',
+    },
+    changeLink: {
+        fontSize: 12,
+        color: '#2E7D32',
+        fontWeight: 'bold',
+    },
+    termsWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 25,
+        paddingHorizontal: 5,
     },
     checkbox: {
-        width: 20,
-        height: 20,
+        width: 18,
+        height: 18,
         borderRadius: 4,
         borderWidth: 2,
-        borderColor: COLORS.border,
-        justifyContent: 'center',
+        borderColor: '#2E7D32',
+        marginRight: 10,
         alignItems: 'center',
-        marginTop: 2,
+        justifyContent: 'center',
     },
     checkboxActive: {
-        backgroundColor: COLORS.primary,
-        borderColor: COLORS.primary,
+        backgroundColor: '#2E7D32',
     },
     termsText: {
-        flex: 1,
         fontSize: 12,
-        color: COLORS.textLight,
-        lineHeight: 18,
+        color: '#999',
     },
-    linkText: {
-        color: COLORS.primary,
-        fontWeight: 'bold',
-    },
-    uploadButton: {
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderStyle: 'dashed',
-        borderRadius: 12,
-        backgroundColor: COLORS.background,
-        overflow: 'hidden',
-    },
-    uploadPlaceholder: {
-        padding: 24,
+    registerButton: {
+        backgroundColor: '#2E7D32',
+        height: 56,
+        borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 8,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    uploadText: {
-        color: COLORS.primary,
-        fontWeight: '500',
-    },
-    uploadContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 8,
-    },
-    uploadedPreview: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        marginRight: 12,
-    },
-    filename: {
-        flex: 1,
-        color: COLORS.text,
-        fontSize: 14,
-    },
-    changeBadge: {
-        backgroundColor: COLORS.background,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-    },
-    changeText: {
-        color: COLORS.textLight,
-        fontSize: 12,
-        fontWeight: '500',
-    },
-    // Verification Styles
-    verifyBtn: {
-        backgroundColor: COLORS.secondary,
-        paddingHorizontal: 16,
-        justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 8,
-        marginLeft: 8,
-        marginTop: 4,
-        marginRight: 4,
-    },
-    verifyText: {
+    registerButtonText: {
         color: '#fff',
+        fontSize: 16,
         fontWeight: 'bold',
-        fontSize: 12,
     },
-    verifiedBadge: {
-        backgroundColor: COLORS.primary,
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+    footerLink: {
         alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 8,
-        alignSelf: 'center',
+        marginTop: 20,
+    },
+    footerText: {
+        fontSize: 14,
+        color: '#999',
+    },
+    footerLinkBold: {
+        color: '#2E7D32',
+        fontWeight: 'bold',
     },
     modalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
+        alignItems: 'center',
         justifyContent: 'center',
-        padding: 24,
+        padding: 20,
     },
-    modalContent: {
+    modalCard: {
         backgroundColor: '#fff',
-        padding: 24,
-        borderRadius: 24,
+        width: '100%',
+        borderRadius: 25,
+        padding: 30,
         alignItems: 'center',
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 8,
+        color: '#333',
+        marginBottom: 5,
     },
-    modalSub: {
-        color: COLORS.textLight,
-        marginBottom: 24,
+    modalDesc: {
+        fontSize: 14,
+        color: '#999',
+        marginBottom: 25,
+        textAlign: 'center',
     },
     otpInput: {
         width: '100%',
-        height: 56,
-        borderWidth: 1,
-        borderColor: COLORS.border,
-        borderRadius: 12,
-        fontSize: 24,
+        height: 60,
+        backgroundColor: '#F5F5F5',
+        borderRadius: 15,
         textAlign: 'center',
-        marginBottom: 24,
-        letterSpacing: 8,
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 20,
+        letterSpacing: 10,
     },
     modalBtn: {
-        backgroundColor: COLORS.primary,
+        backgroundColor: '#2E7D32',
         width: '100%',
-        padding: 16,
-        borderRadius: 16,
+        height: 56,
+        borderRadius: 15,
         alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 15,
     },
     modalBtnText: {
         color: '#fff',
-        fontWeight: 'bold',
         fontSize: 16,
+        fontWeight: 'bold',
     },
-    cancelLink: {
-        marginTop: 16,
-    },
-    cancelText: {
-        color: COLORS.textLight,
+    modalCancel: {
+        color: '#999',
+        fontWeight: '600',
     },
 });

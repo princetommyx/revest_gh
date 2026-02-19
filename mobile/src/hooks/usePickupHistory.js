@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { logisticsApi } from '../api/logistics';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,10 +8,17 @@ import { useAuth } from '../context/AuthContext';
  */
 export const usePickupHistory = (status = null) => {
     const { user, userRole } = useAuth();
+    const [data, setData] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefetching, setIsRefetching] = useState(false);
+    const [isError, setIsError] = useState(false);
 
-    return useQuery({
-        queryKey: ['pickup-history', user?.id, status, userRole],
-        queryFn: async () => {
+    const fetchHistory = async (isManual = false) => {
+        if (!user) return;
+        if (isManual) setIsRefetching(true);
+        else setIsLoading(true);
+
+        try {
             const params = {};
 
             // Filter by user role
@@ -26,11 +33,21 @@ export const usePickupHistory = (status = null) => {
                 params.status = status;
             }
 
-            const data = await logisticsApi.getPickupRequests(params);
-            // Ensure we return an array
-            return Array.isArray(data) ? data : (data.results || []);
-        },
-        staleTime: 1000 * 60 * 2, // 2 minutes - shorter for more up-to-date data
-        enabled: !!user, // Only run if user is logged in
-    });
+            const response = await logisticsApi.getPickupRequests(params);
+            setData(Array.isArray(response) ? response : (response.results || []));
+            setIsError(false); // Reset error on successful fetch
+        } catch (error) {
+            console.error('Fetch pickup history error:', error);
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
+            setIsRefetching(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, [user?.id, status, userRole]);
+
+    return { data, isLoading, isRefetching, isError, refetch: () => fetchHistory(true) };
 };

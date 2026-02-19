@@ -5,9 +5,10 @@ from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
     UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
+    VerifyLoginOTPView,
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
-    TestSMSView, HubtelTestView
+    TestSMSView, HubtelTestView, AdminSendPushView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
 
@@ -15,6 +16,7 @@ from .admin_stats import admin_dashboard_stats, recent_users
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', CustomTokenObtainPairView.as_view(), name='login'),
+    path('login/verify/', VerifyLoginOTPView.as_view(), name='login_verify'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('google/', GoogleLoginView.as_view(), name='google_login'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
@@ -41,6 +43,7 @@ urlpatterns = [
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
     path('test-sms/', TestSMSView.as_view(), name='test_sms'),
     path('test-hubtel/', HubtelTestView.as_view(), name='test_hubtel'),
+    path('notifications/test-push/', AdminSendPushView.as_view(), name='test_push'),
 ]
 
 

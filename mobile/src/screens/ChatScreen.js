@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList,
-    TouchableOpacity, ActivityIndicator, Image, TextInput
+    TouchableOpacity, ActivityIndicator, Image, TextInput, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
-import { MessageSquare, User, Clock, ChevronRight, Bot, Bell, AlertCircle, Check } from 'lucide-react-native';
+import { MessageSquare, User, Clock, ChevronRight, Bot, Bell, AlertCircle, Check, Search, Filter } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
 import { notificationsApi } from '../api/notifications';
 import { useNotifications } from '../context/NotificationContext';
+
+const { width } = Dimensions.get('window');
 
 export default function ChatScreen({ route }) {
     const navigation = useNavigation();
@@ -57,14 +59,10 @@ export default function ChatScreen({ route }) {
         }, [])
     );
 
-    // Handle initial tab from navigation params
     useEffect(() => {
-        if (route.params?.tab) {
-            setActiveTab(route.params.tab);
-        }
+        if (route.params?.tab) setActiveTab(route.params.tab);
     }, [route.params?.tab]);
 
-    // Filter logic
     useEffect(() => {
         let result = conversations;
         if (search) {
@@ -73,9 +71,7 @@ export default function ChatScreen({ route }) {
                 (c.last_message && c.last_message.toLowerCase().includes(search.toLowerCase()))
             );
         }
-        if (activeTab === 'Unread') {
-            result = result.filter(c => c.unread_count > 0);
-        }
+        if (activeTab === 'Unread') result = result.filter(c => c.unread_count > 0);
         setFilteredConversations(result);
     }, [search, activeTab, conversations]);
 
@@ -85,22 +81,11 @@ export default function ChatScreen({ route }) {
         return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
-    // Generate random pastel color based on name
-    const getAvatarColor = (name) => {
-        const colors = ['#E57373', '#F06292', '#BA68C8', '#9575CD', '#7986CB', '#64B5F6', '#4FC3F7', '#4DD0E1', '#4DB6AC', '#81C784', '#AED581', '#FFD54F', '#FFB74D', '#FF8A65'];
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        return colors[Math.abs(hash) % colors.length];
-    };
-
-    const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'U';
-
     const formatSmartTime = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
         const now = new Date();
         const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-
         if (diffDays === 0) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (diffDays === 1) return 'Yesterday';
         if (diffDays < 7) return date.toLocaleDateString([], { weekday: 'short' });
@@ -111,29 +96,12 @@ export default function ChatScreen({ route }) {
         try {
             await markAllRead();
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            Toast.show("All notifications marked as read", { backgroundColor: '#2E7D32' });
-        } catch (e) {
-            console.log("Error marking read", e);
-        }
-    };
-
-    const handleNotificationPress = async (item) => {
-        if (!item.is_read) {
-            try {
-                await notificationsApi.markAsRead(item.id);
-                setNotifications(prev => prev.map(n =>
-                    n.id === item.id ? { ...n, is_read: true } : n
-                ));
-            } catch (e) {
-                console.log("Error marking read", e);
-            }
-        }
+            Toast.show("All marked as read", { backgroundColor: '#2E7D32' });
+        } catch (e) { console.log(e); }
     };
 
     const renderConversation = ({ item }) => {
-        const avatarColor = getAvatarColor(item.contact_username || 'User');
         const profileImg = resolveImageUrl(item.contact_profile_image);
-
         return (
             <TouchableOpacity
                 style={styles.convCard}
@@ -141,375 +109,218 @@ export default function ChatScreen({ route }) {
                     contactId: item.contact_id,
                     contactName: item.contact_username
                 })}
+                activeOpacity={0.7}
             >
-                <View style={[styles.avatarBox, !profileImg && { backgroundColor: avatarColor + '20', borderColor: avatarColor + '40' }]}>
+                <View style={styles.avatarWrapper}>
                     {profileImg ? (
-                        <Image source={{ uri: profileImg }} style={styles.avatarImage} />
+                        <Image source={{ uri: profileImg }} style={styles.avatar} />
                     ) : (
-                        <Text style={[styles.avatarInitials, { color: avatarColor }]}>
-                            {getInitials(item.contact_username)}
-                        </Text>
-                    )}
-                    {item.unread_count > 0 && (
-                        <View style={styles.unreadBadge}>
-                            <View style={styles.unreadDot} />
+                        <View style={styles.avatarPlaceholder}>
+                            <User size={24} color="#9BAA9B" />
                         </View>
                     )}
+                    {item.unread_count > 0 && <View style={styles.unreadPulse} />}
                 </View>
-                <View style={styles.convInfo}>
-                    <View style={styles.convHeader}>
-                        <Text style={[styles.contactName, item.unread_count > 0 && styles.contactNameUnread]}>
+                <View style={styles.convMain}>
+                    <View style={styles.convTop}>
+                        <Text style={[styles.contactName, item.unread_count > 0 && styles.nameUnread]} numberOfLines={1}>
                             {item.contact_username}
                         </Text>
-                        <Text style={[styles.convTime, item.unread_count > 0 && styles.convTimeUnread]}>
-                            {formatSmartTime(item.timestamp)}
-                        </Text>
+                        <Text style={styles.convTime}>{formatSmartTime(item.timestamp)}</Text>
                     </View>
-                    <Text
-                        style={[styles.lastMsg, item.unread_count > 0 && styles.unreadMsg]}
-                        numberOfLines={1}
-                    >
-                        {item.last_message || 'Start a conversation...'}
-                    </Text>
+                    <View style={styles.convBottom}>
+                        <Text style={[styles.lastMsg, item.unread_count > 0 && styles.msgUnread]} numberOfLines={1}>
+                            {item.last_message || 'Tap to chat'}
+                        </Text>
+                        {item.unread_count > 0 && (
+                            <View style={styles.countBadge}>
+                                <Text style={styles.countText}>{item.unread_count}</Text>
+                            </View>
+                        )}
+                    </View>
                 </View>
             </TouchableOpacity>
         );
     };
 
-    const renderNotification = ({ item }) => {
-        const isUrgent = item.urgency === 'URGENT';
-        return (
-            <TouchableOpacity
-                style={[
-                    styles.notifCard,
-                    !item.is_read && styles.unreadNotif,
-                    isUrgent && styles.urgentNotif
-                ]}
-                onPress={() => handleNotificationPress(item)}
-            >
-                <View style={[styles.notifIconBox, isUrgent && { backgroundColor: '#FFEBEE' }]}>
-                    {isUrgent ? (
-                        <AlertCircle size={24} color="#D32F2F" />
-                    ) : (
-                        <Bell size={24} color="#2E7D32" />
-                    )}
-                </View>
-                <View style={styles.notifContent}>
-                    <View style={styles.notifHeader}>
-                        <Text style={[styles.notifTitle, !item.is_read && styles.unreadTitle]} numberOfLines={1}>
-                            {item.title}
-                        </Text>
-                        <Text style={styles.notifTime}>{formatSmartTime(item.created_at)}</Text>
-                    </View>
-                    <Text style={styles.notifBody} numberOfLines={2}>{item.body}</Text>
-                </View>
-                {!item.is_read && <View style={styles.notifDot} />}
-            </TouchableOpacity>
-        );
-    };
-
-    if (loading) {
-        return (
-            <View style={styles.center}>
-                <ActivityIndicator size="large" color="#2E7D32" />
+    const renderNotification = ({ item }) => (
+        <TouchableOpacity style={[styles.notifCard, !item.is_read && styles.notifUnread]} activeOpacity={0.7}>
+            <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? '#FEF2F2' : '#F0F7F4' }]}>
+                {item.urgency === 'URGENT' ? <AlertCircle size={20} color="#EF4444" /> : <Bell size={20} color="#2E7D32" />}
             </View>
-        );
-    }
+            <View style={styles.notifInfo}>
+                <View style={styles.notifTop}>
+                    <Text style={[styles.notifTitle, !item.is_read && styles.notifTitleUnread]} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.notifTimeSmall}>{formatSmartTime(item.created_at)}</Text>
+                </View>
+                <Text style={styles.notifBody} numberOfLines={2}>{item.body}</Text>
+            </View>
+            {!item.is_read && <View style={styles.greenDot} />}
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            {/* Header Section */}
-            <View style={styles.headerContainer}>
-                <SafeAreaView edges={['top']} style={styles.safeArea}>
-                    <View style={styles.searchBarContainer}>
-                        {/* <TouchableOpacity style={styles.backButton}>
-                            <ChevronLeft size={28} color="#fff" />
-                        </TouchableOpacity> */}
-                        <View style={styles.searchBar}>
-                            <View style={styles.searchIcon}>
-                                <MessageSquare size={20} color="#999" />
-                            </View>
-                            <TextInput
-                                style={styles.searchText}
-                                placeholder="Search in Messages"
-                                placeholderTextColor="#aaa"
-                                value={search}
-                                onChangeText={setSearch}
-                            />
-                        </View>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <Text style={styles.headerTitle}>Messages</Text>
+                        <TouchableOpacity style={styles.headerIcon}>
+                            <Bell size={20} color="#fff" />
+                        </TouchableOpacity>
                     </View>
+                    <Text style={styles.headerSubtitle}>Connect with Sellers & Recyclers</Text>
                 </SafeAreaView>
-
-                {/* Tabs */}
-                <View style={styles.tabsContainer}>
-                    {['All', 'Unread', 'Notifications'].map(tab => {
-                        const isNotif = tab === 'Notifications';
-                        const unreadNotifs = notifications.filter(n => !n.is_read).length;
-                        const unreadMsgs = conversations.filter(c => c.unread_count > 0).length;
-
-                        return (
-                            <TouchableOpacity
-                                key={tab}
-                                style={[styles.tabItem, activeTab === tab && styles.tabItemActive]}
-                                onPress={() => setActiveTab(tab)}
-                            >
-                                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                                    {tab}
-                                </Text>
-                                {isNotif && unreadNotifs > 0 && (
-                                    <View style={styles.badgeCommon}>
-                                        <Text style={styles.badgeTextCommon}>{unreadNotifs}</Text>
-                                    </View>
-                                )}
-                                {tab === 'Unread' && unreadMsgs > 0 && (
-                                    <View style={[styles.badgeCommon, { backgroundColor: '#2E7D32' }]}>
-                                        <Text style={styles.badgeTextCommon}>{unreadMsgs}</Text>
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
             </View>
 
-            {/* List Header Actions for Notifications */}
-            {activeTab === 'Notifications' && notifications.length > 0 && (
-                <TouchableOpacity style={styles.markReadAll} onPress={handleMarkAllRead}>
-                    <Check size={16} color="#2E7D32" />
-                    <Text style={styles.markReadText}>Mark all as read</Text>
-                </TouchableOpacity>
-            )}
-
-            {/* Chat/Notification List */}
-            <FlatList
-                data={activeTab === 'Notifications' ? notifications : filteredConversations}
-                renderItem={activeTab === 'Notifications' ? renderNotification : renderConversation}
-                keyExtractor={item => (activeTab === 'Notifications' ? `notif-${item.id}` : `conv-${item.contact_id}`)}
-                contentContainerStyle={styles.listContent}
-                ListHeaderComponent={
-                    activeTab !== 'Notifications' && (
-                        <TouchableOpacity
-                            style={styles.aiSupportRow}
-                            onPress={() => navigation.navigate('SupportChat')}
-                        >
-                            <View style={styles.aiIconBox}>
-                                <Bot size={24} color="#fff" />
-                            </View>
-                            <View style={styles.aiInfo}>
-                                <Text style={styles.aiTitle}>AI Assistant</Text>
-                                <Text style={styles.aiSubtitle}>Need help? Ask our bot instantly.</Text>
-                            </View>
-                            <ChevronRight size={20} color="#ccc" />
+            {/* Content Overlap */}
+            <View style={styles.contentWrap}>
+                {/* Search & Tabs */}
+                <View style={styles.stickyBar}>
+                    <View style={styles.searchBox}>
+                        <Search size={18} color="#999" />
+                        <TextInput
+                            style={styles.searchField}
+                            placeholder="Find chats..."
+                            value={search}
+                            onChangeText={setSearch}
+                            placeholderTextColor="#999"
+                        />
+                        <TouchableOpacity>
+                            <Filter size={18} color="#2E7D32" />
                         </TouchableOpacity>
-                    )
-                }
-                ListEmptyComponent={
-                    <View style={styles.emptyContainer}>
-                        {activeTab === 'Notifications' ? (
-                            <>
-                                <Bell size={48} color="#ccc" />
-                                <Text style={styles.emptyTitle}>All caught up!</Text>
-                                <Text style={styles.emptySubtitle}>System alerts and updates will appear here.</Text>
-                            </>
-                        ) : (
-                            <>
-                                <MessageSquare size={48} color="#ccc" />
-                                <Text style={styles.emptyTitle}>No messages yet</Text>
-                                <Text style={styles.emptySubtitle}>Chats with sellers and buyers will appear here.</Text>
-                            </>
-                        )}
                     </View>
-                }
-                onRefresh={loadData}
-                refreshing={refreshing || loading}
-            />
+
+                    <View style={styles.tabsRow}>
+                        {['All', 'Unread', 'Notifications'].map(tab => (
+                            <TouchableOpacity
+                                key={tab}
+                                style={[styles.tabChip, activeTab === tab && styles.tabChipActive]}
+                                onPress={() => setActiveTab(tab)}
+                            >
+                                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                                {tab === 'Notifications' && notifications.filter(n => !n.is_read).length > 0 && (
+                                    <View style={styles.dot} />
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </View>
+
+                {activeTab === 'Notifications' && notifications.length > 0 && (
+                    <TouchableOpacity style={styles.markAll} onPress={handleMarkAllRead}>
+                        <Check size={14} color="#2E7D32" />
+                        <Text style={styles.markAllText}>Mark all as read</Text>
+                    </TouchableOpacity>
+                )}
+
+                {loading ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color="#2E7D32" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={activeTab === 'Notifications' ? notifications : filteredConversations}
+                        renderItem={activeTab === 'Notifications' ? renderNotification : renderConversation}
+                        keyExtractor={item => (activeTab === 'Notifications' ? `notif-${item.id}` : `conv-${item.contact_id}`)}
+                        contentContainerStyle={styles.listPadding}
+                        showsVerticalScrollIndicator={false}
+                        ListHeaderComponent={activeTab !== 'Notifications' && (
+                            <TouchableOpacity style={styles.aiBanner} onPress={() => navigation.navigate('SupportChat')}>
+                                <View style={styles.aiBotIcon}>
+                                    <Bot size={22} color="#fff" />
+                                </View>
+                                <View style={styles.aiText}>
+                                    <Text style={styles.aiLabel}>Revesta AI Assistant</Text>
+                                    <Text style={styles.aiCap}>Ask questions about recycling</Text>
+                                </View>
+                                <ChevronRight size={18} color="#A5D6A7" />
+                            </TouchableOpacity>
+                        )}
+                        ListEmptyComponent={
+                            <View style={styles.emptyView}>
+                                {activeTab === 'Notifications' ? <Bell size={60} color="#E8F5E9" /> : <MessageSquare size={60} color="#E8F5E9" />}
+                                <Text style={styles.emptyTitle}>Nothing here yet</Text>
+                                <Text style={styles.emptySub}>Messages and alerts will show up here.</Text>
+                            </View>
+                        }
+                        refreshing={refreshing}
+                        onRefresh={loadData}
+                    />
+                )}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' }, // White background like Jiji
-
-    // Header
-    headerContainer: {
-        backgroundColor: '#2E7D32',
-        elevation: 4,
-        zIndex: 10,
+    container: { flex: 1, backgroundColor: '#F0F7F4' },
+    headerBackground: { height: 180, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    curvedShape: {
+        position: 'absolute', bottom: -80, left: -width * 0.25,
+        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', opacity: 0.3
     },
-    safeArea: {
-        paddingBottom: 10,
+    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
+    headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
+    headerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5 },
+    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    stickyBar: { paddingHorizontal: 25, paddingTop: 25, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    searchBox: {
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6',
+        borderRadius: 18, paddingHorizontal: 15, height: 52, marginBottom: 20
     },
-    searchBarContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        marginTop: 10,
+    searchField: { flex: 1, marginLeft: 10, fontSize: 14, color: '#333' },
+    tabsRow: { flexDirection: 'row', gap: 10, marginBottom: 15 },
+    tabChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F9FAFB', flexDirection: 'row', alignItems: 'center', gap: 6 },
+    tabChipActive: { backgroundColor: '#2E7D32' },
+    tabText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+    tabTextActive: { color: '#fff' },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
+    markAll: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginRight: 25, marginBottom: 10, gap: 5 },
+    markAllText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
+    listPadding: { paddingHorizontal: 25, paddingBottom: 40 },
+    aiBanner: {
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#1B5E20',
+        padding: 16, borderRadius: 24, marginBottom: 20
     },
-    searchBar: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#fff',
-        borderRadius: 4,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-    },
-    searchIcon: { marginRight: 10 },
-    searchText: { color: '#aaa', fontSize: 15 },
-
-    // Tabs
-    tabsContainer: {
-        flexDirection: 'row',
-        backgroundColor: '#fff',
-    },
-    tabItem: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        borderBottomWidth: 3,
-        borderBottomColor: 'transparent',
-        flexDirection: 'row',
-        gap: 6
-    },
-    tabItemActive: {
-        borderBottomColor: '#2E7D32',
-    },
-    tabText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#757575',
-    },
-    tabTextActive: {
-        color: '#2E7D32',
-    },
-    badgeCommon: {
-        backgroundColor: '#E74C3C',
-        borderRadius: 10,
-        paddingHorizontal: 6,
-        paddingVertical: 1,
-    },
-    badgeTextCommon: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-
-    // List
-    listContent: {
-        paddingTop: 0,
-    },
-
-    // AI Support Row (Streamlined)
-    aiSupportRow: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingVertical: 12, paddingHorizontal: 16,
-        borderBottomWidth: 1, borderBottomColor: '#f0f0f0',
-        backgroundColor: '#fff'
-    },
-    aiIconBox: {
-        width: 48, height: 48, borderRadius: 24,
-        backgroundColor: '#2E7D32', // Green circle for bot
-        justifyContent: 'center', alignItems: 'center', marginRight: 15
-    },
-    aiTitle: { fontSize: 16, fontWeight: 'bold', color: '#2E7D32' },
-    aiSubtitle: { fontSize: 13, color: '#666' },
-    aiInfo: { flex: 1 },
-
-    // Conversation Item (Flat List Style)
-    convCard: {
-        backgroundColor: '#fff',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-    },
-    avatarBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: '#eee',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-        marginRight: 15,
-        overflow: 'hidden'
-    },
-    avatarImage: { width: '100%', height: '100%' },
-    avatarInitials: { fontSize: 18, fontWeight: 'bold' },
-
-    unreadBadge: {
-        position: 'absolute',
-        top: -2, right: -2,
-        backgroundColor: '#fff',
-        width: 12, height: 12,
-        borderRadius: 6,
-        justifyContent: 'center', alignItems: 'center'
-    },
-    unreadDot: {
-        width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32'
-    },
-    unreadText: { display: 'none' },
-
-    convInfo: { flex: 1 },
-    convHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 4,
-    },
-    contactName: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-    contactNameUnread: { color: '#000' },
-
-    convTime: { fontSize: 12, color: '#999' },
-    convTimeUnread: { color: '#2E7D32', fontWeight: 'bold' },
-
-    lastMsg: { fontSize: 14, color: '#757575' },
-    unreadMsg: { color: '#333', fontWeight: '500' },
-
-    // Empty State
-    emptyContainer: { flex: 1, alignItems: 'center', marginTop: 100 },
-    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#333', marginTop: 15 },
-    emptySubtitle: { color: '#999', marginTop: 5 },
-
-    // Notifications Styling
-    notifCard: {
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
-        backgroundColor: '#fff'
-    },
-    unreadNotif: { backgroundColor: '#F0F8F1' },
-    urgentNotif: { backgroundColor: '#FFEBEE' },
-    notifIconBox: {
-        width: 40, height: 40, borderRadius: 20,
-        backgroundColor: '#F0F8F1', justifyContent: 'center', alignItems: 'center',
-        marginRight: 15
-    },
-    notifContent: { flex: 1 },
-    notifHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
-    notifTitle: { fontSize: 15, fontWeight: '600', color: '#333' },
-    unreadTitle: { fontWeight: 'bold', color: '#000' },
-    notifTime: { fontSize: 11, color: '#999' },
-    notifBody: { fontSize: 13, color: '#666', lineHeight: 18 },
-    notifDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32', marginLeft: 10 },
-
-    markReadAll: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: '#F9F9F9',
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee'
-    },
-    markReadText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#2E7D32',
-        marginLeft: 4
-    },
-
+    aiBotIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    aiText: { flex: 1, marginLeft: 12 },
+    aiLabel: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
+    aiCap: { fontSize: 12, color: '#A5D6A7' },
+    convCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    avatarWrapper: { position: 'relative' },
+    avatar: { width: 56, height: 56, borderRadius: 28 },
+    avatarPlaceholder: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#F0F7F4', justifyContent: 'center', alignItems: 'center' },
+    unreadPulse: { position: 'absolute', top: 0, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#2E7D32', borderWidth: 2, borderColor: '#fff' },
+    convMain: { flex: 1, marginLeft: 16 },
+    convTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+    contactName: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+    nameUnread: { color: '#000' },
+    convTime: { fontSize: 12, color: '#9CA3AF' },
+    convBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    lastMsg: { fontSize: 14, color: '#6B7280', flex: 1 },
+    msgUnread: { color: '#1F2937', fontWeight: 'bold' },
+    countBadge: { backgroundColor: '#2E7D32', minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' },
+    countText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+    notifCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 20, backgroundColor: '#fff', marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
+    notifUnread: { backgroundColor: '#F9FAFB' },
+    notifIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+    notifInfo: { flex: 1, marginLeft: 14 },
+    notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
+    notifTitle: { fontSize: 15, fontWeight: 'bold', color: '#1F2937' },
+    notifTitleUnread: { color: '#000' },
+    notifTimeSmall: { fontSize: 11, color: '#9CA3AF' },
+    notifBody: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
+    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32', marginLeft: 10 },
+    emptyView: { alignItems: 'center', paddingVertical: 100 },
+    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginTop: 15 },
+    emptySub: { fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center', paddingHorizontal: 50 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

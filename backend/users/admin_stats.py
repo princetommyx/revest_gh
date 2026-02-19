@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
 from .models import User
+from logistics.models import PickupRequest
 from admin_dashboard.serializers import UserSummarySerializer
 
 @api_view(['GET'])
@@ -27,6 +28,11 @@ def admin_dashboard_stats(request):
     # Active users (logged in within last 24 hours)
     active_users_count = User.objects.filter(
         last_login__gte=now - timedelta(hours=24)
+    ).count()
+
+    # Active Pickups (not completed or cancelled)
+    active_pickups_count = PickupRequest.objects.exclude(
+        status__in=['COMPLETED', 'CANCELLED']
     ).count()
     
     # New registrations 
@@ -59,6 +65,7 @@ def admin_dashboard_stats(request):
         'sellers': sellers_count,  # Disposers
         'recyclers': recyclers_count,
         'active_users': active_users_count,
+        'active_pickups': active_pickups_count,
         'new_registrations': {
             'today': new_today,
             'this_week': new_this_week,

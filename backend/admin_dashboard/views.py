@@ -428,7 +428,10 @@ class PublicPromoCardListView(generics.ListAPIView):
         queryset = PromoCard.objects.filter(is_active=True)
         
         # Filter by role: show targeted role or ALL
-        if role != 'ALL':
+        # We group SELLER and RECYCLER roles together as they share the same dashboard
+        if role in ['SELLER', 'RECYCLER']:
+            queryset = queryset.filter(Q(target_role='SELLER') | Q(target_role='RECYCLER') | Q(target_role='ALL'))
+        elif role != 'ALL':
             queryset = queryset.filter(Q(target_role=role) | Q(target_role='ALL'))
         else:
             # If role is ALL, we show everything targeted to ALL

@@ -6,15 +6,23 @@ export const authApi = {
         return response.data;
     },
 
+    verifyLoginOTP: async (userId, otp) => {
+        const response = await apiClient.post('auth/login/verify/', { user_id: userId, otp });
+        return response.data;
+    },
+
     register: async (userData) => {
         // Registration can be slow on Render (cold starts), so use longer timeout
-        const isFormData = userData instanceof FormData;
-        const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
-
-        const response = await apiClient.post('auth/register/', userData, {
-            headers,
+        const config = {
             timeout: 120000 // 120 seconds for registration
-        });
+        };
+
+        if (userData instanceof FormData) {
+            // Let the adapter handle the Content-Type with the correct boundary
+            config.transformRequest = (d) => d;
+        }
+
+        const response = await apiClient.post('auth/register/', userData, config);
         return response.data;
     },
 

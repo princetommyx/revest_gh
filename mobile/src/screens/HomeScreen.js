@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
-    TextInput, ScrollView, RefreshControl
+    TextInput, ScrollView, RefreshControl, Dimensions
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,8 @@ import * as Location from 'expo-location';
 import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
+
+const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: 'grid-outline', color: '#455A64', bg: '#fff' },
@@ -301,9 +303,10 @@ export default function HomeScreen({ navigation }) {
                     <RefreshControl refreshing={isRefetchingPickups} onRefresh={refetchPickups} />
                 }
             >
-                {/* Green Header Background */}
-                <View style={styles.greenHeaderContainer}>
-                    <SafeAreaView edges={['top']}>
+                {/* Organic Curved Header */}
+                <View style={styles.headerBackground}>
+                    <View style={styles.curvedShape} />
+                    <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContentContainer}>
                         <View style={styles.headerTopRow}>
                             <TouchableOpacity
                                 style={styles.profileAvatarBtn}
@@ -334,6 +337,29 @@ export default function HomeScreen({ navigation }) {
                                     <Text style={styles.statusTextWhite}>Online</Text>
                                 </View>
                             </View>
+                        </View>
+
+                        {/* Search bar in header */}
+                        <View style={styles.headerSearchContainer}>
+                            <Search size={18} color="rgba(255,255,255,0.7)" />
+                            <TextInput
+                                style={styles.headerSearchInput}
+                                placeholder="Search waste materials..."
+                                value={search}
+                                onChangeText={(text) => {
+                                    if (userRole === 'RECYCLER') {
+                                        navigation.navigate('Pickups', { searchQuery: text });
+                                    } else {
+                                        setSearch(text);
+                                    }
+                                }}
+                                onFocus={() => {
+                                    if (userRole === 'RECYCLER') {
+                                        navigation.navigate('Pickups');
+                                    }
+                                }}
+                                placeholderTextColor="rgba(255,255,255,0.6)"
+                            />
                         </View>
                     </SafeAreaView>
                 </View>
@@ -417,9 +443,10 @@ export default function HomeScreen({ navigation }) {
     // --- SELLER DASHBOARD ---
     return (
         <View style={{ flex: 1, backgroundColor: '#F2F2F7' }}>
-            {/* Green Header */}
-            <View style={styles.greenHeaderContainer}>
-                <SafeAreaView edges={['top', 'left', 'right']}>
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContentContainer}>
                     <View style={styles.headerContent}>
                         <View style={styles.headerInfo}>
                             <TouchableOpacity
@@ -451,6 +478,29 @@ export default function HomeScreen({ navigation }) {
                             <View style={styles.notificationBadge} />
                             <Ionicons name="notifications-outline" size={24} color="#fff" />
                         </TouchableOpacity>
+                    </View>
+
+                    {/* Search bar in header */}
+                    <View style={styles.headerSearchContainer}>
+                        <Search size={18} color="rgba(255,255,255,0.7)" />
+                        <TextInput
+                            style={styles.headerSearchInput}
+                            placeholder="Search waste materials..."
+                            value={search}
+                            onChangeText={(text) => {
+                                if (userRole === 'RECYCLER') {
+                                    navigation.navigate('Pickups', { searchQuery: text });
+                                } else {
+                                    setSearch(text);
+                                }
+                            }}
+                            onFocus={() => {
+                                if (userRole === 'RECYCLER') {
+                                    navigation.navigate('Pickups');
+                                }
+                            }}
+                            placeholderTextColor="rgba(255,255,255,0.6)"
+                        />
                     </View>
                 </SafeAreaView>
             </View>
@@ -486,29 +536,8 @@ export default function HomeScreen({ navigation }) {
 
             {/* Main Content: Search & Listings */}
             <View style={{ flex: 1 }}>
-                <View style={styles.floatingSearchContainer}>
-                    <View style={styles.floatingSearchBar}>
-                        <Search size={20} color="#888" />
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="Search waste materials..."
-                            value={search}
-                            onChangeText={(text) => {
-                                if (userRole === 'RECYCLER') {
-                                    navigation.navigate('Pickups', { searchQuery: text });
-                                } else {
-                                    setSearch(text);
-                                }
-                            }}
-                            onFocus={() => {
-                                if (userRole === 'RECYCLER') {
-                                    navigation.navigate('Pickups');
-                                }
-                            }}
-                            placeholderTextColor="#999"
-                        />
-                    </View>
-                </View>
+                {/* Space for the overlapping card footer if needed */}
+                <View style={{ height: 10 }} />
 
                 {/* Location Filter Chips */}
                 {/* Location Filter Chips - Only show when searching or filtering */}
@@ -667,14 +696,25 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     // Header & Overlapping Card Styles
-    greenHeaderContainer: {
+    headerBackground: {
+        height: 280, // Increased to fit search bar
         backgroundColor: '#2E7D32',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -120,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
+    },
+    headerContentContainer: {
         paddingHorizontal: 20,
-        paddingBottom: 80, // Space for overlap
         paddingTop: 10,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        zIndex: 0,
     },
     headerContent: {
         flexDirection: 'row',
@@ -688,6 +728,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         width: '100%',
         marginBottom: 10,
+        marginTop: 10,
     },
     headerInfo: {
         flexDirection: 'row',
@@ -731,7 +772,7 @@ const styles = StyleSheet.create({
     greetingTextWhite: {
         fontSize: 14,
         color: 'rgba(255,255,255,0.8)',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     userNameWhite: {
         fontSize: 24,
@@ -775,16 +816,16 @@ const styles = StyleSheet.create({
     overlappingCard: {
         backgroundColor: '#fff',
         marginHorizontal: 20,
-        marginTop: -60, // Negative margin to overlap
-        borderRadius: 24,
+        marginTop: -50, // Negative margin to overlap
+        borderRadius: 25,
         padding: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-        marginBottom: 20, // push content down
-        zIndex: 10,
+        shadowRadius: 20,
+        elevation: 10,
+        zIndex: 1,
+        marginBottom: 24,
     },
 
     // Standard Styles
@@ -842,26 +883,28 @@ const styles = StyleSheet.create({
         borderColor: '#fff'
     },
 
-    // Search Bar
-    floatingSearchContainer: {
-        paddingHorizontal: 20,
-        marginBottom: 10,
-    },
-    floatingSearchBar: {
+    // Header Search Styles
+    headerSearchContainer: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
         alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 14,
+        paddingHorizontal: 15,
+        height: 46,
+        marginTop: 15,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    searchInput: {
+    headerSearchInput: {
         flex: 1,
-        marginLeft: 12,
+        marginLeft: 10,
+        color: '#fff',
         fontSize: 15,
-        color: '#333',
+    },
+
+    // Search Bar (Legacy/Removed)
+    floatingSearchContainer: {
+        display: 'none',
     },
 
     // Location Filter

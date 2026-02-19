@@ -2,21 +2,23 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
-    TextInput, ScrollView, RefreshControl
+    TextInput, ScrollView, RefreshControl, Dimensions, StatusBar
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart
+    Search, MapPin, Package, ShoppingCart, Filter, Grid, List, ChevronRight
 } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BASE_URL } from '../api/client';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 
+const { width } = Dimensions.get('window');
+
 const CATEGORIES = [
-    { id: '', name: 'All', icon: 'grid-outline', color: '#455A64', bg: '#fff' },
+    { id: '', name: 'All', icon: 'grid', color: '#455A64', bg: '#fff' },
     { id: 'Plastics', name: 'Plastics', icon: 'cube-outline', color: '#2E7D32', bg: '#fff' },
     { id: 'Metals', name: 'Metals', icon: 'hammer-outline', color: '#5D4037', bg: '#fff' },
     { id: 'Paper', name: 'Paper', icon: 'document-text-outline', color: '#FBC02D', bg: '#fff' },
@@ -46,14 +48,10 @@ export default function MarketplaceScreen({ navigation, route }) {
         return () => clearTimeout(handler);
     }, [search]);
 
-    // Handle incoming navigation parameters (from Home Screen)
+    // Handle incoming navigation parameters
     useEffect(() => {
-        if (route.params?.category !== undefined) {
-            setFilter(route.params.category);
-        }
-        if (route.params?.searchQuery !== undefined) {
-            setSearch(route.params.searchQuery);
-        }
+        if (route.params?.category !== undefined) setFilter(route.params.category);
+        if (route.params?.searchQuery !== undefined) setSearch(route.params.searchQuery);
     }, [route.params]);
 
     const { data: listings = [], isLoading, refetch, isRefetching } = useListings({
@@ -66,9 +64,7 @@ export default function MarketplaceScreen({ navigation, route }) {
         if (!path) return null;
         if (path.startsWith('http')) return path;
         let cleanPath = path.startsWith('/') ? path : `/${path}`;
-        if (!cleanPath.startsWith('/media/')) {
-            cleanPath = `/media${cleanPath}`;
-        }
+        if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
         return `${BASE_URL}${cleanPath}`;
     };
 
@@ -77,35 +73,15 @@ export default function MarketplaceScreen({ navigation, route }) {
         return (
             <TouchableOpacity
                 key={item.id}
-                style={styles.catBtn}
+                style={[styles.catChip, isActive && styles.catChipActive]}
                 onPress={() => setFilter(item.id)}
                 activeOpacity={0.7}
             >
-                <View style={[
-                    styles.catIconBox,
-                    isActive && styles.catIconBoxActive
-                ]}>
-                    <Ionicons
-                        name={item.icon}
-                        size={26}
-                        color={isActive ? '#2E7D32' : item.color}
-                    />
-                </View>
-                <Text style={[styles.catText, isActive && styles.catTextActive]}>
+                <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                     {item.name}
                 </Text>
             </TouchableOpacity>
         );
-    };
-
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = (now - date) / 1000;
-        if (diff < 3600) return 'Just now';
-        if (diff < 86400) return 'Today';
-        if (diff < 172800) return 'Yesterday';
-        return date.toLocaleDateString();
     };
 
     const renderListing = ({ item }) => (
@@ -123,30 +99,24 @@ export default function MarketplaceScreen({ navigation, route }) {
                         cachePolicy="memory-disk"
                     />
                 ) : (
-                    <Package size={30} color="#ccc" />
+                    <View style={styles.placeholderImg}>
+                        <Package size={30} color="#E0E0E0" />
+                    </View>
                 )}
                 {item.is_free && (
                     <View style={styles.freeBadge}>
                         <Text style={styles.freeText}>FREE</Text>
                     </View>
                 )}
-                {item.seller?.is_verified && (
-                    <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                    </View>
-                )}
             </View>
-            <View style={styles.listingContent}>
-                <Text style={styles.listingTitle} numberOfLines={2}>{item.title}</Text>
+            <View style={styles.listingDetails}>
                 <Text style={styles.listingPrice}>
-                    {item.is_free ? 'Contact for details' : `₵${item.price}`}
+                    {item.is_free ? 'Giveaway' : `₵${item.price}`}
                 </Text>
-                <View style={styles.metaRow}>
-                    <View style={styles.locationBox}>
-                        <MapPin size={11} color="#888" />
-                        <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
-                    </View>
-                    <Text style={styles.timeText}>{formatTime(item.created_at)}</Text>
+                <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
+                <View style={styles.listingMeta}>
+                    <MapPin size={12} color="#999" />
+                    <Text style={styles.listingLoc} numberOfLines={1}>{item.location}</Text>
                 </View>
             </View>
         </TouchableOpacity>
@@ -154,40 +124,51 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-                <Text style={styles.headerTitle}>Marketplace</Text>
-                <Text style={styles.headerSubtitle}>Find waste materials for supply</Text>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerTop}>
+                        <Text style={styles.headerTitle}>Marketplace</Text>
+                        <TouchableOpacity style={styles.iconBtn}>
+                            <Filter size={20} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.headerSub}>Find quality recyclable materials</Text>
+                </SafeAreaView>
             </View>
 
-            <View style={styles.searchContainer}>
-                <View style={styles.searchBar}>
-                    <Search size={20} color="#888" />
+            {/* Sticky Search & Filters */}
+            <View style={styles.overlayContainer}>
+                {/* Search Bar */}
+                <View style={styles.searchBarWrapper}>
+                    <Search size={20} color="#999" />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search materials..."
+                        placeholder="What are you looking for?"
                         value={search}
                         onChangeText={setSearch}
                         placeholderTextColor="#999"
                     />
                 </View>
-            </View>
 
-            <View style={styles.stickyFilters}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.catContent}
-                >
-                    {CATEGORIES.map(renderCategory)}
-                </ScrollView>
+                {/* Categories Scroll */}
+                <View style={styles.filterSection}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
+                        {CATEGORIES.map(renderCategory)}
+                    </ScrollView>
+                </View>
 
-                <View style={styles.locationFilterContainer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locScrollContent}>
+                {/* Locations Scroll */}
+                <View style={styles.locationSection}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.locList}>
                         <TouchableOpacity
                             style={[styles.locChip, locationFilter === '' && styles.locChipActive]}
                             onPress={() => setLocationFilter('')}
                         >
-                            <Text style={[styles.locChipText, locationFilter === '' && styles.locChipTextActive]}>All Regions</Text>
+                            <Text style={[styles.locChipText, locationFilter === '' && styles.locChipTextActive]}>All Ghana</Text>
                         </TouchableOpacity>
                         {AVAILABLE_LOCATIONS.map(loc => (
                             <TouchableOpacity
@@ -202,114 +183,279 @@ export default function MarketplaceScreen({ navigation, route }) {
                 </View>
             </View>
 
-            {isLoading ? (
-                <FlatList
-                    data={Array(6).fill({})}
-                    renderItem={() => <SkeletonCard />}
-                    keyExtractor={(_, index) => `skeleton-${index}`}
-                    numColumns={2}
-                    contentContainerStyle={styles.list}
-                    columnWrapperStyle={styles.columnWrapper}
-                />
-            ) : (
-                <FlatList
-                    data={listings}
-                    renderItem={renderListing}
-                    keyExtractor={item => item.id.toString()}
-                    numColumns={2}
-                    contentContainerStyle={styles.list}
-                    columnWrapperStyle={styles.columnWrapper}
-                    refreshControl={
-                        <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-                    }
-                    ListEmptyComponent={
-                        <View style={styles.emptyBox}>
-                            <ShoppingCart size={50} color="#eee" />
-                            <Text style={styles.emptyText}>No materials found in this category or region.</Text>
-                            <TouchableOpacity style={styles.resetBtn} onPress={() => { setFilter(''); setLocationFilter(''); setSearch(''); }}>
-                                <Text style={styles.resetBtnText}>Clear All Filters</Text>
-                            </TouchableOpacity>
-                        </View>
-                    }
-                />
-            )}
+            {/* Results Grid */}
+            <View style={styles.resultsContainer}>
+                {isLoading ? (
+                    <FlatList
+                        data={Array(6).fill({})}
+                        renderItem={() => <SkeletonCard />}
+                        keyExtractor={(_, index) => `skeleton-${index}`}
+                        numColumns={2}
+                        contentContainerStyle={styles.gridContent}
+                        columnWrapperStyle={styles.columnWrapper}
+                    />
+                ) : (
+                    <FlatList
+                        data={listings}
+                        renderItem={renderListing}
+                        keyExtractor={item => item.id.toString()}
+                        numColumns={2}
+                        contentContainerStyle={styles.gridContent}
+                        columnWrapperStyle={styles.columnWrapper}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2E7D32" />
+                        }
+                        ListEmptyComponent={
+                            <View style={styles.emptyBox}>
+                                <ShoppingCart size={60} color="#E0E7E0" />
+                                <Text style={styles.emptyTitle}>No items found</Text>
+                                <Text style={styles.emptyText}>Try adjusting your filters or search terms.</Text>
+                                <TouchableOpacity style={styles.resetBtn} onPress={() => { setFilter(''); setLocationFilter(''); setSearch(''); }}>
+                                    <Text style={styles.resetBtnText}>Reset Filters</Text>
+                                </TouchableOpacity>
+                            </View>
+                        }
+                    />
+                )}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F2F2F7' },
-    header: {
-        backgroundColor: '#2E7D32',
-        paddingHorizontal: 20,
-        paddingBottom: 55,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-    },
-    headerTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
-    headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
-    searchContainer: {
-        paddingHorizontal: 20,
-        marginTop: -28,
-        marginBottom: 10,
-        zIndex: 1,
-    },
-    searchBar: {
-        flexDirection: 'row',
+    container: {
+        flex: 1,
         backgroundColor: '#fff',
-        borderRadius: 14,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+    },
+    headerBackground: {
+        height: 180,
+        backgroundColor: '#2E7D32',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -80,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
+    },
+    headerContent: {
+        paddingHorizontal: 25,
+        paddingTop: 10,
+    },
+    headerTop: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        marginTop: 10,
     },
-    searchInput: { flex: 1, marginLeft: 12, fontSize: 15, color: '#333' },
-    stickyFilters: { backgroundColor: '#F2F2F7', paddingTop: 10 },
-    catContent: { paddingHorizontal: 20, paddingBottom: 15 },
-    catBtn: { alignItems: 'center', marginRight: 16, width: 70 },
-    catIconBox: {
-        width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center',
-        marginBottom: 8, backgroundColor: '#fff', elevation: 2, shadowColor: '#000',
-        shadowOpacity: 0.05, shadowRadius: 5, shadowOffset: { width: 0, height: 2 },
-        borderWidth: 1, borderColor: '#f0f0f0',
+    headerTitle: {
+        fontSize: 26,
+        fontWeight: 'bold',
+        color: '#fff',
     },
-    catIconBoxActive: { borderColor: '#2E7D32', backgroundColor: '#E8F5E9', borderWidth: 2 },
-    catText: { fontSize: 12, color: '#666', textAlign: 'center', fontWeight: '500' },
-    catTextActive: { color: '#2E7D32', fontWeight: 'bold' },
-    locationFilterContainer: { marginBottom: 15 },
-    locScrollContent: { paddingHorizontal: 20 },
+    iconBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerSub: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 8,
+        fontWeight: '500',
+    },
+    overlayContainer: {
+        marginTop: -30,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
+        paddingTop: 25,
+        zIndex: 5,
+    },
+    searchBarWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 25,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 18,
+        paddingHorizontal: 15,
+        height: 56,
+        marginBottom: 20,
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 15,
+        color: '#333',
+    },
+    filterSection: {
+        marginBottom: 15,
+    },
+    catList: {
+        paddingHorizontal: 25,
+        gap: 10,
+    },
+    catChip: {
+        paddingHorizontal: 18,
+        paddingVertical: 10,
+        borderRadius: 14,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    catChipActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#2E7D32',
+    },
+    catChipText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '600',
+    },
+    catChipTextActive: {
+        color: '#fff',
+    },
+    locationSection: {
+        marginBottom: 10,
+    },
+    locList: {
+        paddingHorizontal: 25,
+        gap: 8,
+    },
     locChip: {
-        paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#fff',
-        borderRadius: 20, marginRight: 10, borderWidth: 1, borderColor: '#eee',
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        borderRadius: 12,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
     },
-    locChipActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-    locChipText: { fontSize: 13, color: '#666', fontWeight: '500' },
-    locChipTextActive: { color: '#fff', fontWeight: 'bold' },
-    list: { paddingHorizontal: 12, paddingBottom: 20 },
-    columnWrapper: { justifyContent: 'space-between' },
+    locChipActive: {
+        backgroundColor: '#E8F5E9',
+        borderColor: '#2E7D32',
+    },
+    locChipText: {
+        fontSize: 12,
+        color: '#666',
+        fontWeight: '500',
+    },
+    locChipTextActive: {
+        color: '#2E7D32',
+        fontWeight: 'bold',
+    },
+    resultsContainer: {
+        flex: 1,
+    },
+    gridContent: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 40,
+    },
+    columnWrapper: {
+        justifyContent: 'space-between',
+    },
     listingCard: {
-        width: '48.5%', backgroundColor: '#fff', borderRadius: 16,
-        marginBottom: 16, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, shadowRadius: 5, overflow: 'hidden',
+        width: '48%',
+        backgroundColor: '#fff',
+        borderRadius: 22,
+        marginBottom: 15,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
     },
-    imageBox: { height: 140, backgroundColor: '#F9F9F9', justifyContent: 'center', alignItems: 'center' },
-    image: { width: '100%', height: '100%' },
-    freeBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: '#E74C3C', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    freeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-    verifiedBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: '#2E7D32', borderRadius: 12, padding: 4 },
-    listingContent: { padding: 12 },
-    listingTitle: { fontSize: 14, color: '#1A1A1A', marginBottom: 6, fontWeight: '600', height: 36 },
-    listingPrice: { fontSize: 16, fontWeight: 'bold', color: '#2E7D32', marginBottom: 8 },
-    metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    locationBox: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
-    locationText: { fontSize: 11, color: '#888', flex: 1 },
-    timeText: { fontSize: 10, color: '#BBB', fontWeight: '500' },
-    emptyBox: { flex: 1, alignItems: 'center', marginTop: 40, paddingHorizontal: 40 },
-    emptyText: { color: '#999', fontSize: 15, marginTop: 16, marginBottom: 20, textAlign: 'center' },
-    resetBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10 },
-    resetBtnText: { color: '#fff', fontWeight: 'bold' },
+    imageBox: {
+        height: 150,
+        backgroundColor: '#F9FBF9',
+        position: 'relative',
+    },
+    image: {
+        width: '100%',
+        height: '100%',
+    },
+    placeholderImg: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    freeBadge: {
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        backgroundColor: '#2E7D32',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    freeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
+    listingDetails: {
+        padding: 12,
+    },
+    listingPrice: {
+        fontSize: 17,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 4,
+    },
+    listingTitle: {
+        fontSize: 14,
+        color: '#1A1A1A',
+        fontWeight: '600',
+        marginBottom: 6,
+    },
+    listingMeta: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    listingLoc: {
+        fontSize: 11,
+        color: '#999',
+    },
+    emptyBox: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 60,
+    },
+    emptyTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        marginTop: 15,
+    },
+    emptyText: {
+        fontSize: 14,
+        color: '#999',
+        marginTop: 8,
+        textAlign: 'center',
+        paddingHorizontal: 40,
+    },
+    resetBtn: {
+        marginTop: 20,
+        paddingHorizontal: 25,
+        paddingVertical: 12,
+        backgroundColor: '#2E7D32',
+        borderRadius: 18,
+    },
+    resetBtnText: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
 });

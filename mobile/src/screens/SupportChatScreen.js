@@ -2,15 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TextInput,
     TouchableOpacity, KeyboardAvoidingView, Platform,
-    ActivityIndicator, Image
+    ActivityIndicator, Image, Dimensions, StatusBar, ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Send, Bot, ArrowLeft, User } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Send, Bot, ArrowLeft, User, MessageCircle, HelpCircle, ChevronRight } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import apiClient from '../api/client';
+
+const { width } = Dimensions.get('window');
 
 export default function SupportChatScreen() {
     const navigation = useNavigation();
+    const insets = useSafeAreaInsets();
     const [messages, setMessages] = useState([
         {
             id: '1',
@@ -55,13 +58,6 @@ export default function SupportChatScreen() {
             }
         } catch (error) {
             console.error('[Support Chat] AI Error:', error);
-            const errorMsg = {
-                id: Date.now().toString(),
-                text: "I'm having trouble connecting to my brain right now. Please try again or email support@revesta.com!",
-                sender: 'ai',
-                timestamp: new Date().toISOString()
-            };
-            setMessages(prev => [...prev, errorMsg]);
         } finally {
             setIsTyping(false);
         }
@@ -71,18 +67,12 @@ export default function SupportChatScreen() {
         if (pollInterval.current) clearInterval(pollInterval.current);
         pollInterval.current = setInterval(async () => {
             try {
-                // Check if session has an agent now
                 const res = await apiClient.get(`chat/support-sessions/${id}/`);
-                if (res.data.admin) {
-                    setAgent(res.data.admin);
-                }
+                if (res.data.admin) setAgent(res.data.admin);
 
-                // Also fetch messages - for now we use the general chat history
-                // but usually we'd have a specific "Support Channel"
                 const msgRes = await apiClient.get('chat/messages/');
                 const latest = msgRes.data.results || msgRes.data;
 
-                // Merge new messages from human agents (where sender isn't current user)
                 setMessages(prev => {
                     const existingIds = new Set(prev.map(m => m.id));
                     const newMsgs = latest
@@ -99,7 +89,7 @@ export default function SupportChatScreen() {
             } catch (e) {
                 console.log("Polling error", e);
             }
-        }, 3000); // Poll every 3 seconds
+        }, 3000);
     };
 
     useEffect(() => {
@@ -110,41 +100,28 @@ export default function SupportChatScreen() {
 
     const sendMessage = async (text) => {
         if (!text.trim()) return;
-
         const newMsg = {
             id: Date.now().toString(),
             text: text,
             sender: 'user',
             timestamp: new Date().toISOString()
         };
-
         setMessages(prev => [...prev, newMsg]);
         setInputText('');
-
         if (handoffActive) {
-            // Send directly to admin/support
             try {
-                // We need an admin ID to send to. If not claimed, we send to a system user or wait.
-                // For Revesta, let's assume admins poll the SupportSession and reply using current user's ID.
-                // So the user sends to 'admin' if known, otherwise just wait for agent.
                 if (agent) {
-                    await apiClient.post('chat/messages/', {
-                        receiver: agent.id,
-                        content: text
-                    });
+                    await apiClient.post('chat/messages/', { receiver: agent.id, content: text });
                 } else {
-                    // Still waiting for agent - maybe notify user?
                     const waitMsg = {
                         id: 'wait-' + Date.now(),
-                        text: "An agent hasn't claimed this chat yet. Your message will be seen as soon as someone connects! ⏳",
+                        text: "Searching for an agent... Your message will be seen soon! ⏳",
                         sender: 'system',
                         timestamp: new Date().toISOString()
                     };
                     setMessages(prev => [...prev, waitMsg]);
                 }
-            } catch (e) {
-                console.log("Failed to send human message", e);
-            }
+            } catch (e) { console.log(e); }
         } else {
             fetchAIResponse(text);
         }
@@ -152,31 +129,19 @@ export default function SupportChatScreen() {
 
     const renderMessage = ({ item }) => {
         const isUser = item.sender === 'user';
-        const isAi = item.sender === 'ai';
         const isSystem = item.sender === 'system';
+        const isAi = item.sender === 'ai';
         const isHuman = item.sender === 'human';
 
         return (
-            <View style={[
-                styles.msgRow,
-                isUser ? styles.msgRowUser : (isSystem ? styles.msgRowSystem : styles.msgRowSupport)
-            ]}>
+            <View style={[styles.msgRow, isUser ? styles.msgRowUser : (isSystem ? styles.msgRowSystem : styles.msgRowSupport)]}>
                 {(isAi || isHuman) && (
-                    <View style={[
-                        styles.supportAvatar,
-                        isHuman && { backgroundColor: '#FF8F00' }
-                    ]}>
-                        {isAi ? <Bot size={16} color="#fff" /> : <User size={16} color="#fff" />}
+                    <View style={[styles.supportAvatar, isHuman && { backgroundColor: '#F39C12' }]}>
+                        {isAi ? <Bot size={14} color="#fff" /> : <User size={14} color="#fff" />}
                     </View>
                 )}
-                <View style={[
-                    styles.msgBubble,
-                    isUser ? styles.bubbleUser : (isSystem ? styles.bubbleSystem : styles.bubbleSupport)
-                ]}>
-                    <Text style={[
-                        styles.msgText,
-                        isUser ? styles.textUser : (isSystem ? styles.textSystem : styles.textSupport)
-                    ]}>
+                <View style={[styles.msgBubble, isUser ? styles.bubbleUser : (isSystem ? styles.bubbleSystem : styles.bubbleSupport)]}>
+                    <Text style={[styles.msgText, isUser ? styles.textUser : (isSystem ? styles.textSystem : styles.textSupport)]}>
                         {item.text}
                     </Text>
                     {!isSystem && (
@@ -190,145 +155,143 @@ export default function SupportChatScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <View style={styles.headerTitleBox}>
-                    <Text style={styles.headerTitle}>
-                        {handoffActive ? (agent ? `Agent ${agent.username}` : "Finding Agent...") : "ReVesta Support AI"}
-                    </Text>
-                    <View style={styles.onlineBadge}>
-                        <View style={handoffActive && !agent ? styles.yellowDot : styles.greenDot} />
-                        <Text style={[styles.onlineText, handoffActive && !agent && { color: '#F39C12' }]}>
-                            {handoffActive ? (agent ? "Connected" : "Wait time: < 2m") : "Online"}
-                        </Text>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <View style={styles.headerCenter}>
+                            <Text style={styles.headerTitle}>
+                                {handoffActive ? (agent ? `Agent ${agent.username}` : "Finding Agent...") : "Support Assistant"}
+                            </Text>
+                            <View style={styles.statusRow}>
+                                <View style={handoffActive && !agent ? styles.yellowDot : styles.greenDot} />
+                                <Text style={styles.statusLabel}>{handoffActive ? (agent ? "Connected" : "Wait mode") : "AI Support Online"}</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity style={styles.helpBtn}>
+                            <HelpCircle size={22} color="#fff" />
+                        </TouchableOpacity>
                     </View>
-                </View>
+                </SafeAreaView>
             </View>
 
-            <FlatList
-                ref={flatListRef}
-                data={messages}
-                renderItem={renderMessage}
-                keyExtractor={item => item.id}
-                contentContainerStyle={styles.list}
-                onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
-                ListFooterComponent={
-                    isTyping ? (
-                        <View style={styles.typingBox}>
-                            <ActivityIndicator size="small" color="#2E7D32" />
-                            <Text style={styles.typingText}>{handoffActive ? "Agent is typing..." : "ReVesta AI is typing..."}</Text>
-                        </View>
-                    ) : (
-                        !handoffActive && (
-                            <View style={styles.quickReplies}>
-                                {quickReplies.map((reply, index) => (
-                                    <TouchableOpacity
-                                        key={index}
-                                        style={styles.quickReplyChip}
-                                        onPress={() => sendMessage(reply)}
-                                    >
-                                        <Text style={styles.quickReplyText}>{reply}</Text>
-                                    </TouchableOpacity>
-                                ))}
+            {/* Chat Content Overlap */}
+            <View style={styles.contentContainer}>
+                <FlatList
+                    ref={flatListRef}
+                    data={messages}
+                    renderItem={renderMessage}
+                    keyExtractor={item => item.id}
+                    contentContainerStyle={styles.listContent}
+                    onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                    showsVerticalScrollIndicator={false}
+                    ListFooterComponent={
+                        isTyping ? (
+                            <View style={styles.typingBox}>
+                                <ActivityIndicator size="small" color="#2E7D32" />
+                                <Text style={styles.typingText}>Thinking...</Text>
                             </View>
+                        ) : (
+                            !handoffActive && (
+                                <View style={styles.quickReplyContainer}>
+                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickReplyList}>
+                                        {quickReplies.map((reply, index) => (
+                                            <TouchableOpacity
+                                                key={index}
+                                                style={styles.quickReplyChip}
+                                                onPress={() => sendMessage(reply)}
+                                            >
+                                                <Text style={styles.quickReplyText}>{reply}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </ScrollView>
+                                </View>
+                            )
                         )
-                    )
-                }
-            />
-
-            <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
-                style={styles.inputContainer}
-            >
-                <TextInput
-                    style={styles.input}
-                    placeholder="Type a message..."
-                    value={inputText}
-                    onChangeText={setInputText}
-                    multiline
+                    }
                 />
-                <TouchableOpacity
-                    style={[styles.sendBtn, !inputText.trim() && styles.sendBtnDisabled]}
-                    onPress={() => sendMessage(inputText)}
-                    disabled={!inputText.trim()}
+
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
                 >
-                    <Send size={20} color="#fff" />
-                </TouchableOpacity>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+                    <View style={[styles.inputArea, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 20 }]}>
+                        <View style={styles.inputWrapper}>
+                            <TextInput
+                                style={styles.input}
+                                placeholder="How can we help?"
+                                value={inputText}
+                                onChangeText={setInputText}
+                                multiline
+                                placeholderTextColor="#9BAA9B"
+                            />
+                            <TouchableOpacity
+                                style={[styles.sendBtn, !inputText.trim() && styles.sendDisabled]}
+                                onPress={() => sendMessage(inputText)}
+                                disabled={!inputText.trim()}
+                            >
+                                <Send size={18} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#f5f5f5' },
-    header: {
-        flexDirection: 'row', alignItems: 'center', padding: 15,
-        backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee'
+    container: { flex: 1, backgroundColor: '#F0F7F4' },
+    headerBackground: { height: 180, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    curvedShape: {
+        position: 'absolute', bottom: -80, left: -width * 0.25,
+        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', opacity: 0.3
     },
-    backBtn: { padding: 5, marginRight: 10 },
-    headerTitleBox: { justifyContent: 'center' },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    onlineBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
-    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32', marginRight: 5 },
-    yellowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F39C12', marginRight: 5 },
-    onlineText: { fontSize: 12, color: '#2E7D32', fontWeight: '500' },
-    list: { padding: 15, paddingBottom: 20 },
-    msgRow: { flexDirection: 'row', marginBottom: 16, alignItems: 'flex-end' },
-    msgRowUser: { justifyContent: 'flex-end', paddingLeft: 60 },
-    msgRowSupport: { justifyContent: 'flex-start', paddingRight: 60 },
-    msgRowSystem: { justifyContent: 'center' },
-    supportAvatar: {
-        width: 28, height: 28, borderRadius: 14, backgroundColor: '#FF8F00',
-        justifyContent: 'center', alignItems: 'center', marginRight: 8,
-        marginBottom: 2
-    },
-    msgBubble: {
-        maxWidth: '100%', padding: 12, borderRadius: 18,
-        elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1, shadowRadius: 2
-    },
-    bubbleUser: {
-        backgroundColor: '#2E7D32',
-        borderBottomRightRadius: 4,
-        borderTopRightRadius: 18
-    },
-    bubbleSupport: {
-        backgroundColor: '#FFB300',
-        borderBottomLeftRadius: 4,
-        borderTopLeftRadius: 18
-    },
-    bubbleSystem: { backgroundColor: '#FFF3E0', alignSelf: 'center', borderRadius: 8, borderBottomWidth: 0 },
-    msgText: { fontSize: 16, lineHeight: 22 },
+    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerCenter: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
+    statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981', marginRight: 6 },
+    yellowDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#F59E0B', marginRight: 6 },
+    statusLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '500' },
+    helpBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+    contentContainer: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    listContent: { padding: 25, paddingBottom: 20 },
+    msgRow: { flexDirection: 'row', marginBottom: 15, alignItems: 'flex-end' },
+    msgRowUser: { justifyContent: 'flex-end' },
+    msgRowSupport: { justifyContent: 'flex-start' },
+    msgRowSystem: { justifyContent: 'center', marginVertical: 10 },
+    supportAvatar: { width: 32, height: 32, borderRadius: 12, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center', marginRight: 10, marginBottom: 2 },
+    msgBubble: { maxWidth: '80%', padding: 14, borderRadius: 22 },
+    bubbleUser: { backgroundColor: '#2E7D32', borderBottomRightRadius: 4 },
+    bubbleSupport: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
+    bubbleSystem: { backgroundColor: '#FFFBEB', borderRadius: 12, paddingHorizontal: 15, paddingVertical: 8, borderWidth: 1, borderColor: '#FEF3C7' },
+    msgText: { fontSize: 15, lineHeight: 22 },
     textUser: { color: '#fff' },
-    textSupport: { color: '#333' },
-    textSystem: { color: '#E65100', fontSize: 12, fontWeight: '500' },
-    msgTime: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
-    timeUser: { color: 'rgba(255,255,255,0.7)' },
-    timeSupport: { color: 'rgba(0,0,0,0.4)' },
-    typingBox: { flexDirection: 'row', alignItems: 'center', marginLeft: 40, marginBottom: 10 },
-    typingText: { fontSize: 12, color: '#666', marginLeft: 8, fontStyle: 'italic' },
-    quickReplies: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10, marginBottom: 10 },
-    quickReplyChip: {
-        backgroundColor: '#E8F5E9', paddingHorizontal: 12, paddingVertical: 8,
-        borderRadius: 20, borderWidth: 1, borderColor: '#C8E6C9'
-    },
-    quickReplyText: { fontSize: 12, color: '#2E7D32', fontWeight: '600' },
-    inputContainer: {
-        flexDirection: 'row', alignItems: 'center', padding: 10,
-        backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee'
-    },
-    input: {
-        flex: 1, backgroundColor: '#f5f5f5', borderRadius: 24,
-        paddingHorizontal: 16, paddingVertical: 10, maxHeight: 100,
-        fontSize: 16, color: '#333'
-    },
-    sendBtn: {
-        width: 44, height: 44, borderRadius: 22, backgroundColor: '#2E7D32',
-        justifyContent: 'center', alignItems: 'center', marginLeft: 10
-    },
-    sendBtnDisabled: { backgroundColor: '#ccc' }
+    textSupport: { color: '#1A1A1A' },
+    textSystem: { color: '#B45309', fontSize: 12, fontWeight: '600' },
+    msgTime: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end', opacity: 0.6 },
+    timeUser: { color: '#fff' },
+    timeSupport: { color: '#999' },
+    typingBox: { flexDirection: 'row', alignItems: 'center', marginLeft: 42, marginBottom: 15 },
+    typingText: { fontSize: 13, color: '#999', marginLeft: 8, fontStyle: 'italic' },
+    quickReplyContainer: { marginTop: 10, marginBottom: 5 },
+    quickReplyList: { gap: 10 },
+    quickReplyChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, backgroundColor: '#F0F7F4', borderWidth: 1, borderColor: '#E8F5E9' },
+    quickReplyText: { fontSize: 13, color: '#2E7D32', fontWeight: '600' },
+    inputArea: { backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 15, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 25, paddingHorizontal: 15, minHeight: 50 },
+    input: { flex: 1, fontSize: 15, color: '#1A1A1A', paddingVertical: 10, marginRight: 10 },
+    sendBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center' },
+    sendDisabled: { backgroundColor: '#D1D5DB' },
 });

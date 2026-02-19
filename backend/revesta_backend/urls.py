@@ -35,9 +35,5 @@ urlpatterns = [
     path('api/v1/market/analyze-waste/', AnalyzeWasteView.as_view(), name='analyze-waste'), # AI Analysis
     path('api/v1/support/chat/', SupportAIChatView.as_view(), name='support-ai-chat'),
     path('api/v1/', include(router_v1.urls)),  # ViewSet routes
-    
-    # Admin Dashboard Static Files
-    path('dashboard/', serve, {'document_root': settings.BASE_DIR.parent / 'Bootstrap-Admin-Template-master' / 'dist-modern', 'path': 'index.html'}),
-    re_path(r'^dashboard/(?P<path>.*)$', serve, {'document_root': settings.BASE_DIR.parent / 'Bootstrap-Admin-Template-master' / 'dist-modern'}),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

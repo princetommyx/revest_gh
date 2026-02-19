@@ -1,58 +1,33 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
+import { Mail, Lock, Phone, Eye, EyeOff, User, Check } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { Modal, ActivityIndicator as RNActivityIndicator } from 'react-native';
 
-WebBrowser.maybeCompleteAuthSession();
+const { width } = Dimensions.get('window');
 
-// Ghana flag component (simple unicode or image if available, using unicode for now)
-const Flag = () => <Text style={{ fontSize: 20, marginRight: 5 }}>🇬🇭</Text>;
+const Flag = () => <Text style={{ fontSize: 18, marginRight: 4 }}>🇬🇭</Text>;
 
 export default function LoginScreen() {
     const navigation = useNavigation();
     const [loginMethod, setLoginMethod] = useState('phone'); // 'phone' or 'email'
-    const [email, setEmail] = useState(''); // Used for Email/Username
-    const [phoneNumber, setPhoneNumber] = useState(''); // Used for Phone
+    const [email, setEmail] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const CountryCode = '+233';
 
-    const [request, response, promptAsync] = Google.useAuthRequest({
-        webClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Web Client ID (for backend verification)
-        androidClientId: '132479987352-0mb8h8gaaj2c8qg8jdebgd7u7nsglau3.apps.googleusercontent.com', // Android Client ID (for native flow)
-        iosClientId: '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com', // Use Web Client ID (or specific iOS ID if available)
-    });
+    // Verification State
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [verificationCode, setVerificationCode] = useState('');
+    const [verifying, setVerifying] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
 
-    React.useEffect(() => {
-        if (response?.type === 'success') {
-            const { authentication } = response;
-            handleGoogleBackend(authentication.accessToken);
-        }
-    }, [response]);
-
-    const { signIn, googleSignIn } = useAuth();
-
-    const handleGoogleBackend = async (token) => {
-        setLoading(true);
-        try {
-            await googleSignIn(token);
-        } catch (error) {
-            console.log("Google Login Error:", error);
-            Toast.show({
-                type: 'error',
-                text1: 'Google Login Failed',
-                text2: 'Could not authenticate with server'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { signIn, verifyLogin } = useAuth();
 
     const handleLogin = async () => {
         let usernameToSubmit = '';
@@ -62,8 +37,7 @@ export default function LoginScreen() {
                 Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter your phone number' });
                 return;
             }
-            // Format phone number: Remove leading 0 if present, prepend country code
-            let cleanNumber = phoneNumber.replace(/\D/g, ''); // Remove non-digits
+            let cleanNumber = phoneNumber.replace(/\D/g, '');
             if (cleanNumber.startsWith('0')) cleanNumber = cleanNumber.substring(1);
             usernameToSubmit = CountryCode + cleanNumber;
         } else {
@@ -81,14 +55,28 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            await signIn(usernameToSubmit, password);
-            Toast.show({
-                type: 'success',
-                text1: 'Welcome back!',
-                text2: 'Successfully signed in.'
-            });
+            const result = await signIn(usernameToSubmit, password);
+
+            if (result.status === 'verification_required') {
+                setPendingUser({
+                    id: result.user_id,
+                    channel: result.channel,
+                    identifier: result.channel === 'phone' ? phoneNumber : email
+                });
+                setShowOtpModal(true);
+                Toast.show({
+                    type: 'info',
+                    text1: 'Verification Required',
+                    text2: result.message
+                });
+            } else {
+                Toast.show({
+                    type: 'success',
+                    text1: 'Welcome back!',
+                    text2: 'Successfully signed in.'
+                });
+            }
         } catch (error) {
-            console.log(error);
             Toast.show({
                 type: 'error',
                 text1: 'Login Failed',
@@ -99,22 +87,53 @@ export default function LoginScreen() {
         }
     };
 
+    const confirmLoginCode = async () => {
+        if (!verificationCode || verificationCode.length < 6) {
+            Toast.show({ type: 'error', text1: 'Invalid Code', text2: 'Please enter the 6-digit code' });
+            return;
+        }
+
+        setVerifying(true);
+        try {
+            await verifyLogin(pendingUser.id, verificationCode);
+            setShowOtpModal(false);
+            Toast.show({
+                type: 'success',
+                text1: 'Verified!',
+                text2: 'Welcome back to Revesta.'
+            });
+        } catch (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Verification Failed',
+                text2: error.response?.data?.detail || 'Invalid or expired code'
+            });
+        } finally {
+            setVerifying(false);
+        }
+    };
+
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
+            {/* Curved Header Background */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView style={styles.headerContent}>
+                    <Text style={styles.greetingText}>Hello!</Text>
+                    <Text style={styles.welcomeText}>Welcome to Revesta</Text>
+                </SafeAreaView>
+            </View>
+
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={{ flex: 1 }}
+                style={{ flex: 1, marginTop: -60 }}
             >
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <ArrowLeft size={24} color="#000" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Login</Text>
-                        <View style={{ width: 24 }} />
-                    </View>
-
-                    <View style={styles.content}>
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                >
+                    <View style={styles.formCard}>
+                        <Text style={styles.cardTitle}>Login</Text>
 
                         {/* Tab Switcher */}
                         <View style={styles.tabContainer}>
@@ -122,37 +141,41 @@ export default function LoginScreen() {
                                 style={[styles.tabButton, loginMethod === 'phone' && styles.activeTab]}
                                 onPress={() => setLoginMethod('phone')}
                             >
-                                <Text style={[styles.tabText, loginMethod === 'phone' && styles.activeTabText]}>Phone number</Text>
+                                <Text style={[styles.tabText, loginMethod === 'phone' && styles.activeTabText]}>Phone</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.tabButton, loginMethod === 'email' && styles.activeTab]}
                                 onPress={() => setLoginMethod('email')}
                             >
-                                <Text style={[styles.tabText, loginMethod === 'email' && styles.activeTabText]}>Email or username</Text>
+                                <Text style={[styles.tabText, loginMethod === 'email' && styles.activeTabText]}>Email</Text>
                             </TouchableOpacity>
                         </View>
 
                         {/* Inputs */}
-                        <View style={styles.formContainer}>
+                        <View style={styles.inputGroup}>
                             {loginMethod === 'phone' ? (
-                                <View style={styles.phoneRow}>
-                                    <View style={styles.countryCodeContainer}>
+                                <View style={styles.inputWrapper}>
+                                    <View style={styles.iconContainer}>
+                                        <Phone size={20} color="#666" />
+                                    </View>
+                                    <View style={styles.phoneLabel}>
                                         <Flag />
-                                        <Text style={styles.countryCodeText}>{CountryCode}</Text>
+                                        <Text style={styles.countryCode}>{CountryCode}</Text>
                                     </View>
-                                    <View style={styles.phoneInputContainer}>
-                                        <TextInput
-                                            style={styles.phoneInput}
-                                            placeholder="Phone number"
-                                            value={phoneNumber}
-                                            onChangeText={setPhoneNumber}
-                                            keyboardType="phone-pad"
-                                            placeholderTextColor="#999"
-                                        />
-                                    </View>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Phone number"
+                                        value={phoneNumber}
+                                        onChangeText={setPhoneNumber}
+                                        keyboardType="phone-pad"
+                                        placeholderTextColor="#999"
+                                    />
                                 </View>
                             ) : (
-                                <View style={styles.inputContainer}>
+                                <View style={styles.inputWrapper}>
+                                    <View style={styles.iconContainer}>
+                                        <Mail size={20} color="#666" />
+                                    </View>
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Email or username"
@@ -164,7 +187,10 @@ export default function LoginScreen() {
                                 </View>
                             )}
 
-                            <View style={styles.inputContainer}>
+                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
+                                <View style={styles.iconContainer}>
+                                    <Lock size={20} color="#666" />
+                                </View>
                                 <TextInput
                                     style={styles.input}
                                     placeholder="Password"
@@ -180,250 +206,313 @@ export default function LoginScreen() {
                                     {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
                                 </TouchableOpacity>
                             </View>
-
-                            <TouchableOpacity
-                                style={styles.forgotPasswordContainer}
-                                onPress={() => navigation.navigate('ForgotPassword')}
-                            >
-                                <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-                            </TouchableOpacity>
                         </View>
 
-                        {/* Login Button */}
                         <TouchableOpacity
-                            style={styles.button}
+                            style={styles.forgotPasswordButton}
+                            onPress={() => navigation.navigate('ForgotPassword')}
+                        >
+                            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={styles.loginButton}
                             onPress={handleLogin}
                             disabled={loading}
                         >
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
-                                <Text style={styles.buttonText}>Continue</Text>
+                                <Text style={styles.loginButtonText}>Login</Text>
                             )}
                         </TouchableOpacity>
 
-                        {/* Google Button - Hidden for now */}
-                        {/* 
-                        <View style={styles.dividerContainer}>
-                            <View style={styles.dividerLine} />
-                            <Text style={styles.dividerText}>Or continue with</Text>
-                            <View style={styles.dividerLine} />
-                        </View>
-
                         <TouchableOpacity
-                            style={styles.googleButton}
-                            onPress={() => promptAsync()}
-                            disabled={!request}
+                            onPress={() => navigation.navigate('Register')}
+                            style={styles.signupContainer}
                         >
-                            <Image
-                                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2991/2991148.png' }}
-                                style={styles.googleIcon}
-                            />
-                            <Text style={styles.googleButtonText}>Sign in with Google</Text>
-                        </TouchableOpacity> 
-                        */}
-
-                        <TouchableOpacity onPress={() => navigation.navigate('Register')} style={styles.signupContainer}>
                             <Text style={styles.signupText}>
-                                Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                                Don't have account? <Text style={styles.signupLink}>Sign Up</Text>
                             </Text>
                         </TouchableOpacity>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+
+            {/* Verification Modal */}
+            <Modal visible={showOtpModal} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <View style={styles.modalIconContainer}>
+                            <Lock size={32} color="#2E7D32" />
+                        </View>
+                        <Text style={styles.modalTitle}>Verification Code</Text>
+                        <Text style={styles.modalDesc}>
+                            Enter the code sent to your {pendingUser?.channel}
+                        </Text>
+
+                        <TextInput
+                            style={styles.otpInput}
+                            placeholder="000000"
+                            placeholderTextColor="#CCC"
+                            value={verificationCode}
+                            onChangeText={setVerificationCode}
+                            keyboardType="number-pad"
+                            maxLength={6}
+                        />
+
+                        <TouchableOpacity
+                            style={styles.modalBtn}
+                            onPress={confirmLoginCode}
+                            disabled={verifying}
+                        >
+                            {verifying ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <Text style={styles.modalBtnText}>Verify & Login</Text>
+                            )}
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setShowOtpModal(false)}
+                            style={styles.modalCancelBtn}
+                        >
+                            <Text style={styles.modalCancel}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#F0F7F4', // Very light mint/green
     },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    headerBackground: {
+        height: 300,
+        backgroundColor: '#2E7D32', // Revesta Primary Green
+        position: 'relative',
+        overflow: 'hidden',
     },
-    backButton: {
-        padding: 5,
+    curvedShape: {
+        position: 'absolute',
+        bottom: -150,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', // Slightly lighter green for depth
+        opacity: 0.3,
     },
-    headerTitle: {
-        fontSize: 20,
+    headerContent: {
+        paddingHorizontal: 30,
+        paddingTop: 40,
+    },
+    greetingText: {
+        fontSize: 42,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#fff',
     },
-    content: {
-        flex: 1,
-        padding: 20,
+    welcomeText: {
+        fontSize: 18,
+        color: 'rgba(255, 255, 255, 0.8)',
+        marginTop: 5,
+        fontWeight: '500',
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+    },
+    formCard: {
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        padding: 30,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    cardTitle: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 25,
     },
     tabContainer: {
         flexDirection: 'row',
         backgroundColor: '#F5F5F5',
-        borderRadius: 12,
-        padding: 4,
-        marginBottom: 30,
-        height: 50,
+        borderRadius: 15,
+        padding: 5,
+        marginBottom: 25,
     },
     tabButton: {
         flex: 1,
-        justifyContent: 'center',
+        paddingVertical: 10,
         alignItems: 'center',
-        borderRadius: 10,
+        borderRadius: 12,
     },
     activeTab: {
         backgroundColor: '#fff',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
         elevation: 2,
     },
     tabText: {
         fontSize: 14,
-        fontWeight: '500',
-        color: '#666',
-    },
-    activeTabText: {
-        color: '#000',
+        color: '#999',
         fontWeight: '600',
     },
-    formContainer: {
-        marginBottom: 20,
+    activeTabText: {
+        color: '#2E7D32',
     },
-    phoneRow: {
-        flexDirection: 'row',
+    inputGroup: {
         marginBottom: 15,
-        gap: 12,
     },
-    countryCodeContainer: {
+    inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        width: 100,
-        height: 56,
+        borderRadius: 15,
         borderWidth: 1,
         borderColor: '#F3F4F6',
+        height: 60,
+        paddingHorizontal: 15,
     },
-    countryCodeText: {
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500',
+    iconContainer: {
+        marginRight: 10,
     },
-    phoneInputContainer: {
-        flex: 1,
-        backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        height: 56,
-        justifyContent: 'center',
-    },
-    phoneInput: {
-        paddingHorizontal: 16,
-        fontSize: 16,
-        color: '#333',
-        height: '100%',
-    },
-    inputContainer: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        marginBottom: 15,
-        height: 56,
+    phoneLabel: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginRight: 10,
+        borderRightWidth: 1,
+        borderRightColor: '#EEE',
+        paddingRight: 10,
+    },
+    countryCode: {
+        fontSize: 16,
+        color: '#333',
+        fontWeight: '600',
     },
     input: {
         flex: 1,
-        paddingHorizontal: 16,
         fontSize: 16,
-        colors: '#333',
+        color: '#333',
         height: '100%',
     },
     eyeIcon: {
-        padding: 10,
+        padding: 5,
     },
-    forgotPasswordContainer: {
-        alignItems: 'flex-end',
-        marginTop: 5,
+    forgotPasswordButton: {
+        alignSelf: 'flex-end',
+        marginBottom: 30,
     },
     forgotPasswordText: {
-        color: '#2E7D32',
+        color: '#999',
         fontSize: 14,
         fontWeight: '500',
     },
-    button: {
+    loginButton: {
         backgroundColor: '#2E7D32',
-        height: 56,
-        borderRadius: 28, // Fully rounded
+        height: 60,
+        borderRadius: 30,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 30,
         shadowColor: '#2E7D32',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 4,
+        elevation: 5,
     },
-    buttonText: {
+    loginButtonText: {
         color: '#fff',
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-    },
-    dividerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginVertical: 30,
-    },
-    dividerLine: {
-        flex: 1,
-        height: 1,
-        backgroundColor: '#E5E7EB',
-    },
-    dividerText: {
-        marginHorizontal: 10,
-        color: '#6B7280',
-        fontSize: 14,
-    },
-    googleButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#fff',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-        height: 56,
-        borderRadius: 28,
-        marginBottom: 20,
-    },
-    googleIcon: {
-        width: 24,
-        height: 24,
-        marginRight: 10,
-    },
-    googleButtonText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '600',
     },
     signupContainer: {
         alignItems: 'center',
-        marginTop: 10,
+        marginTop: 25,
     },
     signupText: {
-        color: '#6B7280',
+        color: '#999',
         fontSize: 14,
     },
     signupLink: {
         color: '#2E7D32',
         fontWeight: 'bold',
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        padding: 20,
+    },
+    modalCard: {
+        backgroundColor: '#fff',
+        borderRadius: 25,
+        padding: 30,
+        alignItems: 'center',
+    },
+    modalIconContainer: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+        backgroundColor: '#E8F5E9',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+    },
+    modalDesc: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        marginBottom: 25,
+        lineHeight: 20,
+    },
+    otpInput: {
+        width: '100%',
+        height: 60,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 15,
+        textAlign: 'center',
+        fontSize: 24,
+        letterSpacing: 10,
+        fontWeight: 'bold',
+        marginBottom: 25,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    modalBtn: {
+        backgroundColor: '#2E7D32',
+        width: '100%',
+        height: 56,
+        borderRadius: 28,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 15,
+    },
+    modalBtnText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalCancelBtn: {
+        padding: 10,
+    },
+    modalCancel: {
+        color: '#999',
+        fontSize: 14,
+        fontWeight: '500',
     },
 });
 

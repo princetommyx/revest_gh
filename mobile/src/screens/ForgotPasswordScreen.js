@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Dimensions, StatusBar } from 'react-native';
+import { ArrowLeft, Mail, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
 
+const { width } = Dimensions.get('window');
 
 export default function ForgotPasswordScreen() {
     const navigation = useNavigation();
@@ -14,142 +15,114 @@ export default function ForgotPasswordScreen() {
 
     const handleSendResetLink = async () => {
         if (!email) {
-            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter your email address' });
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Please enter your email' });
             return;
         }
-
         setLoading(true);
         try {
             await authApi.requestPasswordReset(email);
-
-            Toast.show({
-                type: 'success',
-                text1: 'Email Sent',
-                text2: 'If an account exists, you will receive a reset link.'
-            });
+            Toast.show({ type: 'success', text1: 'Email Sent', text2: 'Check your inbox for the reset link.' });
             setTimeout(() => navigation.goBack(), 2000);
         } catch (error) {
-            console.log(error);
-            Toast.show({
-                type: 'error',
-                text1: 'Request Failed',
-                text2: 'Could not send reset link. Please try again.'
-            });
+            Toast.show({ type: 'error', text1: 'Request Failed', text2: 'Could not send link.' });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-                <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-                    <View style={styles.header}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                            <ArrowLeft size={24} color="#000" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Forgot Password</Text>
-                        <View style={{ width: 24 }} />
-                    </View>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-                    <View style={styles.content}>
-                        <Text style={styles.description}>
-                            Enter your email address and we'll send you a link to reset your password.
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Password Reset</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+                </SafeAreaView>
+            </View>
+
+            <View style={styles.contentWrap}>
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+                    <ScrollView contentContainerStyle={styles.scrollPadding} showsVerticalScrollIndicator={false}>
+                        <View style={styles.iconCircle}>
+                            <Mail size={40} color="#2E7D32" />
+                        </View>
+                        <Text style={styles.heroTitle}>Forgot Password?</Text>
+                        <Text style={styles.heroSub}>
+                            Don't worry! Enter the email address associated with your account and we'll send you instructions to reset your password.
                         </Text>
 
-                        <View style={styles.inputContainer}>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Email address"
-                                value={email}
-                                onChangeText={setEmail}
-                                autoCapitalize="none"
-                                keyboardType="email-address"
-                                placeholderTextColor="#999"
-                            />
+                        <View style={styles.inputSection}>
+                            <View style={styles.inputWrapper}>
+                                <Mail size={20} color="#9BAA9B" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Enter your email"
+                                    value={email}
+                                    onChangeText={setEmail}
+                                    autoCapitalize="none"
+                                    keyboardType="email-address"
+                                    placeholderTextColor="#9BAA9B"
+                                />
+                            </View>
                         </View>
 
                         <TouchableOpacity
-                            style={styles.button}
+                            style={[styles.mainBtn, loading && styles.btnDisabled]}
                             onPress={handleSendResetLink}
                             disabled={loading}
                         >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.buttonText}>Send Reset Link</Text>
-                            )}
+                            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Send Reset Link</Text>}
                         </TouchableOpacity>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+
+                        <TouchableOpacity style={styles.backTextBtn} onPress={() => navigation.goBack()}>
+                            <Text style={styles.backText}>Remember password? <Text style={styles.backLink}>Login</Text></Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
+    container: { flex: 1, backgroundColor: '#F0F7F4' },
+    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    curvedShape: {
+        position: 'absolute', bottom: -80, left: -width * 0.25,
+        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', opacity: 0.3
     },
-    header: {
-        paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 10,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    scrollPadding: { padding: 25, paddingBottom: 50, alignItems: 'center' },
+    iconCircle: { width: 90, height: 90, borderRadius: 30, backgroundColor: '#F0F7F4', justifyContent: 'center', alignItems: 'center', marginBottom: 25, marginTop: 10 },
+    heroTitle: { fontSize: 24, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 12 },
+    heroSub: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 22, marginBottom: 35, paddingHorizontal: 20 },
+    inputSection: { width: '100%', marginBottom: 30 },
+    inputWrapper: {
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6',
+        borderRadius: 20, paddingHorizontal: 20, height: 60
     },
-    backButton: {
-        padding: 5,
+    input: { flex: 1, marginLeft: 15, fontSize: 16, color: '#1A1A1A' },
+    mainBtn: {
+        backgroundColor: '#2E7D32', width: '100%', height: 60, borderRadius: 30,
+        justifyContent: 'center', alignItems: 'center', shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6
     },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    content: {
-        flex: 1,
-        padding: 20,
-        paddingTop: 40,
-    },
-    description: {
-        fontSize: 16,
-        color: '#666',
-        marginBottom: 30,
-        lineHeight: 24,
-    },
-    inputContainer: {
-        backgroundColor: '#F9FAFB',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        marginBottom: 20,
-        height: 56,
-        justifyContent: 'center',
-    },
-    input: {
-        paddingHorizontal: 16,
-        fontSize: 16,
-        color: '#333',
-        height: '100%',
-    },
-    button: {
-        backgroundColor: '#2E7D32',
-        height: 56,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 10,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
+    btnDisabled: { backgroundColor: '#D1D5DB' },
+    btnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    backTextBtn: { marginTop: 25 },
+    backText: { fontSize: 14, color: '#6B7280' },
+    backLink: { color: '#2E7D32', fontWeight: 'bold' }
 });

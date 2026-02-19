@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ActivityIndicator, ScrollView,
-    Image, Alert
+    Image, Alert, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, User, Mail, MapPin, Camera } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, MapPin, Camera, ChevronRight, Phone, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-root-toast';
 import apiClient, { BASE_URL } from '../api/client';
+
+const { width } = Dimensions.get('window');
 
 export default function EditProfileScreen({ navigation }) {
     const { user, setUser } = useAuth();
@@ -42,242 +44,199 @@ export default function EditProfileScreen({ navigation }) {
 
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
         if (permissionResult.granted === false) {
-            Toast.show("Permission to access camera roll is required!", { backgroundColor: '#E74C3C' });
+            Toast.show("Media permission required", { backgroundColor: '#E74C3C' });
             return;
         }
-
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaType.Images,
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
         });
-
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
+        if (!result.canceled) setImage(result.assets[0].uri);
     };
 
     const handleSave = async () => {
         setLoading(true);
         try {
-            // BEACON 1: Start
-            console.log("BEACON: Starting Save");
-            apiClient.get('/users/profile/', { params: { beacon: '1_START_SAVE', has_image: !!image } }).catch(e => console.log("Beacon 1 fail", e));
-
             const data = new FormData();
-
-            // Append fields only if they have values
-            Object.keys(formData).forEach(key => {
-                data.append(key, formData[key]);
-            });
-
+            Object.keys(formData).forEach(key => data.append(key, formData[key]));
             if (image) {
                 const filename = image.split('/').pop();
                 const match = /\.(\w+)$/.exec(filename);
                 const type = match ? `image/${match[1]}` : `image`;
-
-                console.log('[Profile Update] Uploading image:', { filename, type, uri: image });
-
-                data.append('profile_picture', {
-                    uri: image,
-                    name: filename,
-                    type
-                });
+                data.append('profile_picture', { uri: image, name: filename, type });
             }
-
-            // BEACON 2: Before API Call
-            console.log("BEACON: Before API Call");
-            apiClient.get('/users/profile/', { params: { beacon: '2_PRE_UPDATE' } }).catch(e => console.log("Beacon 2 fail", e));
-
-            console.log('[Profile Update] Sending data...');
             const updatedUser = await authApi.updateProfile(data);
-
-            // BEACON 3: Success
-            console.log("BEACON: Success");
-            apiClient.get('/users/profile/', { params: { beacon: '3_SUCCESS' } }).catch(e => console.log("Beacon 3 fail", e));
-
-            console.log('[Profile Update] Success:', updatedUser);
-
-            setUser(updatedUser); // Update local user state
-            Toast.show("Profile updated successfully!", { backgroundColor: '#2E7D32' });
+            setUser(updatedUser);
+            Toast.show("Profile updated!", { backgroundColor: '#2E7D32' });
             navigation.goBack();
         } catch (error) {
-            // BEACON 4: Error
-            console.error("BEACON: Error", error.message);
-            apiClient.get('/users/profile/', { params: { beacon: '4_ERROR', msg: error.message } }).catch(e => console.log("Beacon 4 fail", e));
-
-            console.error("[Profile Update] Error details:", {
-                message: error.message,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-
-            let errorMsg = "Failed to update profile";
-            if (error.response?.data) {
-                const errData = error.response.data;
-                if (typeof errData === 'string') {
-                    errorMsg = errData;
-                } else if (errData.error) {
-                    errorMsg = errData.error;
-                } else if (errData.detail) {
-                    errorMsg = errData.detail;
-                }
-            } else if (error.message) {
-                errorMsg = error.message;
-            }
-
-            Toast.show(errorMsg, { backgroundColor: '#E74C3C', duration: 4000 });
+            Toast.show("Update failed", { backgroundColor: '#E74C3C' });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Edit Profile</Text>
-                <View style={{ width: 24 }} />
-            </View>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <View style={styles.avatarContainer}>
-                    <View style={styles.avatarHelper}>
-                        {image ? (
-                            <Image source={{ uri: image }} style={styles.avatar} />
-                        ) : user?.profile_picture_url ? (
-                            <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.avatar} />
-                        ) : (
-                            <View style={styles.avatarPlaceholder}>
-                                <User size={40} color="#2E7D32" />
-                            </View>
-                        )}
-                        <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
-                            <Camera size={16} color="#fff" />
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Edit Profile</Text>
+                        <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
+                            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnTextTop}>Save</Text>}
                         </TouchableOpacity>
                     </View>
-                </View>
+                </SafeAreaView>
+            </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>First Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={formData.first_name}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
-                        placeholder="Enter first name"
-                    />
-                </View>
+            {/* Content Overlap */}
+            <View style={styles.contentWrap}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Last Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={formData.last_name}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
-                        placeholder="Enter last name"
-                    />
-                </View>
-
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>City</Text>
-                    <View style={styles.inputContainer}>
-                        <MapPin size={20} color="#999" />
-                        <TextInput
-                            style={styles.inputIcon}
-                            value={formData.city}
-                            onChangeText={(text) => setFormData(prev => ({ ...prev, city: text }))}
-                            placeholder="Current city"
-                        />
+                    {/* Avatar Selection */}
+                    <View style={styles.avatarSection}>
+                        <View style={styles.avatarWrapper}>
+                            {image ? (
+                                <Image source={{ uri: image }} style={styles.avatar} />
+                            ) : user?.profile_picture_url ? (
+                                <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.avatar} />
+                            ) : (
+                                <View style={styles.avatarPlaceholder}>
+                                    <User size={48} color="#2E7D32" />
+                                </View>
+                            )}
+                            <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
+                                <Camera size={18} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={styles.avatarHint}>Change Profile Photo</Text>
                     </View>
-                </View>
 
-                <View style={styles.formGroup}>
-                    <Text style={styles.label}>Phone Number</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={formData.phone_number}
-                        onChangeText={(text) => setFormData(prev => ({ ...prev, phone_number: text }))}
-                        placeholder="+233..."
-                        keyboardType="phone-pad"
-                    />
-                </View>
+                    {/* Form Fields */}
+                    <View style={styles.formSection}>
+                        <View style={styles.inputBox}>
+                            <Text style={styles.label}>First Name</Text>
+                            <View style={styles.fieldRow}>
+                                <User size={18} color="#9BAA9B" />
+                                <TextInput
+                                    style={styles.fieldInput}
+                                    value={formData.first_name}
+                                    onChangeText={(t) => setFormData(p => ({ ...p, first_name: t }))}
+                                    placeholder="e.g. John"
+                                    placeholderTextColor="#9BAA9B"
+                                />
+                            </View>
+                        </View>
 
-                <View style={styles.infoBox}>
-                    <Mail size={16} color="#666" />
-                    <Text style={styles.infoText}>Email cannot be changed: {user?.email}</Text>
-                </View>
+                        <View style={styles.inputBox}>
+                            <Text style={styles.label}>Last Name</Text>
+                            <View style={styles.fieldRow}>
+                                <User size={18} color="#9BAA9B" />
+                                <TextInput
+                                    style={styles.fieldInput}
+                                    value={formData.last_name}
+                                    onChangeText={(t) => setFormData(p => ({ ...p, last_name: t }))}
+                                    placeholder="e.g. Doe"
+                                    placeholderTextColor="#9BAA9B"
+                                />
+                            </View>
+                        </View>
 
-                <TouchableOpacity
-                    style={styles.saveBtn}
-                    onPress={handleSave}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.saveBtnText}>Save Changes</Text>
-                    )}
-                </TouchableOpacity>
+                        <View style={styles.inputBox}>
+                            <Text style={styles.label}>Mobile Number</Text>
+                            <View style={styles.fieldRow}>
+                                <Phone size={18} color="#9BAA9B" />
+                                <TextInput
+                                    style={styles.fieldInput}
+                                    value={formData.phone_number}
+                                    onChangeText={(t) => setFormData(p => ({ ...p, phone_number: t }))}
+                                    placeholder="+233..."
+                                    keyboardType="phone-pad"
+                                    placeholderTextColor="#9BAA9B"
+                                />
+                            </View>
+                        </View>
 
-            </ScrollView>
-        </SafeAreaView>
+                        <View style={styles.inputBox}>
+                            <Text style={styles.label}>City/Location</Text>
+                            <View style={styles.fieldRow}>
+                                <MapPin size={18} color="#9BAA9B" />
+                                <TextInput
+                                    style={styles.fieldInput}
+                                    value={formData.city}
+                                    onChangeText={(t) => setFormData(p => ({ ...p, city: t }))}
+                                    placeholder="Enter your city"
+                                    placeholderTextColor="#9BAA9B"
+                                />
+                            </View>
+                        </View>
+
+                        {/* Static Field */}
+                        <View style={styles.disabledBox}>
+                            <View style={styles.disabledIcon}>
+                                <Mail size={16} color="#999" />
+                            </View>
+                            <View style={styles.disabledTextCol}>
+                                <Text style={styles.disabledLabel}>Email Address</Text>
+                                <Text style={styles.disabledValue}>{user?.email}</Text>
+                            </View>
+                            <Shield size={16} color="#ccc" />
+                        </View>
+                    </View>
+
+                    {/* Bottom Action */}
+                    <TouchableOpacity style={styles.footerBtn} onPress={handleSave} disabled={loading}>
+                        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.footerBtnText}>Update Profile</Text>}
+                    </TouchableOpacity>
+
+                </ScrollView>
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: {
-        flexDirection: 'row', alignItems: 'center',
-        justifyContent: 'space-between', padding: 20,
-        borderBottomWidth: 1, borderBottomColor: '#f1f1f1'
+    container: { flex: 1, backgroundColor: '#F0F7F4' },
+    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    curvedShape: {
+        position: 'absolute', bottom: -80, left: -width * 0.25,
+        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', opacity: 0.3
     },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    backBtn: { padding: 5 },
-    content: { padding: 25 },
-
-    avatarContainer: { alignItems: 'center', marginBottom: 30 },
-    avatarHelper: { position: 'relative' },
-    avatar: { width: 100, height: 100, borderRadius: 50 },
-    avatarPlaceholder: {
-        width: 100, height: 100, borderRadius: 50,
-        backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center'
-    },
-    cameraBtn: {
-        position: 'absolute', bottom: 0, right: 0,
-        backgroundColor: '#2E7D32', width: 32, height: 32,
-        borderRadius: 16, justifyContent: 'center', alignItems: 'center',
-        borderWidth: 2, borderColor: '#fff'
-    },
-
-    formGroup: { marginBottom: 20 },
-    label: { fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 8 },
-    input: {
-        backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee',
-        borderRadius: 12, padding: 14, fontSize: 16, color: '#1a1a1a'
-    },
-    inputContainer: {
-        flexDirection: 'row', alignItems: 'center',
-        backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#eee',
-        borderRadius: 12, paddingHorizontal: 14
-    },
-    inputIcon: { flex: 1, padding: 14, fontSize: 16, color: '#1a1a1a' },
-
-    infoBox: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: '#f1f3f5', padding: 15, borderRadius: 10, marginBottom: 30
-    },
-    infoText: { fontSize: 12, color: '#666' },
-
-    saveBtn: {
-        backgroundColor: '#2E7D32', padding: 18, borderRadius: 15,
-        alignItems: 'center', shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
-        elevation: 5
-    },
-    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
+    saveBtnTop: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)' },
+    saveBtnTextTop: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    scrollPadding: { padding: 25, paddingBottom: 50 },
+    avatarSection: { alignItems: 'center', marginBottom: 35 },
+    avatarWrapper: { position: 'relative' },
+    avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+    avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#F0F7F4', borderWidth: 3, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+    cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
+    avatarHint: { fontSize: 13, color: '#999', marginTop: 12, fontWeight: '600' },
+    formSection: { gap: 20, marginBottom: 40 },
+    inputBox: { gap: 8 },
+    label: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginLeft: 4 },
+    fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 15, height: 56 },
+    fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    disabledBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: '#F3F4F6' },
+    disabledIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    disabledTextCol: { flex: 1 },
+    disabledLabel: { fontSize: 11, color: '#999', fontWeight: 'bold', textTransform: 'uppercase' },
+    disabledValue: { fontSize: 14, color: '#666', marginTop: 2 },
+    footerBtn: { backgroundColor: '#2E7D32', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    footerBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

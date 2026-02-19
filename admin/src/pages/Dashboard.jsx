@@ -1,235 +1,225 @@
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '../api/users';
-import { Users, Truck, Trash2, Recycle, TrendingUp, TrendingDown, Loader2, Activity, UserPlus } from 'lucide-react';
+import { Users, Truck, Trash2, Recycle, Loader2, Info, Activity, Wallet } from 'lucide-react';
 import { formatNumber } from '../utils/formatters';
+import {
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    PieChart, Pie, Cell, Legend
+} from 'recharts';
 
-function StatCard({ title, value, icon: Icon, gradient, trend, index }) {
+function StatCard({ title, value, detail, icon: Icon, isPrimary, index }) {
     return (
-        <div className={`bg-gradient-to-br ${gradient} rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 hover-scale p-6 overflow-hidden relative animate-slide-up animate-stagger-${index}`}>
-            {/* Background decoration */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-
-            <div className="relative flex items-center justify-between">
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-white/80 mb-2">{title}</p>
-                    <p className="text-4xl font-bold text-white mb-3 animate-scale-in">
-                        {formatNumber(value)}
-                    </p>
-                    {trend !== undefined && (
-                        <div className={`flex items-center text-sm font-medium ${trend >= 0 ? 'text-white/90' : 'text-white/90'}`}>
-                            {trend >= 0 ? (
-                                <TrendingUp className="w-4 h-4 mr-1" />
-                            ) : (
-                                <TrendingDown className="w-4 h-4 mr-1" />
-                            )}
-                            <span>{trend >= 0 ? '+' : ''}{trend}% this month</span>
+        <div className={`rounded-3xl shadow-premium animate-slide-up p-6 relative overflow-hidden group border border-gray-100/50 ${isPrimary ? 'bg-blue-600 text-white shadow-blue-500/20' : 'bg-white text-gray-900'
+            }`} style={{ animationDelay: `${index * 100}ms` }}>
+            <div className="relative z-10">
+                <div className="flex items-center space-x-3 mb-4">
+                    <div className={`p-2.5 rounded-xl ${isPrimary ? 'bg-white/20' : 'bg-blue-50 text-blue-600'}`}>
+                        <Icon className="w-5 h-5" />
+                    </div>
+                    <p className={`text-xs font-bold uppercase tracking-wider ${isPrimary ? 'text-white/80' : 'text-gray-400'}`}>{title}</p>
+                </div>
+                <div className="flex items-end justify-between">
+                    <div>
+                        <h3 className="text-3xl font-extrabold mb-1 tracking-tight">{formatNumber(value)}</h3>
+                        <p className={`text-[10px] font-bold ${isPrimary ? 'text-white/60' : 'text-gray-400'}`}>
+                            {detail || 'TOTAL REGISTERED'}
+                        </p>
+                    </div>
+                    {isPrimary && (
+                        <div className="bg-white/20 p-1 rounded-lg">
+                            <Info className="w-3 h-3 text-white" />
                         </div>
                     )}
                 </div>
-                <div className="ml-4">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                        <Icon className="w-8 h-8 text-white" />
-                    </div>
-                </div>
             </div>
         </div>
     );
 }
 
-function ActivityCard({ title, items, icon: Icon }) {
-    return (
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 border border-gray-100 animate-slide-up animate-stagger-2">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                    <Icon className="w-5 h-5 text-white" />
-                </div>
-            </div>
-            <div className="space-y-4">
-                {items.map((item, index) => (
-                    <div
-                        key={index}
-                        className="flex justify-between items-center py-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors"
-                    >
-                        <span className="text-gray-600 font-medium">{item.label}</span>
-                        <div className="flex items-center space-x-2">
-                            <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                                {formatNumber(item.value)}
-                            </span>
-                            {item.trend && (
-                                <span className={`text-xs px-2 py-1 rounded-full ${item.trend > 0
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-red-100 text-red-700'
-                                    }`}>
-                                    {item.trend > 0 ? '+' : ''}{item.trend}%
-                                </span>
-                            )}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
+const COLORS = ['#0047ff', '#1e293b', '#94a3b8'];
 
 export default function Dashboard() {
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: usersApi.getStats,
-        refetchInterval: 30000, // Auto-refresh every 30 seconds
+        refetchInterval: 30000,
     });
 
-    const { data: recentUsers } = useQuery({
-        queryKey: ['recent-users'],
-        queryFn: usersApi.getRecentUsers,
-    });
+    // Mock trend data for the chart (alignment with the image)
+    const trendData = [
+        { name: 'Jan', value: 30 },
+        { name: 'Feb', value: 45 },
+        { name: 'Mar', value: 35 },
+        { name: 'Apr', value: 50 },
+        { name: 'May', value: 70 },
+        { name: 'Jun', value: 65 },
+        { name: 'Jul', value: 90 },
+        { name: 'Aug', value: 85 },
+        { name: 'Sep', value: 95 },
+    ];
+
+    const distributionData = [
+        { name: 'Paper', value: 400 },
+        { name: 'Plastic', value: 300 },
+        { name: 'Metal', value: 300 },
+    ];
 
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <Loader2 className="w-12 h-12 animate-spin text-purple-600 mx-auto mb-4" />
-                    <p className="text-gray-600 font-medium">Loading dashboard...</p>
-                </div>
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
         );
     }
-
-    if (error) {
-        return (
-            <div className="p-6">
-                <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl p-6 text-red-800 animate-slide-down">
-                    <h3 className="font-bold text-lg mb-2">Error Loading Dashboard</h3>
-                    <p>Unable to load dashboard statistics. Please try again.</p>
-                </div>
-            </div>
-        );
-    }
-
-    const registrationItems = [
-        { label: 'Today', value: stats?.new_registrations?.today || 0 },
-        { label: 'This Week', value: stats?.new_registrations?.this_week || 0 },
-        { label: 'This Month', value: stats?.new_registrations?.this_month || 0 },
-    ];
-
-    const activityItems = [
-        { label: 'Active Users (24h)', value: stats?.active_users || 0 },
-        { label: 'Online Collectors', value: stats?.online_collectors || 0 },
-    ];
 
     return (
-        <div className="p-6 space-y-8 animate-fade-in">
-            {/* Welcome Header */}
-            <div className="animate-slide-down">
-                <h1 className="text-3xl font-bold mb-2">
-                    <span className="gradient-text">Welcome to Revesta</span>
-                </h1>
-                <p className="text-gray-600">Here's what's happening with your platform today</p>
-            </div>
+        <div className="p-8 space-y-8 animate-fade-in max-w-[1600px] mx-auto">
+            {/* Header / Search is in layout header */}
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                 <StatCard
                     title="Total Users"
                     value={stats?.total_users || 0}
                     icon={Users}
-                    gradient="from-purple-500 via-purple-600 to-indigo-600"
-                    trend={stats?.growth_percentage}
                     index={1}
                 />
                 <StatCard
                     title="Collectors"
                     value={stats?.collectors || 0}
                     icon={Truck}
-                    gradient="from-blue-500 via-blue-600 to-cyan-500"
                     index={2}
                 />
                 <StatCard
                     title="Disposers"
                     value={stats?.sellers || 0}
                     icon={Trash2}
-                    gradient="from-orange-500 via-orange-600 to-pink-500"
                     index={3}
                 />
                 <StatCard
                     title="Recyclers"
                     value={stats?.recyclers || 0}
                     icon={Recycle}
-                    gradient="from-green-500 via-emerald-600 to-teal-500"
                     index={4}
                 />
-            </div>
-
-            {/* Activity Summary */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ActivityCard
-                    title="New Registrations"
-                    items={registrationItems}
-                    icon={UserPlus}
-                />
-                <ActivityCard
-                    title="Platform Activity"
-                    items={activityItems}
+                <StatCard
+                    title="Active Pickups"
+                    value={stats?.active_pickups || 0}
+                    detail="CURRENTLY IN PROGRESS"
                     icon={Activity}
+                    isPrimary={true}
+                    index={5}
                 />
             </div>
 
-            {/* Recent Users */}
-            {recentUsers && recentUsers.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 animate-slide-up animate-stagger-3">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-gray-900">Recent Users</h3>
-                        <span className="px-3 py-1 bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700 rounded-full text-sm font-medium">
-                            {recentUsers.length} new
-                        </span>
+            {/* Main Charts Area */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Registrations Chart */}
+                <div className="lg:col-span-2 bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
+                    <div className="flex justify-between items-center mb-8">
+                        <div>
+                            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">January 2025</h3>
+                            <p className="text-sm text-gray-400 font-medium">Platform Growth Analysis</p>
+                        </div>
+                        <div className="flex items-center space-x-2 bg-gray-50 p-1 rounded-xl">
+                            <button className="px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600">Daily</button>
+                            <button className="px-4 py-2 text-xs font-bold rounded-lg text-gray-400">Weekly</button>
+                        </div>
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Name</th>
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Email</th>
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Role</th>
-                                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Joined</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {recentUsers.map((user, index) => (
-                                    <tr
-                                        key={user.id}
-                                        className="hover:bg-gradient-to-r hover:from-purple-50 hover:to-transparent transition-all duration-200"
-                                        style={{ animationDelay: `${index * 100}ms` }}
-                                    >
-                                        <td className="py-4 px-4">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
-                                                    {user.first_name?.[0]}{user.last_name?.[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-900">
-                                                        {user.first_name} {user.last_name}
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">@{user.username}</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-4 text-sm text-gray-600">{user.email}</td>
-                                        <td className="py-4 px-4">
-                                            <span className="inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-700">
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="py-4 px-4 text-sm text-gray-500">
-                                            {new Date(user.date_joined).toLocaleDateString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+
+                    <div className="h-[300px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trendData}>
+                                <defs>
+                                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#0047ff" stopOpacity={0.1} />
+                                        <stop offset="95%" stopColor="#0047ff" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                                <YAxis hide />
+                                <Tooltip
+                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                />
+                                <Area
+                                    type="monotone"
+                                    dataKey="value"
+                                    stroke="#0047ff"
+                                    strokeWidth={4}
+                                    fillOpacity={1}
+                                    fill="url(#colorValue)"
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Simple Date Selector as seen in image */}
+                    <div className="mt-8 flex justify-between items-center px-4">
+                        {[5, 6, 7, 8, 9, 10, 11].map(day => (
+                            <div key={day} className={`flex flex-col items-center p-3 rounded-2xl transition-all ${day === 7 ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
+                                <span className="text-[10px] font-bold uppercase opacity-60 mb-1">Mon</span>
+                                <span className="text-lg font-extrabold">{day}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            )}
+
+                {/* Right Side Widgets */}
+                <div className="space-y-8">
+                    {/* Top Sale Pie Chart */}
+                    <div className="bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
+                        <h3 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">Top Material Source</h3>
+                        <div className="h-[200px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={distributionData}
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        paddingAngle={5}
+                                        dataKey="value"
+                                    >
+                                        {distributionData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                            {distributionData.map((item, idx) => (
+                                <div key={item.name} className="flex justify-between items-center">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx] }}></div>
+                                        <span className="text-sm font-bold text-gray-500">{item.name}</span>
+                                    </div>
+                                    <span className="text-sm font-extrabold text-gray-900">{item.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Traffic Source / Mini List */}
+                    <div className="bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
+                        <h3 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">System Status</h3>
+                        <div className="space-y-6">
+                            {['API Server', 'Cloud Storage', 'Database'].map(item => (
+                                <div key={item}>
+                                    <div className="flex justify-between text-xs font-bold mb-2">
+                                        <span className="text-gray-400 uppercase">{item}</span>
+                                        <span className="text-blue-600">98% UP</span>
+                                    </div>
+                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-blue-600 rounded-full" style={{ width: '98%' }}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

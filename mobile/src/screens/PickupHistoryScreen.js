@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    RefreshControl, ActivityIndicator, ScrollView
+    RefreshControl, ActivityIndicator, ScrollView, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, User, Clock, TrendingUp } from 'lucide-react-native';
+import { ArrowLeft, MapPin, User, Clock, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { useNavigation } from '@react-navigation/native';
 
+const { width } = Dimensions.get('window');
+
 const STATUS_CONFIG = {
-    PENDING: { color: '#F59E0B', label: 'Pending', bg: '#FEF3C7' },
-    ACCEPTED: { color: '#3B82F6', label: 'Accepted', bg: '#DBEAFE' },
-    ARRIVED: { color: '#8B5CF6', label: 'Arrived', bg: '#EDE9FE' },
-    COMPLETED: { color: '#10B981', label: 'Completed', bg: '#D1FAE5' },
-    CANCELLED: { color: '#EF4444', label: 'Cancelled', bg: '#FEE2E2' },
+    PENDING: { color: '#F59E0B', label: 'Pending', bg: '#FFFBEB' },
+    ACCEPTED: { color: '#3B82F6', label: 'Accepted', bg: '#EFF6FF' },
+    ARRIVED: { color: '#8B5CF6', label: 'Arrived', bg: '#F5F3FF' },
+    COMPLETED: { color: '#10B981', label: 'Completed', bg: '#ECFDF5' },
+    CANCELLED: { color: '#EF4444', label: 'Cancelled', bg: '#FEF2F2' },
 };
 
 const FILTER_OPTIONS = ['ALL', 'PENDING', 'COMPLETED', 'CANCELLED'];
@@ -25,77 +27,42 @@ export default function PickupHistoryScreen() {
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 1) return 'Just now';
-        if (diffMins < 60) return `${diffMins}m ago`;
-        if (diffHours < 24) return `${diffHours}h ago`;
-        if (diffDays < 7) return `${diffDays}d ago`;
-
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
     const renderPickupCard = ({ item }) => {
         const statusInfo = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING;
 
         return (
-            <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                    // Navigate to pickup detail - reusing PickupsScreen logic
-                    // You could create a dedicated detail screen later
-                }}
-            >
-                <View style={styles.cardHeader}>
-                    <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-                        <Text style={[styles.statusText, { color: statusInfo.color }]}>
-                            {statusInfo.label}
-                        </Text>
+            <TouchableOpacity style={styles.card} activeOpacity={0.7}>
+                <View style={styles.cardMain}>
+                    <View style={styles.cardLeft}>
+                        <View style={[styles.statusIndicator, { backgroundColor: statusInfo.color }]} />
+                        <View style={styles.infoCol}>
+                            <Text style={styles.materialText}>{item.material_type || 'Waste Pickup'}</Text>
+                            <View style={styles.locationRow}>
+                                <MapPin size={12} color="#999" />
+                                <Text style={styles.locationText} numberOfLines={1}>{item.pickup_address}</Text>
+                            </View>
+                        </View>
                     </View>
-                    <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
+                    <View style={styles.cardRight}>
+                        <Text style={styles.priceText}>₵{parseFloat(item.waste_price || 0).toFixed(2)}</Text>
+                        <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
+                            <Text style={[styles.badgeText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
+                        </View>
+                    </View>
                 </View>
 
-                <View style={styles.locationRow}>
-                    <MapPin size={16} color="#666" />
-                    <Text style={styles.locationText} numberOfLines={1}>
-                        {item.pickup_location}
-                    </Text>
-                </View>
-
-                {item.collector && (
-                    <View style={styles.collectorRow}>
-                        <User size={16} color="#666" />
-                        <Text style={styles.collectorText}>
-                            Collector: {item.collector_name || 'Assigned'}
-                        </Text>
+                <View style={styles.cardFooter}>
+                    <View style={styles.footerItem}>
+                        <Calendar size={12} color="#999" />
+                        <Text style={styles.footerText}>{formatDate(item.created_at)}</Text>
                     </View>
-                )}
-
-                {item.status === 'CANCELLED' && item.cancel_reason && (
-                    <View style={styles.cancelReasonRow}>
-                        <Text style={styles.cancelReasonLabel}>Reason:</Text>
-                        <Text style={styles.cancelReasonText}>{item.cancel_reason.replace(/_/g, ' ')}</Text>
-                    </View>
-                )}
-
-                <View style={styles.footer}>
-                    <View style={styles.priceRow}>
-                        <TrendingUp size={16} color="#2E7D32" />
-                        <Text style={styles.priceText}>GHS {parseFloat(item.price || 0).toFixed(2)}</Text>
-                    </View>
-                    {item.scheduled_time && (
-                        <View style={styles.timeRow}>
-                            <Clock size={14} color="#999" />
-                            <Text style={styles.timeText}>
-                                {new Date(item.scheduled_time).toLocaleTimeString('en-US', {
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                })}
-                            </Text>
+                    {item.collector_name && (
+                        <View style={styles.footerItem}>
+                            <User size={12} color="#999" />
+                            <Text style={styles.footerText}>{item.collector_name}</Text>
                         </View>
                     )}
                 </View>
@@ -105,114 +72,141 @@ export default function PickupHistoryScreen() {
 
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
-            <MapPin size={64} color="#DDD" />
-            <Text style={styles.emptyTitle}>No Pickups Yet</Text>
+            <View style={styles.emptyIconCircle}>
+                <Activity size={40} color="#2E7D32" />
+            </View>
+            <Text style={styles.emptyTitle}>No Activity Yet</Text>
             <Text style={styles.emptyText}>
-                {activeFilter === 'ALL'
-                    ? 'Your pickup requests will appear here'
-                    : `No ${activeFilter.toLowerCase()} pickups found`
-                }
+                Your {activeFilter !== 'ALL' ? activeFilter.toLowerCase() : ''} pickup history will appear here.
             </Text>
         </View>
     );
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Pickup History</Text>
-                <View style={{ width: 24 }} />
-            </View>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-            <View style={styles.filterWrapper}>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.filterContent}
-                >
-                    {FILTER_OPTIONS.map(filter => (
-                        <TouchableOpacity
-                            key={filter}
-                            style={[
-                                styles.filterChip,
-                                activeFilter === filter && styles.filterChipActive
-                            ]}
-                            onPress={() => setActiveFilter(filter)}
-                        >
-                            <Text style={[
-                                styles.filterText,
-                                activeFilter === filter && styles.filterTextActive
-                            ]}>
-                                {filter}
-                            </Text>
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#fff" />
                         </TouchableOpacity>
-                    ))}
-                </ScrollView>
+                        <Text style={styles.headerTitle}>Pickup History</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+                </SafeAreaView>
             </View>
 
-            {isLoading ? (
-                <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#2E7D32" />
+            {/* Overlapping Filter & List Container */}
+            <View style={styles.contentContainer}>
+                <View style={styles.filterSection}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+                        {FILTER_OPTIONS.map(filter => (
+                            <TouchableOpacity
+                                key={filter}
+                                style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
+                                onPress={() => setActiveFilter(filter)}
+                            >
+                                <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
+                                    {filter}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
                 </View>
-            ) : (
-                <FlatList
-                    data={pickups || []}
-                    renderItem={renderPickupCard}
-                    keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={styles.listContent}
-                    ListEmptyComponent={renderEmpty}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefetching}
-                            onRefresh={refetch}
-                            tintColor="#2E7D32"
-                        />
-                    }
-                />
-            )}
-        </SafeAreaView>
+
+                {isLoading ? (
+                    <View style={styles.center}>
+                        <ActivityIndicator size="large" color="#2E7D32" />
+                    </View>
+                ) : (
+                    <FlatList
+                        data={pickups || []}
+                        renderItem={renderPickupCard}
+                        keyExtractor={(item) => item.id.toString()}
+                        contentContainerStyle={styles.listContent}
+                        ListEmptyComponent={renderEmpty}
+                        showsVerticalScrollIndicator={false}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefetching}
+                                onRefresh={refetch}
+                                tintColor="#2E7D32"
+                            />
+                        }
+                    />
+                )}
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB'
+        backgroundColor: '#F0F7F4',
     },
-    header: {
+    headerBackground: {
+        height: 180,
+        backgroundColor: '#2E7D32',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -80,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
+    },
+    headerContent: {
+        paddingHorizontal: 25,
+        paddingTop: 10,
+    },
+    headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1,
-        borderBottomColor: '#f1f1f1',
-    },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1a1a1a'
+        marginTop: 10,
     },
     backBtn: {
-        padding: 5
-    },
-    filterWrapper: {
-        backgroundColor: '#fff',
-        paddingVertical: 12,
-    },
-    filterContent: {
-        flexDirection: 'row',
-        paddingHorizontal: 20,
-        gap: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
         alignItems: 'center',
     },
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    contentContainer: {
+        flex: 1,
+        marginTop: -30,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
+        paddingTop: 25,
+    },
+    filterSection: {
+        marginBottom: 15,
+    },
+    filterContent: {
+        paddingHorizontal: 25,
+        gap: 12,
+    },
     filterChip: {
-        paddingHorizontal: 18,
+        paddingHorizontal: 20,
         paddingVertical: 10,
-        borderRadius: 25,
+        borderRadius: 15,
         backgroundColor: '#F3F4F6',
         borderWidth: 1,
         borderColor: '#E5E7EB',
@@ -220,138 +214,138 @@ const styles = StyleSheet.create({
     filterChipActive: {
         backgroundColor: '#2E7D32',
         borderColor: '#2E7D32',
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
     filterText: {
         fontSize: 14,
         color: '#6B7280',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     filterTextActive: {
         color: '#fff',
-        fontWeight: 'bold',
     },
     listContent: {
-        padding: 20,
+        paddingHorizontal: 25,
         paddingBottom: 40,
+        paddingTop: 10,
     },
     card: {
         backgroundColor: '#fff',
-        borderRadius: 16,
+        borderRadius: 24,
         padding: 16,
-        marginBottom: 12,
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        shadowRadius: 10,
+        elevation: 3,
     },
-    cardHeader: {
+    cardMain: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
     },
-    statusBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
+    cardLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
     },
-    statusText: {
-        fontSize: 12,
+    statusIndicator: {
+        width: 4,
+        height: 40,
+        borderRadius: 2,
+        marginRight: 12,
+    },
+    infoCol: {
+        flex: 1,
+    },
+    materialText: {
+        fontSize: 16,
         fontWeight: 'bold',
-    },
-    dateText: {
-        fontSize: 12,
-        color: '#9CA3AF',
+        color: '#1A1A1A',
+        marginBottom: 4,
     },
     locationRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        marginBottom: 8,
+        gap: 4,
     },
     locationText: {
-        fontSize: 14,
-        color: '#374151',
-        flex: 1,
-    },
-    collectorRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    collectorText: {
         fontSize: 13,
-        color: '#6B7280',
+        color: '#999',
     },
-    footer: {
+    cardRight: {
+        alignItems: 'flex-end',
+    },
+    priceText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginBottom: 6,
+    },
+    badge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    badgeText: {
+        fontSize: 11,
+        fontWeight: 'bold',
+    },
+    cardFooter: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingTop: 12,
+        marginTop: 15,
+        paddingTop: 15,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: '#F9FAFB',
+        gap: 15,
     },
-    priceRow: {
+    footerItem: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
     },
-    priceText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#2E7D32',
-    },
-    timeRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    timeText: {
+    footerText: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: '#999',
+        fontWeight: '500',
     },
-    loadingContainer: {
+    center: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
     emptyContainer: {
-        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 80,
+    },
+    emptyIconCircle: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#F0F7F4',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 80,
+        marginBottom: 20,
     },
     emptyTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#374151',
-        marginTop: 16,
+        color: '#1F2937',
         marginBottom: 8,
     },
     emptyText: {
         fontSize: 14,
         color: '#9CA3AF',
         textAlign: 'center',
-    },
-    cancelReasonRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginBottom: 12,
-        backgroundColor: '#FEE2E2',
-        padding: 8,
-        borderRadius: 8,
-    },
-    cancelReasonLabel: {
-        fontSize: 12,
-        color: '#EF4444',
-        fontWeight: '600',
-    },
-    cancelReasonText: {
-        fontSize: 12,
-        color: '#991B1B',
-        textTransform: 'capitalize',
+        paddingHorizontal: 40,
+        lineHeight: 20,
     },
 });

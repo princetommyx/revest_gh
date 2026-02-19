@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ScrollView, Image, ActivityIndicator,
-    Platform
+    Platform, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-toast-message';
 
 import { useQueryClient } from '@tanstack/react-query';
+
+const { width } = Dimensions.get('window');
 
 export default function CreateListingScreen({ navigation }) {
     const queryClient = useQueryClient();
@@ -22,9 +24,8 @@ export default function CreateListingScreen({ navigation }) {
         material_type: '',
         description: '',
         quantity: '',
-        weight_kg: 0, // Hidden field for pricing
+        weight_kg: 0,
         price: '',
-        is_free: false,
         is_free: false,
         location: '',
         latitude: null,
@@ -47,14 +48,10 @@ export default function CreateListingScreen({ navigation }) {
                 'Mixed': 1.0,
                 'Other': 0.5
             };
-
             const rate = rates[formData.material_type] || 1.0;
-            // Use AI weight or fallback to 5kg if 0
             const weight = formData.weight_kg > 0 ? formData.weight_kg : 5;
             const commission = 0.20;
-
             const estimatedValue = (rate * weight * (1 - commission)).toFixed(2);
-
             setFormData(prev => ({ ...prev, price: estimatedValue }));
         }
     }, [formData.material_type, formData.weight_kg]);
@@ -63,21 +60,13 @@ export default function CreateListingScreen({ navigation }) {
     React.useEffect(() => {
         (async () => {
             let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                Toast.show('Permission to access location was denied', { backgroundColor: '#E74C3C' });
-                return;
-            }
-
+            if (status !== 'granted') return;
             let location = await Location.getCurrentPositionAsync({});
             setFormData(prev => ({
                 ...prev,
                 latitude: parseFloat(location.coords.latitude.toFixed(6)),
                 longitude: parseFloat(location.coords.longitude.toFixed(6))
             }));
-            console.log("Captured Location (Rounded):", {
-                lat: location.coords.latitude.toFixed(6),
-                lng: location.coords.longitude.toFixed(6)
-            });
         })();
     }, []);
 
@@ -87,41 +76,31 @@ export default function CreateListingScreen({ navigation }) {
     const pickImage = async () => {
         try {
             const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
             if (permissionResult.granted === false) {
-                Toast.show("Permission to access camera roll is required!", { backgroundColor: '#E74C3C' });
+                Toast.show({ type: 'error', text1: 'Permission denied', text2: 'Permission required' });
                 return;
             }
-
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.7,
             });
-
             if (!result.canceled) {
                 const asset = result.assets[0];
                 setSelectedAsset(asset);
-
-                // Start AI Analysis
                 analyzeImage(asset.uri);
             }
         } catch (error) {
-            console.error("PickImage Error:", error);
-            Toast.show("Error picking image", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Error picking image' });
         }
     };
 
     const analyzeImage = async (uri) => {
         setIsScanning(true);
         try {
-            console.log("Starting AI Analysis...");
             const data = await marketApi.analyzeWaste(uri);
-            console.log("AI Result:", data);
-
             if (data) {
-                // Auto-fill form
                 setFormData(prev => ({
                     ...prev,
                     material_type: data.material_type || prev.material_type,
@@ -130,427 +109,490 @@ export default function CreateListingScreen({ navigation }) {
                     title: data.title_suggestion || prev.title,
                     description: data.description || prev.description,
                 }));
-
                 setScanResult(data);
-                Toast.show("Verified by Revesta AI 🤖", { backgroundColor: '#2E7D32' });
+                Toast.show({ type: 'success', text1: 'AI Verified ✓', text2: 'Waste analysis complete' });
             }
         } catch (error) {
-            console.error("AI Analysis Failed:", error);
-            Toast.show("AI Scan failed - please enter details manually", { backgroundColor: '#F39C12' });
+            Toast.show({ type: 'error', text1: 'AI Scan failed', text2: 'Could not analyze waste' });
         } finally {
             setIsScanning(false);
         }
     };
 
     const handleSubmit = async () => {
-        if (!formData.title || !formData.material_type || !formData.quantity || !formData.location) {
-            Toast.show("Please fill all required fields", { backgroundColor: '#E74C3C' });
+        if (!formData.title) {
+            Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a title' });
             return;
         }
-
-        if (!formData.is_free && !formData.price) {
-            Toast.show("Please set a price or mark as free", { backgroundColor: '#E74C3C' });
+        if (!formData.material_type) {
+            Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please select a material type' });
             return;
         }
-
+        if (!formData.quantity) {
+            Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a quantity' });
+            return;
+        }
+        if (!formData.location) {
+            Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a location' });
+            return;
+        }
         setLoading(true);
         try {
             const data = new FormData();
-
-            // Add image if selected
             if (selectedAsset) {
                 const uri = selectedAsset.uri;
-                let name = selectedAsset.fileName;
-                let type = selectedAsset.mimeType;
-
-                // Fallback if fileName/mimeType are missing (common on Android)
-                if (!name) {
-                    const parts = uri.split('/');
-                    name = parts[parts.length - 1];
-                }
-
-                // Ensure name has an extension
-                if (!name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-                    name += '.jpg';
-                }
-
-                // Infer type from extension if missing
-                if (!type) {
-                    const match = /\.(\w+)$/.exec(name);
-                    type = match ? `image/${match[1]}` : `image/jpeg`;
-                }
-
-                // Fix common mimetype issues
-                if (type === 'image/jpg') type = 'image/jpeg';
-
-                console.log('Uploading image:', { uri, name, type });
-
-                data.append('image', {
-                    uri,
-                    name,
-                    type
-                });
+                let name = selectedAsset.fileName || uri.split('/').pop();
+                if (!name.includes('.')) name += '.jpg';
+                let type = selectedAsset.mimeType || 'image/jpeg';
+                data.append('image', { uri, name, type });
             }
-
-            // Add other form data
             Object.keys(formData).forEach(key => {
-                if (key !== 'image') {
-                    data.append(key, formData[key]);
+                if (formData[key] !== null && formData[key] !== undefined) {
+                    data.append(key, formData[key].toString());
                 }
             });
-
-            // Add verification status if scanned
-            if (scanResult && scanResult.confidence > 0.8) {
-                data.append('is_verified_waste', 'true');
-            }
+            if (scanResult && scanResult.confidence > 0.8) data.append('is_verified_waste', 'true');
 
             await marketApi.createListing(data);
-
-            // Invalidate listings query to refresh Home Screen
             queryClient.invalidateQueries(['listings']);
-
-            Toast.show("Listing created successfully!", { backgroundColor: '#2E7D32' });
+            Toast.show({ type: 'success', text1: 'Success', text2: 'Listing created!' });
             navigation.goBack();
         } catch (error) {
-            console.error("Create Listing Error:", error);
-            let errorMessage = "Failed to create listing";
-
-            if (error.response?.data) {
-                const data = error.response.data;
-                console.log("Error Response Data:", data);
-
-                if (typeof data === 'string') {
-                    errorMessage = data;
-                } else if (data.error) {
-                    errorMessage = data.error;
-                } else if (data.detail) {
-                    errorMessage = data.detail;
-                } else {
-                    // Handle field-specific errors
-                    const messages = Object.keys(data).map(key => {
-                        const val = data[key];
-                        return `${key}: ${Array.isArray(val) ? val.join(', ') : val}`;
-                    });
-                    if (messages.length > 0) errorMessage = messages.join('\n');
-                }
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
-            Toast.show(errorMessage, { backgroundColor: '#E74C3C', duration: Toast.durations.LONG });
+            console.error("Submission Error:", error.response?.data || error.message);
+            Toast.show({ type: 'error', text1: 'Submission failed', text2: 'Failed to create listing' });
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Create Listing</Text>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
-                    <X size={24} color="#000" />
-                </TouchableOpacity>
-            </View>
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* Image Upload */}
-                <Text style={styles.label}>Photo</Text>
-                <TouchableOpacity
-                    style={styles.imageUpload}
-                    onPress={pickImage}
-                >
-                    {selectedAsset ? (
-                        <View style={styles.imagePreviewContainer}>
-                            <Image source={{ uri: selectedAsset.uri }} style={styles.imagePreview} />
-
-                            {/* Scanning Overlay */}
-                            {isScanning && (
-                                <View style={styles.scanningOverlay}>
-                                    <ActivityIndicator size="large" color="#fff" />
-                                    <Text style={styles.scanningText}>Revesta AI Analyzing...</Text>
-                                    <Text style={styles.scanningSubtext}>Detecting material & quality</Text>
-                                </View>
-                            )}
-
-                            {/* Scan Result Badge */}
-                            {!isScanning && scanResult && (
-                                <View style={styles.verifiedBadge}>
-                                    <Text style={styles.verifiedText}>AI Verified ✓</Text>
-                                </View>
-                            )}
-
-                            <TouchableOpacity
-                                style={styles.removeImageBtn}
-                                onPress={() => setSelectedAsset(null)}
-                            >
-                                <X size={16} color="#fff" />
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+                {/* Organic Curved Header */}
+                <View style={styles.headerBackground}>
+                    <View style={styles.curvedShape} />
+                    <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                        <View style={styles.headerRow}>
+                            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                                <ArrowLeft size={24} color="#fff" />
                             </TouchableOpacity>
+                            <Text style={styles.headerTitle}>New Listing</Text>
+                            <View style={{ width: 40 }} />
                         </View>
-                    ) : (
-                        <View style={styles.uploadPlaceholder}>
-                            <Upload size={48} color="#ccc" />
-                            <Text style={styles.uploadText}>Tap to upload photo</Text>
+                        <Text style={styles.headerSubtitle}>Post your waste for sale or recycling</Text>
+                    </SafeAreaView>
+                </View>
+
+                {/* Overlapping Content Card */}
+                <View style={styles.contentCard}>
+                    {/* Image Upload Area */}
+                    <TouchableOpacity style={styles.imageSection} onPress={pickImage} activeOpacity={0.8}>
+                        {selectedAsset ? (
+                            <View style={styles.previewContainer}>
+                                <Image source={{ uri: selectedAsset.uri }} style={styles.previewImage} />
+                                {isScanning && (
+                                    <View style={styles.scanningOverlay}>
+                                        <ActivityIndicator color="#fff" />
+                                        <Text style={styles.scanningText}>AI Analyzing...</Text>
+                                    </View>
+                                )}
+                                <TouchableOpacity style={styles.removeImageBtn} onPress={() => setSelectedAsset(null)}>
+                                    <X size={16} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : (
+                            <View style={styles.uploadBox}>
+                                <View style={styles.uploadIconCircle}>
+                                    <Camera size={32} color="#2E7D32" />
+                                </View>
+                                <Text style={styles.uploadTitle}>Add a Photo</Text>
+                                <Text style={styles.uploadSub}>Show potential buyers what you have</Text>
+                            </View>
+                        )}
+                    </TouchableOpacity>
+
+                    {/* Form Fields */}
+                    <View style={styles.formSection}>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>Listing Title</Text>
+                            <View style={styles.inputWrapper}>
+                                <Package size={20} color="#999" />
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="e.g. 50kg Mixed Plastics"
+                                    value={formData.title}
+                                    onChangeText={(val) => handleChange('title', val)}
+                                />
+                            </View>
                         </View>
-                    )}
-                </TouchableOpacity>
 
-                {/* Title */}
-                <Text style={styles.label}>Title *</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="e.g. 50kg Mixed Plastics"
-                    value={formData.title}
-                    onChangeText={(val) => handleChange('title', val)}
-                />
-
-                <View style={styles.row}>
-                    {/* Material Type */}
-                    <View style={styles.halfWidth}>
-                        <Text style={styles.label}>Material Type *</Text>
-                        <View style={styles.pickerContainer}>
+                        <Text style={styles.label}>Category</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
                             {['Plastics', 'Metals', 'Paper', 'Glass', 'Electronics', 'Other'].map(type => (
                                 <TouchableOpacity
                                     key={type}
-                                    style={[
-                                        styles.chip,
-                                        formData.material_type === type && styles.chipActive
-                                    ]}
+                                    style={[styles.chip, formData.material_type === type && styles.chipActive]}
                                     onPress={() => handleChange('material_type', type)}
                                 >
-                                    <Text style={[
-                                        styles.chipText,
-                                        formData.material_type === type && styles.chipTextActive
-                                    ]}>{type}</Text>
+                                    <Text style={[styles.chipText, formData.material_type === type && styles.chipTextActive]}>{type}</Text>
                                 </TouchableOpacity>
                             ))}
+                        </ScrollView>
+
+                        <View style={styles.row}>
+                            <View style={styles.flex1}>
+                                <Text style={styles.label}>Quantity</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Tag size={18} color="#999" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="5kg, 10 units"
+                                        value={formData.quantity}
+                                        onChangeText={(val) => handleChange('quantity', val)}
+                                    />
+                                </View>
+                            </View>
+                            <View style={styles.flex1}>
+                                <Text style={styles.label}>Location</Text>
+                                <View style={styles.inputWrapper}>
+                                    <MapPin size={18} color="#999" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Madina, Accra"
+                                        value={formData.location}
+                                        onChangeText={(val) => handleChange('location', val)}
+                                    />
+                                </View>
+                            </View>
                         </View>
-                    </View>
 
-                    {/* Quantity */}
-                    <View style={styles.halfWidth}>
-                        <Text style={styles.label}>Quantity *</Text>
-                        <TextInput
-                            style={styles.input}
-                            placeholder="e.g. 1 Fridge, 5kg"
-                            value={formData.quantity}
-                            onChangeText={(val) => handleChange('quantity', val)}
-                        />
+                        <Text style={styles.label}>Description</Text>
+                        <View style={[styles.inputWrapper, styles.textAreaWrapper]}>
+                            <TextInput
+                                style={[styles.input, styles.textArea]}
+                                placeholder="Tell us more about the items..."
+                                value={formData.description}
+                                onChangeText={(val) => handleChange('description', val)}
+                                multiline
+                                numberOfLines={4}
+                            />
+                        </View>
+
+                        {/* AI Price Offer */}
+                        <View style={styles.offerCard}>
+                            <View style={styles.offerHeader}>
+                                <View style={styles.offerBadge}>
+                                    <Text style={styles.offerBadgeText}>✨ AI ESTIMATE</Text>
+                                </View>
+                                <Text style={styles.offerTitle}>Recommended Price</Text>
+                            </View>
+                            <View style={styles.offerValueRow}>
+                                <Text style={styles.currencyPrefix}>₵</Text>
+                                <Text style={styles.offerValue}>{formData.price || '0.00'}</Text>
+                            </View>
+                            <Text style={styles.offerSub}>Based on market rates and quality analysis</Text>
+                        </View>
+
+                        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
+                            {loading ? (
+                                <ActivityIndicator color="#fff" />
+                            ) : (
+                                <>
+                                    <Text style={styles.submitBtnText}>Post Waste Now</Text>
+                                    <View style={styles.btnIcon}>
+                                        <Check size={20} color="#fff" />
+                                    </View>
+                                </>
+                            )}
+                        </TouchableOpacity>
                     </View>
                 </View>
-
-                {/* Description */}
-                <Text style={styles.label}>Description *</Text>
-                <TextInput
-                    style={[styles.input, styles.textArea]}
-                    placeholder="Describe your materials..."
-                    value={formData.description}
-                    onChangeText={(val) => handleChange('description', val)}
-                    multiline
-                    numberOfLines={4}
-                />
-
-                {/* Location */}
-                <Text style={styles.label}>Location *</Text>
-                <TextInput
-                    style={styles.input}
-                    placeholder="e.g. Madina Market"
-                    value={formData.location}
-                    onChangeText={(val) => handleChange('location', val)}
-                />
-
-                {/* Revesta AI Price Offer */}
-                <Text style={styles.label}>Revesta Offer (GHS)</Text>
-                <View style={styles.aiPriceContainer}>
-                    <View style={styles.aiBadge}>
-                        <Text style={styles.aiBadgeText}>✨ AI Rate</Text>
-                    </View>
-                    <TextInput
-                        style={[styles.input, styles.priceInput, styles.disabledInput, { color: '#2E7D32', fontWeight: 'bold' }]}
-                        placeholder="0.00"
-                        value={formData.price}
-                        editable={false}
-                    />
-                    <Text style={styles.priceSubtext}>
-                        Based on quality & market rates
-                    </Text>
-                </View>
-
-                {/* Submit Button */}
-                <TouchableOpacity
-                    style={styles.submitBtn}
-                    onPress={handleSubmit}
-                    disabled={loading}
-                >
-                    {loading ? (
-                        <ActivityIndicator color="#fff" />
-                    ) : (
-                        <Text style={styles.submitBtnText}>Post Listing</Text>
-                    )}
-                </TouchableOpacity>
+                <View style={{ height: 40 }} />
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: {
+    container: {
+        flex: 1,
+        backgroundColor: '#F0F7F4',
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    headerBackground: {
+        height: 220,
+        backgroundColor: '#2E7D32',
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -100,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
+    },
+    headerContent: {
+        paddingHorizontal: 25,
+        paddingTop: 20,
+    },
+    headerRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#eee'
+        justifyContent: 'space-between',
+        marginTop: 10,
     },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a' },
-    closeBtn: { padding: 5 },
-    scrollContent: { padding: 20, paddingBottom: 40 },
-
-    label: { fontSize: 14, fontWeight: 'bold', color: '#333', marginBottom: 8, marginTop: 16 },
-
-    input: {
-        borderWidth: 1,
-        borderColor: '#ddd',
-        borderRadius: 12,
-        padding: 14,
-        fontSize: 16,
-        backgroundColor: '#f8f9fa'
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-
-    textArea: { height: 100, textAlignVertical: 'top' },
-
-    row: { flexDirection: 'row', gap: 12 },
-    halfWidth: { flex: 1 },
-
-    imageUpload: {
+    headerTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+    headerSubtitle: {
+        fontSize: 14,
+        color: 'rgba(255,255,255,0.8)',
+        marginTop: 15,
+        fontWeight: '500',
+    },
+    contentCard: {
+        backgroundColor: '#fff',
+        marginHorizontal: 20,
+        marginTop: -40,
+        borderRadius: 30,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
+        zIndex: 1,
+    },
+    imageSection: {
+        width: '100%',
+        height: 180,
+        borderRadius: 20,
+        backgroundColor: '#F9FBF9',
         borderWidth: 2,
         borderStyle: 'dashed',
-        borderColor: '#ddd',
-        borderRadius: 12,
-        padding: 40,
+        borderColor: '#E0E7E0',
+        overflow: 'hidden',
+    },
+    uploadBox: {
+        flex: 1,
+        justifyContent: 'center',
         alignItems: 'center',
+    },
+    uploadIconCircle: {
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#E8F5E9',
         justifyContent: 'center',
-        marginBottom: 10
-    },
-
-    uploadPlaceholder: { alignItems: 'center' },
-    uploadText: { marginTop: 10, color: '#888', fontSize: 14 },
-
-    imagePreviewContainer: { position: 'relative' },
-    imagePreview: { width: 200, height: 150, borderRadius: 12 },
-    removeImageBtn: {
-        position: 'absolute',
-        top: -10,
-        right: -10,
-        backgroundColor: '#E74C3C',
-        borderRadius: 20,
-        width: 30,
-        height: 30,
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-
-    pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-    chip: {
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: 20,
-        backgroundColor: '#f1f3f5',
-        borderWidth: 1,
-        borderColor: '#e5e7eb'
-    },
-    chipActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-    chipText: { fontSize: 12, color: '#666', fontWeight: '500' },
-    chipTextActive: { color: '#fff', fontWeight: 'bold' },
-
-    priceContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    priceInput: { flex: 1 },
-    disabledInput: { backgroundColor: '#f1f3f5', color: '#999' },
-
-    freeCheckbox: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    checkbox: {
-        width: 20,
-        height: 20,
-        borderRadius: 4,
-        borderWidth: 2,
-        borderColor: '#ddd',
-        justifyContent: 'center',
-        alignItems: 'center'
-    },
-    checkboxActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-    checkmark: { color: '#fff', fontSize: 14, fontWeight: 'bold' },
-    freeLabel: { fontSize: 14, color: '#666', fontWeight: '500' },
-
-    submitBtn: {
-        backgroundColor: '#2E7D32',
-        padding: 18,
-        borderRadius: 16,
         alignItems: 'center',
-        marginTop: 30,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5
+        marginBottom: 12,
     },
-    submitBtnText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
-
-    aiPriceContainer: {
+    uploadTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    uploadSub: {
+        fontSize: 12,
+        color: '#999',
+        marginTop: 4,
+    },
+    previewContainer: {
+        flex: 1,
         position: 'relative',
-        marginBottom: 10
     },
-    aiBadge: {
-        position: 'absolute',
-        top: -10,
-        right: 10,
-        backgroundColor: '#F39C12',
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 8,
-        zIndex: 1
+    previewImage: {
+        width: '100%',
+        height: '100%',
     },
-    aiBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
-    priceSubtext: { fontSize: 11, color: '#888', marginTop: 4, fontStyle: 'italic' },
-
     scanningOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(46, 125, 50, 0.85)',
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(46,125,50,0.8)',
         justifyContent: 'center',
         alignItems: 'center',
-        borderRadius: 12,
-        zIndex: 10
     },
     scanningText: {
         color: '#fff',
         fontWeight: 'bold',
-        marginTop: 10,
-        fontSize: 14
+        marginTop: 8,
     },
-    scanningSubtext: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 12,
-        marginTop: 5
-    },
-    verifiedBadge: {
+    removeImageBtn: {
         position: 'absolute',
-        bottom: 10,
-        left: 10,
-        backgroundColor: '#2E7D32',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#fff',
-        zIndex: 5
+        top: 10,
+        right: 10,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
-    verifiedText: {
+    formSection: {
+        marginTop: 25,
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 8,
+        marginLeft: 4,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        borderRadius: 15,
+        paddingHorizontal: 15,
+        height: 54,
+    },
+    input: {
+        flex: 1,
+        fontSize: 15,
+        color: '#333',
+        marginLeft: 10,
+    },
+    textAreaWrapper: {
+        height: 120,
+        alignItems: 'flex-start',
+        paddingVertical: 12,
+    },
+    textArea: {
+        marginLeft: 0,
+        textAlignVertical: 'top',
+    },
+    row: {
+        flexDirection: 'row',
+        gap: 15,
+        marginBottom: 20,
+    },
+    flex1: {
+        flex: 1,
+    },
+    chipScroll: {
+        marginBottom: 20,
+    },
+    chip: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        marginRight: 10,
+    },
+    chipActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#2E7D32',
+    },
+    chipText: {
+        fontSize: 13,
+        color: '#666',
+        fontWeight: '500',
+    },
+    chipTextActive: {
         color: '#fff',
         fontWeight: 'bold',
-        fontSize: 12
-    }
+    },
+    offerCard: {
+        backgroundColor: '#FFFBEB',
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: '#FEF3C7',
+        marginTop: 10,
+        marginBottom: 30,
+    },
+    offerHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    offerBadge: {
+        backgroundColor: '#F39C12',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    offerBadgeText: {
+        color: '#fff',
+        fontSize: 9,
+        fontWeight: 'bold',
+    },
+    offerTitle: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#92400E',
+    },
+    offerValueRow: {
+        flexDirection: 'row',
+        alignItems: 'baseline',
+    },
+    currencyPrefix: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+        marginRight: 4,
+    },
+    offerValue: {
+        fontSize: 32,
+        fontWeight: 'bold',
+        color: '#2E7D32',
+    },
+    offerSub: {
+        fontSize: 11,
+        color: '#92400E',
+        opacity: 0.7,
+        marginTop: 5,
+    },
+    submitBtn: {
+        backgroundColor: '#2E7D32',
+        height: 60,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    submitBtnText: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    btnIcon: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });

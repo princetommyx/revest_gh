@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, Switch, ScrollView, Alert, StatusBar
+    Image, Switch, ScrollView, Alert, StatusBar, Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { BASE_URL } from '../api/client';
+
+const { width } = Dimensions.get('window');
 
 const MenuItem = ({ icon: Icon, title, subtitle, onPress, isLast, color = "#2E7D32", iconBg }) => (
     <TouchableOpacity
@@ -59,56 +61,65 @@ export default function ProfileScreen({ navigation }) {
                 showsVerticalScrollIndicator={false}
                 bounces={false}
             >
-                {/* Green Header Section - Matching Home Screen */}
-                <View style={styles.greenHeaderContainer}>
-                    <SafeAreaView edges={['top', 'left', 'right']}>
-                        <View style={styles.headerContent}>
-                            <View style={styles.profileRow}>
-                                <View style={styles.avatarContainer}>
-                                    {user?.profile_picture_url ? (
-                                        <Image
-                                            source={{ uri: resolveImageUrl(user.profile_picture_url) }}
-                                            style={styles.avatar}
-                                        />
-                                    ) : (
-                                        <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                            <User size={40} color="#fff" />
-                                        </View>
-                                    )}
-                                    <TouchableOpacity style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')}>
-                                        <Settings size={14} color="#F59E0B" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                <View style={styles.userInfo}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                                        <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
-                                        <View style={[
-                                            styles.roleBadge,
-                                            userRole === 'RECYCLER' && { backgroundColor: '#0284c7' }, // Blue for Recycler
-                                            userRole === 'SELLER' && { backgroundColor: '#ea580c' }    // Orange for Disposer
-                                        ]}>
-                                            <Text style={styles.roleText}>
-                                                {userRole === 'SELLER' ? 'DISPOSER' : userRole || 'USER'}
-                                            </Text>
-                                        </View>
+                {/* Organic Curved Header */}
+                <View style={styles.headerBackground}>
+                    <View style={styles.curvedShape} />
+                    <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                        <View style={styles.profileRow}>
+                            <View style={styles.avatarContainer}>
+                                {user?.profile_picture_url ? (
+                                    <Image
+                                        source={{ uri: resolveImageUrl(user.profile_picture_url) }}
+                                        style={styles.avatar}
+                                    />
+                                ) : (
+                                    <View style={[styles.avatar, styles.placeholderAvatar]}>
+                                        <User size={40} color="#fff" />
                                     </View>
-                                    <Text style={styles.email}>{user?.email || 'No email connected'}</Text>
+                                )}
+                                <TouchableOpacity style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')}>
+                                    <Settings size={14} color="#F59E0B" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={styles.userInfo}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                                    <View>
+                                        <Text style={styles.greetingText}>My Profile</Text>
+                                        <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
+                                    </View>
+                                    <View style={[
+                                        styles.roleBadge,
+                                        userRole === 'RECYCLER' && { backgroundColor: '#0284c7' },
+                                        userRole === 'SELLER' && { backgroundColor: '#ea580c' }
+                                    ]}>
+                                        <Text style={styles.roleText}>
+                                            {userRole === 'SELLER' ? 'DISPOSER' : userRole || 'USER'}
+                                        </Text>
+                                    </View>
                                 </View>
+                                <Text style={styles.email}>{user?.email || 'No email connected'}</Text>
                             </View>
                         </View>
                     </SafeAreaView>
                 </View>
 
-                {/* Overlapping Stats Card - Matching Home Screen */}
+                {/* Overlapping Stats Card */}
                 <View style={styles.overlappingCard}>
-                    <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
-                    <Text style={styles.statLabel}>Pickups</Text>
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
+                        <Text style={styles.statLabel}>Pickups</Text>
+                    </View>
+                    <View style={styles.statDivider} />
+                    <View style={styles.statBox}>
+                        <Text style={styles.statValue}>Gold</Text>
+                        <Text style={styles.statLabel}>Member</Text>
+                    </View>
                 </View>
 
                 {/* Account Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>ACCOUNT</Text>
+                    <Text style={styles.sectionTitle}>Account Settings</Text>
                     <View style={styles.menuGroup}>
                         <MenuItem
                             icon={User}
@@ -148,11 +159,12 @@ export default function ProfileScreen({ navigation }) {
 
                 {/* Support Section */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>SUPPORT</Text>
+                    <Text style={styles.sectionTitle}>Help & Support</Text>
                     <View style={styles.menuGroup}>
                         <MenuItem
                             icon={MessageSquare}
                             title="Chat Support"
+                            subtitle="Get help with your orders"
                             onPress={() => navigation.navigate('SupportChat')}
                             color="#8B5CF6"
                             iconBg="#EDE9FE"
@@ -162,6 +174,7 @@ export default function ProfileScreen({ navigation }) {
                 </View>
 
                 <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                    <LogOut size={20} color="#EF4444" style={{ marginRight: 8 }} />
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
 
@@ -172,39 +185,51 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F3F4F6' },
-    scrollContent: { paddingBottom: 40 },
-
-    // Header Style from HomeScreen
-    greenHeaderContainer: {
+    container: {
+        flex: 1,
+        backgroundColor: '#F0F7F4',
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    headerBackground: {
+        height: 240,
         backgroundColor: '#2E7D32',
-        paddingBottom: 80, // High padding for overlap
-        paddingTop: 10,
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        zIndex: 0,
+        position: 'relative',
+        overflow: 'hidden',
+    },
+    curvedShape: {
+        position: 'absolute',
+        bottom: -120,
+        left: -width * 0.25,
+        width: width * 1.5,
+        height: width * 1.5,
+        borderRadius: width * 0.75,
+        backgroundColor: '#388E3C',
+        opacity: 0.3,
     },
     headerContent: {
-        paddingHorizontal: 20,
-        paddingBottom: 10,
+        paddingHorizontal: 25,
+        paddingTop: 20,
     },
     profileRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        marginTop: 20,
     },
     avatarContainer: {
         position: 'relative',
-        marginRight: 16,
+        marginRight: 20,
     },
     avatar: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.5)',
+        width: 84,
+        height: 84,
+        borderRadius: 42,
+        borderWidth: 3,
+        borderColor: 'rgba(255, 255, 255, 0.5)',
     },
     placeholderAvatar: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -213,106 +238,121 @@ const styles = StyleSheet.create({
         bottom: 0,
         right: 0,
         backgroundColor: '#fff',
-        width: 24,
-        height: 24,
-        borderRadius: 12,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 2,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     userInfo: {
         flex: 1,
     },
+    greetingText: {
+        fontSize: 14,
+        color: 'rgba(255, 255, 255, 0.8)',
+        fontWeight: '500',
+    },
     name: {
-        fontSize: 22,
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#fff',
-        marginBottom: 2,
+        marginBottom: 4,
     },
     email: {
         fontSize: 13,
-        color: 'rgba(255,255,255,0.8)',
+        color: 'rgba(255, 255, 255, 0.8)',
     },
     roleBadge: {
-        backgroundColor: '#1B5E20',
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
         paddingHorizontal: 12,
         paddingVertical: 4,
         borderRadius: 20,
-        marginLeft: 8,
+        marginLeft: 12,
     },
     roleText: {
         color: '#fff',
-        fontWeight: '700',
+        fontWeight: 'bold',
         fontSize: 10,
         letterSpacing: 0.5,
     },
-
-    // Overlapping Card from HomeScreen
     overlappingCard: {
         backgroundColor: '#fff',
         marginHorizontal: 20,
-        marginTop: -50, // Negative margin to overlap
-        borderRadius: 20,
+        marginTop: -40,
+        borderRadius: 25,
         padding: 20,
+        flexDirection: 'row',
         alignItems: 'center',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
+        shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 4,
+        shadowRadius: 20,
+        elevation: 10,
         zIndex: 1,
-        marginBottom: 24,
+    },
+    statBox: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    statDivider: {
+        width: 1,
+        height: 40,
+        backgroundColor: '#F3F4F6',
     },
     statValue: {
-        fontSize: 32,
+        fontSize: 24,
         fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 4,
+        color: '#2E7D32',
     },
     statLabel: {
-        fontSize: 14,
-        color: '#666',
+        fontSize: 12,
+        color: '#999',
+        marginTop: 2,
     },
-
     section: {
-        marginBottom: 24,
+        marginTop: 30,
         paddingHorizontal: 20,
     },
     sectionTitle: {
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#6B7280',
-        marginBottom: 12,
-        textTransform: 'uppercase',
+        color: '#333',
+        marginBottom: 15,
+        marginLeft: 5,
     },
     menuGroup: {
         backgroundColor: '#fff',
         borderRadius: 20,
-        paddingHorizontal: 4,
+        overflow: 'hidden',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
+        shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
+        shadowRadius: 10,
+        elevation: 2,
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 12,
+        paddingVertical: 18,
+        paddingHorizontal: 20,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6'
+        borderBottomColor: '#F9FAFB',
     },
     menuItemLast: {
         borderBottomWidth: 0,
     },
     iconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 12,
+        width: 44,
+        height: 44,
+        borderRadius: 14,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 15,
     },
     menuContent: {
         flex: 1,
@@ -320,23 +360,23 @@ const styles = StyleSheet.create({
     menuTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1F2937',
-        marginBottom: 2,
+        color: '#333',
     },
     menuSubtitle: {
-        fontSize: 13,
-        color: '#9CA3AF',
+        fontSize: 12,
+        color: '#999',
+        marginTop: 2,
     },
-
     logoutBtn: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginHorizontal: 20,
-        paddingVertical: 16,
+        marginTop: 40,
+        marginBottom: 20,
     },
     logoutText: {
         color: '#EF4444',
-        fontWeight: '600',
+        fontWeight: 'bold',
         fontSize: 16,
     },
 });

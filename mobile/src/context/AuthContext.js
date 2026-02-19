@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authStorage } from '../utils/authStorage';
 import { authApi } from '../api/auth';
 
@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
         loadStoredAuth();
     }, []);
 
-    const loadStoredAuth = async () => {
+    const loadStoredAuth = useCallback(async () => {
         try {
             // Run all SecureStore reads in PARALLEL for faster startup
             const [token, role, userData] = await Promise.all([
@@ -31,11 +31,17 @@ export const AuthProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const signIn = async (username, password) => {
+    const signIn = useCallback(async (username, password) => {
         const data = await authApi.login(username, password);
 
+        // If backend says verification is required, return data without signing in yet
+        if (data.status === 'verification_required') {
+            return data;
+        }
+
+        // Standard direct login (if enabled or for specific users)
         await authStorage.storeSession(
             data.access,
             data.refresh,
@@ -46,9 +52,25 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         setUserRole(data.user.role || 'SELLER');
         return data;
-    };
+    }, []);
 
-    const signUp = async (userData) => {
+    const verifyLogin = useCallback(async (userId, otp) => {
+        const data = await authApi.verifyLoginOTP(userId, otp);
+
+        // This endpoint returns tokens on success
+        await authStorage.storeSession(
+            data.access,
+            data.refresh,
+            data.user.role || 'SELLER',
+            data.user
+        );
+
+        setUser(data.user);
+        setUserRole(data.user.role || 'SELLER');
+        return data;
+    }, []);
+
+    const signUp = useCallback(async (userData) => {
         const data = await authApi.register(userData);
 
         // If backend returns tokens on register, store them and log user in
@@ -64,17 +86,10 @@ export const AuthProvider = ({ children }) => {
             setUserRole(data.user.role || 'SELLER');
         }
         return data;
-    };
+    }, []);
 
-    const googleSignIn = async (token) => {
+    const googleSignIn = useCallback(async (token) => {
         const data = await authApi.googleLogin(token);
-
-        // Ensure backend returns user object, otherwise fetch it
-        // Assuming data contains { access, refresh, user } like login
-        // If not, we might need: const user = await authApi.getProfile();
-
-        // For now, let's assume standard auth response. 
-        // If googleLogin endpoint doesn't return user, we should fetch it.
 
         let userForState = data.user;
         let roleForState = data.user?.role || 'SELLER';
@@ -90,9 +105,9 @@ export const AuthProvider = ({ children }) => {
         setUser(userForState);
         setUserRole(roleForState);
         return data;
-    };
+    }, []);
 
-    const signOut = async () => {
+    const signOut = useCallback(async () => {
         try {
             await authApi.logout();
         } catch (e) {
@@ -101,20 +116,23 @@ export const AuthProvider = ({ children }) => {
         await authStorage.clearSession();
         setUser(null);
         setUserRole(null);
-    };
+    }, []);
+
+    const value = useMemo(() => ({
+        user,
+        setUser,
+        userRole,
+        loading,
+        signIn,
+        verifyLogin,
+        signUp,
+        googleSignIn,
+        signOut,
+        isAuthenticated: !!user
+    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut]);
 
     return (
-        <AuthContext.Provider value={{
-            user,
-            setUser,
-            userRole,
-            loading,
-            signIn,
-            signUp,
-            googleSignIn,
-            signOut,
-            isAuthenticated: !!user
-        }}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );

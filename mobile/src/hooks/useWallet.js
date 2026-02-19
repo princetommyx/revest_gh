@@ -1,156 +1,112 @@
-import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { walletApi } from '../api/wallet';
 import Toast from 'react-native-root-toast';
 
 /**
- * Base wallet query hook - fetches wallet data
+ * Base wallet hook - handles fetching, depositing, and withdrawing
  */
 export const useWallet = () => {
-    return useQuery({
-        queryKey: ['wallet'],
-        queryFn: async () => {
-            const data = await walletApi.getWallet();
-            return data;
-        },
-        staleTime: 1000 * 30, // 30 seconds
-        retry: 2,
-    });
+    const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isRefetching, setIsRefetching] = useState(false);
+    const [isError, setIsError] = useState(false);
+    const [isActionLoading, setIsActionLoading] = useState(false);
+
+    const fetchWallet = async (isManual = false) => {
+        if (isManual) setIsRefetching(true);
+        else setIsLoading(true);
+
+        try {
+            const wallet = await walletApi.getWallet();
+            setData(wallet);
+            setIsError(false);
+        } catch (error) {
+            console.error('Error fetching wallet:', error);
+            setIsError(true);
+        } finally {
+            setIsLoading(false);
+            setIsRefetching(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchWallet();
+    }, []);
+
+    const deposit = async (depositData) => {
+        setIsActionLoading(true);
+        try {
+            const res = await walletApi.deposit(depositData);
+            await fetchWallet();
+            return res;
+        } catch (error) {
+            throw error;
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const withdraw = async (withdrawData) => {
+        setIsActionLoading(true);
+        try {
+            const res = await walletApi.withdraw(withdrawData);
+            await fetchWallet();
+            return res;
+        } catch (error) {
+            throw error;
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    const verifyPayment = async (reference) => {
+        setIsActionLoading(true);
+        try {
+            const res = await walletApi.verifyPayment(reference);
+            await fetchWallet();
+            return res;
+        } catch (error) {
+            throw error;
+        } finally {
+            setIsActionLoading(false);
+        }
+    };
+
+    return {
+        data,
+        isLoading,
+        isRefetching,
+        isError,
+        isActionLoading,
+        refetch: () => fetchWallet(true),
+        deposit,
+        withdraw,
+        verifyPayment
+    };
 };
 
-/**
- * Verify payment mutation
- */
+// Wrappers for compatibility with .mutate() and .isPending
+const mutationWrapper = (mutationFn, isPending) => ({
+    mutate: (vars, options) => {
+        mutationFn(vars)
+            .then(res => options?.onSuccess?.(res))
+            .catch(err => options?.onError?.(err));
+    },
+    mutateAsync: mutationFn,
+    isPending
+});
+
 export const useVerifyPayment = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (reference) => walletApi.verifyPayment(reference),
-        onSuccess: (response) => {
-            if (response.balance !== undefined) {
-                queryClient.setQueryData(['wallet'], response);
-                Toast.show("Payment verified!", { backgroundColor: '#27AE60' });
-                return { verified: true };
-            }
-            Toast.show("Payment still pending", { backgroundColor: '#F39C12' });
-            return { verified: false };
-        },
-        onError: () => {
-            Toast.show("Verification failed", { backgroundColor: '#E74C3C' });
-        },
-    });
+    const { verifyPayment, isActionLoading } = useWallet();
+    return mutationWrapper(verifyPayment, isActionLoading);
 };
 
-
-/**
- * Optimistic deposit mutation - UI updates instantly
- */
 export const useOptimisticDeposit = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (data) => walletApi.deposit(data),
-
-        // ✅ Update UI BEFORE API call completes
-        onMutate: async (newDeposit) => {
-            // Cancel any outgoing refetches to avoid race conditions
-            await queryClient.cancelQueries({ queryKey: ['wallet'] });
-
-            // Snapshot the previous value for rollback
-            const previousWallet = queryClient.getQueryData(['wallet']);
-
-            // Optimistically update UI immediately
-            queryClient.setQueryData(['wallet'], (old) => {
-                if (!old) return old;
-
-                return {
-                    ...old,
-                    // Don't update balance yet - wait for confirmation
-                    recent_transactions: [
-                        {
-                            id: 'temp-' + Date.now(),
-                            amount: newDeposit.amount,
-                            transaction_type: 'DEPOSIT',
-                            status: 'PENDING',
-                            description: `MoMo Deposit via ${newDeposit.network}`,
-                            created_at: new Date().toISOString(),
-                        },
-                        ...(old.recent_transactions || [])
-                    ]
-                };
-            });
-
-            Toast.show('Processing deposit...', { backgroundColor: '#2E7D32' });
-
-            return { previousWallet };
-        },
-
-        // Rollback on error
-        onError: (err, newDeposit, context) => {
-            queryClient.setQueryData(['wallet'], context.previousWallet);
-            Toast.show('Deposit failed - ' + (err.response?.data?.error || 'Please try again'), {
-                backgroundColor: '#E74C3C'
-            });
-        },
-
-        // Always refetch to ensure server state
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['wallet'] });
-        },
-    });
+    const { deposit, isActionLoading } = useWallet();
+    return mutationWrapper(deposit, isActionLoading);
 };
 
-/**
- * Optimistic withdrawal mutation - UI updates instantly
- */
 export const useOptimisticWithdraw = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: (data) => walletApi.withdraw(data),
-
-        onMutate: async (withdrawal) => {
-            await queryClient.cancelQueries({ queryKey: ['wallet'] });
-            const previousWallet = queryClient.getQueryData(['wallet']);
-
-            // Optimistically deduct balance
-            queryClient.setQueryData(['wallet'], (old) => {
-                if (!old) return old;
-
-                return {
-                    ...old,
-                    balance: old.balance - withdrawal.amount,
-                    recent_transactions: [
-                        {
-                            id: 'temp-' + Date.now(),
-                            amount: withdrawal.amount,
-                            transaction_type: 'WITHDRAW',
-                            status: 'PENDING',
-                            description: `MoMo Withdrawal to ${withdrawal.network}`,
-                            created_at: new Date().toISOString(),
-                        },
-                        ...(old.recent_transactions || [])
-                    ]
-                };
-            });
-
-            Toast.show('Processing withdrawal...', { backgroundColor: '#F39C12' });
-
-            return { previousWallet };
-        },
-
-        onError: (err, withdrawal, context) => {
-            queryClient.setQueryData(['wallet'], context.previousWallet);
-            Toast.show('Withdrawal failed - ' + (err.response?.data?.error || 'Please try again'), {
-                backgroundColor: '#E74C3C'
-            });
-        },
-
-        onSuccess: () => {
-            Toast.show('Withdrawal successful!', { backgroundColor: '#27AE60' });
-        },
-
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: ['wallet'] });
-        },
-    });
+    const { withdraw, isActionLoading } = useWallet();
+    return mutationWrapper(withdraw, isActionLoading);
 };

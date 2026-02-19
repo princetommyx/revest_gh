@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -12,9 +12,9 @@ const NotificationContext = createContext();
 try {
     Notifications.setNotificationHandler({
         handleNotification: async (notification) => {
-            // Check urgency from data
-            const urgency = notification.request.content.data?.urgency;
-            const isUrgent = urgency === 'URGENT';
+            // Check for OTP or URGENT data
+            const data = notification.request.content.data;
+            const isUrgent = data?.urgency === 'URGENT' || data?.type?.includes('otp');
 
             return {
                 shouldShowAlert: true,
@@ -39,7 +39,8 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         // Wrap all async operations in try-catch to prevent crashes
         const initializeNotifications = async () => {
-            // Skip notification setup entirely in Expo Go on Android
+            // Skip notification setup entirely in Expo Go on Android (UNSUPPORTED in SDK 53+)
+            // We previously tried to remove this, but SDK 54 throws a hard error in Expo Go.
             if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
                 console.log('Skipping notification fetch in Expo Go (Android)');
                 return;
@@ -114,17 +115,25 @@ export const NotificationProvider = ({ children }) => {
         };
     }, [user]);
 
-    const markAllRead = async () => {
+    const markAllRead = useCallback(async () => {
         try {
             await notificationsApi.markAllAsRead();
             setUnreadCount(0);
         } catch (e) {
             console.error(e);
         }
-    };
+    }, []);
+
+    const value = useMemo(() => ({
+        expoPushToken,
+        notification,
+        unreadCount,
+        markAllRead,
+        setUnreadCount
+    }), [expoPushToken, notification, unreadCount, markAllRead]);
 
     return (
-        <NotificationContext.Provider value={{ expoPushToken, notification, unreadCount, markAllRead, setUnreadCount }}>
+        <NotificationContext.Provider value={value}>
             {children}
         </NotificationContext.Provider>
     );
@@ -135,9 +144,9 @@ export const useNotifications = () => useContext(NotificationContext);
 async function registerForPushNotificationsAsync() {
     let token;
 
-    // Check for Expo Go on Android (where notifications are not supported in SDK 53+)
+    // Check for Expo Go on Android where remote notifications are removed in SDK 53+
     if (Platform.OS === 'android' && Constants.appOwnership === 'expo') {
-        console.log('Skipping Push Notification setup in Expo Go (Android)');
+        console.log('Push notifications are NOT supported in Android Expo Go. Use a Development Build.');
         return null;
     }
 

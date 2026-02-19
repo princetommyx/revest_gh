@@ -22,6 +22,7 @@ from google.auth.transport import requests
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 import os
+import threading
 
 # Import from new modular email service
 from .email_service import send_welcome_email, send_login_alert
@@ -29,6 +30,8 @@ from .email_service import send_welcome_email, send_login_alert
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 @extend_schema(
     tags=['auth'],
@@ -39,6 +42,7 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (permissions.AllowAny,)
     serializer_class = UserRegistrationSerializer
+    parser_classes = (MultiPartParser, FormParser, JSONParser)
     throttle_scope = 'register'
     
     def perform_create(self, serializer):
@@ -61,15 +65,34 @@ class RegisterView(generics.CreateAPIView):
             )
         except Exception as e:
             logger.error(f"Error sending admin notification: {e}")
-    
+
     def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            errors = serializer.errors
+            print(f"DEBUG: Registration validation failed: {errors}")
+            # Flatten errors for the frontend to show a nice message
+            error_details = []
+            for field, messages in errors.items():
+                if isinstance(messages, list):
+                    error_details.append(f"{field}: {messages[0]}")
+                else:
+                    error_details.append(f"{field}: {messages}")
+            
+            return Response({
+                "detail": f"Registration failed. {', '.join(error_details)}",
+                "errors": errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
         response = super().create(request, *args, **kwargs)
         # Add JWT tokens to response and structure it like login
         if response.status_code == status.HTTP_201_CREATED:
-            user = User.objects.get(email=request.data.get('email'))
+            # Safer lookup using the ID from the created serializer
+            user_id = response.data.get('id')
+            user = User.objects.get(id=user_id)
             refresh = RefreshToken.for_user(user)
             
-            # Re-structure the response to match what frontend expects: { user: {...}, tokens: {...} }
+            # Re-structure the response to match what frontend expects
             user_data = response.data
             response.data = {
                 'user': user_data,
@@ -285,6 +308,142 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+    def post(self, request, *args, **kwargs):
+        # First, validate credentials normally
+        serializer = self.get_serializer(data=request.data)
+        
+        try:
+            # We don't want to actually return tokens yet, so we just validate
+            serializer.is_valid(raise_exception=True)
+            user = serializer.user
+        except Exception as e:
+            # Re-raise or return same error as standard login
+            return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+            
+        # If user is admin (is_staff), skip OTP and return tokens immediately
+        if user.is_staff:
+            print(f"DEBUG: Admin user {user.username} logged in, bypassing OTP.")
+            # Trigger login alert (still good for security)
+            send_login_alert(user)
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+
+        # If credentials are valid, generate and send OTP
+        # In a real app, you might only do this for certain users/devices
+        # But per user request: "every time they tap on login"
+        
+        otp_code = str(random.randint(100000, 999999))
+        expires_at = timezone.now() + timedelta(minutes=10)
+        
+        # Save OTP to DB
+        from .models import LoginOTP
+        LoginOTP.objects.filter(user=user).delete() # Remove old ones
+        LoginOTP.objects.create(user=user, otp=otp_code, expires_at=expires_at)
+        
+        # Send OTP via Preferred Methods (SMS, Email, AND Push)
+        sent_to = []
+        
+        # 1. Try SMS
+        if user.phone_number:
+            try:
+                from .sms_service import send_otp_sms
+                send_otp_sms(user.phone_number, otp_code)
+                sent_to.append(f"phone {user.phone_number}")
+                print(f"DEBUG: Sent login OTP {otp_code} to {user.phone_number}")
+            except Exception as e:
+                logger.error(f"Failed to send SMS OTP: {e}")
+        
+        # 2. Try Email
+        if user.email:
+            try:
+                def _async_mail(email, otp):
+                    send_mail(
+                        'Revesta Login Verification',
+                        f'Your login verification code is: {otp}',
+                        settings.DEFAULT_FROM_EMAIL,
+                        [email],
+                        fail_silently=True
+                    )
+                threading.Thread(target=_async_mail, args=(user.email, otp_code), daemon=True).start()
+                
+                sent_to.append(f"email {user.email}")
+                print(f"DEBUG: Sent login OTP {otp_code} to {user.email} (Async)")
+            except Exception as e:
+                logger.error(f"Failed to send Email OTP: {e}")
+
+        # 3. ALWAYS try Push if token exists
+        if user.expo_push_token:
+            try:
+                from .notifications import send_push_notification
+                send_push_notification(
+                    user, 
+                    "Login Verification", 
+                    f"Your Revesta login code is: {otp_code}",
+                    data={"type": "login_otp", "otp": otp_code},
+                    urgency='URGENT'
+                )
+                sent_to.append("push notification")
+                print(f"DEBUG: Sent login OTP {otp_code} via push to {user.username}")
+            except Exception as e:
+                logger.error(f"Failed to send Push OTP: {e}")
+
+        if not sent_to:
+             return Response({
+                "detail": "No valid contact method found to send verification code."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "status": "verification_required",
+            "message": f"Login verification code sent to your {', '.join(sent_to)}",
+            "user_id": user.id,
+            "channel": "phone" if user.phone_number else "email"
+        }, status=status.HTTP_200_OK)
+
+class VerifyLoginOTPView(views.APIView):
+    permission_classes = (permissions.AllowAny,)
+    
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        otp_code = request.data.get('otp')
+        
+        if not user_id or not otp_code:
+            return Response({"detail": "user_id and otp are required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            from .models import User, LoginOTP
+            user = User.objects.get(id=user_id)
+            verification = LoginOTP.objects.get(user=user)
+            
+            if not verification.is_valid():
+                return Response({"detail": "OTP has expired or already used"}, status=status.HTTP_400_BAD_REQUEST)
+                
+            if verification.otp == otp_code:
+                # Success! Finally issue tokens
+                verification.is_verified = True
+                verification.save()
+                
+                refresh = RefreshToken.for_user(user)
+                
+                # Structure exactly like the successful login serializer did
+                return Response({
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user': {
+                        'id': user.id,
+                        'username': user.username,
+                        'email': user.email,
+                        'role': user.role,
+                        'is_staff': user.is_staff,
+                        'is_superuser': user.is_superuser
+                    }
+                })
+            else:
+                return Response({"detail": "Invalid verification code"}, status=status.HTTP_400_BAD_REQUEST)
+                
+        except (User.DoesNotExist, LoginOTP.DoesNotExist):
+            return Response({"detail": "Invalid verification session"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"detail": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class DebugEmailView(views.APIView):
     permission_classes = (permissions.AllowAny,)
@@ -515,14 +674,35 @@ class SendOTPView(views.APIView):
         print(f"VERIFICATION CODE FOR {phone_number}: {otp_code}")
         print("="*40 + "\n")
         
-        # Send via Hubtel SMS (Standard SMS API)
+        # Send via Push AND SMS
+        sent_methods = []
+        
+        # 1. Send via Push if user exists for this phone number
+        user = User.objects.filter(phone_number=phone_number).first()
+        if user and user.expo_push_token:
+            try:
+                from .notifications import send_push_notification
+                send_push_notification(
+                    user, 
+                    "Verification Code", 
+                    f"Your code is: {otp_code}",
+                    data={"type": "otp", "otp": otp_code},
+                    urgency='URGENT'
+                )
+                sent_methods.append("Push")
+                print(f"DEBUG: Sent register OTP {otp_code} via push to {user.username}")
+            except Exception as e:
+                logger.error(f"Failed to send Push OTP during register: {e}")
+
+        # 2. Send via Hubtel SMS
         try:
             from .sms_service import send_otp_sms
             send_otp_sms(phone_number, otp_code)
+            sent_methods.append("SMS")
             
             return Response({
                 'status': 'success',
-                'message': 'Verification code sent (Internal Logic + Hubtel SMS)'
+                'message': f"Verification code sent ({' & '.join(sent_methods)})"
             })
         except Exception as e:
             import traceback
@@ -531,9 +711,39 @@ class SendOTPView(views.APIView):
             return Response({
                 'status': 'error',
                 'error': str(e),
-                'message': 'Failed to send SMS. Please check your credentials and number format.',
+                'message': f"Failed to send SMS. {'Push was sent.' if 'Push' in sent_methods else ''}",
                 'traceback': error_details
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AdminSendPushView(views.APIView):
+    """
+    Testing endpoint for Admins to send manual push notifications.
+    """
+    permission_classes = (permissions.IsAdminUser,)
+
+    def post(self, request):
+        user_id = request.data.get('user_id')
+        title = request.data.get('title', 'Admin Notification')
+        body = request.data.get('body', 'This is a test notification.')
+        data = request.data.get('data', {})
+        urgency = request.data.get('urgency', 'NORMAL')
+
+        if not user_id:
+            return Response({'error': 'user_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(id=user_id)
+            if not user.expo_push_token:
+                return Response({'error': 'User has no push token registered'}, status=status.HTTP_400_BAD_REQUEST)
+
+            from .notifications import send_push_notification
+            send_push_notification(user, title, body, data, urgency)
+            
+            return Response({'status': 'success', 'message': f'Notification sent to {user.username}'})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class VerifyOTPView(views.APIView):
     permission_classes = (permissions.AllowAny,)

@@ -1,10 +1,12 @@
 import React from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, Linking
+    ScrollView, Linking, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Mail, MessageSquare, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, Mail, MessageSquare, ChevronDown, HelpCircle, Phone, Globe, ExternalLink } from 'lucide-react-native';
+
+const { width } = Dimensions.get('window');
 
 const FAQS = [
     {
@@ -31,84 +33,116 @@ export default function HelpScreen({ navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Help & Support</Text>
-                <View style={{ width: 24 }} />
+        <View style={styles.container}>
+            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+
+            {/* Organic Curved Header */}
+            <View style={styles.headerBackground}>
+                <View style={styles.curvedShape} />
+                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <Text style={styles.headerTitle}>Help Center</Text>
+                        <TouchableOpacity style={styles.iconBtn}>
+                            <HelpCircle size={22} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
             </View>
 
-            <ScrollView contentContainerStyle={styles.content}>
-                <Text style={styles.sectionTitle}>Contact Us</Text>
+            {/* Content Overlap */}
+            <View style={styles.contentWrap}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
-                <View style={styles.contactRow}>
-                    <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
-                        <View style={[styles.iconBox, { backgroundColor: '#E3F2FD' }]}>
-                            <Mail size={24} color="#1976D2" />
-                        </View>
-                        <Text style={styles.contactLabel}>Email Support</Text>
-                        <Text style={styles.contactSub}>support@revesta.com</Text>
-                    </TouchableOpacity>
+                    <Text style={styles.sectionTitle}>Contact Support</Text>
+                    <View style={styles.contactContainer}>
+                        <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
+                            <View style={[styles.iconBox, { backgroundColor: '#F0F7F4' }]}>
+                                <Mail size={22} color="#2E7D32" />
+                            </View>
+                            <Text style={styles.contactLabel}>Email Us</Text>
+                            <Text style={styles.contactSub}>Fast response</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity style={styles.contactCard}>
-                        <View style={[styles.iconBox, { backgroundColor: '#E8F5E9' }]}>
-                            <MessageSquare size={24} color="#2E7D32" />
-                        </View>
-                        <Text style={styles.contactLabel}>Live Chat</Text>
-                        <Text style={styles.contactSub}>Coming Soon</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
-
-                {FAQS.map((item, index) => (
-                    <View key={index} style={styles.faqItem}>
-                        <View style={styles.faqHeader}>
-                            <Text style={styles.faqQ}>{item.q}</Text>
-                        </View>
-                        <Text style={styles.faqA}>{item.a}</Text>
+                        <TouchableOpacity style={styles.contactCard} onPress={() => navigation.navigate('SupportChat')}>
+                            <View style={[styles.iconBox, { backgroundColor: '#F0F7F4' }]}>
+                                <MessageSquare size={22} color="#2E7D32" />
+                            </View>
+                            <Text style={styles.contactLabel}>Live Chat</Text>
+                            <Text style={styles.contactSub}>AI Assistant</Text>
+                        </TouchableOpacity>
                     </View>
-                ))}
 
-            </ScrollView>
-        </SafeAreaView>
+                    <View style={styles.otherContacts}>
+                        <TouchableOpacity style={styles.linkRow}>
+                            <Phone size={18} color="#666" />
+                            <Text style={styles.linkText}>Call Support</Text>
+                            <ChevronDown size={18} color="#ccc" style={{ transform: [{ rotate: '-90deg' }] }} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.linkRow}>
+                            <Globe size={18} color="#666" />
+                            <Text style={styles.linkText}>Visit Website</Text>
+                            <ExternalLink size={16} color="#ccc" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
+                    {FAQS.map((item, index) => (
+                        <View key={index} style={styles.faqCard}>
+                            <View style={styles.faqHeader}>
+                                <Text style={styles.faqQ}>{item.q}</Text>
+                                <ChevronDown size={18} color="#2E7D32" />
+                            </View>
+                            <Text style={styles.faqA}>{item.a}</Text>
+                        </View>
+                    ))}
+
+                    <View style={styles.footerInfo}>
+                        <Text style={styles.versionText}>Revesta App v2.4.0</Text>
+                        <Text style={styles.copyrightText}>© 2026 Revesta Inc. All rights reserved.</Text>
+                    </View>
+
+                </ScrollView>
+            </View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: {
-        flexDirection: 'row', alignItems: 'center',
-        justifyContent: 'space-between', padding: 20,
-        borderBottomWidth: 1, borderBottomColor: '#f1f1f1'
+    container: { flex: 1, backgroundColor: '#F0F7F4' },
+    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    curvedShape: {
+        position: 'absolute', bottom: -80, left: -width * 0.25,
+        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
+        backgroundColor: '#388E3C', opacity: 0.3
     },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    backBtn: { padding: 5 },
-    content: { padding: 25 },
-
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a', marginBottom: 20, marginTop: 10 },
-
-    contactRow: { flexDirection: 'row', gap: 15, marginBottom: 40 },
+    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
+    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
+    iconBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    scrollPadding: { padding: 25, paddingBottom: 50 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 20, marginTop: 10 },
+    contactContainer: { flexDirection: 'row', gap: 15, marginBottom: 20 },
     contactCard: {
-        flex: 1, backgroundColor: '#fff', padding: 20,
-        borderRadius: 16, alignItems: 'center',
-        borderWidth: 1, borderColor: '#eee',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05, shadowRadius: 5, elevation: 2
+        flex: 1, backgroundColor: '#fff', padding: 20, borderRadius: 24,
+        alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6',
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
     },
-    iconBox: {
-        width: 50, height: 50, borderRadius: 25,
-        justifyContent: 'center', alignItems: 'center', marginBottom: 12
-    },
-    contactLabel: { fontSize: 14, fontWeight: 'bold', color: '#333' },
-    contactSub: { fontSize: 12, color: '#999', marginTop: 4 },
-
-    faqItem: {
-        marginBottom: 15, padding: 20,
-        backgroundColor: '#f9fafb', borderRadius: 12
-    },
-    faqQ: { fontSize: 15, fontWeight: 'bold', color: '#333', marginBottom: 8 },
-    faqA: { fontSize: 14, color: '#666', lineHeight: 22 }
+    iconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+    contactLabel: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A' },
+    contactSub: { fontSize: 11, color: '#999', marginTop: 4, fontWeight: '600', textTransform: 'uppercase' },
+    otherContacts: { marginBottom: 35 },
+    linkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    linkText: { flex: 1, marginLeft: 15, fontSize: 15, color: '#4B5563', fontWeight: '500' },
+    faqCard: { marginBottom: 15, padding: 20, backgroundColor: '#F9FAFB', borderRadius: 20, borderWidth: 1, borderColor: '#F3F4F6' },
+    faqHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+    faqQ: { fontSize: 15, fontWeight: 'bold', color: '#1A1A1A', flex: 1, marginRight: 15 },
+    faqA: { fontSize: 14, color: '#6B7280', lineHeight: 22 },
+    footerInfo: { alignItems: 'center', marginTop: 30 },
+    versionText: { fontSize: 12, color: '#999', fontWeight: 'bold' },
+    copyrightText: { fontSize: 11, color: '#CCC', marginTop: 4 },
 });

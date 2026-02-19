@@ -2,16 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TextInput,
     TouchableOpacity, KeyboardAvoidingView, Platform,
-    ActivityIndicator
+    ActivityIndicator, Dimensions, StatusBar, Image
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatApi } from '../api/chat';
-import { Send, User, ChevronLeft } from 'lucide-react-native';
+import { Send, User, ChevronLeft, MoreHorizontal, Phone, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-root-toast';
 
+const { width } = Dimensions.get('window');
+
 export default function ChatDetailScreen({ route, navigation }) {
-    const { contactId, contactName } = route.params;
+    const insets = useSafeAreaInsets();
+    const { contactId, contactName, contactImage } = route.params;
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -20,7 +23,7 @@ export default function ChatDetailScreen({ route, navigation }) {
 
     useEffect(() => {
         fetchMessages();
-        const interval = setInterval(fetchMessages, 5000); // Polling as fallback for WS
+        const interval = setInterval(fetchMessages, 5000);
         return () => clearInterval(interval);
     }, [contactId]);
 
@@ -30,7 +33,6 @@ export default function ChatDetailScreen({ route, navigation }) {
             setMessages(data);
         } catch (error) {
             console.error("Messages Load Error:", error);
-            Toast.show("Failed to load messages", { backgroundColor: '#E74C3C' });
         } finally {
             setLoading(false);
         }
@@ -65,16 +67,43 @@ export default function ChatDetailScreen({ route, navigation }) {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <ChevronLeft size={24} color="#1a1a1a" />
-                </TouchableOpacity>
-                <View style={styles.headerInfo}>
-                    <Text style={styles.headerTitle}>{contactName}</Text>
-                    <Text style={styles.headerSub}>Online</Text>
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+
+            {/* Minimalist Premium Header */}
+            <SafeAreaView edges={['top']} style={styles.header}>
+                <View style={styles.headerRow}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                        <ChevronLeft size={28} color="#1A1A1A" />
+                    </TouchableOpacity>
+
+                    <View style={styles.headerMain}>
+                        <View style={styles.avatarWrap}>
+                            {contactImage ? (
+                                <Image source={{ uri: contactImage }} style={styles.avatarImg} />
+                            ) : (
+                                <View style={styles.avatarPlaceholder}>
+                                    <User size={18} color="#9BAA9B" />
+                                </View>
+                            )}
+                            <View style={styles.onlineDot} />
+                        </View>
+                        <View style={styles.headerText}>
+                            <Text style={styles.contactName} numberOfLines={1}>{contactName}</Text>
+                            <Text style={styles.statusText}>Active now</Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity style={styles.headerIconBtn}>
+                            <Phone size={20} color="#2E7D32" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.headerIconBtn}>
+                            <MoreHorizontal size={20} color="#666" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
-            </View>
+            </SafeAreaView>
 
             {loading ? (
                 <View style={styles.center}><ActivityIndicator size="small" color="#2E7D32" /></View>
@@ -86,81 +115,183 @@ export default function ChatDetailScreen({ route, navigation }) {
                     keyExtractor={item => item.id.toString()}
                     contentContainerStyle={styles.messageList}
                     onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                    showsVerticalScrollIndicator={false}
                 />
             )}
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
-                <View style={styles.inputArea}>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Type a message..."
-                        value={newMessage}
-                        onChangeText={setNewMessage}
-                        multiline
-                    />
-                    <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-                        <Send size={20} color="#fff" />
-                    </TouchableOpacity>
+                <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 20 }]}>
+                    <View style={styles.inputWrapper}>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Type a message..."
+                            value={newMessage}
+                            onChangeText={setNewMessage}
+                            multiline
+                            placeholderTextColor="#999"
+                        />
+                        <TouchableOpacity
+                            style={[styles.sendBtn, !newMessage.trim() && styles.sendBtnDisabled]}
+                            onPress={handleSend}
+                            disabled={!newMessage.trim()}
+                        >
+                            <Send size={18} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fcfcfc' },
+    container: { flex: 1, backgroundColor: '#F9FBFA' },
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 15,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
-        borderBottomColor: '#eee'
+        borderBottomColor: '#F0F3F1',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
     },
-    headerInfo: { marginLeft: 15 },
-    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    headerSub: { fontSize: 12, color: '#27AE60' },
+    headerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+    },
+    backBtn: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    headerMain: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 5,
+    },
+    avatarWrap: {
+        position: 'relative',
+    },
+    avatarImg: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+    },
+    avatarPlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F0F7F4',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    onlineDot: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#2E7D32',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    headerText: {
+        marginLeft: 12,
+        flex: 1,
+    },
+    contactName: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+    },
+    statusText: {
+        fontSize: 12,
+        color: '#2E7D32',
+        fontWeight: '500',
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 5,
+    },
+    headerIconBtn: {
+        width: 40,
+        height: 40,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    messageList: { padding: 15, paddingBottom: 20 },
-    messageRow: { marginBottom: 15, width: '100%' },
+    messageList: { padding: 20, paddingBottom: 30 },
+    messageRow: { marginBottom: 12, width: '100%' },
     myMessageRow: { alignItems: 'flex-end' },
     theirMessageRow: { alignItems: 'flex-start' },
-    bubble: { maxWidth: '80%', padding: 12, borderRadius: 18 },
-    myBubble: { backgroundColor: '#2E7D32', borderBottomRightRadius: 4 },
-    theirBubble: { backgroundColor: '#fff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#eee' },
-    messageText: { fontSize: 15 },
-    myText: { color: '#fff' },
-    theirText: { color: '#1a1a1a' },
-    timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
-    myTime: { color: 'rgba(255,255,255,0.7)' },
-    theirTime: { color: '#999' },
-    inputArea: {
-        flexDirection: 'row',
-        padding: 15,
+    bubble: {
+        maxWidth: '80%',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 22
+    },
+    myBubble: {
+        backgroundColor: '#2E7D32',
+        borderBottomRightRadius: 4,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    theirBubble: {
         backgroundColor: '#fff',
-        alignItems: 'center',
+        borderBottomLeftRadius: 4,
+        borderWidth: 1,
+        borderColor: '#F0F3F1'
+    },
+    messageText: { fontSize: 15, lineHeight: 20 },
+    myText: { color: '#fff' },
+    theirText: { color: '#1A1A1A' },
+    timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end', opacity: 0.6 },
+    myTime: { color: '#fff' },
+    theirTime: { color: '#999' },
+    inputContainer: {
+        backgroundColor: '#fff',
+        paddingHorizontal: 20,
+        paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#eee'
+        borderTopColor: '#F0F3F1',
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F3F4F6',
+        borderRadius: 25,
+        paddingHorizontal: 15,
+        minHeight: 50,
+        maxHeight: 120,
     },
     input: {
         flex: 1,
-        backgroundColor: '#f1f3f5',
-        borderRadius: 20,
-        paddingHorizontal: 15,
+        fontSize: 15,
+        color: '#1A1A1A',
         paddingVertical: 10,
-        maxHeight: 100,
-        fontSize: 16
+        marginRight: 10,
     },
     sendBtn: {
-        width: 45,
-        height: 45,
-        borderRadius: 22.5,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         backgroundColor: '#2E7D32',
         justifyContent: 'center',
         alignItems: 'center',
-        marginLeft: 10
+    },
+    sendBtnDisabled: {
+        backgroundColor: '#D1D5DB',
     },
 });

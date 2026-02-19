@@ -151,7 +151,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Additional static files locations
 STATICFILES_DIRS = [
-    BASE_DIR.parent / 'admin' / 'dist-modern',
+    # Add other static directories here
 ]
 
 # Default primary key field type

@@ -4,22 +4,24 @@ import {
     Dimensions, Modal, TextInput, ScrollView,
     ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert
 } from 'react-native';
-import { useQueryClient } from '@tanstack/react-query';
-import { usePickups } from '../hooks/usePickups';
-import MapView, { Marker, PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { logisticsApi } from '../api/logistics';
 import { useAuth } from '../context/AuthContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import {
     Truck, MapPin, Navigation,
-    CheckCircle2, AlertCircle, Info, Clock, Search, X
+    CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar, ChevronRight, Activity
 } from 'lucide-react-native';
-import Toast from 'react-native-root-toast';
+import { usePickups } from '../hooks/usePickups';
+import * as Location from 'expo-location';
+import MapView, { Marker, Polyline } from 'react-native-maps';
+import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
-import { useNavigation } from '@react-navigation/native';
+const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
+const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
 // Helper: Calculate distance between two coordinates (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -36,23 +38,18 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
-    const queryClient = useQueryClient();
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
 
-    // ... rest of checking logic can go in useEffect
     const [location, setLocation] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
-    // Missing state declarations
     const mapRef = useRef(null);
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
     const [requestForm, setRequestForm] = useState({
-        material_type: 'Plastics',
-        quantity_estimate: '1-2 Bags',
         material_type: 'Plastics',
         quantity_estimate: '1-2 Bags',
         delivery_fee: null,
@@ -62,7 +59,7 @@ export default function PickupsScreen({ route }) {
         payment_method: 'DIGITAL_WALLET',
         listing_id: null
     });
-    const [useCustomLocation, setUseCustomLocation] = useState(false);
+    const [useCurrentLocation, setUseCurrentLocation] = useState(true);
     const [customAddress, setCustomAddress] = useState('');
     const [recentLocations, setRecentLocations] = useState([]);
 
@@ -104,7 +101,6 @@ export default function PickupsScreen({ route }) {
         try {
             const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
             if (address) {
-                // Format: "Madina Market, Accra"
                 const street = address.street || address.name || '';
                 const city = address.city || address.subregion || address.region || '';
                 return `${street}, ${city}`.replace(/^, /, '').trim();
@@ -128,7 +124,6 @@ export default function PickupsScreen({ route }) {
 
     const saveRecentLocation = async (address) => {
         try {
-            // Add to beginning, remove duplicates, keep max 5
             const updated = [
                 { address, timestamp: Date.now() },
                 ...recentLocations.filter(loc => loc.address !== address)
@@ -140,11 +135,8 @@ export default function PickupsScreen({ route }) {
             console.log('Error saving recent location:', e);
         }
     };
-    // but typically map shows up first then pins drop.
-    // If location is required for collector, we might want to wait.
 
-    // We can derive "loading" state:
-    const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location); // simplified
+    const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location);
 
     useEffect(() => {
         (async () => {
@@ -157,7 +149,6 @@ export default function PickupsScreen({ route }) {
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc.coords);
 
-            // Set initial map region
             setMapRegion({
                 latitude: loc.coords.latitude,
                 longitude: loc.coords.longitude,
@@ -167,8 +158,6 @@ export default function PickupsScreen({ route }) {
         })();
     }, []);
 
-    // Handle incoming pickup request from listing
-    // Handle incoming pickup request from listing
     useEffect(() => {
         if (pickupData) {
             setRequestForm(prev => ({
@@ -180,7 +169,6 @@ export default function PickupsScreen({ route }) {
                 payment_method: 'DIGITAL_WALLET'
             }));
 
-            // Pre-fill Seller Location
             if (pickupData.seller_location) {
                 const { latitude, longitude, address } = pickupData.seller_location;
                 if (latitude && longitude) {
@@ -190,7 +178,6 @@ export default function PickupsScreen({ route }) {
                     });
                     setCustomAddress(address || '');
 
-                    // Center map on seller's location
                     setMapRegion({
                         latitude: parseFloat(latitude),
                         longitude: parseFloat(longitude),
@@ -201,17 +188,13 @@ export default function PickupsScreen({ route }) {
             }
 
             setShowRequestModal(true);
-
-            // Clear params to prevent reopening on generic refresh (optional, but good practice)
             navigation.setParams({ pickupData: null });
         }
     }, [pickupData]);
 
-    // Handle "Set on Map" Flow
     const startMapSelection = () => {
         setShowRequestModal(false);
         setIsSelectingLocation(true);
-        // Ensure map is centered on current location or last known
         if (mapRef.current && location) {
             mapRef.current.animateToRegion({
                 latitude: location.latitude,
@@ -224,34 +207,27 @@ export default function PickupsScreen({ route }) {
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
-        // Get center of map (managed by onRegionChangeComplete)
         if (mapRegion) {
-            // Reverse geocode
             const address = await reverseGeocode(mapRegion.latitude, mapRegion.longitude);
 
             if (selectionMode === 'PICKUP') {
                 setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
                 setCustomAddress(address);
+                setUseCurrentLocation(false);
             } else {
                 setDestinationLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
                 setDestinationAddress(address);
             }
 
-            // Re-open modal
             setShowRequestModal(true);
         }
     };
 
-    // Location tracking for collectors during active jobs
     useEffect(() => {
         if (userRole !== 'COLLECTOR' || !location) return;
-        // ... (existing tracking logic)
-        // Find if collector has any ACCEPTED jobs
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' && j.collector?.id === user?.id);
+        if (!activeJob) return;
 
-        if (!activeJob) return; // No active job, don't track
-
-        // Send location update every 10 seconds
         const interval = setInterval(async () => {
             try {
                 const currentLocation = await Location.getCurrentPositionAsync({});
@@ -263,17 +239,14 @@ export default function PickupsScreen({ route }) {
             } catch (error) {
                 console.log('Location update error:', error);
             }
-        }, 10000); // Every 10 seconds
+        }, 10000);
 
         return () => clearInterval(interval);
     }, [userRole, location, jobs, user]);
 
-    // React Query handles focus refetch
-
-
     const fetchEstimate = async () => {
         if (!location) {
-            Toast.show("Location missing. Cannot calculate estimate.", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Location Error', text2: 'Location missing. Cannot calculate estimate.' });
             return;
         }
 
@@ -286,21 +259,19 @@ export default function PickupsScreen({ route }) {
 
             setRequestForm(prev => ({
                 ...prev,
-                delivery_fee: estimate.estimated_price, // API returns the rider fare/delivery fee
+                delivery_fee: estimate.estimated_price,
                 distance_km: estimate.distance_km,
                 duration_min: estimate.duration_min
             }));
         } catch (error) {
             console.error("Estimate Error:", error);
-            Toast.show("Failed to get estimate", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Estimate Error', text2: 'Failed to get estimate' });
         } finally {
             setRequestLoading(false);
         }
     };
 
-    // AI Value Estimator
     useEffect(() => {
-        // If waste_value passed from listing (via pickupData), don't overwrite it immediately unless user changes quantity/material
         if (!pickupData?.waste_price) {
             calculateWasteValue();
         }
@@ -310,7 +281,6 @@ export default function PickupsScreen({ route }) {
         const { material_type, quantity_estimate } = requestForm;
         if (!material_type || !quantity_estimate) return;
 
-        // Base rates per kg (GHS)
         const rates = {
             'Plastics': 1.5,
             'Metals': 4.0,
@@ -320,7 +290,6 @@ export default function PickupsScreen({ route }) {
             'Mixed': 1.0
         };
 
-        // Estimated weights (kg)
         const weights = {
             '1-2 Bags': 10,
             '3-5 Bags': 25,
@@ -329,17 +298,12 @@ export default function PickupsScreen({ route }) {
         };
 
         const rate = rates[material_type] || 1.0;
-        const weight = weights[quantity_estimate] || 10; // Default to small qty
+        const weight = weights[quantity_estimate] || 10;
 
-        // Calculate estimated value logic
         const baseValue = rate * weight;
-        const commission = 0.20; // 20% platform fee
+        const commission = 0.20;
         const estimatedValue = baseValue * (1 - commission);
 
-        // Update form with AI estimate if not manually set
-        // We set a range or a specific value. specific for now.
-        // Update form with AI estimate if not manually set
-        // We set a range or a specific value. specific for now.
         setRequestForm(prev => ({
             ...prev,
             waste_value: estimatedValue.toFixed(2)
@@ -347,13 +311,11 @@ export default function PickupsScreen({ route }) {
     };
 
     const handleCreateRequest = async () => {
-        // ... (existing logic)
         if (!location) {
-            Toast.show("Location not available", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Location Error', text2: 'Location not available' });
             return;
         }
 
-        // Ensure price is calculated
         if (!requestForm.delivery_fee) {
             fetchEstimate();
             return;
@@ -363,38 +325,34 @@ export default function PickupsScreen({ route }) {
         try {
             const requestData = {
                 ...requestForm,
-                estimated_price: parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0), // Total for API (if needed as single field, or adjust backend to accept strict split)
+                estimated_price: parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0),
                 waste_price: parseFloat(requestForm.waste_value || 0),
                 delivery_fee: parseFloat(requestForm.delivery_fee || 0),
-                listing: requestForm.listing_id,  // Send listing ID as 'listing' field
+                listing: requestForm.listing_id,
                 latitude: location.latitude,
                 longitude: location.longitude,
-                // Add Destination Data
                 destination_address: destinationAddress,
                 destination_latitude: destinationLocation?.latitude,
                 destination_longitude: destinationLocation?.longitude
             };
 
-            // Add custom address if provided
             if (customAddress.trim()) {
                 requestData.pickup_address = customAddress.trim();
-                // Save to recent locations
                 saveRecentLocation(customAddress.trim());
             }
 
             await logisticsApi.createPickupRequest(requestData);
 
-            Toast.show("Pickup request created!", { backgroundColor: '#2E7D32' });
+            Toast.show({ type: 'success', text1: 'Success', text2: 'Pickup request created!' });
             setShowRequestModal(false);
             setCustomAddress('');
-            setDestinationAddress(''); // Reset destination
+            setDestinationAddress('');
             setDestinationLocation(null);
             refetch();
         } catch (error) {
             console.error("Create Request Error:", error);
             const errorData = error.response?.data;
 
-            // Check for Insufficient Funds (Standard DRF Validation Error structure)
             if (errorData?.detail === 'Insufficient funds' || errorData?.code === 'insufficient_funds') {
                 const required = errorData.required || (parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0));
 
@@ -407,13 +365,13 @@ export default function PickupsScreen({ route }) {
                             text: "Top Up Now",
                             onPress: () => {
                                 setShowRequestModal(false);
-                                navigation.navigate('TopUp'); // Navigate to TopUp screen
+                                navigation.navigate('TopUp');
                             }
                         }
                     ]
                 );
             } else {
-                Toast.show("Failed to create request: " + (errorData?.detail || "Unknown error"), { backgroundColor: '#E74C3C' });
+                Toast.show({ type: 'error', text1: 'Request Failed', text2: errorData?.detail || 'Unknown error' });
             }
         } finally {
             setRequestLoading(false);
@@ -423,49 +381,38 @@ export default function PickupsScreen({ route }) {
     const handleAcceptJob = async (jobId) => {
         try {
             await logisticsApi.acceptRequest(jobId);
-            Toast.show("Job accepted! Start navigating.", { backgroundColor: '#2E7D32' });
-            // Refresh
+            Toast.show({ type: 'success', text1: 'Accepted', text2: 'Job accepted! Start navigating.' });
             refetch();
         } catch (error) {
-            Toast.show("Failed to accept job", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to accept job' });
         }
     };
 
     const handleArriveJob = async (jobId) => {
         try {
             await logisticsApi.updateStatus(jobId, 'ARRIVED');
-            Toast.show("Marked as Arrived!", { backgroundColor: '#2E7D32' });
+            Toast.show({ type: 'success', text1: 'Arrived', text2: 'Marked as Arrived!' });
             refetch();
         } catch (error) {
-            Toast.show("Failed to update status", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to update status' });
         }
     };
 
     const openNavigation = (job) => {
         const { latitude, longitude, pickup_address } = job;
         const label = encodeURIComponent(pickup_address || 'Pickup Location');
-
-        // Use platform-specific maps URL
         const scheme = Platform.select({
             ios: `maps:0,0?q=${label}@${latitude},${longitude}`,
             android: `geo:0,0?q=${latitude},${longitude}(${label})`
         });
 
-        // Fallback to Google Maps web if app not installed
-        const url = Platform.select({
-            ios: scheme,
-            android: scheme
-        });
-
-        Linking.openURL(url).catch(() => {
-            // Fallback to Google Maps web
+        Linking.openURL(scheme).catch(() => {
             const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
             Linking.openURL(webUrl);
         });
     };
 
     const handleCompleteJob = async (jobId) => {
-        // Find the job first to show confirmation
         const job = jobs.find(j => j.id === jobId);
         if (job) {
             setConfirmingJob(job);
@@ -478,14 +425,12 @@ export default function PickupsScreen({ route }) {
 
         try {
             await logisticsApi.updateStatus(confirmingJob.id, 'COMPLETED');
-            Toast.show("Job Completed! Funds processed.", { backgroundColor: '#2E7D32' });
+            Toast.show({ type: 'success', text1: 'Completed', text2: 'Job Completed! Funds processed.' });
             setShowConfirmModal(false);
             setConfirmingJob(null);
             refetch();
-            // Refresh wallet too as balance changed
-            queryClient.invalidateQueries({ queryKey: ['wallet'] });
         } catch (error) {
-            Toast.show("Failed to complete job", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to complete job' });
         }
     };
 
@@ -497,23 +442,21 @@ export default function PickupsScreen({ route }) {
 
     const handleCancelRequest = async () => {
         if (!selectedCancelReason) {
-            Toast.show("Please select a reason", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'info', text1: 'Selection Missing', text2: 'Please select a reason' });
             return;
         }
 
         setCancelLoading(true);
         try {
             await logisticsApi.cancelRequest(cancelJobId, selectedCancelReason);
-            Toast.show("Request cancelled", { backgroundColor: '#2E7D32' });
+            Toast.show({ type: 'success', text1: 'Cancelled', text2: 'Request cancelled' });
             setShowCancelModal(false);
             setCancelJobId(null);
             setSelectedCancelReason(null);
-            // Refresh pickups list and invalidate history cache
             refetch();
-            queryClient.invalidateQueries({ queryKey: ['pickup-history'] });
         } catch (error) {
             console.error("Cancel Error:", error);
-            Toast.show("Failed to cancel request", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to cancel request' });
         } finally {
             setCancelLoading(false);
         }
@@ -523,7 +466,6 @@ export default function PickupsScreen({ route }) {
         const markers = [];
         const routes = [];
 
-        // Pickup Location
         markers.push(
             <Marker
                 key={`pickup-${job.id}`}
@@ -541,7 +483,6 @@ export default function PickupsScreen({ route }) {
             </Marker>
         );
 
-        // Collector Live Location (if job is accepted and tracking is active)
         if (job.status === 'ACCEPTED' && job.current_lat && job.current_lon) {
             markers.push(
                 <Marker
@@ -556,7 +497,6 @@ export default function PickupsScreen({ route }) {
                 </Marker>
             );
 
-            // Add route line from collector to pickup
             routes.push(
                 <Polyline
                     key={`route-${job.id}`}
@@ -574,18 +514,14 @@ export default function PickupsScreen({ route }) {
         return [...markers, ...routes];
     };
 
-    // Memoize markers to prevent re-rendering on every state change
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
     }, [jobs]);
 
-    // Sort jobs: Active jobs (ACCEPTED/ARRIVED) first, then PENDING
     const sortedJobs = useMemo(() => {
         if (userRole !== 'COLLECTOR') return jobs;
-
         const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         const pendingJobs = jobs.filter(j => j.status === 'PENDING');
-
         return [...activeJobs, ...pendingJobs];
     }, [jobs, userRole]);
 
@@ -599,7 +535,7 @@ export default function PickupsScreen({ route }) {
                 ref={mapRef}
                 style={styles.map}
                 initialRegion={{
-                    latitude: location?.latitude || 5.6037, // Default Accra
+                    latitude: location?.latitude || 5.6037,
                     longitude: location?.longitude || -0.1870,
                     latitudeDelta: 0.005,
                     longitudeDelta: 0.005,
@@ -609,7 +545,6 @@ export default function PickupsScreen({ route }) {
             >
                 {memoizedMarkers}
 
-                {/* Center Pin for Location Selection */}
                 {isSelectingLocation && (
                     <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -16, marginTop: -32 }}>
                         <MapPin size={32} color="#E74C3C" fill="#fff" />
@@ -617,7 +552,6 @@ export default function PickupsScreen({ route }) {
                 )}
             </MapView>
 
-            {/* Map Selection Overlay */}
             {isSelectingLocation && (
                 <View style={styles.selectionOverlay}>
                     <View style={styles.selectionHeader}>
@@ -631,43 +565,61 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && (
-                <View style={styles.overlay}>
-                    <View style={styles.header}>
-                        <View style={styles.headerRow}>
-                            <Text style={styles.headerTitle}>
-                                {userRole === 'COLLECTOR' ? 'Available Pickups' : 'Your Pickups'}
+                <View style={styles.header}>
+                    <View style={styles.headerRow}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                            <ArrowLeft size={24} color="#333" />
+                        </TouchableOpacity>
+                        <View style={styles.headerTextCol}>
+                            <Text style={styles.headerTitleMain}>
+                                {userRole === 'COLLECTOR' ? 'Nearby Pickups' : 'My Pickups'}
+                            </Text>
+                            <Text style={styles.headerSubText}>
+                                {userRole === 'COLLECTOR' ? 'Earn by recycling waste' : 'Track your waste collection'}
                             </Text>
                         </View>
-                        {userRole !== 'COLLECTOR' && (
-                            <View style={styles.actionsRow}>
-                                <TouchableOpacity
-                                    style={styles.requestButton}
-                                    onPress={() => setShowRequestModal(true)}
-                                >
-                                    <Navigation size={18} color="#fff" />
-                                    <Text style={styles.requestButtonText}>Request Pickup</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={styles.historyBtn}
-                                    onPress={() => navigation.navigate('PickupHistory')}
-                                >
-                                    <Clock size={20} color="#666" />
-                                </TouchableOpacity>
-                            </View>
+                        {userRole !== 'COLLECTOR' ? (
+                            <TouchableOpacity
+                                style={styles.historyBtn}
+                                onPress={() => navigation.navigate('PickupHistory')}
+                            >
+                                <Clock size={20} color="#333" />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.historyBtn}
+                                onPress={() => navigation.navigate('CollectorJobs')}
+                            >
+                                <Truck size={20} color="#333" />
+                            </TouchableOpacity>
                         )}
                     </View>
+
+                    {userRole !== 'COLLECTOR' && (
+                        <View style={styles.floatingActionRow}>
+                            <TouchableOpacity
+                                style={styles.requestButton}
+                                onPress={() => setShowRequestModal(true)}
+                            >
+                                <MapPin size={20} color="#fff" />
+                                <Text style={styles.requestButtonText}>Request Pickup</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
             )}
 
-            {sortedJobs.length > 0 && (
+            {!isSelectingLocation && sortedJobs.length > 0 && (
                 <View style={styles.jobListContainer}>
                     <FlatList
                         data={sortedJobs}
-                        keyExtractor={item => item.id.toString()}
+                        keyExtractor={(item) => item.id.toString()}
                         horizontal
                         showsHorizontalScrollIndicator={false}
+                        snapToInterval={width * 0.85 + 20}
+                        decelerationRate="fast"
+                        contentContainerStyle={{ paddingHorizontal: 10 }}
                         renderItem={({ item, index }) => {
-                            // Check if this is the first PENDING job after active jobs
                             const previousItem = index > 0 ? sortedJobs[index - 1] : null;
                             const showSeparator = previousItem &&
                                 (previousItem.status === 'ACCEPTED' || previousItem.status === 'ARRIVED') &&
@@ -681,101 +633,88 @@ export default function PickupsScreen({ route }) {
                                         </View>
                                     )}
                                     <View style={styles.jobCard}>
-                                        {/* Show "ACTIVE JOB" label for accepted/arrived jobs */}
-                                        {(item.status === 'ACCEPTED' || item.status === 'ARRIVED') && (
-                                            <View style={styles.activeJobBanner}>
-                                                <Truck size={16} color="#fff" />
-                                                <Text style={styles.activeJobText}>ACTIVE JOB</Text>
+                                        <View style={styles.cardHeader}>
+                                            <View style={[styles.jobIconBox, { backgroundColor: item.status === 'PENDING' ? '#E8F5E9' : '#FFFBEB' }]}>
+                                                <Truck size={20} color={item.status === 'PENDING' ? '#2E7D32' : '#F39C12'} />
                                             </View>
-                                        )}
-                                        <View style={styles.jobHeader}>
-                                            <Truck size={20} color={item.status === 'PENDING' ? '#2E7D32' : '#F39C12'} />
-                                            <Text style={styles.jobType}>{item.material_type}</Text>
-                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
-                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>{item.status}</Text>
+                                            <View style={styles.jobMainInfo}>
+                                                <Text style={styles.jobType}>{item.material_type}</Text>
+                                                <Text style={styles.jobQty}>{item.quantity_estimate}</Text>
+                                            </View>
+                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#ECFDF5' : '#FFFBEB' }]}>
+                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#10B981' : '#F59E0B' }]}>{item.status}</Text>
                                             </View>
                                         </View>
-                                        <Text style={styles.jobInfo}>{item.quantity_estimate}</Text>
-                                        <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
+
+                                        <View style={styles.jobDivider} />
+
+                                        <View style={styles.jobLocationRow}>
+                                            <MapPin size={16} color="#999" />
+                                            <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
+                                        </View>
 
                                         {userRole === 'COLLECTOR' && (
-                                            <>
+                                            <View style={styles.actionRow}>
                                                 {item.status === 'PENDING' && (
                                                     <TouchableOpacity
                                                         style={styles.acceptBtn}
                                                         onPress={() => handleAcceptJob(item.id)}
                                                     >
-                                                        <Text style={styles.acceptBtnText}>Accept Job</Text>
+                                                        <Text style={styles.acceptBtnText}>Accept Order</Text>
+                                                        <ChevronRight size={18} color="#fff" />
                                                     </TouchableOpacity>
                                                 )}
 
                                                 {item.status === 'ACCEPTED' && (
-                                                    <>
+                                                    <View style={styles.collectorActions}>
                                                         <TouchableOpacity
-                                                            style={[styles.acceptBtn, { backgroundColor: '#3498DB', marginBottom: 10 }]}
+                                                            style={[styles.actionBtn, styles.navBtn]}
                                                             onPress={() => openNavigation(item)}
                                                         >
                                                             <Navigation size={18} color="#fff" />
-                                                            <Text style={[styles.acceptBtnText, { marginLeft: 8 }]}>Navigate to Pickup</Text>
+                                                            <Text style={styles.actionBtnText}>Navigate</Text>
                                                         </TouchableOpacity>
 
                                                         <TouchableOpacity
-                                                            style={[styles.acceptBtn, { backgroundColor: '#F39C12' }]}
+                                                            style={[styles.actionBtn, styles.arriveBtn]}
                                                             onPress={() => handleArriveJob(item.id)}
                                                         >
-                                                            <Text style={styles.acceptBtnText}>I have Arrived</Text>
+                                                            <CheckCircle2 size={18} color="#fff" />
+                                                            <Text style={styles.actionBtnText}>Arrived</Text>
                                                         </TouchableOpacity>
-                                                    </>
+                                                    </View>
                                                 )}
 
                                                 {item.status === 'ARRIVED' && (
                                                     <TouchableOpacity
-                                                        style={[styles.acceptBtn, { backgroundColor: '#27AE60' }]}
+                                                        style={[styles.acceptBtn, { backgroundColor: '#2E7D32' }]}
                                                         onPress={() => handleCompleteJob(item.id)}
                                                     >
-                                                        <Text style={styles.acceptBtnText}>Complete Job</Text>
+                                                        <Text style={styles.acceptBtnText}>Confirm Completion</Text>
+                                                        <CheckCircle2 size={18} color="#fff" />
                                                     </TouchableOpacity>
                                                 )}
-                                            </>
-                                        )}
-
-                                        {item.status !== 'PENDING' && item.collector_name && (
-                                            <View style={styles.collectorInfo}>
-                                                <Info size={14} color="#666" />
-                                                <Text style={styles.collectorName}>Collector: {item.collector_name}</Text>
                                             </View>
                                         )}
 
-                                        {/* Tracking Info for Sellers - Bolt-style */}
-                                        {userRole === 'SELLER' && item.status === 'ACCEPTED' && item.current_lat && item.current_lon && (
-                                            <View style={styles.trackingInfo}>
-                                                <View style={styles.trackingRow}>
-                                                    <Navigation size={16} color="#3498DB" />
-                                                    <Text style={styles.trackingText}>
-                                                        {(() => {
-                                                            const distance = calculateDistance(
-                                                                parseFloat(item.current_lat),
-                                                                parseFloat(item.current_lon),
-                                                                parseFloat(item.latitude),
-                                                                parseFloat(item.longitude)
-                                                            );
-                                                            const eta = Math.ceil((distance / 40) * 60); // Assuming 40km/h avg speed
-                                                            return `${distance.toFixed(1)} km away • ETA ${eta} min`;
-                                                        })()}
-                                                    </Text>
+                                        {userRole === 'SELLER' && item.status === 'ACCEPTED' && (
+                                            <View style={styles.trackingContainer}>
+                                                <View style={styles.trackingPulse}>
+                                                    <Activity size={14} color="#3498DB" />
+                                                    <Text style={styles.trackingTitle}>Collector En Route</Text>
                                                 </View>
-                                                <Text style={styles.trackingSubtext}>🚛 {item.collector_name} is on the way</Text>
+                                                <Text style={styles.trackingDetail}>
+                                                    {item.collector_name || "Collector"} is picking up your waste.
+                                                </Text>
                                             </View>
                                         )}
 
-                                        {/* Cancel Button for Sellers */}
                                         {userRole === 'SELLER' && (item.status === 'PENDING' || item.status === 'ACCEPTED') && (
                                             <TouchableOpacity
-                                                style={styles.cancelBtn}
+                                                style={styles.cancelRequestBtn}
                                                 onPress={() => openCancelModal(item.id)}
                                             >
-                                                <X size={16} color="#E74C3C" />
-                                                <Text style={styles.cancelBtnText}>Cancel Request</Text>
+                                                <Text style={styles.cancelText}>Cancel Pickup</Text>
                                             </TouchableOpacity>
                                         )}
                                     </View>
@@ -820,7 +759,6 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-
             {/* Request Pickup Modal */}
             <Modal
                 visible={showRequestModal}
@@ -836,153 +774,83 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Request Pickup</Text>
                             <TouchableOpacity onPress={() => setShowRequestModal(false)}>
-                                <Text style={{ color: '#666', fontWeight: 'bold' }}>Close</Text>
+                                <X size={24} color="#666" />
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView
-                            style={styles.modalBody}
-                            keyboardShouldPersistTaps="handled"
-                            showsVerticalScrollIndicator={false}
-                        >
-                            {/* Pickup Location Section */}
+                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                            <Text style={styles.label}>Material Type</Text>
+                            <View style={styles.pickerContainer}>
+                                {MATERIALS.map(m => (
+                                    <TouchableOpacity
+                                        key={m}
+                                        style={[styles.pickerItem, requestForm.material_type === m && styles.pickerItemActive]}
+                                        onPress={() => setRequestForm({ ...requestForm, material_type: m })}
+                                    >
+                                        <Text style={[styles.pickerItemText, requestForm.material_type === m && styles.pickerItemTextActive]}>
+                                            {m}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={styles.label}>Quantity Estimate</Text>
+                            <View style={styles.pickerContainer}>
+                                {QUANTITIES.map(q => (
+                                    <TouchableOpacity
+                                        key={q}
+                                        style={[styles.pickerItem, requestForm.quantity_estimate === q && styles.pickerItemActive]}
+                                        onPress={() => setRequestForm({ ...requestForm, quantity_estimate: q })}
+                                    >
+                                        <Text style={[styles.pickerItemText, requestForm.quantity_estimate === q && styles.pickerItemTextActive]}>
+                                            {q}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
                             <Text style={styles.label}>Pickup Location</Text>
-
-                            {/* Address Input */}
-                            <TextInput
-                                style={[styles.addressInput, pickupData ? styles.disabledInput : null]}
-                                placeholder="Enter pickup address (e.g., Madina Market, Accra)"
-                                placeholderTextColor="#999"
-                                value={customAddress}
-                                onChangeText={setCustomAddress}
-                                editable={!pickupData}
-                            />
-                            {pickupData && (
-                                <Text style={styles.inputNote}>Location locked to listing address</Text>
-                            )}
-
-                            {/* Recent Locations List */}
-                            {recentLocations.length > 0 && (
-                                <View style={styles.recentLocationsContainer}>
-                                    <Text style={styles.recentLocationsTitle}>Recent Locations</Text>
-                                    {recentLocations.map((loc, index) => (
-                                        <TouchableOpacity
-                                            key={index}
-                                            style={styles.recentLocationItem}
-                                            onPress={() => setCustomAddress(loc.address)}
-                                        >
-                                            <View style={styles.recentLocationIcon}>
-                                                <Clock size={18} color="#666" />
-                                            </View>
-                                            <View style={styles.recentLocationInfo}>
-                                                <Text style={styles.recentLocationName} numberOfLines={1}>
-                                                    {loc.address.split(',')[0]}
-                                                </Text>
-                                                <Text style={styles.recentLocationArea} numberOfLines={1}>
-                                                    {loc.address.split(',').slice(1).join(',').trim() || 'Ghana'}
-                                                </Text>
-                                            </View>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-                            )}
-
-                            {/* Current Location Info */}
-                            {!customAddress && location && (
-                                <View style={styles.currentLocationBox}>
-                                    <MapPin size={16} color="#2E7D32" />
-                                    <Text style={styles.currentLocationText}>
-                                        Leave empty to use your current GPS location
-                                    </Text>
-                                </View>
-                            )}
-
-                            {/* Destination Section */}
-                            <Text style={styles.label}>Destination (Recycling Company)</Text>
-                            <View style={{ marginBottom: 20 }}>
-                                <TextInput
-                                    style={styles.addressInput}
-                                    placeholder="Enter destination (e.g., Zoomlion, Accra)"
-                                    placeholderTextColor="#999"
-                                    value={destinationAddress}
-                                    onChangeText={setDestinationAddress}
-                                />
+                            <View style={styles.locationToggleRow}>
                                 <TouchableOpacity
-                                    style={styles.mapSelectBtn}
-                                    onPress={() => {
-                                        setSelectionMode('DESTINATION');
-                                        startMapSelection();
-                                    }}
+                                    style={[styles.locationToggleBtn, useCurrentLocation && styles.locationToggleBtnActive]}
+                                    onPress={() => setUseCurrentLocation(true)}
                                 >
-                                    <MapPin size={18} color="#2E7D32" />
-                                    <Text style={styles.mapSelectText}>Set on Map</Text>
+                                    <Navigation size={16} color={useCurrentLocation ? "#fff" : "#666"} />
+                                    <Text style={[styles.locationToggleText, useCurrentLocation && styles.locationToggleTextActive]}>Current</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.locationToggleBtn, !useCurrentLocation && styles.locationToggleBtnActive]}
+                                    onPress={() => setUseCurrentLocation(false)}
+                                >
+                                    <MapPin size={16} color={!useCurrentLocation ? "#fff" : "#666"} />
+                                    <Text style={[styles.locationToggleText, !useCurrentLocation && styles.locationToggleTextActive]}>Custom</Text>
                                 </TouchableOpacity>
                             </View>
 
-                            <Text style={styles.label}>Material Type</Text>
-                            <View style={styles.pickerContainer}>
-                                {(() => {
-                                    const defaultTypes = ['Plastics', 'Metals', 'Paper', 'Mixed'];
-                                    // If current type is not in defaults, add it
-                                    const types2 = requestForm.material_type && !defaultTypes.includes(requestForm.material_type)
-                                        ? [...defaultTypes, requestForm.material_type]
-                                        : defaultTypes;
-
-                                    return types2.map(type => (
-                                        <TouchableOpacity
-                                            key={type}
-                                            style={[
-                                                styles.pickerItem,
-                                                requestForm.material_type === type && styles.pickerItemActive
-                                            ]}
-                                            onPress={() => setRequestForm({ ...requestForm, material_type: type })}
-                                        >
-                                            <Text style={[
-                                                styles.pickerItemText,
-                                                requestForm.material_type === type && styles.pickerItemTextActive
-                                            ]}>{type}</Text>
-                                        </TouchableOpacity>
-                                    ));
-                                })()}
-                            </View>
-
-                            <Text style={styles.label}>Estimated Quantity</Text>
-                            <View style={styles.pickerContainer}>
-                                {(() => {
-                                    const defaultQtys = ['1-2 Bags', '3-5 Bags', 'Pickup Truck Load', 'Tricycle Load'];
-                                    // If current qty is not in defaults, add it
-                                    const qtys2 = requestForm.quantity_estimate && !defaultQtys.includes(requestForm.quantity_estimate)
-                                        ? [requestForm.quantity_estimate, ...defaultQtys]
-                                        : defaultQtys;
-
-                                    return qtys2.map(qty => (
-                                        <TouchableOpacity
-                                            key={qty}
-                                            style={[
-                                                styles.pickerItem,
-                                                requestForm.quantity_estimate === qty && styles.pickerItemActive
-                                            ]}
-                                            onPress={() => setRequestForm({ ...requestForm, quantity_estimate: qty })}
-                                        >
-                                            <Text style={[
-                                                styles.pickerItemText,
-                                                requestForm.quantity_estimate === qty && styles.pickerItemTextActive
-                                            ]}>{qty}</Text>
-                                        </TouchableOpacity>
-                                    ));
-                                })()}
-                            </View>
-
-
-                            {/* AI Estimate Display */}
-
-
-                            <Text style={styles.label}>Payment Method</Text>
-                            <View style={styles.pickerContainer}>
-                                <View style={[styles.pickerItem, styles.pickerItemActive]}>
-                                    <Text style={styles.pickerItemTextActive}>Digital Wallet</Text>
+                            {useCurrentLocation ? (
+                                <View style={styles.currentLocationBox}>
+                                    <Navigation size={16} color="#2E7D32" />
+                                    <Text style={{ flex: 1, color: '#2E7D32', fontSize: 13, fontWeight: '500' }}>
+                                        Using your current GPS coordinates to ensure faster pickup.
+                                    </Text>
                                 </View>
-                            </View>
+                            ) : (
+                                <View style={{ position: 'relative' }}>
+                                    <TextInput
+                                        style={styles.addressInput}
+                                        placeholder="Enter landmark or street address"
+                                        value={customAddress}
+                                        onChangeText={setCustomAddress}
+                                    />
+                                    <TouchableOpacity
+                                        style={styles.mapSelectBtn}
+                                        onPress={startMapSelection}
+                                    >
+                                        <MapPin size={14} color="#2E7D32" />
+                                        <Text style={styles.mapSelectText}>Map</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
 
                             {/* Price Estimate Section */}
                             <View style={styles.estimateContainer}>
@@ -1027,9 +895,9 @@ export default function PickupsScreen({ route }) {
                             </View>
 
                             <TouchableOpacity
-                                style={[styles.submitRequestBtn, !requestForm.estimated_price && { backgroundColor: '#ccc' }]}
+                                style={[styles.submitRequestBtn, !requestForm.waste_value && { backgroundColor: '#ccc' }]}
                                 onPress={handleCreateRequest}
-                                disabled={requestLoading || !requestForm.estimated_price}
+                                disabled={requestLoading}
                             >
                                 {requestLoading ? (
                                     <ActivityIndicator color="#fff" />
@@ -1169,7 +1037,7 @@ export default function PickupsScreen({ route }) {
                     </View>
                 </View>
             </Modal>
-        </View >
+        </View>
     );
 }
 
@@ -1177,257 +1045,314 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     map: { width: width, height: height },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'box-none' },
+
     header: {
-        paddingTop: 50,
-        paddingBottom: 20,
-        backgroundColor: 'rgba(255,255,255,0.9)',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#fff',
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
-        elevation: 5
-    },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a', textAlign: 'center' },
-    jobListContainer: { position: 'absolute', bottom: 40, left: 0, right: 0 },
-    jobCard: {
-        backgroundColor: '#fff',
-        width: width * 0.8,
-        marginHorizontal: 20,
-        borderRadius: 20,
-        padding: 20,
-        elevation: 10,
+        paddingTop: Platform.OS === 'ios' ? 50 : 30,
+        paddingBottom: 20,
+        paddingHorizontal: 20,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10
-    },
-    jobHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-    jobType: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
-    jobInfo: { fontSize: 14, color: '#666', marginBottom: 5 },
-    jobLoc: { fontSize: 12, color: '#999', marginBottom: 15 },
-    acceptBtn: {
-        backgroundColor: '#2E7D32',
-        padding: 12,
-        borderRadius: 12,
-        alignItems: 'center',
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 6
-    },
-    acceptBtnText: { color: '#fff', fontWeight: 'bold' },
-    markerContainer: { backgroundColor: '#fff', padding: 5, borderRadius: 10, borderWidth: 2, borderColor: '#2E7D32' },
-    errorBox: {
-        position: 'absolute',
-        top: 150,
-        left: 20,
-        right: 20,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        padding: 15,
-        borderRadius: 15,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10
-    },
-    errorText: { color: '#E74C3C', fontSize: 14, fontWeight: '500' },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
-        marginLeft: 'auto'
-    },
-    statusText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-    collectorInfo: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        marginTop: 10,
-        backgroundColor: '#f8f9fa',
-        padding: 8,
-        borderRadius: 8
-    },
-    collectorName: { fontSize: 12, color: '#666', fontWeight: '500' },
-    trackingInfo: {
-        marginTop: 10,
-        backgroundColor: '#E3F2FD',
-        padding: 12,
-        borderRadius: 12,
-        borderLeftWidth: 3,
-        borderLeftColor: '#3498DB'
-    },
-    trackingRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 4
-    },
-    trackingText: {
-        fontSize: 14,
-        color: '#1976D2',
-        fontWeight: 'bold'
-    },
-    trackingSubtext: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 4
-    },
-    activeJobBanner: {
-        backgroundColor: '#FF9800',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 8,
-        borderTopLeftRadius: 15,
-        borderTopRightRadius: 15,
-        marginBottom: 10,
-        gap: 6,
-    },
-    activeJobText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-    },
-    jobSeparator: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 20,
-    },
-    separatorText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#666',
-        textAlign: 'center',
-    },
-    emptyState: {
-        position: 'absolute',
-        bottom: Dimensions.get('window').height * 0.2,
-        alignSelf: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        padding: 20,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#eee'
-    },
-    emptyText: { color: '#666', fontSize: 14, fontWeight: '600' },
-    requestButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end'
-    },
-    modalContent: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
-        minHeight: height * 0.6,
-        padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 24
-    },
-    header: {
-        paddingTop: Platform.OS === 'ios' ? 60 : 40,
-        paddingHorizontal: 20,
-        paddingBottom: 20,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        borderBottomLeftRadius: 30,
-        borderBottomRightRadius: 30,
-        elevation: 5
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+        zIndex: 10,
     },
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 16
+        justifyContent: 'space-between',
     },
-    actionsRow: {
-        flexDirection: 'row',
+    backBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
         alignItems: 'center',
-        gap: 12
+    },
+    headerTextCol: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    headerTitleMain: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+    },
+    headerSubText: {
+        fontSize: 12,
+        color: '#999',
+        marginTop: 2,
     },
     historyBtn: {
-        padding: 10,
-        backgroundColor: '#F8F9FA',
-        borderRadius: 12,
-        marginLeft: 12,
-        borderWidth: 1,
-        borderColor: '#E8E8E8'
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    floatingActionRow: {
+        marginTop: 20,
     },
     requestButton: {
-        flex: 1,
         backgroundColor: '#2E7D32',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 14,
-        paddingHorizontal: 20,
-        borderRadius: 15,
+        borderRadius: 16,
         gap: 8,
-        elevation: 3,
-        shadowColor: '#2E7D32',
-        shadowOpacity: 0.3,
-        shadowOffset: { width: 0, height: 4 }
     },
-    modalTitle: { fontSize: 22, fontWeight: 'bold', color: '#1a1a1a' },
-    modalBody: { flex: 1 },
-    label: { fontSize: 14, fontWeight: 'bold', color: '#666', marginBottom: 12, textTransform: 'uppercase' },
-    pickerContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 24 },
+    requestButtonText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+
+    jobListContainer: {
+        position: 'absolute',
+        bottom: 40,
+        left: 0,
+        right: 0,
+    },
+    jobCard: {
+        backgroundColor: '#fff',
+        width: width * 0.85,
+        marginHorizontal: 10,
+        borderRadius: 28,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+    },
+    jobIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    jobMainInfo: {
+        flex: 1,
+    },
+    jobType: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+    },
+    jobQty: {
+        fontSize: 13,
+        color: '#666',
+        marginTop: 2,
+    },
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    statusText: {
+        fontSize: 11,
+        fontWeight: 'bold',
+        textTransform: 'uppercase',
+    },
+    jobDivider: {
+        height: 1,
+        backgroundColor: '#F3F4F6',
+        marginBottom: 15,
+    },
+    jobLocationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 10,
+    },
+    jobLoc: {
+        fontSize: 13,
+        color: '#666',
+        flex: 1,
+    },
+    actionRow: {
+        marginTop: 10,
+    },
+    acceptBtn: {
+        backgroundColor: '#2E7D32',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 16,
+        gap: 8,
+    },
+    acceptBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    collectorActions: {
+        flexDirection: 'row',
+        gap: 10,
+    },
+    actionBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 16,
+        gap: 8,
+    },
+    navBtn: { backgroundColor: '#3498DB' },
+    arriveBtn: { backgroundColor: '#F39C12' },
+    actionBtnText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
+    },
+    trackingContainer: {
+        backgroundColor: '#EBF5FB',
+        padding: 15,
+        borderRadius: 16,
+        borderLeftWidth: 4,
+        borderLeftColor: '#3498DB',
+    },
+    trackingPulse: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 4,
+    },
+    trackingTitle: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#2980B9',
+    },
+    trackingDetail: {
+        fontSize: 12,
+        color: '#5D6D7E',
+    },
+    cancelRequestBtn: {
+        alignItems: 'center',
+        marginTop: 15,
+    },
+    cancelText: {
+        fontSize: 13,
+        color: '#E74C3C',
+        fontWeight: '600',
+    },
+
+    markerContainer: {
+        backgroundColor: '#fff',
+        padding: 5,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: '#2E7D32',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    selectionOverlay: {
+        position: 'absolute',
+        top: 60,
+        left: 20,
+        right: 20,
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 5,
+    },
+    selectionHeader: { alignItems: 'center', marginBottom: 15 },
+    selectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    selectionSubtitle: { fontSize: 13, color: '#666', marginTop: 4 },
+    confirmLocationBtn: {
+        backgroundColor: '#2E7D32',
+        paddingHorizontal: 40,
+        paddingVertical: 14,
+        borderRadius: 15,
+        width: '100%',
+        alignItems: 'center',
+    },
+    confirmLocationText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 35,
+        borderTopRightRadius: 35,
+        paddingHorizontal: 24,
+        paddingTop: 24,
+        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        maxHeight: height * 0.9,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
+    modalBody: {},
+    label: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#374151',
+        marginBottom: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    pickerContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 20,
+    },
     pickerItem: {
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#eee',
-        backgroundColor: '#f8f9fa'
+        borderColor: '#E5E7EB',
+        backgroundColor: '#F9FAFB',
     },
-    pickerItemActive: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
-    pickerItemText: { color: '#666', fontWeight: '500' },
+    pickerItemActive: {
+        backgroundColor: '#2E7D32',
+        borderColor: '#2E7D32',
+    },
+    pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
 
-    estimateContainer: { marginBottom: 30 },
-    estimateLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 20 },
-    estimateLoadingText: { color: '#666' },
-    estimateBox: {
-        backgroundColor: '#f8f9fa', padding: 20, borderRadius: 16,
-        borderWidth: 1, borderColor: '#eee'
-    },
-    estimateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-    estimateLabel: { fontSize: 14, color: '#666' },
-    estimateValue: { fontSize: 14, fontWeight: '600', color: '#333' },
-    divider: { height: 1, backgroundColor: '#eee', marginVertical: 10 },
-    estimateTotalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-    estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a' },
-    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#2E7D32' },
-    estimateNote: { fontSize: 12, color: '#999', fontStyle: 'italic', marginTop: 5 },
-    calcBtn: {
-        padding: 15, borderRadius: 12, borderWidth: 1, borderColor: '#2E7D32',
-        alignItems: 'center', borderStyle: 'dashed'
-    },
-    calcBtnText: { color: '#2E7D32', fontWeight: 'bold' },
-
-    submitRequestBtn: {
-        backgroundColor: '#2E7D32',
-        padding: 18,
-        borderRadius: 16,
-        alignItems: 'center',
-        marginTop: 10,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5
-    },
-    submitRequestBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-
-    // Location selector styles
     locationToggleRow: {
         flexDirection: 'row',
-        gap: 10,
-        marginBottom: 15
+        gap: 12,
+        marginBottom: 15,
     },
     locationToggleBtn: {
         flex: 1,
@@ -1436,267 +1361,193 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         gap: 6,
         paddingVertical: 12,
-        paddingHorizontal: 10,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#eee',
-        backgroundColor: '#f8f9fa'
+        borderColor: '#E5E7EB',
+        backgroundColor: '#F9FAFB',
     },
     locationToggleBtnActive: {
         backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32'
+        borderColor: '#2E7D32',
     },
-    locationToggleText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#666'
-    },
-    locationToggleTextActive: {
-        color: '#fff'
-    },
+    locationToggleText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
+    locationToggleTextActive: { color: '#fff' },
+
     addressInput: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F9FAFB',
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: '#E5E7EB',
         borderRadius: 12,
         padding: 15,
-        fontSize: 15,
-        color: '#333',
-        marginBottom: 20
-    },
-    disabledInput: {
-        backgroundColor: '#f5f5f5',
-        borderColor: '#eee',
-        color: '#999',
-    },
-    inputNote: {
-        fontSize: 12,
-        color: '#2E7D32',
-        marginTop: -15,
+        fontSize: 14,
+        color: '#1A1A1A',
         marginBottom: 20,
-        marginLeft: 4,
-        fontWeight: '500'
     },
+    mapSelectBtn: {
+        position: 'absolute',
+        right: 12,
+        top: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#ECFDF5',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+    },
+    mapSelectText: { fontSize: 12, color: '#059669', fontWeight: 'bold' },
+
     currentLocationBox: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
-        backgroundColor: '#E8F5E9',
-        padding: 12,
+        gap: 10,
+        backgroundColor: '#ECFDF5',
+        padding: 15,
         borderRadius: 12,
-        marginBottom: 20
+        marginBottom: 20,
     },
 
-    mapSelectBtn: {
-        position: 'absolute',
-        right: 10,
-        top: 10,
+    estimateContainer: {
+        marginBottom: 20,
+    },
+    estimateLoading: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 5,
-        backgroundColor: '#E8F5E9',
-        padding: 8,
-        borderRadius: 8
+        gap: 10,
+        padding: 15,
     },
-    mapSelectText: {
-        fontSize: 12,
-        color: '#2E7D32',
-        fontWeight: 'bold'
-    },
-
-    // Bolt-style "Where to?" and Recent Locations
-    whereToBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#f5f5f5',
-        borderRadius: 12,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        marginBottom: 15,
-        gap: 12
-    },
-    whereToInput: {
-        flex: 1,
-        fontSize: 16,
-        color: '#333',
-        fontWeight: '500'
-    },
-    recentLocationsContainer: {
-        marginBottom: 20
-    },
-    recentLocationsTitle: {
-        fontSize: 12,
-        fontWeight: '600',
-        color: '#999',
-        textTransform: 'uppercase',
-        marginBottom: 12,
-        letterSpacing: 0.5
-    },
-    recentLocationItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0'
-    },
-    recentLocationIcon: {
-        width: 40,
-        height: 40,
+    estimateLoadingText: { color: '#6B7280', fontSize: 13 },
+    estimateBox: {
+        backgroundColor: '#F9FAFB',
+        padding: 20,
         borderRadius: 20,
-        backgroundColor: '#f5f5f5',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginRight: 12
-    },
-    recentLocationInfo: {
-        flex: 1
-    },
-    recentLocationName: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1a1a1a',
-        marginBottom: 2
-    },
-    recentLocationArea: {
-        fontSize: 13,
-        color: '#999'
-    },
-
-    // Cancel button and modal styles
-    cancelBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        marginTop: 10,
-        paddingVertical: 8,
         borderWidth: 1,
-        borderColor: '#E74C3C',
-        borderRadius: 8,
-        backgroundColor: '#FEF2F2'
+        borderColor: '#E5E7EB',
     },
-    cancelBtnText: {
-        color: '#E74C3C',
-        fontSize: 13,
-        fontWeight: '600'
+    estimateRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
     },
+    estimateLabel: { fontSize: 14, color: '#6B7280' },
+    estimateValue: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A' },
+    divider: {
+        height: 1,
+        backgroundColor: '#E5E7EB',
+        marginVertical: 12,
+    },
+    estimateTotalRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
+    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#2E7D32' },
+    estimateNote: {
+        fontSize: 11,
+        color: '#9CA3AF',
+        fontStyle: 'italic',
+        lineHeight: 16,
+    },
+    submitRequestBtn: {
+        backgroundColor: '#2E7D32',
+        paddingVertical: 18,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    submitRequestBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
     cancelModalOverlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        justifyContent: 'flex-end'
+        justifyContent: 'center',
+        padding: 20,
     },
     cancelModalContent: {
         backgroundColor: '#fff',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        maxHeight: height * 0.7
+        borderRadius: 30,
+        padding: 24,
     },
     cancelModalHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 8
+        marginBottom: 10,
     },
-    aiEstimateBox: {
-        backgroundColor: '#E8F5E9',
-        padding: 15,
-        borderRadius: 12,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#C8E6C9',
-        alignItems: 'center'
-    },
-    aiHeader: {
-        marginBottom: 5,
-    },
-    aiLabel: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        color: '#2E7D32',
-        textTransform: 'uppercase',
-        letterSpacing: 1
-    },
-    aiValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1B5E20',
-        marginBottom: 2
-    },
-    aiSubtext: {
-        fontSize: 11,
-        color: '#66bb6a',
-        fontStyle: 'italic'
-    },
-    cancelModalClose: {
-        padding: 4
-    },
-    cancelModalSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 20
-    },
-    cancelReasonsList: {
-        marginBottom: 20
-    },
+    cancelModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
+    cancelModalSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 20 },
+    cancelReasonsList: { maxHeight: 300, marginBottom: 20 },
     cancelReasonItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 12,
-        borderRadius: 12,
+        padding: 15,
+        borderRadius: 15,
         borderWidth: 1,
-        borderColor: '#eee',
+        borderColor: '#F3F4F6',
         marginBottom: 10,
-        backgroundColor: '#f9f9f9'
     },
     cancelReasonItemActive: {
-        borderColor: '#E74C3C',
-        backgroundColor: '#FEF2F2'
+        borderColor: '#FEE2E2',
+        backgroundColor: '#FEF2F2',
     },
-    cancelReasonIcon: {
-        fontSize: 20,
-        marginRight: 12
-    },
-    cancelReasonText: {
-        flex: 1,
-        fontSize: 15,
-        color: '#333',
-        fontWeight: '500'
-    },
-    cancelReasonTextActive: {
-        color: '#E74C3C',
-        fontWeight: '600'
-    },
-    cancelModalButtons: {
-        flexDirection: 'row',
-        gap: 12
-    },
+    cancelReasonIcon: { fontSize: 20, marginRight: 12 },
+    cancelReasonText: { flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' },
+    cancelReasonTextActive: { color: '#EF4444', fontWeight: 'bold' },
+    cancelModalClose: { padding: 4 },
+    cancelModalButtons: { flexDirection: 'row', gap: 12 },
     cancelModalKeepBtn: {
         flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        alignItems: 'center'
-    },
-    cancelModalKeepText: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#666'
+        paddingVertical: 15,
+        borderRadius: 15,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
     },
     cancelModalConfirmBtn: {
         flex: 1,
-        paddingVertical: 14,
-        borderRadius: 12,
-        backgroundColor: '#E74C3C',
-        alignItems: 'center'
+        paddingVertical: 15,
+        borderRadius: 15,
+        backgroundColor: '#EF4444',
+        alignItems: 'center',
     },
-    cancelModalConfirmText: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#fff'
-    }
+    cancelModalKeepText: { color: '#4B5563', fontWeight: 'bold' },
+    cancelModalConfirmText: { color: '#fff', fontWeight: 'bold' },
+
+    errorBox: {
+        position: 'absolute',
+        top: 150,
+        left: 20,
+        right: 20,
+        backgroundColor: '#FEF2F2',
+        padding: 15,
+        borderRadius: 15,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        zIndex: 20,
+        borderWidth: 1,
+        borderColor: '#FEE2E2',
+    },
+    errorText: { color: '#EF4444', fontSize: 13, fontWeight: '500' },
+    emptyState: {
+        position: 'absolute',
+        bottom: 120,
+        alignSelf: 'center',
+        backgroundColor: '#fff',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 20,
+        elevation: 3,
+    },
+    emptyText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
+    jobSeparator: {
+        justifyContent: 'center',
+        paddingHorizontal: 15,
+        paddingVertical: 10,
+    },
+    separatorText: { fontSize: 12, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 },
 });

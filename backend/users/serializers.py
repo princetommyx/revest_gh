@@ -45,7 +45,8 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         extra_kwargs = {
             'email': {'required': True},
-            'role': {'required': True},
+            'role': {'required': False}, # Make optional so create() default can work
+            'username': {'required': False}, # Auto-generated in create() if missing
         }
     
     def validate(self, attrs):
@@ -62,14 +63,37 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("A user with this username already exists.")
         return value
+
+    def validate_phone_number(self, value):
+        if not value:
+            return value
+        
+        # Normalize for check (Remove spaces, handles 0... and +233...)
+        clean = value.lstrip('+').replace(' ', '')
+        if clean.startswith('0'):
+            normalized = '233' + clean[1:]
+        elif len(clean) == 9:
+            normalized = '233' + clean
+        else:
+            normalized = clean
+            
+        if User.objects.filter(phone_number=normalized).exists():
+            raise serializers.ValidationError("A user with this phone number already exists.")
+        return normalized # Return the normalized version to save it correctly
     
     def create(self, validated_data):
         validated_data.pop('password2')
         
         # Auto-generate username if not provided
         if not validated_data.get('username'):
-            validated_data['username'] = f"user_{uuid.uuid4().hex[:8]}"
+            email = validated_data.get('email', '')
+            prefix = email.split('@')[0] if email else 'user'
+            validated_data['username'] = f"{prefix}_{uuid.uuid4().hex[:4]}"
         
+        # Ensure role has a default
+        if not validated_data.get('role'):
+            validated_data['role'] = 'SELLER'
+            
         user = User.objects.create_user(**validated_data)
         return user
 
