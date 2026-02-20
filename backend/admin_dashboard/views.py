@@ -6,12 +6,13 @@ from django.utils import timezone
 from datetime import timedelta
 import logging
 
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard, OnboardingScreen
 from .serializers import (
     ActivityLogSerializer, SupportTicketSerializer,
     AdminNotificationSerializer, SystemMetricsSerializer,
     DashboardStatsSerializer, UserDetailSerializer, UserSummarySerializer,
-    PromoCardSerializer
+    PromoCardSerializer,
+    OnboardingScreenSerializer
 )
 from .permissions import IsAdminUser, IsSuperAdmin
 from users.models import User
@@ -438,3 +439,31 @@ class PublicPromoCardListView(generics.ListAPIView):
             queryset = queryset.filter(target_role='ALL')
             
         return queryset.order_by('order', '-created_at')
+
+class OnboardingScreenViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing onboarding screens. Restricted to admins.
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = OnboardingScreenSerializer
+    queryset = OnboardingScreen.objects.all().order_by('order', 'created_at')
+
+    def perform_create(self, serializer):
+        serializer.save()
+        from .utils import log_activity
+        log_activity(
+            self.request.user, 
+            'ADMIN_ACTION', 
+            details={'action': 'CREATE_ONBOARDING_SCREEN', 'title': serializer.validated_data.get('title')},
+            request=self.request
+        )
+
+
+class PublicOnboardingListView(generics.ListAPIView):
+    """
+    Public endpoint for mobile app to fetch active onboarding screens.
+    """
+    serializer_class = OnboardingScreenSerializer
+    permission_classes = [permissions.AllowAny]
+    pagination_class = None
+    queryset = OnboardingScreen.objects.filter(is_active=True).order_by('order', 'created_at')

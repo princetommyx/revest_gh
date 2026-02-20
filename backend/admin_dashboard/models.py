@@ -237,3 +237,23 @@ class PromoCard(models.Model):
 
     def __str__(self):
         return self.title
+
+class OnboardingScreen(models.Model):
+    """
+    Dynamic onboarding screens for the mobile app.
+    """
+    title = models.CharField(max_length=100)
+    description = models.TextField()
+    image = models.ImageField(upload_to='onboarding/', null=True, blank=True)
+    image_url = models.URLField(max_length=500, null=True, blank=True, help_text="Alternative to uploaded image")
+    button_text = models.CharField(max_length=50, default="Next")
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return self.title

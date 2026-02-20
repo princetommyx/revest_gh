@@ -116,13 +116,13 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
                         <View style={[
                             styles.trackBadge,
-                            { backgroundColor: listing.track === 'B' ? '#DCFCE7' : '#FEE2E2' }
+                            { backgroundColor: listing.track === 'B' ? '#DCFCE7' : '#E8F5E9' }
                         ]}>
                             <Text style={[
                                 styles.trackText,
-                                { color: listing.track === 'B' ? '#166534' : '#DC2626' }
+                                { color: listing.track === 'B' ? '#166534' : '#2E7D32' }
                             ]}>
-                                {listing.track === 'B' ? 'Track B' : 'Track A'}
+                                {listing.track === 'B' ? 'Sell Recyclables' : 'Safe Disposal'}
                             </Text>
                         </View>
                     </View>

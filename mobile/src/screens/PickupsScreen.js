@@ -1081,9 +1081,9 @@ export default function PickupsScreen({ route }) {
                                     ]}>
                                         <Text style={[
                                             styles.trackTagText,
-                                            { color: confirmingJob.track_type === 'A' ? '#DC2626' : '#166534' }
+                                            { color: confirmingJob.track_type === 'A' ? '#2E7D32' : '#166534' }
                                         ]}>
-                                            {confirmingJob.track_type === 'A' ? 'Track A: Paid Disposal' : 'Track B: Value Buyback'}
+                                            {confirmingJob.track_type === 'A' ? 'Safe Disposal (Pay to Clear)' : 'Sell Recyclables (Earn Cash)'}
                                         </Text>
                                     </View>
                                 </View>

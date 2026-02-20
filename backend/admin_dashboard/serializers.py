@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard, OnboardingScreen
 from users.models import User
 from market.models import Listing
 from logistics.models import PickupRequest
@@ -146,5 +146,14 @@ class PromoCardSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = PromoCard
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at']
+
+class OnboardingScreenSerializer(serializers.ModelSerializer):
+    """
+    Serializer for dynamic onboarding screens.
+    """
+    class Meta:
+        model = OnboardingScreen
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -16,10 +16,12 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Facebook, Github, Chrome } from 'lucide-react-native';
+import { adminApi } from '../api/admin';
+import { BASE_URL } from '../api/client';
 
 const { width, height } = Dimensions.get('window');
 
-const slides = [
+const FALLBACK_SLIDES = [
     {
         id: '0',
         image: require('../../assets/onboarding1.jpg'),
@@ -40,8 +42,38 @@ export default function OnboardingScreen() {
     const navigation = useNavigation();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAuthView, setShowAuthView] = useState(false);
+    const [dynamicSlides, setDynamicSlides] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
     const scrollX = useRef(new Animated.Value(0)).current;
     const slidesRef = useRef(null);
+
+    const slides = dynamicSlides && dynamicSlides.length > 0 ? dynamicSlides : FALLBACK_SLIDES;
+
+    useEffect(() => {
+        fetchOnboarding();
+    }, []);
+
+    const fetchOnboarding = async () => {
+        try {
+            const data = await adminApi.getOnboardingScreens();
+            if (data && data.length > 0) {
+                // Map API data to slide format
+                const formatted = data.map(screen => ({
+                    id: screen.id.toString(),
+                    image: screen.image || screen.image_url,
+                    title: screen.title,
+                    text: screen.description,
+                    buttonText: screen.button_text || "Next",
+                    isRemote: true
+                }));
+                setDynamicSlides(formatted);
+            }
+        } catch (error) {
+            console.log('Error fetching dynamic onboarding:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const viewableItemsChanged = useRef(({ viewableItems }) => {
         if (viewableItems.length > 0) {
@@ -64,17 +96,27 @@ export default function OnboardingScreen() {
         navigation.navigate(target);
     };
 
-    const renderItem = ({ item }) => (
-        <ImageBackground source={item.image} style={styles.image}>
-            <View style={styles.overlay} />
-            <SafeAreaView style={styles.slideContent}>
-                <View style={styles.textContainer}>
-                    <Text style={styles.title}>{item.title}</Text>
-                    <Text style={styles.description}>{item.text}</Text>
-                </View>
-            </SafeAreaView>
-        </ImageBackground>
-    );
+    const renderItem = ({ item }) => {
+        const imageSource = item.isRemote
+            ? {
+                uri: typeof item.image === 'string' && !item.image.startsWith('http')
+                    ? `${BASE_URL}${item.image}`
+                    : item.image
+            }
+            : item.image;
+
+        return (
+            <ImageBackground source={imageSource} style={styles.image}>
+                <View style={styles.overlay} />
+                <SafeAreaView style={styles.slideContent}>
+                    <View style={styles.textContainer}>
+                        <Text style={styles.title}>{item.title}</Text>
+                        <Text style={styles.description}>{item.text}</Text>
+                    </View>
+                </SafeAreaView>
+            </ImageBackground>
+        );
+    };
 
     if (showAuthView) {
         return (

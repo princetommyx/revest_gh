@@ -3,8 +3,8 @@ from django.conf import settings
 
 class Listing(models.Model):
     TRACK_CHOICES = (
-        ('A', 'Paid Disposal (General Waste)'),
-        ('B', 'Value Buyback (Recyclables)'),
+        ('A', 'Safe Disposal (Pay to Clear)'),
+        ('B', 'Sell Recyclables (Earn Cash)'),
     )
 
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listings')

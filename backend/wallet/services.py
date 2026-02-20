@@ -271,7 +271,7 @@ class WalletService:
             return
 
         with transaction.atomic():
-            # Payout Collector
+            # 1. Payout Collector
             collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
             collector_wallet.balance += collector_share
             collector_wallet.save()
@@ -282,8 +282,25 @@ class WalletService:
                 amount=collector_share,
                 transaction_type='ESCROW_RELEASE',
                 status='COMPLETED',
-                description=f"Logistics Share for Job #{pickup_request.id} (Track A)"
+                description=f"Logistics Share for Job #{pickup_request.id} (Safe Disposal)"
             )
+
+            # 2. Payout Platform (Revesta Commission)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            platform_user = User.objects.filter(username='revesta').first()
+            if platform_user:
+                platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
+                platform_wallet.balance += platform_commission
+                platform_wallet.save()
+                Transaction.objects.create(
+                    wallet=platform_wallet,
+                    pickup=pickup_request,
+                    amount=platform_commission,
+                    transaction_type='COMMISSION_DEDUCTION',
+                    status='COMPLETED',
+                    description=f"Commission for Job #{pickup_request.id} (Disposal Fee)"
+                )
             
             # Mark Escrow as Released
             escrow.status = 'RELEASED'
@@ -336,7 +353,24 @@ class WalletService:
                     amount=collector_logistics,
                     transaction_type='ESCROW_RELEASE',
                     status='COMPLETED',
-                    description=f"Logistics Share for Job #{pickup_request.id} (Track B)"
+                    description=f"Logistics Share for Job #{pickup_request.id} (Sell Recyclables)"
+                )
+
+            # 3. Payout Platform (Revesta Commission)
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            platform_user = User.objects.filter(username='revesta').first()
+            if platform_user:
+                platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
+                platform_wallet.balance += platform_commission
+                platform_wallet.save()
+                Transaction.objects.create(
+                    wallet=platform_wallet,
+                    pickup=pickup_request,
+                    amount=platform_commission,
+                    transaction_type='COMMISSION_DEDUCTION',
+                    status='COMPLETED',
+                    description=f"Commission for Job #{pickup_request.id} (Buyback Value)"
                 )
             
             # Mark Escrow as Released

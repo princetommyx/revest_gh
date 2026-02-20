@@ -31,4 +31,9 @@ urlpatterns = [
     path('promos/', views.PromoCardViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_promos_list'),
     path('promos/<int:pk>/', views.PromoCardViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='admin_promo_detail'),
     path('promos/public/', views.PublicPromoCardListView.as_view(), name='public_promos_list'),
+
+    # Onboarding Screens
+    path('onboarding/', views.OnboardingScreenViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_onboarding_list'),
+    path('onboarding/<int:pk>/', views.OnboardingScreenViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='admin_onboarding_detail'),
+    path('onboarding/public/', views.PublicOnboardingListView.as_view(), name='public_onboarding_list'),
 ]

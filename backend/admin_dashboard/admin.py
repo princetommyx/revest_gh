@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard
+from .models import ActivityLog, SupportTicket, AdminNotification, SystemMetrics, PromoCard, OnboardingScreen
 
 
 @admin.register(ActivityLog)
@@ -43,4 +43,11 @@ class PromoCardAdmin(admin.ModelAdmin):
     list_display = ['title', 'target_role', 'is_active', 'order', 'created_at']
     list_filter = ['target_role', 'is_active', 'created_at']
     search_fields = ['title', 'subtitle', 'action_value']
+    list_editable = ['order', 'is_active']
+
+@admin.register(OnboardingScreen)
+class OnboardingScreenAdmin(admin.ModelAdmin):
+    list_display = ['title', 'order', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['title', 'description']
     list_editable = ['order', 'is_active']

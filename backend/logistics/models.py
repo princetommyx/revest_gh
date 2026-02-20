@@ -11,8 +11,8 @@ class PickupRequest(models.Model):
     )
 
     TRACK_CHOICES = (
-        ('A', 'Paid Disposal (General Waste)'),
-        ('B', 'Value Buyback (Recyclables)'),
+        ('A', 'Safe Disposal (Pay to Clear)'),
+        ('B', 'Sell Recyclables (Earn Cash)'),
     )
 
     BAG_SIZE_CHOICES = (

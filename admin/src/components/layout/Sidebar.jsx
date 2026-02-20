@@ -15,6 +15,7 @@ const navItems = [
     { to: '/wallet', icon: Wallet, label: 'Transactions' },
     { to: '/support', icon: MessageSquare, label: 'Support Inbox' },
     { to: '/promos', icon: Megaphone, label: 'Promo Cards' },
+    { to: '/onboarding', icon: Recycle, label: 'Onboarding' },
     { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

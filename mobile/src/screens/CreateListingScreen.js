@@ -120,7 +120,7 @@ export default function CreateListingScreen({ navigation }) {
                 setScanResult(data);
                 Toast.show({
                     type: 'success',
-                    text1: isTrackA ? 'General Waste Identified' : 'Recyclables Detected',
+                    text1: isTrackA ? 'General Waste (Safe Disposal)' : 'Recyclables (Sell)',
                     text2: isTrackA ? 'Estimated disposal fee calculated' : 'Estimated buyback value calculated'
                 });
             }
@@ -295,14 +295,14 @@ export default function CreateListingScreen({ navigation }) {
                                 onPress={() => handleChange('track_type', 'A')}
                             >
                                 <Info size={16} color={formData.track_type === 'A' ? '#fff' : '#666'} />
-                                <Text style={[styles.trackBtnText, formData.track_type === 'A' && styles.trackBtnTextActive]}>Paid Disposal</Text>
+                                <Text style={[styles.trackBtnText, formData.track_type === 'A' && styles.trackBtnTextActive]}>Safe Disposal</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[styles.trackBtn, formData.track_type === 'B' && styles.trackBtnActiveB]}
                                 onPress={() => handleChange('track_type', 'B')}
                             >
                                 <Tag size={16} color={formData.track_type === 'B' ? '#fff' : '#666'} />
-                                <Text style={[styles.trackBtnText, formData.track_type === 'B' && styles.trackBtnTextActive]}>Value Buyback</Text>
+                                <Text style={[styles.trackBtnText, formData.track_type === 'B' && styles.trackBtnTextActive]}>Sell Recyclables</Text>
                             </TouchableOpacity>
                         </View>
 
