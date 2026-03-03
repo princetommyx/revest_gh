@@ -8,6 +8,8 @@ import { logisticsApi } from '../api/logistics';
 import { useAuth } from '../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { BASE_URL } from '../api/client';
+import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation,
     CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
@@ -53,14 +55,16 @@ export default function PickupsScreen({ route }) {
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
     const [requestForm, setRequestForm] = useState({
-        material_type: 'Plastics',
-        quantity_estimate: '1-2 Bags',
+        material_type: pickupData?.material_type || 'Plastics',
+        quantity_estimate: pickupData?.quantity_estimate || '1-2 Bags',
         delivery_fee: null,
-        waste_value: null,
+        waste_value: pickupData?.waste_price ? parseFloat(pickupData.waste_price).toFixed(2) : null,
         distance_km: null,
         duration_min: null,
-        payment_method: 'DIGITAL_WALLET',
-        listing_id: null
+        payment_method: 'DIGITAL',
+        listing_id: pickupData?.listing_id || null,
+        track_type: pickupData?.track_type || 'A',
+        image: null
     });
     const [useCurrentLocation, setUseCurrentLocation] = useState(true);
     const [customAddress, setCustomAddress] = useState('');
@@ -167,14 +171,21 @@ export default function PickupsScreen({ route }) {
 
     useEffect(() => {
         if (pickupData) {
-            setRequestForm(prev => ({
-                ...prev,
-                material_type: pickupData.material_type || prev.material_type,
-                quantity_estimate: pickupData.quantity_estimate || prev.quantity_estimate,
-                waste_value: pickupData.waste_price || null,
-                listing_id: pickupData.listing_id || null,
-                payment_method: 'DIGITAL_WALLET'
-            }));
+            // Re-sync if params changed while screen was already mounted
+            setRequestForm(prev => {
+                if (prev.listing_id === pickupData.listing_id && prev.waste_value === parseFloat(pickupData.waste_price).toFixed(2)) {
+                    return prev;
+                }
+                return {
+                    ...prev,
+                    material_type: pickupData.material_type || prev.material_type,
+                    quantity_estimate: pickupData.quantity_estimate || prev.quantity_estimate,
+                    waste_value: pickupData.waste_price ? parseFloat(pickupData.waste_price).toFixed(2) : prev.waste_value,
+                    listing_id: pickupData.listing_id || prev.listing_id,
+                    track_type: pickupData.track_type || prev.track_type,
+                    payment_method: 'DIGITAL'
+                };
+            });
 
             if (pickupData.seller_location) {
                 const { latitude, longitude, address } = pickupData.seller_location;
@@ -195,6 +206,12 @@ export default function PickupsScreen({ route }) {
             }
 
             setShowRequestModal(true);
+
+            // Automatically fetch estimate if location is available and we don't have a fee yet
+            if (location && !requestForm.delivery_fee) {
+                setTimeout(fetchEstimate, 500);
+            }
+
             navigation.setParams({ pickupData: null });
         }
     }, [pickupData]);
@@ -279,14 +296,15 @@ export default function PickupsScreen({ route }) {
     };
 
     useEffect(() => {
-        if (!pickupData?.waste_price) {
+        // ONLY calculate waste value if we are NOT using a pre-analyzed listing
+        if (!requestForm.listing_id) {
             calculateWasteValue();
         }
-    }, [requestForm.material_type, requestForm.quantity_estimate]);
+    }, [requestForm.material_type, requestForm.quantity_estimate, requestForm.listing_id]);
 
     const calculateWasteValue = () => {
-        const { material_type, quantity_estimate } = requestForm;
-        if (!material_type || !quantity_estimate) return;
+        const { material_type, quantity_estimate, listing_id } = requestForm;
+        if (!material_type || !quantity_estimate || listing_id) return;
 
         const rates = {
             'Plastics': 1.5,
@@ -317,6 +335,27 @@ export default function PickupsScreen({ route }) {
         }));
     };
 
+    const pickRequestImage = async () => {
+        try {
+            const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (permissionResult.granted === false) {
+                Toast.show({ type: 'error', text1: 'Permission denied', text2: 'Library access required' });
+                return;
+            }
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                allowsEditing: true,
+                aspect: [4, 3],
+                quality: 0.7,
+            });
+            if (!result.canceled) {
+                setRequestForm({ ...requestForm, image: result.assets[0] });
+            }
+        } catch (error) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Could not pick photo' });
+        }
+    };
+
     const handleCreateRequest = async () => {
         if (!location) {
             Toast.show({ type: 'error', text1: 'Location Error', text2: 'Location not available' });
@@ -332,10 +371,14 @@ export default function PickupsScreen({ route }) {
         try {
             const requestData = {
                 ...requestForm,
-                estimated_price: parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0),
-                waste_price: parseFloat(requestForm.waste_value || 0),
-                delivery_fee: parseFloat(requestForm.delivery_fee || 0),
-                listing: requestForm.listing_id,
+                estimated_price: (
+                    parseFloat(requestForm.waste_value || 0) + 
+                    parseFloat(requestForm.delivery_fee || 0) + 
+                    (userRole === 'RECYCLER' ? 5.00 : 0)
+                ).toFixed(2),
+                waste_price: parseFloat(requestForm.waste_value || 0).toFixed(2),
+                delivery_fee: parseFloat(requestForm.delivery_fee || 0).toFixed(2),
+                listing: requestForm.listing_id ? parseInt(requestForm.listing_id) : null,
                 latitude: location.latitude,
                 longitude: location.longitude,
                 destination_address: destinationAddress,
@@ -348,7 +391,22 @@ export default function PickupsScreen({ route }) {
                 saveRecentLocation(customAddress.trim());
             }
 
-            await logisticsApi.createPickupRequest(requestData);
+            let finalData = requestData;
+            if (requestForm.image) {
+                finalData = new FormData();
+                for (const key in requestData) {
+                    if (requestData[key] !== null && requestData[key] !== undefined) {
+                        finalData.append(key, requestData[key]);
+                    }
+                }
+                const uri = requestForm.image.uri;
+                let name = requestForm.image.fileName || uri.split('/').pop();
+                if (!name.includes('.')) name += '.jpg';
+                let type = requestForm.image.mimeType || 'image/jpeg';
+                finalData.append('image', { uri, name, type });
+            }
+
+            await logisticsApi.createPickupRequest(finalData);
 
             Toast.show({ type: 'success', text1: 'Success', text2: 'Pickup request created!' });
             setShowRequestModal(false);
@@ -704,9 +762,12 @@ export default function PickupsScreen({ route }) {
                                     )}
                                     <View style={styles.jobCard}>
                                         <View style={styles.cardHeader}>
-                                            <View style={[styles.jobIconBox, { backgroundColor: item.status === 'PENDING' ? '#E8F5E9' : '#FFFBEB' }]}>
-                                                <Truck size={20} color={item.status === 'PENDING' ? '#2E7D32' : '#F39C12'} />
-                                            </View>
+                                            <Image
+                                                source={{ uri: item.listing_image ? (item.listing_image.startsWith('http') ? item.listing_image : `${BASE_URL}${item.listing_image}`) : getMaterialImage(item.material_type) }}
+                                                style={{ width: 44, height: 44, borderRadius: 14, marginRight: 12 }}
+                                                contentFit="cover"
+                                                cachePolicy="memory-disk"
+                                            />
                                             <View style={styles.jobMainInfo}>
                                                 <Text style={styles.jobType}>{item.material_type}</Text>
                                                 <Text style={styles.jobQty}>{item.quantity_estimate}</Text>
@@ -849,35 +910,6 @@ export default function PickupsScreen({ route }) {
                         </View>
 
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-                            <Text style={styles.label}>Material Type</Text>
-                            <View style={styles.pickerContainer}>
-                                {MATERIALS.map(m => (
-                                    <TouchableOpacity
-                                        key={m}
-                                        style={[styles.pickerItem, requestForm.material_type === m && styles.pickerItemActive]}
-                                        onPress={() => setRequestForm({ ...requestForm, material_type: m })}
-                                    >
-                                        <Text style={[styles.pickerItemText, requestForm.material_type === m && styles.pickerItemTextActive]}>
-                                            {m}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.label}>Quantity Estimate</Text>
-                            <View style={styles.pickerContainer}>
-                                {QUANTITIES.map(q => (
-                                    <TouchableOpacity
-                                        key={q}
-                                        style={[styles.pickerItem, requestForm.quantity_estimate === q && styles.pickerItemActive]}
-                                        onPress={() => setRequestForm({ ...requestForm, quantity_estimate: q })}
-                                    >
-                                        <Text style={[styles.pickerItemText, requestForm.quantity_estimate === q && styles.pickerItemTextActive]}>
-                                            {q}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
 
                             <Text style={styles.label}>Pickup Location</Text>
                             <View style={styles.locationToggleRow}>
@@ -922,6 +954,7 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             )}
 
+
                             {/* Price Estimate Section */}
                             <View style={styles.estimateContainer}>
                                 <Text style={styles.label}>Order Estimate</Text>
@@ -930,29 +963,53 @@ export default function PickupsScreen({ route }) {
                                         <ActivityIndicator size="small" color="#2E7D32" />
                                         <Text style={styles.estimateLoadingText}>Calculating costs...</Text>
                                     </View>
-                                ) : (requestForm.delivery_fee && requestForm.waste_value) ? (
+                                ) : (requestForm.waste_value) ? (
                                     <View style={styles.estimateBox}>
                                         <View style={styles.estimateRow}>
                                             <Text style={styles.estimateLabel}>Order Price (Waste)</Text>
                                             <Text style={styles.estimateValue}>₵{requestForm.waste_value}</Text>
                                         </View>
-                                        <View style={styles.estimateRow}>
-                                            <Text style={styles.estimateLabel}>Delivery Fee</Text>
-                                            <Text style={styles.estimateValue}>₵{requestForm.delivery_fee}</Text>
-                                        </View>
+
+                                        {userRole === 'SELLER' && (
+                                            <View style={styles.estimateRow}>
+                                                <Text style={[styles.estimateLabel, { color: '#C62828' }]}>Platform Fee</Text>
+                                                <Text style={[styles.estimateValue, { color: '#C62828' }]}>-₵2.00</Text>
+                                            </View>
+                                        )}
+
+                                         {userRole !== 'SELLER' && (
+                                            <>
+                                                <View style={styles.estimateRow}>
+                                                    <Text style={styles.estimateLabel}>Delivery Fee</Text>
+                                                    <Text style={styles.estimateValue}>₵{requestForm.delivery_fee}</Text>
+                                                </View>
+                                                {userRole === 'RECYCLER' && (
+                                                    <View style={styles.estimateRow}>
+                                                        <Text style={styles.estimateLabel}>Service Fee</Text>
+                                                        <Text style={styles.estimateValue}>₵5.00</Text>
+                                                    </View>
+                                                )}
+                                            </>
+                                        )}
 
                                         <View style={styles.divider} />
-
+                                        
                                         <View style={styles.estimateTotalRow}>
-                                            <Text style={styles.estimateTotalLabel}>Total</Text>
-                                            <Text style={styles.estimateTotalValue}>
-                                                ₵{(parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee)).toFixed(2)}
+                                            <Text style={styles.estimateTotalLabel}>
+                                                {userRole === 'SELLER' ? 'Total Payout' : 'Total'}
+                                            </Text>
+                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#2E7D32' }]}>
+                                                ₵{userRole === 'SELLER'
+                                                    ? (parseFloat(requestForm.waste_value) - 2.00).toFixed(2)
+                                                    : (parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee || 0) + (userRole === 'RECYCLER' ? 5.00 : 0)).toFixed(2)}
                                             </Text>
                                         </View>
-                                        <Text style={styles.estimateNote}>
-                                            {userRole === 'RECYCLER'
-                                                ? "Funds will be held in escrow and released to Seller & Collector upon arrival."
-                                                : "Includes waste cost & rider delivery fee"}
+                                         <Text style={styles.estimateNote}>
+                                            {userRole === 'SELLER'
+                                                ? "Revesta commission of ₵2.00 will be deducted from your payout."
+                                                : (userRole === 'RECYCLER'
+                                                    ? "Funds will be held in escrow and released to Seller & Collector upon arrival."
+                                                    : "Includes waste cost & rider delivery fee")}
                                         </Text>
                                     </View>
                                 ) : (
@@ -1143,7 +1200,7 @@ export default function PickupsScreen({ route }) {
                                     <Text style={styles.earningsAmount}>
                                         ₵{(confirmingJob.track_type === 'A'
                                             ? (parseFloat(confirmingJob.actual_price || 0) * 0.8)
-                                            : (parseFloat(confirmingJob.actual_price || 0) * 0.3)).toFixed(2)}
+                                            : (parseFloat(confirmingJob.delivery_fee || 0) - 5.00)).toFixed(2)}
                                     </Text>
                                 </View>
                             </View>
@@ -1798,5 +1855,33 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: 'bold',
         color: '#2E7D32',
+    },
+    imageUploadBtn: {
+        width: '100%',
+        height: 120,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        borderStyle: 'dashed',
+        borderRadius: 16,
+        overflow: 'hidden',
+        marginBottom: 20,
+        marginTop: 10,
+    },
+    imageUploadPlaceholder: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+    },
+    imageUploadText: {
+        color: '#666',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    uploadedImagePreview: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
 });

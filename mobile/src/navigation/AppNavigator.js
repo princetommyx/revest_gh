@@ -24,6 +24,7 @@ import SecurityScreen from '../screens/SecurityScreen';
 import HelpScreen from '../screens/HelpScreen';
 import SupportChatScreen from '../screens/SupportChatScreen';
 import PickupHistoryScreen from '../screens/PickupHistoryScreen';
+import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -140,6 +141,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
                         <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false }} />
                     </>

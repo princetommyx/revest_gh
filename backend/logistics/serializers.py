@@ -14,7 +14,9 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     collector_name = serializers.CharField(source='collector.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
-    
+    listing_image = serializers.SerializerMethodField()
+    distance_km = serializers.SerializerMethodField()
+
     class Meta:
         model = PickupRequest
         fields = (
@@ -22,13 +24,45 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             'bag_size', 'weight_kg', 'quantity_estimate', 
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon',
+            'distance_km',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector', 'collector_name',
             'estimated_price', 'actual_price', 'payment_method',
-            'waste_price', 'delivery_fee', 'listing',
+            'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'is_verified'
         )
         read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
+
+    def get_distance_km(self, obj):
+        request = self.context.get('request')
+        if not request or not request.query_params:
+            return None
+            
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lon')
+        
+        if lat and lon:
+            try:
+                from .utils import haversine
+                dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
+                return round(dist, 2)
+            except (ValueError, TypeError):
+                pass
+        return None
+
+    def get_listing_image(self, obj):
+        image_to_use = None
+        if obj.image:
+            image_to_use = obj.image
+        elif obj.listing and obj.listing.image:
+            image_to_use = obj.listing.image
+            
+        if image_to_use:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(image_to_use.url)
+            return image_to_use.url
+        return None
 
 
 class PickupRequestDetailSerializer(serializers.ModelSerializer):
@@ -39,7 +73,8 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
     collector =PublicUserSerializer(read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
-    
+    listing_image = serializers.SerializerMethodField()
+
     class Meta:
         model = PickupRequest
         fields = (
@@ -50,11 +85,19 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector',
             'estimated_price', 'actual_price', 'payment_method',
-            'waste_price', 'delivery_fee', 'listing',
+            'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'distance_km', 'duration_min',
             'verification_photo', 'manual_weight', 'ai_verified_weight', 'is_verified'
         )
         read_only_fields = ('provider', 'collector', 'created_at')
+
+    def get_listing_image(self, obj):
+        if obj.listing and obj.listing.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.listing.image.url)
+            return obj.listing.image.url
+        return None
 
 
 class PickupRequestCreateSerializer(serializers.ModelSerializer):

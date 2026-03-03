@@ -12,20 +12,12 @@ export const onboardingApi = {
     },
 
     createScreen: async (data) => {
-        const response = await apiClient.post('admin/onboarding/', data, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+        const response = await apiClient.post('admin/onboarding/', data);
         return response.data;
     },
 
     updateScreen: async (id, data) => {
-        const response = await apiClient.patch(`admin/onboarding/${id}/`, data, {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            }
-        });
+        const response = await apiClient.patch(`admin/onboarding/${id}/`, data);
         return response.data;
     },
 

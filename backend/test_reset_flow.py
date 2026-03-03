@@ -28,7 +28,7 @@ def make_request(url, data=None):
              return e.code, {}
 
 def test_flow():
-    base_url = "http://localhost:8000/api/users"
+    base_url = "http://localhost:8000/api/v1/auth"
     
     # 1. Create a test user if not exists
     phone = "0558888888"
@@ -61,10 +61,10 @@ def test_flow():
     print("Resetting Password...")
     new_pass = "NewPassword123!"
     status, body = make_request(f"{base_url}/password-reset/confirm/", {
-        "mode": "otp",
-        "phone": phone,
+        "identifier": phone,
         "otp": otp_code,
-        "new_password": new_pass
+        "new_password": new_pass,
+        "confirm_password": new_pass
     })
     
     print(f"Confirm Status: {status}")

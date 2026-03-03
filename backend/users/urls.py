@@ -5,12 +5,13 @@ from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
     UpdateLocationView, ChangePasswordView,
     PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
-    VerifyLoginOTPView,
+    VerifyLoginOTPView, SubmitFeedbackView,
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
     TestSMSView, HubtelTestView, AdminSendPushView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
+from .kyc_views import KYCSubmitView, KYCStatusView
 
 # Authentication endpoints (for /api/v1/auth/)
 urlpatterns = [
@@ -33,6 +34,7 @@ urlpatterns = [
     path('push-token/', DeviceTokenView.as_view(), name='update_push_token'),
     path('notifications/', NotificationViewSet.as_view({'get': 'list', 'patch': 'read_all'}), name='notification_list'),
     path('notifications/<int:pk>/', NotificationViewSet.as_view({'patch': 'read', 'delete': 'destroy'}), name='notification_detail'),
+    path('feedback/', SubmitFeedbackView.as_view(), name='submit_feedback'),
     
     # Admin stats
     path('admin/stats/', admin_dashboard_stats, name='admin_dashboard_stats'),
@@ -44,6 +46,10 @@ urlpatterns = [
     path('test-sms/', TestSMSView.as_view(), name='test_sms'),
     path('test-hubtel/', HubtelTestView.as_view(), name='test_hubtel'),
     path('notifications/test-push/', AdminSendPushView.as_view(), name='test_push'),
+    
+    # Identity Verification (KYC)
+    path('kyc/submit/', KYCSubmitView.as_view(), name='kyc_submit'),
+    path('kyc/status/', KYCStatusView.as_view(), name='kyc_status'),
 ]
 
 

@@ -48,7 +48,22 @@ export default function PromoCardsPage() {
         },
         onError: (error) => {
             console.error('Create error:', error);
-            setToast({ type: 'error', message: 'Failed to create promo: ' + (error.response?.data?.message || error.message) });
+            let message = 'Failed to create promo';
+            if (error.response?.data) {
+                if (typeof error.response.data === 'object') {
+                    // Extract field errors
+                    const errors = error.response.data;
+                    const errorDetails = Object.keys(errors)
+                        .map(key => `${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`)
+                        .join(' | ');
+                    message += `: ${errorDetails}`;
+                } else if (error.response.data.message) {
+                    message += `: ${error.response.data.message}`;
+                }
+            } else {
+                message += `: ${error.message}`;
+            }
+            setToast({ type: 'error', message });
         }
     });
 
@@ -61,7 +76,21 @@ export default function PromoCardsPage() {
         },
         onError: (error) => {
             console.error('Update error:', error);
-            setToast({ type: 'error', message: 'Failed to update promo: ' + (error.response?.data?.message || error.message) });
+            let message = 'Failed to update promo';
+            if (error.response?.data) {
+                if (typeof error.response.data === 'object') {
+                    const errors = error.response.data;
+                    const errorDetails = Object.keys(errors)
+                        .map(key => `${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`)
+                        .join(' | ');
+                    message += `: ${errorDetails}`;
+                } else if (error.response.data.message) {
+                    message += `: ${error.response.data.message}`;
+                }
+            } else {
+                message += `: ${error.message}`;
+            }
+            setToast({ type: 'error', message });
         }
     });
 

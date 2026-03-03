@@ -36,4 +36,14 @@ urlpatterns = [
     path('onboarding/', views.OnboardingScreenViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_onboarding_list'),
     path('onboarding/<int:pk>/', views.OnboardingScreenViewSet.as_view({'get': 'retrieve', 'put': 'update', 'patch': 'partial_update', 'delete': 'destroy'}), name='admin_onboarding_detail'),
     path('onboarding/public/', views.PublicOnboardingListView.as_view(), name='public_onboarding_list'),
+
+    # KYC Review
+    path('kyc/', views.AdminKYCViewSet.as_view({'get': 'list'}), name='admin_kyc_list'),
+    path('kyc/<int:pk>/', views.AdminKYCViewSet.as_view({'get': 'retrieve'}), name='admin_kyc_detail'),
+    path('kyc/<int:pk>/approve/', views.AdminKYCViewSet.as_view({'post': 'approve'}), name='admin_kyc_approve'),
+    path('kyc/<int:pk>/reject/', views.AdminKYCViewSet.as_view({'post': 'reject'}), name='admin_kyc_reject'),
+    # Revesta Platform Wallet
+    path('revesta/wallet/', views.RevestaWalletView.as_view(), name='revesta_wallet'),
+    path('revesta/withdraw/', views.RevestaWithdrawView.as_view(), name='revesta_withdraw'),
+    path('feedback/', views.AdminFeedbackListView.as_view(), name='admin_feedback_list'),
 ]

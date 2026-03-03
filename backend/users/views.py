@@ -5,8 +5,18 @@ from rest_framework.response import Response
 from .serializers import (
     UserSerializer, UserRegistrationSerializer, UserProfileSerializer,
     UserLocationSerializer, ChangePasswordSerializer, PublicUserSerializer,
-    NotificationSerializer, DeviceTokenSerializer
+    NotificationSerializer, DeviceTokenSerializer, UserFeedbackSerializer
 )
+
+class SubmitFeedbackView(generics.CreateAPIView):
+    """
+    Allow users to submit feedback/suggestions to the platform.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+    serializer_class = UserFeedbackSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 from .permissions import IsOwnerOrAdmin
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
@@ -230,8 +240,24 @@ class PasswordResetRequestView(views.APIView):
         # Normalize identifier
         identifier = "".join(identifier.split())
         
-        # Try to find user by email or phone
-        user = User.objects.filter(models.Q(email=identifier) | models.Q(phone_number__icontains=identifier.lstrip('+'))).first()
+        # Phone Normalization (handle 0 prefix for Ghana)
+        normalized_phone = identifier
+        if identifier.lstrip('+').isdigit():
+            clean = identifier.lstrip('+')
+            if clean.startswith('0'):
+                normalized_phone = '233' + clean[1:]
+            elif len(clean) == 9:
+                normalized_phone = '233' + clean
+            else:
+                normalized_phone = clean
+
+        # Try to find user by email or phone (original text, normalized phone, or partial match)
+        user = User.objects.filter(
+            models.Q(email=identifier) | 
+            models.Q(phone_number=identifier) |
+            models.Q(phone_number=normalized_phone) |
+            models.Q(phone_number__icontains=identifier.lstrip('+'))
+        ).order_by('-date_joined').first()
         
         if user:
             # Generate OTP
@@ -321,8 +347,25 @@ class PasswordResetConfirmView(views.APIView):
         # Normalize identifier
         identifier = "".join(identifier.split())
 
+        # Phone Normalization (handle 0 prefix for Ghana)
+        normalized_phone = identifier
+        if identifier.lstrip('+').isdigit():
+            clean = identifier.lstrip('+')
+            if clean.startswith('0'):
+                normalized_phone = '233' + clean[1:]
+            elif len(clean) == 9:
+                normalized_phone = '233' + clean
+            else:
+                normalized_phone = clean
+
         # Find user
-        user = User.objects.filter(models.Q(email=identifier) | models.Q(phone_number__icontains=identifier.lstrip('+'))).first()
+        user = User.objects.filter(
+            models.Q(email=identifier) | 
+            models.Q(phone_number=identifier) |
+            models.Q(phone_number=normalized_phone) |
+            models.Q(phone_number__icontains=identifier.lstrip('+'))
+        ).order_by('-date_joined').first()
+
         if not user:
             return Response({'error': 'Invalid request'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -483,7 +526,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
         return Response({
             "status": "verification_required",
-            "message": f"Login verification code sent to your {', '.join(sent_to)}",
+            "message": "verification code sent through sms to your number",
             "user_id": user.id,
             "channel": "phone" if user.phone_number else "email"
         }, status=status.HTTP_200_OK)
@@ -791,7 +834,7 @@ class SendOTPView(views.APIView):
             
             return Response({
                 'status': 'success',
-                'message': f"Verification code sent ({' & '.join(sent_methods)})"
+                'message': "verification code sent through sms to your number"
             })
         except Exception as e:
             import traceback

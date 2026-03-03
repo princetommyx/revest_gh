@@ -13,6 +13,12 @@ export const usersApi = {
         return response.data;
     },
 
+    // Create a new user (admin)
+    createUser: async (data) => {
+        const response = await apiClient.post('/admin/users/', data);
+        return response.data;
+    },
+
     // Get recent users
     getRecentUsers: async () => {
         const response = await apiClient.get('/users/admin/recent-users/');

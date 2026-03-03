@@ -1,6 +1,6 @@
 from rest_framework import generics, status, permissions, views
 from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from datetime import timedelta
@@ -15,9 +15,19 @@ from .serializers import (
     OnboardingScreenSerializer
 )
 from .permissions import IsAdminUser, IsSuperAdmin
-from users.models import User
+from users.models import User, UserFeedback
+from users.serializers import UserFeedbackSerializer
 from market.models import Listing
 from logistics.models import PickupRequest
+
+class AdminFeedbackListView(generics.ListAPIView):
+    """
+    GET /api/admin/feedback/
+    List all user feedback/suggestions.
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = UserFeedbackSerializer
+    queryset = UserFeedback.objects.all().order_by('-created_at')
 
 logger = logging.getLogger(__name__)
 
@@ -96,13 +106,18 @@ class DashboardStatsView(views.APIView):
         return Response(serializer.data)
 
 
-class UserListView(generics.ListAPIView):
+class UserListView(generics.ListCreateAPIView):
     """
-    GET /api/admin/users/
-    List all users with filtering and search.
+    GET /api/admin/users/ : List all users with filtering and search.
+    POST /api/admin/users/ : Create a new user (admin).
     """
     permission_classes = [IsAdminUser]
-    serializer_class = UserSummarySerializer
+    
+    def get_serializer_class(self):
+        from .serializers import AdminUserCreateSerializer, UserSummarySerializer
+        if self.request.method == 'POST':
+            return AdminUserCreateSerializer
+        return UserSummarySerializer
     
     def get_queryset(self):
         queryset = User.objects.all().order_by('-date_joined')
@@ -432,6 +447,8 @@ class PublicPromoCardListView(generics.ListAPIView):
         # We group SELLER and RECYCLER roles together as they share the same dashboard
         if role in ['SELLER', 'RECYCLER']:
             queryset = queryset.filter(Q(target_role='SELLER') | Q(target_role='RECYCLER') | Q(target_role='ALL'))
+        elif role == 'COLLECTOR':
+            queryset = queryset.filter(Q(target_role='COLLECTOR') | Q(target_role='ALL'))
         elif role != 'ALL':
             queryset = queryset.filter(Q(target_role=role) | Q(target_role='ALL'))
         else:
@@ -467,3 +484,138 @@ class PublicOnboardingListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     pagination_class = None
     queryset = OnboardingScreen.objects.filter(is_active=True).order_by('order', 'created_at')
+
+from users.models import IdentityVerification
+from .kyc_serializers import AdminKYCSerializer
+
+class AdminKYCViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for admins to review and approve/reject KYC submissions.
+    """
+    permission_classes = [IsAdminUser]
+    serializer_class = AdminKYCSerializer
+    queryset = IdentityVerification.objects.all().order_by('-created_at')
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        kyc = self.get_object()
+        if kyc.status == 'VERIFIED':
+            return Response({'error': 'Already verified'}, status=400)
+            
+        kyc.status = 'VERIFIED'
+        kyc.save()
+        
+        # Sync User state
+        user = kyc.user
+        user.is_verified = True
+        user.save()
+        
+        # Log action
+        from .utils import log_activity
+        log_activity(
+            request.user, 
+            'ADMIN_ACTION', 
+            details={'action': 'APPROVE_KYC', 'target_user_id': user.id}, 
+            request=request
+        )
+
+        return Response({'status': 'Approved successfully'})
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        kyc = self.get_object()
+        reason = request.data.get('reason', 'Rejected by Administrator')
+        
+        kyc.status = 'REJECTED'
+        kyc.rejection_reason = reason
+        kyc.save()
+        
+        # Log action
+        from .utils import log_activity
+        log_activity(
+            request.user, 
+            'ADMIN_ACTION', 
+            details={'action': 'REJECT_KYC', 'target_user_id': kyc.user.id, 'reason': reason}, 
+            request=request
+        )
+
+        return Response({'status': 'Rejected successfully'})
+from wallet.models import Wallet, Transaction
+from wallet.serializers import TransactionSerializer
+
+class RevestaWalletView(views.APIView):
+    """
+    GET /api/admin/revesta/wallet/
+    Returns the Revesta Platform Wallet balance and recent transactions.
+    """
+    permission_classes = [IsSuperAdmin] # Only SuperAdmins can see platform balance
+
+    def get(self, request):
+        try:
+            platform_user = User.objects.get(username='revesta')
+            wallet, _ = Wallet.objects.get_or_create(user=platform_user)
+            transactions = Transaction.objects.filter(wallet=wallet).order_by('-created_at')[:20]
+            
+            return Response({
+                'balance': wallet.balance,
+                'currency': wallet.currency,
+                'recent_transactions': TransactionSerializer(transactions, many=True).data
+            })
+        except User.DoesNotExist:
+            return Response({'error': 'Platform user "revesta" not found'}, status=404)
+
+class RevestaWithdrawView(views.APIView):
+    """
+    POST /api/admin/revesta/withdraw/
+    Records a withdrawal from the Revesta Platform Wallet.
+    """
+    permission_classes = [IsSuperAdmin]
+
+    def post(self, request):
+        amount = request.data.get('amount')
+        description = request.data.get('description', 'Platform withdrawal')
+        
+        if not amount:
+            return Response({'error': 'Amount is required'}, status=400)
+            
+        try:
+            platform_user = User.objects.get(username='revesta')
+            wallet = Wallet.objects.get(user=platform_user)
+            amount_dec = Decimal(str(amount))
+            
+            if wallet.balance < amount_dec:
+                return Response({'error': 'Insufficient balance'}, status=400)
+                
+            from django.db import transaction as db_transaction
+            import uuid
+            
+            with db_transaction.atomic():
+                wallet.balance -= amount_dec
+                wallet.save()
+                
+                txn = Transaction.objects.create(
+                    wallet=wallet,
+                    amount=-amount_dec,
+                    transaction_type='WITHDRAWAL',
+                    status='COMPLETED',
+                    description=description,
+                    reference=f"ADMIN_WD_{uuid.uuid4().hex[:8]}"
+                )
+                
+                # Audit Log
+                from .utils import log_activity
+                log_activity(
+                    request.user, 
+                    'ADMIN_ACTION', 
+                    details={
+                        'action': 'REVESTA_PLATFORM_WITHDRAWAL',
+                        'amount': str(amount_dec),
+                        'transaction_id': txn.id
+                    },
+                    request=request
+                )
+                
+            return Response({'status': 'Withdrawal recorded successfully', 'new_balance': wallet.balance})
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

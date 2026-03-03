@@ -14,14 +14,7 @@ export const marketApi = {
 
     createListing: async (listingData) => {
         // listingData should be FormData if uploading image
-        const response = await apiClient.post('market/listings/', listingData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            transformRequest: (data, headers) => {
-                return data; // Axios workaround for FormData on React Native
-            }
-        });
+        const response = await apiClient.post('market/listings/', listingData);
         return response.data;
     },
 
@@ -52,19 +45,23 @@ export const marketApi = {
 
         let type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : `image/jpeg`;
 
-        data.append('image', {
-            uri: imageUri,
-            name,
-            type
-        });
+        const imageFile = { uri: imageUri, name, type };
+        console.log('[analyzeWaste] Prepared image file:', imageFile);
+        data.append('image', imageFile);
 
-        const response = await apiClient.post('market/analyze-waste/', data, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            transformRequest: (data) => data, // crucial for FormData
-            timeout: 15000 // Give AI some time
-        });
-        return response.data;
+        try {
+            const response = await apiClient.post('market/analyze-waste/', data, {
+                timeout: 30000 // Increased timeout for AI
+            });
+            console.log('[analyzeWaste] Success!');
+            return response.data;
+        } catch (error) {
+            console.error('[analyzeWaste] Network Error:', error.message);
+            if (error.response) {
+                console.error('[analyzeWaste] Response status:', error.response.status);
+                console.error('[analyzeWaste] Response data:', error.response.data);
+            }
+            throw error;
+        }
     }
 };

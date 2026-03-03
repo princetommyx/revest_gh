@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -15,6 +16,7 @@ import SettingsPage from './pages/SettingsPage';
 import SupportPage from './pages/SupportPage';
 import PromoCardsPage from './pages/PromoCardsPage';
 import OnboardingPage from './pages/OnboardingPage';
+import KYCReviewPage from './pages/KYCReviewPage';
 import { authApi } from './api/auth';
 
 const queryClient = new QueryClient();
@@ -54,10 +56,12 @@ function App() {
                             <Route path="settings" element={<SettingsPage />} />
                             <Route path="promos" element={<PromoCardsPage />} />
                             <Route path="onboarding" element={<OnboardingPage />} />
+                            <Route path="kyc-review" element={<KYCReviewPage />} />
                         </Route>
                     </Routes>
                 </BrowserRouter>
             </ThemeProvider>
+            <Toaster position="top-right" toastOptions={{ duration: 4000 }} />
         </QueryClientProvider>
     );
 }

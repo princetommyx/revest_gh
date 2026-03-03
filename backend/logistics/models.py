@@ -13,6 +13,7 @@ class PickupRequest(models.Model):
     TRACK_CHOICES = (
         ('A', 'Safe Disposal (Pay to Clear)'),
         ('B', 'Sell Recyclables (Earn Cash)'),
+        ('C', 'Buy Materials'),
     )
 
     BAG_SIZE_CHOICES = (
@@ -38,7 +39,9 @@ class PickupRequest(models.Model):
     manual_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     ai_verified_weight = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    is_disposer_paid = models.BooleanField(default=False)
     verification_data = models.JSONField(null=True, blank=True) # AI analysis results
+    image = models.ImageField(upload_to='pickup_requests/', null=True, blank=True)
     
     quantity_estimate = models.CharField(max_length=100)
     latitude = models.FloatField()

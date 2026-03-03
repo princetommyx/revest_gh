@@ -68,7 +68,7 @@ export default function LoginScreen() {
                 Toast.show({
                     type: 'info',
                     text1: 'Verification Required',
-                    text2: result.message
+                    text2: 'verification code sent through sms to your number'
                 });
             } else {
                 Toast.show({

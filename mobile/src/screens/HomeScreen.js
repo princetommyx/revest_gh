@@ -29,6 +29,18 @@ const CATEGORIES = [
     { id: 'Electronics', name: 'E-Waste', icon: 'phone-portrait-outline', color: '#7B1FA2', bg: '#fff' }
 ];
 
+export const getMaterialImage = (materialType) => {
+    switch (materialType?.toLowerCase()) {
+        case 'plastics': return 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=400&q=80';
+        case 'metals': return 'https://images.unsplash.com/photo-1558611848-73f7eb4001a1?w=400&q=80';
+        case 'paper': return 'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&q=80';
+        case 'glass': return 'https://images.unsplash.com/photo-1605389445167-9d7a26fba893?w=400&q=80';
+        case 'electronics': return 'https://images.unsplash.com/photo-1550005972-026115998dfc?w=400&q=80';
+        case 'e-waste': return 'https://images.unsplash.com/photo-1550005972-026115998dfc?w=400&q=80';
+        default: return 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80';
+    }
+};
+
 export default function HomeScreen({ navigation }) {
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
@@ -400,6 +412,9 @@ export default function HomeScreen({ navigation }) {
                     </TouchableOpacity>
                 </View>
 
+                {/* Promo Cards */}
+                <PromoCarousel />
+
                 {/* Available Pickups Section */}
                 <View style={styles.availableSection}>
                     <View style={styles.sectionHeaderRow}>
@@ -418,39 +433,48 @@ export default function HomeScreen({ navigation }) {
                             {pickupJobs.map((job) => (
                                 <TouchableOpacity
                                     key={job.id}
-                                    style={styles.jobCard}
+                                    style={[styles.jobCard, { padding: 0, overflow: 'hidden' }]}
                                     onPress={() => navigation.navigate('Pickups')}
                                     activeOpacity={0.9}
                                 >
-                                    <View style={styles.jobCardHeader}>
-                                        <View style={[styles.jobStatusBadge, { backgroundColor: job.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
-                                            <Text style={[styles.jobStatusText, { color: job.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>
-                                                {job.status}
-                                            </Text>
-                                        </View>
-                                        <View style={[
-                                            styles.trackTagSmall,
-                                            { backgroundColor: job.track_type === 'A' ? '#FEE2E2' : '#DCFCE7' }
-                                        ]}>
-                                            <Text style={[
-                                                styles.trackTagTextSmall,
-                                                { color: job.track_type === 'A' ? '#DC2626' : '#166534' }
+                                    <Image
+                                        source={{ uri: job.listing_image ? resolveImageUrl(job.listing_image) : getMaterialImage(job.material_type) }}
+                                        style={{ width: '100%', height: 100 }}
+                                        contentFit="cover"
+                                        cachePolicy="memory-disk"
+                                        transition={200}
+                                    />
+                                    <View style={{ padding: 12 }}>
+                                        <View style={[styles.jobCardHeader, { marginBottom: 8 }]}>
+                                            <View style={[styles.jobStatusBadge, { backgroundColor: job.status === 'PENDING' ? '#E8F5E9' : '#FFF3E0' }]}>
+                                                <Text style={[styles.jobStatusText, { color: job.status === 'PENDING' ? '#2E7D32' : '#E67E22' }]}>
+                                                    {job.status}
+                                                </Text>
+                                            </View>
+                                            <View style={[
+                                                styles.trackTagSmall,
+                                                { backgroundColor: job.track_type === 'A' ? '#FEE2E2' : '#DCFCE7' }
                                             ]}>
-                                                Track {job.track_type}
-                                            </Text>
+                                                <Text style={[
+                                                    styles.trackTagTextSmall,
+                                                    { color: job.track_type === 'A' ? '#DC2626' : '#166534' }
+                                                ]}>
+                                                    Track {job.track_type}
+                                                </Text>
+                                            </View>
                                         </View>
-                                    </View>
-                                    <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
-                                    <View style={styles.jobRow}>
-                                        <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
-                                        <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
-                                    </View>
-                                    <View style={styles.jobFooter}>
-                                        <View style={styles.jobLocation}>
-                                            <MapPin size={12} color="#888" />
-                                            <Text style={styles.jobLocationText} numberOfLines={1}>
-                                                {job.pickup_address || job.city || 'Nearby'}
-                                            </Text>
+                                        <Text style={styles.jobTitle} numberOfLines={1}>{job.material_type}</Text>
+                                        <View style={styles.jobRow}>
+                                            <Text style={styles.jobQuantity}>{job.quantity_estimate}</Text>
+                                            <Text style={styles.jobPrice}>₵{job.estimated_price || '0.00'}</Text>
+                                        </View>
+                                        <View style={styles.jobFooter}>
+                                            <View style={styles.jobLocation}>
+                                                <MapPin size={12} color="#888" />
+                                                <Text style={styles.jobLocationText} numberOfLines={1}>
+                                                    {job.pickup_address || job.city || 'Nearby'}
+                                                </Text>
+                                            </View>
                                         </View>
                                     </View>
                                 </TouchableOpacity>
@@ -601,7 +625,7 @@ export default function HomeScreen({ navigation }) {
                     />
                 ) : (
                     <FlatList
-                        data={userRole === 'RECYCLER' ? [] : filteredListings}
+                        data={filteredListings}
                         renderItem={renderListing}
                         keyExtractor={item => item.id.toString()}
                         numColumns={2}
@@ -926,6 +950,7 @@ const styles = StyleSheet.create({
         marginLeft: 10,
         color: '#fff',
         fontSize: 15,
+        letterSpacing: 0,
     },
 
     // Search Bar (Legacy/Removed)

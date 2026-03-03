@@ -5,6 +5,7 @@ class Listing(models.Model):
     TRACK_CHOICES = (
         ('A', 'Safe Disposal (Pay to Clear)'),
         ('B', 'Sell Recyclables (Earn Cash)'),
+        ('C', 'Buy Materials'),
     )
 
     seller = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listings')
@@ -44,6 +45,10 @@ class MaterialMarketPrice(models.Model):
         ('PAPER', 'Paper/Cardboard'),
         ('ELECTRONICS', 'E-Waste'),
         ('METALS', 'Scrap Metal'),
+        ('PURE_WATER_RUBBERS', 'Pure Water Rubbers'),
+        ('PURE_WATER_RUBBERS_BALE', 'Pure Water Rubbers Bale'),
+        ('PLASTIC_BOTTLES', 'Plastic Bottles'),
+        ('PLASTIC_BOTTLES_BALE', 'Plastic Bottles Bale'),
     )
     material_type = models.CharField(max_length=50, choices=MATERIAL_CHOICES, unique=True)
     price_per_kg = models.DecimalField(max_digits=10, decimal_places=2)

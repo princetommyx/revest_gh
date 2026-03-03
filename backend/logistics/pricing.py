@@ -37,6 +37,11 @@ def calculate_track_b_earnings(material_type, weight_kg):
     """
     Calculate estimated earnings for high-value recyclables.
     """
+    if material_type.upper() in ['PURE_WATER_RUBBERS', 'PLASTIC_BOTTLES']:
+        return Decimal('30.00')
+    if material_type.upper() in ['PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES_BALE']:
+        return Decimal('60.00')
+
     try:
         market_price = MaterialMarketPrice.objects.get(material_type=material_type).price_per_kg
     except MaterialMarketPrice.DoesNotExist:

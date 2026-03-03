@@ -83,10 +83,17 @@ export default function ProfileScreen({ navigation }) {
                             </View>
 
                             <View style={styles.userInfo}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                     <View>
                                         <Text style={styles.greetingText}>My Profile</Text>
-                                        <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
+                                            {user?.kyc_status === 'VERIFIED' && (
+                                                <View style={{ marginLeft: 6, marginBottom: 4 }}>
+                                                    <Shield size={16} color="#4ADE80" fill="#22C55E" />
+                                                </View>
+                                            )}
+                                        </View>
                                     </View>
                                     <View style={[
                                         styles.roleBadge,
@@ -121,6 +128,32 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Account Settings</Text>
                     <View style={styles.menuGroup}>
+                        {/* Only show KYC Verification for Collectors and Recyclers */}
+                        {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
+                            <MenuItem
+                                icon={Shield}
+                                title="Identity Verification"
+                                subtitle={
+                                    user?.kyc_status === 'VERIFIED' ? 'Verified Account' :
+                                        user?.kyc_status === 'PENDING' ? 'Verification Pending Review' :
+                                            user?.kyc_status === 'REJECTED' ? 'Verification Rejected - Try Again' :
+                                                'Required for Withdrawals'
+                                }
+                                onPress={() => navigation.navigate('KYCVerification')}
+                                color={
+                                    user?.kyc_status === 'VERIFIED' ? "#2E7D32" :
+                                        user?.kyc_status === 'PENDING' ? "#D97706" :
+                                            user?.kyc_status === 'REJECTED' ? "#EF4444" :
+                                                "#2563EB"
+                                }
+                                iconBg={
+                                    user?.kyc_status === 'VERIFIED' ? "#E8F5E9" :
+                                        user?.kyc_status === 'PENDING' ? "#FEF3C7" :
+                                            user?.kyc_status === 'REJECTED' ? "#FEE2E2" :
+                                                "#DBEAFE"
+                                }
+                            />
+                        )}
                         <MenuItem
                             icon={User}
                             title="Personal Details"

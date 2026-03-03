@@ -12,14 +12,33 @@ class ListingListSerializer(serializers.ModelSerializer):
     """
     seller = PublicUserSerializer(read_only=True)
     seller_name = serializers.ReadOnlyField(source='seller.username')
+    distance_km = serializers.SerializerMethodField()
     
     class Meta:
         model = Listing
         fields = (
             'id', 'title', 'material_type', 'quantity', 'price', 'is_free',
-            'location', 'image', 'created_at', 'seller', 'seller_name'
+            'location', 'image', 'created_at', 'seller', 'seller_name', 'track',
+            'distance_km'
         )
         read_only_fields = ('seller', 'created_at')
+
+    def get_distance_km(self, obj):
+        request = self.context.get('request')
+        if not request or not request.query_params:
+            return None
+            
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lon')
+        
+        if lat and lon:
+            try:
+                from logistics.utils import haversine
+                dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
+                return round(dist, 2)
+            except (ValueError, TypeError):
+                pass
+        return None
 
 
 class ListingDetailSerializer(serializers.ModelSerializer):
@@ -35,7 +54,7 @@ class ListingDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'material_type', 'description', 'quantity', 
             'price', 'is_free', 'location', 'latitude', 'longitude', 'image', 'created_at',
-            'seller', 'seller_name', 'seller_phone'
+            'seller', 'seller_name', 'seller_phone', 'track'
         )
         read_only_fields = ('seller', 'created_at')
     
@@ -56,7 +75,7 @@ class ListingCreateSerializer(serializers.ModelSerializer):
         model = Listing
         fields = (
             'id', 'title', 'material_type', 'description', 'quantity',
-            'price', 'is_free', 'location', 'latitude', 'longitude', 'image'
+            'price', 'is_free', 'location', 'latitude', 'longitude', 'image', 'track'
         )
     
     def validate_image(self, value):

@@ -37,11 +37,28 @@ export default function CreateListingScreen({ navigation }) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // AI Pricing Logic (Updated for Track A/B)
+    // Material display mapping (Backend -> User Friendly)
+    const MATERIAL_DISPLAY_MAP = {
+        'PURE_WATER_RUBBERS': 'Pure Water Rubbers',
+        'PURE_WATER_RUBBERS_BALE': 'Pure Water Rubbers Bale',
+        'PLASTIC_BOTTLES': 'Plastic Bottles',
+        'PLASTIC_BOTTLES_BALE': 'Plastic Bottles Bale',
+        'PET': 'PET Bottles',
+        'HDPE': 'HDPE Plastics'
+    };
+
+    // AI Pricing Logic (Updated for Track A/B and Fixed Pricing)
     React.useEffect(() => {
         if (formData.material_type && formData.weight_kg) {
-            // Only auto-calculate if AI didn't already provide a specific estimate
-            // OR if user manually changes material/weight after scan
+            // FIXED PRICE CHECK: Skip recalculation for fixed-price high-value items
+            const isFixedPriceItem = [
+                'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
+                'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
+            ].includes(formData.material_type);
+
+            if (isFixedPriceItem) return;
+
+            // Only auto-calculate for general materials if AI didn't already provide a specific estimate
             if (!scanResult || scanResult.material_type !== formData.material_type) {
                 const rates = {
                     'PET': 1.5,
@@ -175,7 +192,7 @@ export default function CreateListingScreen({ navigation }) {
 
             await marketApi.createListing(data);
             queryClient.invalidateQueries(['listings']);
-            Toast.show({ type: 'success', text1: 'Success', text2: 'Listing created!' });
+            Toast.show({ type: 'success', text1: 'Success', text2: 'Waste posted' });
             navigation.goBack();
         } catch (error) {
             console.error("Submission Error:", error.response?.data || error.message);
@@ -198,7 +215,7 @@ export default function CreateListingScreen({ navigation }) {
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                                 <ArrowLeft size={24} color="#fff" />
                             </TouchableOpacity>
-                            <Text style={styles.headerTitle}>New Listing</Text>
+                            <Text style={styles.headerTitle}>New Post</Text>
                             <View style={{ width: 40 }} />
                         </View>
                         <Text style={styles.headerSubtitle}>Post your waste for sale or recycling</Text>
@@ -236,29 +253,47 @@ export default function CreateListingScreen({ navigation }) {
                     {/* Form Fields */}
                     <View style={styles.formSection}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.label}>Listing Title</Text>
+                            <Text style={styles.label}>Post Title</Text>
                             <View style={styles.inputWrapper}>
                                 <Package size={20} color="#999" />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="e.g. 50kg Mixed Plastics"
-                                    value={formData.title}
+                                    value={MATERIAL_DISPLAY_MAP[formData.material_type] || formData.title}
                                     onChangeText={(val) => handleChange('title', val)}
                                 />
                             </View>
                         </View>
 
-                        <Text style={styles.label}>Category</Text>
+                        <Text style={styles.label}>Category {([
+                            'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
+                            'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
+                        ].includes(formData.material_type)) && <Text style={styles.lockedLabel}>(AI Locked)</Text>}</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                            {['Plastics', 'Metals', 'Paper', 'Glass', 'Electronics', 'Other'].map(type => (
-                                <TouchableOpacity
-                                    key={type}
-                                    style={[styles.chip, formData.material_type === type && styles.chipActive]}
-                                    onPress={() => handleChange('material_type', type)}
-                                >
-                                    <Text style={[styles.chipText, formData.material_type === type && styles.chipTextActive]}>{type}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {['Plastics', 'Metals', 'Paper', 'Glass', 'Electronics', 'Other'].map(type => {
+                                const isFixedItem = [
+                                    'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
+                                    'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
+                                ].includes(formData.material_type);
+
+                                // Map backend types to UI category for highlighting
+                                const activeType = (formData.material_type.includes('WATER') || formData.material_type.includes('BOTTLE')) ? 'Plastics' : formData.material_type;
+
+                                return (
+                                    <TouchableOpacity
+                                        key={type}
+                                        disabled={isFixedItem}
+                                        style={[
+                                            styles.chip,
+                                            activeType === type && styles.chipActive,
+                                            isFixedItem && type !== activeType && { opacity: 0.5 }
+                                        ]}
+                                        onPress={() => handleChange('material_type', type)}
+                                    >
+                                        <Text style={[styles.chipText, activeType === type && styles.chipTextActive]}>{type}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </ScrollView>
 
                         <View style={styles.row}>
@@ -644,5 +679,44 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.2)',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    trackContainer: {
+        flexDirection: 'row',
+        gap: 12,
+        marginBottom: 20,
+    },
+    trackBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 15,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        gap: 8,
+    },
+    trackBtnActiveA: {
+        backgroundColor: '#5D6D7E', // Muted dark for disposal
+        borderColor: '#5D6D7E',
+    },
+    trackBtnActiveB: {
+        backgroundColor: '#2E7D32', // Revesta Green for sell
+        borderColor: '#2E7D32',
+    },
+    trackBtnText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#666',
+    },
+    trackBtnTextActive: {
+        color: '#fff',
+    },
+    lockedLabel: {
+        fontSize: 10,
+        color: '#2E7D32',
+        fontWeight: 'normal',
+        fontStyle: 'italic',
     },
 });

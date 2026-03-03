@@ -19,9 +19,7 @@ class AnalyzeWasteView(APIView):
     def post(self, request, *args, **kwargs):
         # 1. Check for API Key
         api_key = os.environ.get("GEMINI_API_KEY")
-        print(f"!!! DEBUG: Checking API Key. Found: {bool(api_key)}")
         if not api_key:
-            print("!!! DEBUG: No GEMINI_API_KEY found in os.environ")
             logger.warning("GEMINI_API_KEY not found. Using simulation fallback.")
             return self.simulation_fallback()
 
@@ -66,7 +64,17 @@ class AnalyzeWasteView(APIView):
             - **Track A (Paid Disposal):** Organic waste, diapers, food scraps, mixed household trash that cannot be easily recycled.
             - **Track B (Value Buyback):** High-value recyclables like PET (bottles), HDPE (containers), Aluminum (cans), Paper/Cardboard, Electronics, or Scrap Metal.
 
-            Allowed Material Types: 'PET', 'HDPE', 'Aluminum', 'Paper', 'Electronics', 'Metals', 'Mixed', 'Organic', 'Other'
+            PRICING SYSTEM:
+            - PURE_WATER_RUBBERS: 30 GH₵ (Standard bag/loose)
+            - PLASTIC_BOTTLES: 30 GH₵ (Standard bag/loose)
+            - PURE_WATER_RUBBERS_BALE: 60 GH₵ (Compressed large bale)
+            - PLASTIC_BOTTLES_BALE: 60 GH₵ (Compressed large bale)
+            - Others: Price calculated per KG based on weight estimate.
+
+            Allowed Material Types: 'PET', 'HDPE', 'ALUMINUM', 'PAPER', 'ELECTRONICS', 'METALS', 'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE', 'MIXED', 'ORGANIC', 'OTHER'
+
+            NOTE: If you see large compressed/bundled bales of pure water sachets or bottles, classify as the 'BALE' version.
+            Otherwise use 'PURE_WATER_RUBBERS' or 'PLASTIC_BOTTLES'.
 
             Return ONLY valid JSON:
             {
@@ -76,8 +84,8 @@ class AnalyzeWasteView(APIView):
                 "quantity_estimate": "String (e.g. '3 Large Bags', '10kg Pile')",
                 "suggested_bag_size": "SMALL", "MEDIUM", "LARGE", or "XLARGE" (Track A only, otherwise null),
                 "suggested_weight_kg": number (Track B only, estimated weight in KG, otherwise null),
-                "title_suggestion": "String (e.g. 'PET Bottle Collection')",
-                "description": "String (Short assessment)",
+                "title_suggestion": "String (e.g. 'Pure Water Rubbers')",
+                "description": "String (Brief assessment including the price if Track B)",
                 "confidence": number (0.0-1.0)
             }
             """
@@ -86,16 +94,13 @@ class AnalyzeWasteView(APIView):
             response = None
             for model_name in candidate_models:
                 try:
-                    print(f"!!! DEBUG: Attempting analysis with model: {model_name}")
                     model = genai.GenerativeModel(model_name)
                     response = model.generate_content([
                         {'mime_type': mime_type, 'data': image_content},
                         prompt
                     ])
-                    print(f"!!! DEBUG: Success with {model_name}")
                     break # Success!
                 except Exception as e:
-                    print(f"!!! DEBUG: Failed with {model_name}: {e}")
                     last_error = e
                     continue # Try next model
             
@@ -132,7 +137,6 @@ class AnalyzeWasteView(APIView):
         import time
         from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings
         
-        logger.warning("!!! DEBUG: Triggering Simulation Fallback")
         time.sleep(1.5)
         
         tracks = ['A', 'B']

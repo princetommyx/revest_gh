@@ -116,3 +116,40 @@ class LoginOTP(models.Model):
 
     def __str__(self):
         return f"Login OTP for {self.user.username}"
+
+
+class IdentityVerification(models.Model):
+    class Status(models.TextChoices):
+        UNVERIFIED = 'UNVERIFIED', 'Unverified'
+        PENDING = 'PENDING', 'Pending Review'
+        VERIFIED = 'VERIFIED', 'Verified'
+        REJECTED = 'REJECTED', 'Rejected'
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='identity_verification')
+    id_front_image = models.ImageField(upload_to='kyc/id_front/')
+    id_back_image = models.ImageField(upload_to='kyc/id_back/')
+    selfie_image = models.ImageField(upload_to='kyc/selfie/')
+    
+    # Store the encrypted Ghana Card PIN
+    id_number_encrypted = models.BinaryField(blank=True, null=True)
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.UNVERIFIED, db_index=True)
+    rejection_reason = models.TextField(blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"KYC for {self.user.username} - {self.status}"
+
+
+class UserFeedback(models.Model):
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='feedbacks')
+    content = models.TextField()
+    category = models.CharField(max_length=50, default='Improvement') # Improvement, Bug, Feature Request
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_reviewed = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"Feedback from {self.user.username if self.user else 'Anonymous'} - {self.created_at}"
+

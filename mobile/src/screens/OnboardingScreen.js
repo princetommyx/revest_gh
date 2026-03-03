@@ -120,70 +120,48 @@ export default function OnboardingScreen() {
 
     if (showAuthView) {
         return (
-            <View style={styles.container}>
-                <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-                <LinearGradient
-                    colors={['#2E7D32', '#1B5E20', '#123D15']}
-                    style={StyleSheet.absoluteFill}
-                />
+            <View style={[styles.container, { backgroundColor: '#F0F7F4' }]}>
+                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
+
+                {/* Background Shapes */}
+                <View style={styles.topShape}>
+                    <LinearGradient colors={['rgba(215, 255, 235, 0.8)', 'rgba(215, 255, 235, 0)']} style={StyleSheet.absoluteFill} />
+                </View>
+                <View style={styles.bottomShape}>
+                    <LinearGradient colors={['rgba(224, 231, 255, 0.8)', 'rgba(224, 231, 255, 0)']} style={StyleSheet.absoluteFill} />
+                </View>
 
                 <SafeAreaView style={styles.authContainer}>
-                    <View style={styles.whiteCard}>
-                        <View style={styles.logoBranding}>
-                            <Image
-                                source={require('../../assets/icon.png')}
-                                style={styles.logoImageLarge}
-                            />
-                            <Text style={styles.cardTitle}>ReVesta</Text>
-                            <Text style={styles.cardSubtitle}>Recycle. Reward. Repeat.</Text>
-                        </View>
-
-                        <View style={styles.authActionArea}>
-                            <Text style={styles.mainActionHeading}>Sign Up</Text>
-                            <Text style={styles.mainActionSub}>It's easier to sign up now</Text>
-
-                            <TouchableOpacity
-                                style={styles.facebookBtn}
-                                onPress={() => console.log('Facebook login')}
-                            >
-                                <Facebook size={20} color="#fff" />
-                                <Text style={styles.facebookBtnText}>Continue with Facebook</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.emailBtn}
-                                onPress={() => finishOnboarding('Register')}
-                            >
-                                <Text style={styles.emailBtnText}>I'll use email or phone</Text>
-                            </TouchableOpacity>
-
-                            <View style={styles.socialRow}>
-                                <TouchableOpacity style={styles.socialIconBtn}>
-                                    <Chrome size={22} color="#EA4335" />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.socialIconBtn}>
-                                    <View style={{ backgroundColor: '#000', borderRadius: 12, padding: 4 }}>
-                                        <Github size={16} color="#fff" />
-                                    </View>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.socialIconBtn}>
-                                    <Mail size={22} color="#4B5563" />
-                                </TouchableOpacity>
+                    <View style={styles.authContent}>
+                        <Image
+                            source={require('../../assets/auth_illustration.png')}
+                            style={styles.heroIllustration}
+                            resizeMode="contain"
+                        />
+                        <View style={styles.welcomeTextContainer}>
+                            <Text style={styles.welcomeHeading}>Welcome !</Text>
+                            <View style={styles.brandRow}>
+                                <Text style={styles.brandTextDark}>Re</Text>
+                                <Text style={styles.brandTextGreen}>Vesta</Text>
                             </View>
                         </View>
 
-                        <TouchableOpacity
-                            style={styles.loginFooterRow}
-                            onPress={() => finishOnboarding('Login')}
-                        >
-                            <Text style={styles.loginFooterText}>Already have account? </Text>
-                            <Text style={styles.loginLink}>Login</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={styles.authActionArea}>
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                onPress={() => finishOnboarding('Register')}
+                            >
+                                <Text style={styles.primaryBtnText}>Sign up</Text>
+                            </TouchableOpacity>
 
-                    <Text style={styles.cardTagline}>
-                        JOIN THE MOVEMENT FOR A CLEANER GHANA
-                    </Text>
+                            <TouchableOpacity
+                                style={styles.secondaryBtn}
+                                onPress={() => finishOnboarding('Login')}
+                            >
+                                <Text style={styles.secondaryBtnText}>Login</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </SafeAreaView>
             </View>
         );
@@ -331,122 +309,106 @@ const styles = StyleSheet.create({
     authContainer: {
         flex: 1,
         justifyContent: 'center',
-        paddingHorizontal: 25,
+        paddingHorizontal: 30,
     },
-    whiteCard: {
+    authContent: {
+        width: '100%',
         backgroundColor: '#fff',
         borderRadius: 40,
-        padding: 40,
+        paddingTop: 30,
+        paddingBottom: 40,
+        paddingHorizontal: 20,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 15 },
-        shadowOpacity: 0.2,
-        shadowRadius: 20,
+        shadowColor: '#2E7D32',
+        shadowOffset: { width: 0, height: 20 },
+        shadowOpacity: 0.1,
+        shadowRadius: 30,
         elevation: 10,
+        marginTop: 20,
+        zIndex: 10,
     },
-    logoImageLarge: {
-        width: 100,
-        height: 100,
-        borderRadius: 30,
-        marginBottom: 15,
+    topShape: {
+        position: 'absolute',
+        top: -100,
+        left: -100,
+        width: width * 0.8,
+        height: width * 0.8,
+        borderRadius: width * 0.4,
+        overflow: 'hidden',
     },
-    cardTitle: {
+    bottomShape: {
+        position: 'absolute',
+        bottom: -150,
+        right: -100,
+        width: width,
+        height: width,
+        borderRadius: width * 0.5,
+        overflow: 'hidden',
+    },
+    heroIllustration: {
+        width: 180,
+        height: 180,
+        marginBottom: 25,
+    },
+    welcomeTextContainer: {
+        alignItems: 'center',
+        marginBottom: 35,
+    },
+    welcomeHeading: {
         fontSize: 32,
+        fontWeight: '900',
+        color: '#2E7D32',
+        marginBottom: 5,
+    },
+    brandRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    brandTextDark: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#1a1a1a',
+    },
+    brandTextGreen: {
+        fontSize: 24,
         fontWeight: 'bold',
         color: '#2E7D32',
-        letterSpacing: -1,
-    },
-    cardSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        fontWeight: '600',
-        marginTop: 2,
     },
     authActionArea: {
         width: '100%',
-        alignItems: 'center',
-        marginTop: 40,
     },
-    mainActionHeading: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    mainActionSub: {
-        fontSize: 14,
-        color: '#999',
-        marginTop: 4,
-        marginBottom: 30,
-    },
-    facebookBtn: {
+    primaryBtn: {
         width: '100%',
-        height: 60,
-        backgroundColor: '#4E6AFF',
-        borderRadius: 30,
-        flexDirection: 'row',
+        height: 58,
+        backgroundColor: '#1E3A8A', // Deep blue as in reference
+        borderRadius: 29,
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 10,
-        shadowColor: '#4E6AFF',
+        marginBottom: 15,
+        shadowColor: '#1E3A8A',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,
     },
-    facebookBtnText: {
+    primaryBtnText: {
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
     },
-    emailBtn: {
+    secondaryBtn: {
         width: '100%',
-        height: 60,
-        borderRadius: 30,
+        height: 58,
+        backgroundColor: '#fff',
+        borderRadius: 29,
         borderWidth: 1.5,
         borderColor: '#E5E7EB',
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 15,
     },
-    emailBtnText: {
-        color: '#6B7280',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    socialRow: {
-        flexDirection: 'row',
-        gap: 20,
-        marginTop: 30,
-        marginBottom: 10,
-    },
-    socialIconBtn: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    loginFooterRow: {
-        flexDirection: 'row',
-        marginTop: 30,
-    },
-    loginFooterText: {
-        color: '#999',
-        fontSize: 14,
-    },
-    loginLink: {
-        color: '#2E7D32',
-        fontSize: 14,
+    secondaryBtnText: {
+        color: '#1a1a1a',
+        fontSize: 16,
         fontWeight: 'bold',
-    },
-    cardTagline: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 10,
-        fontWeight: 'bold',
-        letterSpacing: 2,
-        textAlign: 'center',
-        marginTop: 30,
     },
 });

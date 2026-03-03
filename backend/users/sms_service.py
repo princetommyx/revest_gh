@@ -51,9 +51,11 @@ class HubtelSMSService:
             
             if response.status_code in [200, 201]:
                 logger.info(f"SMS sent successfully to {formatted_to}")
+                print(f"DEBUG: Hubtel SMS Sent to {formatted_to} successfully.")
                 return True
             else:
                 logger.error(f"Failed to send SMS to {formatted_to}: {response.status_code} - {response.text}")
+                print(f"DEBUG: Hubtel SMS FAILED for {formatted_to}. Status: {response.status_code}, Response: {response.text}")
                 return False
         except Exception as e:
             logger.error(f"Error calling Hubtel SMS API: {e}")

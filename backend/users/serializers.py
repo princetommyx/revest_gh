@@ -102,12 +102,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for viewing and editing user profile
     """
+    kyc_status = serializers.SerializerMethodField()
+    kyc_rejection_reason = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = (
             'id', 'username', 'email', 'first_name', 'last_name',
             'role', 'phone_number', 'city', 'is_verified', 'is_online',
+            'kyc_status', 'kyc_rejection_reason',
             # Role-specific fields
             'vehicle_type', 'license_plate',  # COLLECTOR
             'company_name', 'tax_id', 'national_id', 'business_certification',  # RECYCLER
@@ -231,4 +234,15 @@ class NotificationSerializer(serializers.ModelSerializer):
 
 class DeviceTokenSerializer(serializers.Serializer):
     push_token = serializers.CharField(required=True)
+
+
+from .models import UserFeedback
+
+class UserFeedbackSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    
+    class Meta:
+        model = UserFeedback
+        fields = ('id', 'user', 'username', 'content', 'category', 'is_reviewed', 'created_at')
+        read_only_fields = ('id', 'user', 'is_reviewed', 'created_at')
 

@@ -6,6 +6,16 @@ import { formatDate } from '../utils/formatters';
 import SearchBar from '../components/common/SearchBar';
 import Toast from '../components/common/Toast';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (typeof imagePath === 'string' && !imagePath.startsWith('http')) {
+        return `${API_URL}${imagePath}`;
+    }
+    return imagePath;
+};
+
 export default function OnboardingPage() {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
@@ -34,7 +44,22 @@ export default function OnboardingPage() {
             handleCloseModal();
         },
         onError: (error) => {
-            setToast({ type: 'error', message: 'Failed to create screen: ' + (error.response?.data?.message || error.message) });
+            console.error('Create error:', error);
+            let message = 'Failed to create screen';
+            if (error.response?.data) {
+                if (typeof error.response.data === 'object') {
+                    const errors = error.response.data;
+                    const errorDetails = Object.keys(errors)
+                        .map(key => `${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`)
+                        .join(' | ');
+                    message += `: ${errorDetails}`;
+                } else if (error.response.data.message) {
+                    message += `: ${error.response.data.message}`;
+                }
+            } else {
+                message += `: ${error.message}`;
+            }
+            setToast({ type: 'error', message });
         }
     });
 
@@ -46,7 +71,22 @@ export default function OnboardingPage() {
             handleCloseModal();
         },
         onError: (error) => {
-            setToast({ type: 'error', message: 'Failed to update screen: ' + (error.response?.data?.message || error.message) });
+            console.error('Update error:', error);
+            let message = 'Failed to update screen';
+            if (error.response?.data) {
+                if (typeof error.response.data === 'object') {
+                    const errors = error.response.data;
+                    const errorDetails = Object.keys(errors)
+                        .map(key => `${key}: ${Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key]}`)
+                        .join(' | ');
+                    message += `: ${errorDetails}`;
+                } else if (error.response.data.message) {
+                    message += `: ${error.response.data.message}`;
+                }
+            } else {
+                message += `: ${error.message}`;
+            }
+            setToast({ type: 'error', message });
         }
     });
 
@@ -182,10 +222,8 @@ export default function OnboardingPage() {
                     filteredScreens.map((screen) => (
                         <div key={screen.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow relative">
                             <div className="h-48 bg-gray-50 relative overflow-hidden">
-                                {screen.image ? (
-                                    <img src={screen.image} alt={screen.title} className="w-full h-full object-cover" />
-                                ) : screen.image_url ? (
-                                    <img src={screen.image_url} alt={screen.title} className="w-full h-full object-cover" />
+                                {(screen.image || screen.image_url) ? (
+                                    <img src={getImageUrl(screen.image || screen.image_url)} alt={screen.title} className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center">
                                         <ImageIcon className="w-12 h-12 text-gray-200" />
@@ -221,14 +259,14 @@ export default function OnboardingPage() {
 
             {isModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100">
-                        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
+                        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 shrink-0">
                             <h2 className="text-xl font-bold text-gray-900">{editingScreen ? 'Edit Screen' : 'Add New Screen'}</h2>
                             <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600 transition-colors">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
-                        <form onSubmit={handleSubmit} className="p-8 space-y-5">
+                        <form onSubmit={handleSubmit} className="p-8 space-y-5 overflow-y-auto">
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">Title</label>
                                 <input
@@ -265,7 +303,7 @@ export default function OnboardingPage() {
                                     {(formData.image || (editingScreen && (editingScreen.image || editingScreen.image_url))) && (
                                         <div className="relative w-full h-40 rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
                                             <img
-                                                src={formData.image ? URL.createObjectURL(formData.image) : (editingScreen.image || editingScreen.image_url)}
+                                                src={formData.image ? URL.createObjectURL(formData.image) : getImageUrl(editingScreen.image || editingScreen.image_url)}
                                                 alt="Preview"
                                                 className="w-full h-full object-cover"
                                             />

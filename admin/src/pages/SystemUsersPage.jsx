@@ -5,12 +5,14 @@ import { Loader2, Shield, UserPlus, Mail, Calendar } from 'lucide-react';
 import { formatDate, getRoleBadgeColor } from '../utils/formatters';
 import Pagination from '../components/common/Pagination';
 import SearchBar from '../components/common/SearchBar';
+import AddAdminModal from '../components/users/AddAdminModal';
 
 const USERS_PER_PAGE = 10;
 
 export default function SystemUsersPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Fetch only admin users (role=ADMIN)
     const { data, isLoading, error } = useQuery({
@@ -70,7 +72,10 @@ export default function SystemUsersPage() {
                         <Shield className="w-6 h-6" />
                         <span className="text-sm font-medium">{data?.count || admins.length} Admins</span>
                     </div>
-                    <button className="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-600 hover:to-indigo-700 transition-all hover-scale shadow-lg">
+                    <button
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-600 hover:to-indigo-700 transition-all hover-scale shadow-lg"
+                    >
                         <UserPlus className="w-5 h-5 mr-2" />
                         Add Admin
                     </button>
@@ -227,6 +232,11 @@ export default function SystemUsersPage() {
                     <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
                 </div>
             )}
+
+            <AddAdminModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+            />
         </div>
     );
 }

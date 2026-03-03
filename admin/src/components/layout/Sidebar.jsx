@@ -14,6 +14,7 @@ const navItems = [
     { to: '/pickups', icon: Truck, label: 'Pickups' },
     { to: '/wallet', icon: Wallet, label: 'Transactions' },
     { to: '/support', icon: MessageSquare, label: 'Support Inbox' },
+    { to: '/kyc-review', icon: Shield, label: 'KYC Verification' },
     { to: '/promos', icon: Megaphone, label: 'Promo Cards' },
     { to: '/onboarding', icon: Recycle, label: 'Onboarding' },
     { to: '/settings', icon: Settings, label: 'Settings' },

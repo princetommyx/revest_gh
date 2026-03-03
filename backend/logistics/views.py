@@ -36,6 +36,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     queryset = PickupRequest.objects.all().order_by('-created_at')
     serializer_class = PickupRequestListSerializer
     permission_classes = [permissions.IsAuthenticated]
+    from rest_framework import parsers
+    parser_classes = (MultiPartParser, FormParser, parsers.JSONParser)
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'material_type']
     ordering_fields = ['created_at', 'status']
@@ -44,11 +46,54 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if user.role == 'COLLECTOR':
             # Collectors see:
-            # 1. PENDING jobs nearby (to accept)
-            # 2. Their own active jobs (ACCEPTED, ARRIVED) - like Bolt active ride
-            return PickupRequest.objects.select_related('provider', 'collector').filter(
-                models.Q(status='PENDING') | models.Q(collector=user, status__in=['ACCEPTED', 'ARRIVED'])
-            ).order_by('-created_at')
+            # 1. Nearby PENDING jobs
+            # 2. Their own active jobs (ACCEPTED, ARRIVED)
+            
+            queryset = PickupRequest.objects.select_related('provider', 'collector')
+            
+            # Active jobs for this collector
+            active_q = models.Q(collector=user, status__in=['ACCEPTED', 'ARRIVED'])
+            
+            # Pending jobs nearby
+            two_hours_ago = timezone.now() - timedelta(hours=2)
+            pending_q = models.Q(status='PENDING', created_at__gte=two_hours_ago)
+            
+            lat = self.request.query_params.get('lat')
+            lon = self.request.query_params.get('lon')
+            
+            if lat and lon:
+                try:
+                    lat_f = float(lat)
+                    lon_f = float(lon)
+                    
+                    # Initial rough bounding box filter (+/- ~0.2 degrees is ~22km)
+                    queryset = queryset.filter(
+                        latitude__gte=lat_f - 0.2,
+                        latitude__lte=lat_f + 0.2,
+                        longitude__gte=lon_f - 0.2,
+                        longitude__lte=lon_f + 0.2
+                    )
+                    
+                    # Strict Haversine filter (Python side since we are dealing with a small subset)
+                    # For a truly scalable solution, GeoDjango/PostGIS would be used.
+                    all_candidates = queryset.filter(active_q | pending_q)
+                    nearby_ids = []
+                    for job in all_candidates:
+                        if job.status != 'PENDING' or job.collector == user:
+                            nearby_ids.append(job.id)
+                            continue
+                            
+                        dist = haversine(lat_f, lon_f, float(job.latitude), float(job.longitude))
+                        if dist <= 20: # 20km radius
+                            nearby_ids.append(job.id)
+                    
+                    return PickupRequest.objects.filter(id__in=nearby_ids).order_by('-created_at')
+                    
+                except (ValueError, TypeError):
+                    pass
+            
+            return queryset.filter(active_q | pending_q).order_by('-created_at')
+            
         return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
 
     def get_serializer_class(self):
@@ -67,23 +112,35 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         delivery_fee = Decimal(str(serializer.validated_data.get('delivery_fee', 0) or 0))
         payment_method = serializer.validated_data.get('payment_method', 'CASH')
 
+        RECYCLER_COMMISSION = Decimal('5.00')
         total_amount = waste_price + delivery_fee
+        
+        provider_is_recycler = (provider.role == 'RECYCLER')
+        if provider_is_recycler and track_type in ['B', 'C']:
+            total_amount += RECYCLER_COMMISSION
 
         # 1. Save the request first
         request = serializer.save(provider=provider, actual_price=total_amount)
 
         # 2. Handle Escrow/Payment
-        if payment_method == 'DIGITAL' and total_amount > 0:
+        # ONLY lock escrow if:
+        # A) It's Track A (Disposer always pays)
+        # B) The provider is a RECYCLER (Track C or helping Track B)
+        # We skip escrow for SELLER/DISPOSER on Track B because they shouldn't pay delivery upfront.
+        
+        provider_is_recycler = (provider.role == 'RECYCLER')
+        should_lock_escrow = (track_type == 'A') or (track_type == 'B' and provider_is_recycler) or (track_type == 'C')
+
+        if payment_method == 'DIGITAL' and total_amount > 0 and should_lock_escrow:
             try:
-                # Track A: Disposer pays (Provider)
-                # Track B: For now, Disposer pays for the listing, but this might be recycler later.
-                # Standardizing: Whoever creates the request with DIGITAL payment locks the funds.
                 WalletService.lock_escrow(request, provider, total_amount, track_type=track_type)
             except ValueError as e:
-                # If escrow fails, we should probably delete the request or mark as FAILED
                 request.status = 'CANCELLED'
                 request.save()
                 raise serializers.ValidationError({"detail": str(e), "code": "escrow_failed"})
+        elif payment_method == 'DIGITAL' and track_type == 'B' and not provider_is_recycler:
+            # We don't lock escrow, but we mark it as expecting system or recycler payment later
+            pass
 
         # Logic to find nearby collectors
         self.notify_nearby_collectors(request)
@@ -100,6 +157,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         if not is_eligible:
             return Response({'error': error_msg}, status=403)
         
+        # Check KYC Verification
+        if request.user.role in ['COLLECTOR', 'RECYCLER']:
+            if not hasattr(request.user, 'identity_verification') or request.user.identity_verification.status != 'VERIFIED':
+                return Response({'error': 'You must complete Identity Verification (KYC) before accepting jobs.'}, status=403)
+
         pickup_request.status = 'ACCEPTED'
         pickup_request.collector = request.user
         pickup_request.save()
@@ -118,6 +180,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
         pickup_request.status = 'ARRIVED'
         pickup_request.save()
+        
+        # Early Payout for Sellers (Track B & C)
+        if pickup_request.track_type in ['B', 'C']:
+            from wallet.services import WalletService
+            WalletService.process_disposer_early_payout(pickup_request)
         
         # Track A: Inform provider that collector is here
         # Track B: Inform provider and wait for weight verification
@@ -189,6 +256,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         try:
             if pickup_request.track_type == 'A':
                 WalletService.process_track_a_completion(pickup_request)
+            elif pickup_request.track_type == 'C':
+                WalletService.process_track_c_completion(pickup_request)
             else:
                 WalletService.process_track_b_completion(pickup_request)
         except Exception as e:

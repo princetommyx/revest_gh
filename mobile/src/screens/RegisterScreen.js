@@ -83,7 +83,7 @@ export default function RegisterScreen() {
             Toast.show({
                 type: 'success',
                 text1: 'Code Sent',
-                text2: 'Check the backend console for the OTP code!'
+                text2: 'verification code sent through sms to your number'
             });
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Verification Failed', text2: error.message });
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F0F7F4',
     },
     headerBackground: {
-        height: 240,
+        height: 280,
         backgroundColor: '#2E7D32',
         position: 'relative',
         overflow: 'hidden',

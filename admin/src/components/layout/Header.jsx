@@ -1,8 +1,11 @@
 import { Search, Bell, Mail, HelpCircle, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import NotificationsDropdown from '../notifications/NotificationsDropdown';
 
 export default function Header() {
     const navigate = useNavigate();
+    const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
     const handleProfileClick = () => {
         navigate('/profile');
@@ -27,10 +30,19 @@ export default function Header() {
                     {/* Action Icons */}
                     <div className="flex items-center space-x-6 text-white/80">
                         <button className="hover:text-white transition-colors"><Mail className="w-5 h-5" /></button>
-                        <button className="hover:text-white transition-colors relative">
-                            <Bell className="w-5 h-5" />
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-blue-700"></span>
-                        </button>
+                        <div className="relative">
+                            <button
+                                className="hover:text-white transition-colors relative"
+                                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                            >
+                                <Bell className="w-5 h-5" />
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-blue-700"></span>
+                            </button>
+                            <NotificationsDropdown
+                                isOpen={isNotificationsOpen}
+                                onClose={() => setIsNotificationsOpen(false)}
+                            />
+                        </div>
                         <button className="hover:text-white transition-colors"><HelpCircle className="w-5 h-5" /></button>
                     </div>
 

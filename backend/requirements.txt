@@ -4,6 +4,7 @@ django-cors-headers
 channels[daphne]
 psycopg2-binary
 dj-database-url
+mysqlclient>=2.2.0
 whitenoise
 python-dotenv
 redis
@@ -19,3 +20,4 @@ requests
 gunicorn
 exponent_server_sdk
 google-generativeai
+cryptography==46.0.3

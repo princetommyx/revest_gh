@@ -6,7 +6,7 @@ import * as Device from 'expo-device';
 
 // Detect environment based on release channel or simple manual switch
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_IP = '192.168.100.7';
+const LOCAL_IP = '10.110.103.79';
 const EMULATOR_IP = '10.0.2.2';
 
 const getLocalURL = () => {
@@ -36,12 +36,17 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
     async (config) => {
         try {
+            // Let Axios handle the Content-Type automatically for FormData so it includes the boundary
+            if (config.data instanceof FormData) {
+                delete config.headers['Content-Type'];
+            }
+
             const token = await authStorage.getAccessToken();
             if (token) {
                 config.headers.Authorization = `Bearer ${token}`;
             }
             const fullUrl = `${config.baseURL}${config.url}`;
-            console.log(`[API] Request: ${config.method.toUpperCase()} ${fullUrl}`, config.headers['Content-Type']);
+            console.log(`[API] Request: ${config.method?.toUpperCase()} ${fullUrl}`, config.headers['Content-Type']);
         } catch (error) {
             console.error('[API] Error in request interceptor:', error);
         }

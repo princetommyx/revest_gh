@@ -14,6 +14,22 @@ class UserSummarySerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'role', 'role_display', 'is_online', 'is_verified', 'date_joined', 'is_staff', 'is_superuser']
 
 
+class AdminUserCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating new system users (Admins) from the dashboard."""
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'first_name', 'last_name', 'role', 'phone_number']
+        extra_kwargs = {'password': {'write_only': True}}
+        
+    def create(self, validated_data):
+        user = User.objects.create_user(**validated_data)
+        if user.role == 'ADMIN':
+            user.is_staff = True
+            user.is_superuser = True
+            user.save()
+        return user
+
+
 class ActivityLogSerializer(serializers.ModelSerializer):
     user_display = serializers.SerializerMethodField()
     action_display = serializers.CharField(source='get_action_display', read_only=True)

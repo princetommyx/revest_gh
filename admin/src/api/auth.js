@@ -3,7 +3,7 @@ import apiClient from './client';
 export const authApi = {
     // Login admin user
     login: async (credentials) => {
-        const response = await apiClient.post('/auth/login/', credentials);
+        const response = await apiClient.post('auth/login/', credentials);
         if (response.data.access) {
             localStorage.setItem('admin_token', response.data.access);
         }
@@ -12,7 +12,7 @@ export const authApi = {
 
     // Verify OTP for login
     verifyOTP: async (userId, otp) => {
-        const response = await apiClient.post('/auth/login/verify/', { user_id: userId, otp });
+        const response = await apiClient.post('auth/login/verify/', { user_id: userId, otp });
         if (response.data.access) {
             localStorage.setItem('admin_token', response.data.access);
         }
@@ -31,7 +31,7 @@ export const authApi = {
 
     // Get current user info
     getCurrentUser: async () => {
-        const response = await apiClient.get('/users/me/');
+        const response = await apiClient.get('users/me/');
         return response.data;
     },
 };

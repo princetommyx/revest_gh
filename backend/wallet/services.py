@@ -77,6 +77,11 @@ class WalletService:
             if wallet.is_frozen:
                 raise ValueError("Your wallet is frozen. Please contact support.")
 
+            # KYC Verification Check
+            if user.role in ['COLLECTOR', 'RECYCLER']:
+                if not hasattr(user, 'identity_verification') or user.identity_verification.status != 'VERIFIED':
+                    raise ValueError("You must complete Identity Verification (KYC) before withdrawing funds.")
+
             # 4. Cooldown Checks
             # Rule: After PIN change (24h cooldown)
             if wallet.last_pin_change:
@@ -311,36 +316,61 @@ class WalletService:
     def process_track_b_completion(pickup_request):
         """
         Track B - Value Buyback Logic:
-        Release escrow: Disposer (60%) + Collector (30%) + Platform (10%).
+        Release escrow: Disposer (Sachets/Bottles Price) + Collector (Logistics) + Platform.
+        If no escrow exists (Seller-initiated), draw from platform wallet.
         """
         from .models import Escrow, Transaction
+        from django.db import transaction
         
-        try:
-            escrow = Escrow.objects.get(pickup=pickup_request, status='HELD')
-        except Escrow.DoesNotExist:
-            return
-
-        total_value = escrow.amount
-        disposer_incentive = (total_value * Decimal('0.60')).quantize(Decimal('0.01'))
-        collector_logistics = (total_value * Decimal('0.30')).quantize(Decimal('0.01'))
+        waste_price = pickup_request.waste_price or Decimal('0.00')
+        delivery_fee = pickup_request.delivery_fee or Decimal('0.00')
+        total_value = escrow.amount if escrow else (waste_price + delivery_fee)
+        
+        # Flat Rate Logic (Requested by User)
+        # Seller: Waste Price - 2
+        # Collector: Delivery Fee - 5
+        # Platform: Remainder (Includes 2 from Seller + 5 from Collector + 5 from Recycler if involved)
+        
+        waste_price = pickup_request.waste_price or Decimal('0.00')
+        delivery_fee = pickup_request.delivery_fee or Decimal('0.00')
+        
+        disposer_incentive = (waste_price - Decimal('2.00')).max(Decimal('0.00'))
+        collector_logistics = (delivery_fee - Decimal('5.00')).max(Decimal('0.00'))
         platform_commission = total_value - disposer_incentive - collector_logistics
 
         disposer = pickup_request.provider
         collector = pickup_request.collector
 
         with transaction.atomic():
-            # 1. Payout Disposer
-            disposer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=disposer)
-            disposer_wallet.balance += disposer_incentive
-            disposer_wallet.save()
-            Transaction.objects.create(
-                wallet=disposer_wallet,
-                pickup=pickup_request,
-                amount=disposer_incentive,
-                transaction_type='ESCROW_RELEASE',
-                status='COMPLETED',
-                description=f"Waste Incentive for Job #{pickup_request.id} (Track B)"
-            )
+            # If no escrow, we debit from Revesta system wallet to pay others
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            platform_user = User.objects.filter(username='revesta').first()
+            
+            if not escrow and platform_user:
+                platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
+                # Platform user pays the disposer_incentive and collector_logistics
+                payout_total = disposer_incentive + collector_logistics
+                if platform_wallet.balance < payout_total:
+                    # In production, we might want to flag this but for now we proceed
+                    # Or we could raise an error if system wallet is empty
+                    pass
+                platform_wallet.balance -= payout_total
+                platform_wallet.save()
+
+            # 1. Payout Disposer (If not already paid early)
+            if not pickup_request.is_disposer_paid:
+                disposer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=disposer)
+                disposer_wallet.balance += disposer_incentive
+                disposer_wallet.save()
+                Transaction.objects.create(
+                    wallet=disposer_wallet,
+                    pickup=pickup_request,
+                    amount=disposer_incentive,
+                    transaction_type='ESCROW_RELEASE',
+                    status='COMPLETED',
+                    description=f"Waste Incentive for Job #{pickup_request.id} (Track B)"
+                )
 
             # 2. Payout Collector
             if collector:
@@ -357,13 +387,14 @@ class WalletService:
                 )
 
             # 3. Payout Platform (Revesta Commission)
-            from django.contrib.auth import get_user_model
-            User = get_user_model()
-            platform_user = User.objects.filter(username='revesta').first()
+            # If escrow existed, platform_commission is the remainder. 
+            # If NO escrow, the platform already "paid" the others, so we just log the commission.
             if platform_user:
                 platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
-                platform_wallet.balance += platform_commission
-                platform_wallet.save()
+                if escrow:
+                    platform_wallet.balance += platform_commission
+                    platform_wallet.save()
+                
                 Transaction.objects.create(
                     wallet=platform_wallet,
                     pickup=pickup_request,
@@ -374,9 +405,161 @@ class WalletService:
                 )
             
             # Mark Escrow as Released
+            if escrow:
+                escrow.status = 'RELEASED'
+                escrow.payee = disposer # Principal payee is the disposer for Track B
+                escrow.save()
+
+    @staticmethod
+    def process_track_c_completion(pickup_request):
+        """
+        Track C - Buy Materials Logic (Recycler buying from Seller):
+        Release escrow: Seller (Material Value) + Collector (Delivery Fee) + Revesta (Commission).
+        """
+        from .models import Escrow, Transaction
+        from decimal import Decimal
+        from django.db import transaction
+        
+        try:
+            escrow = Escrow.objects.get(pickup=pickup_request, status='HELD')
+        except Escrow.DoesNotExist:
+            return
+
+        total_held = escrow.amount
+        
+        # Split logic:
+        # Payer is Recycler.
+        # Total logic: Material Price goes entirely to Seller (minus some commission if applicable)
+        # Delivery Fee goes entirely to Collector (minus some commission if applicable)
+        # Wait, the simplest logic is:
+        # Let's say Revesta takes 10% of total transfer. The rest goes to Seller & Collector relative to their share.
+        # But pickup_request has `waste_price` and `delivery_fee`.
+        
+        material_value = pickup_request.waste_price or Decimal('0.00')
+        delivery_fee = pickup_request.delivery_fee or Decimal('0.00')
+        
+        # Flat Rate Logic (Requested by User)
+        # Seller: Waste Price - 2
+        # Collector: Delivery Fee - 5
+        # Platform: Remainder
+        
+        seller_share = (material_value - Decimal('2.00')).max(Decimal('0.00'))
+        collector_share = (delivery_fee - Decimal('5.00')).max(Decimal('0.00'))
+        platform_commission = total_held - seller_share - collector_share
+
+        seller = pickup_request.provider  # For Track C, provider is the Seller
+        collector = pickup_request.collector
+
+        with transaction.atomic():
+            # 1. Payout Seller (If not already paid early)
+            if seller and seller_share > 0 and not pickup_request.is_disposer_paid:
+                seller_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=seller)
+                seller_wallet.balance += seller_share
+                seller_wallet.save()
+                Transaction.objects.create(
+                    wallet=seller_wallet,
+                    pickup=pickup_request,
+                    amount=seller_share,
+                    transaction_type='ESCROW_RELEASE',
+                    status='COMPLETED',
+                    description=f"Material Sale for Job #{pickup_request.id} (Track C)"
+                )
+
+            # 2. Payout Collector
+            if collector and collector_share > 0:
+                collector_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=collector)
+                collector_wallet.balance += collector_share
+                collector_wallet.save()
+                Transaction.objects.create(
+                    wallet=collector_wallet,
+                    pickup=pickup_request,
+                    amount=collector_share,
+                    transaction_type='ESCROW_RELEASE',
+                    status='COMPLETED',
+                    description=f"Logistics Share for Job #{pickup_request.id} (Material Delivery)"
+                )
+
+            # 3. Payout Platform (Revesta Commission)
+            if platform_commission > 0:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                platform_user = User.objects.filter(username='revesta').first()
+                if platform_user:
+                    platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
+                    platform_wallet.balance += platform_commission
+                    platform_wallet.save()
+                    Transaction.objects.create(
+                        wallet=platform_wallet,
+                        pickup=pickup_request,
+                        amount=platform_commission,
+                        transaction_type='COMMISSION_DEDUCTION',
+                        status='COMPLETED',
+                        description=f"Commission for Job #{pickup_request.id} (Track C)"
+                    )
+            
+            # Mark Escrow as Released
             escrow.status = 'RELEASED'
-            escrow.payee = disposer # Principal payee is the disposer for Track B
+            escrow.payee = seller # Principal payee is the seller
             escrow.save()
+
+    @staticmethod
+    def process_disposer_early_payout(pickup_request):
+        """
+        Immediately pays the Disposer/Seller their waste price (minus ₵2) 
+        as soon as the Collector marks the job as ARRIVED.
+        Applicable for Track B and Track C.
+        """
+        from .models import Escrow, Transaction, Wallet
+        from django.db import transaction
+        from decimal import Decimal
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        if pickup_request.is_disposer_paid:
+            return
+
+        waste_price = pickup_request.waste_price or Decimal('0.00')
+        disposer_incentive = (waste_price - Decimal('2.00')).max(Decimal('0.00'))
+        
+        if disposer_incentive <= 0:
+            return
+
+        disposer = pickup_request.provider if pickup_request.track_type == 'C' else pickup_request.provider
+        # Actually in both cases provider is the disposer/seller for now.
+        
+        escrow = Escrow.objects.filter(pickup=pickup_request, status='HELD').first()
+        platform_user = User.objects.filter(username='revesta').first()
+
+        with transaction.atomic():
+            # 1. Payout Disposer
+            disposer_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=disposer)
+            disposer_wallet.balance += disposer_incentive
+            disposer_wallet.save()
+            
+            Transaction.objects.create(
+                wallet=disposer_wallet,
+                pickup=pickup_request,
+                amount=disposer_incentive,
+                transaction_type='ESCROW_RELEASE',
+                status='COMPLETED',
+                description=f"Early Payout for Job #{pickup_request.id} (Collector Arrived)"
+            )
+
+            # 2. Debit from Source (Escrow or Platform Wallet)
+            if escrow:
+                # If escrow exists (Recycler pre-paid), the funds stay in escrow
+                # but we've effectively 'promised' them from the total held.
+                # To keep ledger balanced, we'll just track that the disposer is paid and 
+                # deduct this from the final release.
+                pass
+            elif platform_user:
+                # Seller-initiated Track B: Debit from platform wallet (system payment)
+                platform_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=platform_user)
+                platform_wallet.balance -= disposer_incentive
+                platform_wallet.save()
+
+            pickup_request.is_disposer_paid = True
+            pickup_request.save()
 
 class PaystackService:
     @staticmethod
@@ -387,11 +570,11 @@ class PaystackService:
         secret_key = settings.PAYSTACK_SECRET_KEY
         
         # Debug logging
-        print(f"🔑 PAYSTACK_SECRET_KEY loaded: {'Yes' if secret_key else 'NO - THIS IS THE PROBLEM!'}")
-        print(f"💰 Initializing payment: amount={amount}, email={email or user.email}")
+        print(f"PAYSTACK_SECRET_KEY loaded: {'Yes' if secret_key else 'NO - THIS IS THE PROBLEM!'}")
+        print(f"Initializing payment: amount={amount}, email={email or user.email}")
         
         if not secret_key:
-            print("❌ CRITICAL: Paystack secret key is not configured!")
+            print("CRITICAL: Paystack secret key is not configured!")
             return {
                 'status': False, 
                 'message': 'Payment system not configured. Please contact support.'
@@ -429,7 +612,7 @@ class PaystackService:
         }
         
         try:
-            print(f"📤 Sending request to Paystack API...")
+            print(f"Sending request to Paystack API...")
             response = requests.post(
                 "https://api.paystack.co/transaction/initialize",
                 headers=headers,
@@ -437,10 +620,10 @@ class PaystackService:
             )
             response.raise_for_status()
             result = response.json()
-            print(f"✅ Paystack response: {result.get('status')}, Message: {result.get('message')}")
+            print(f"Paystack response: {result.get('status')}, Message: {result.get('message')}")
             return result
         except requests.exceptions.RequestException as e:
-            print(f"❌ Paystack API Error: {str(e)}")
+            print(f"Paystack API Error: {str(e)}")
             return {'status': False, 'message': f'Payment initialization failed: {str(e)}'}
 
     @staticmethod

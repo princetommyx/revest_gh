@@ -15,6 +15,15 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 
+# PyMySQL compatibility patch for XAMPP/MariaDB 10.4
+# Allows Django 6 to work with MariaDB < 10.6 by spoofing the version string
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+    pymysql.version_info = (10, 6, 0, "final", 0)
+except ImportError:
+    pass
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -29,16 +38,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RENDER' not in os.environ
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*'] # Robust for migration, can restrict later
-if 'ALLOWED_HOSTS' in os.environ:
-    ALLOWED_HOSTS.extend(os.environ.get('ALLOWED_HOSTS').split(','))
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+if '*' in ALLOWED_HOSTS and not DEBUG:
+    # If in production and still wildcard, restrict it if possible or warn
+    print("WARNING: ALLOWED_HOSTS is '*' in production. Please set this in environment variables.")
 
-# Trust Railway's own domains automatically
+# Trust Railway/Render domains automatically
 RAILWAY_STATIC_URL = os.environ.get('RAILWAY_STATIC_URL')
+if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+    ALLOWED_HOSTS.append(os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
 if RAILWAY_STATIC_URL:
     ALLOWED_HOSTS.append(RAILWAY_STATIC_URL.replace('https://', '').replace('http://', ''))
+
+# Production Security Headers
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    X_FRAME_OPTIONS = 'DENY'
+
+# Encryption Key for sensitive data (e.g. KYC ID numbers)
+FERNET_KEY = os.environ.get('FERNET_KEY', b'osLlL5AzQozSnG3c6TLOptUE1lAr_3kO3nyiOO88b38=')
 
 
 # Application definition
@@ -103,12 +132,24 @@ ASGI_APPLICATION = 'revesta_backend.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600
-    )
-}
+_db_config = dj_database_url.config(
+    default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+    conn_max_age=600,
+    conn_health_checks=True,
+)
+
+# Add MySQL-specific production options when using MySQL
+if _db_config.get('ENGINE') == 'django.db.backends.mysql':
+    _db_config.setdefault('OPTIONS', {})
+    _db_config['OPTIONS'].update({
+        'charset': 'utf8mb4',
+        'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        'connect_timeout': 10,
+    })
+    # Use our custom backend that skips the MariaDB version check (XAMPP ships 10.4)
+    _db_config['ENGINE'] = 'revesta_backend.mysql_compat'
+
+DATABASES = {'default': _db_config}
 
 
 # Password validation
@@ -161,11 +202,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
-# CORS configuration - Enabled for all origins for robustness in production/dev
+# CORS configuration
 CORS_ALLOW_ALL_ORIGINS = True
+if not CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://localhost:5174",
+    ]
+    if os.environ.get('CORS_ALLOWED_ORIGINS'):
+        CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+else:
+    # Warning for production
+    if not DEBUG:
+        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
+
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000"]
 if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
 if RAILWAY_STATIC_URL:
@@ -187,11 +242,11 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    # 'DEFAULT_THROTTLE_CLASSES': [
-    #     'rest_framework.throttling.AnonRateThrottle',
-    #     'rest_framework.throttling.UserRateThrottle',
-    #     'rest_framework.throttling.ScopedRateThrottle',
-    # ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
     'DEFAULT_THROTTLE_RATES': {
         'anon': '20/minute',  # Limit for unauthenticated users
         'user': '10000/day',   # Increased for polling admin dashboard

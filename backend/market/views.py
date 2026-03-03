@@ -24,9 +24,40 @@ from django.views.decorators.vary import vary_on_cookie
     partial_update=extend_schema(summary="Partially update listing", description="Partially update a listing. Only the owner can update."),
     destroy=extend_schema(summary="Delete listing", description="Delete a listing. Only the owner or admin can delete."),
 )
-@method_decorator(cache_page(60 * 5), name='list')
+@method_decorator(cache_page(1), name='list')
 class ListingViewSet(viewsets.ModelViewSet):
-    queryset = Listing.objects.all().select_related('seller').order_by('-created_at')
+    def get_queryset(self):
+        queryset = Listing.objects.all().select_related('seller')
+        
+        lat = self.request.query_params.get('lat')
+        lon = self.request.query_params.get('lon')
+        
+        if lat and lon:
+            try:
+                lat_f = float(lat)
+                lon_f = float(lon)
+                
+                # Bounding box filter (~22km)
+                queryset = queryset.filter(
+                    latitude__gte=lat_f - 0.2,
+                    latitude__lte=lat_f + 0.2,
+                    longitude__gte=lon_f - 0.2,
+                    longitude__lte=lon_f + 0.2
+                )
+                
+                # Precise filter
+                from logistics.utils import haversine
+                nearby_ids = []
+                for listing in queryset:
+                    if listing.latitude is not None and listing.longitude is not None:
+                        dist = haversine(lat_f, lon_f, float(listing.latitude), float(listing.longitude))
+                        if dist <= 20: # 20km
+                            nearby_ids.append(listing.id)
+                return Listing.objects.filter(id__in=nearby_ids).order_by('-created_at')
+            except (ValueError, TypeError):
+                pass
+                
+        return queryset.order_by('-created_at')
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     
@@ -57,9 +88,6 @@ class ListingViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Auto-set seller to current user"""
-        print(f"DEBUG: Creating listing. User: {self.request.user}")
-        print(f"DEBUG: Data: {self.request.data}")
-        print(f"DEBUG: Files: {self.request.FILES}")
         serializer.save(seller=self.request.user)
     
     @extend_schema(

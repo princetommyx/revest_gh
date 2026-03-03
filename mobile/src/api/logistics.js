@@ -56,12 +56,7 @@ export const logisticsApi = {
     },
 
     verifyWeight: async (id, formData) => {
-        const response = await apiClient.post(`logistics/pickups/${id}/verify_weight/`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            transformRequest: (data) => data,
-        });
+        const response = await apiClient.post(`logistics/pickups/${id}/verify_weight/`, formData);
         return response.data;
     }
 };

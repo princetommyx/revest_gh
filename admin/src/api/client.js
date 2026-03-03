@@ -4,9 +4,6 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const apiClient = axios.create({
     baseURL: `${API_URL}/api/v1`,
-    headers: {
-        'Content-Type': 'application/json',
-    },
 });
 
 // Request interceptor to add auth token
@@ -25,10 +22,15 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => response,
     (error) => {
+        const originalRequest = error.config;
+
         if (error.response?.status === 401) {
-            // Token expired or invalid
-            localStorage.removeItem('admin_token');
-            window.location.href = '/login';
+            // Only redirect to login if this wasn't an auth/login request
+            if (originalRequest && !originalRequest.url.includes('/auth/login/')) {
+                // Token expired or invalid
+                localStorage.removeItem('admin_token');
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
