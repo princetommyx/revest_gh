@@ -160,7 +160,7 @@ def send_otp_sms(phone_number, otp):
     """
     Send OTP verification SMS.
     """
-    content = f"Your Revesta verification code is: {otp}. Valid for 10 minutes."
+    content = f"Your Revesta verification code is: {otp}. Valid for 2 minutes."
     send_sms_async(phone_number, content)
 
 def send_login_sms(phone_number, username):

@@ -6,7 +6,7 @@ import * as Device from 'expo-device';
 
 // Detect environment based on release channel or simple manual switch
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_IP = '10.110.103.79';
+const LOCAL_IP = '192.168.100.11';
 const EMULATOR_IP = '10.0.2.2';
 
 const getLocalURL = () => {

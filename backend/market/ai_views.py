@@ -39,9 +39,9 @@ class AnalyzeWasteView(APIView):
             # 2. 2.5 Pro (Higher accuracy if Flash fails)
             # 3. 2.0 Flash (Legacy fallback)
             candidate_models = [
-                'gemini-2.5-flash',
-                'gemini-2.5-pro',
-                'gemini-2.0-flash-001'
+                'gemini-flash-latest',
+                'gemini-2.0-flash',
+                'gemini-1.5-flash'
             ]
             
             active_model = None
@@ -201,11 +201,12 @@ class SupportAIChatView(APIView):
             Help users with basic queries concisely. Detect if the user needs human support.
             If they need a human, start your response with '[HANDOFF_TRIGGER]'.
             Speak like a helpful, modern Ghanaian assistant.
+            Do not use any markdown formatting like asterisks (**) or bold text.
             """
             
             # Using 2.5-flash as it's the confirmed functional model with available quota
             model = genai.GenerativeModel(
-                model_name='models/gemini-2.5-flash',
+                model_name='gemini-flash-latest',
                 system_instruction=chat_context
             )
             

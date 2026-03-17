@@ -262,7 +262,7 @@ class PasswordResetRequestView(views.APIView):
         if user:
             # Generate OTP
             otp_code = str(random.randint(100000, 999999))
-            expires_at = timezone.now() + timedelta(minutes=15)
+            expires_at = timezone.now() + timedelta(minutes=2)
             
             # Save OTP
             from .models import PasswordResetOTP
@@ -465,7 +465,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # But per user request: "every time they tap on login"
         
         otp_code = str(random.randint(100000, 999999))
-        expires_at = timezone.now() + timedelta(minutes=10)
+        expires_at = timezone.now() + timedelta(minutes=2)
         
         # Save OTP to DB
         from .models import LoginOTP
@@ -792,7 +792,7 @@ class SendOTPView(views.APIView):
         
         # Internal OTP Generation (More reliable than Managed Verification for many accounts)
         otp_code = str(random.randint(100000, 999999))
-        expires_at = timezone.now() + timedelta(minutes=10)
+        expires_at = timezone.now() + timedelta(minutes=2)
         
         # Save or update verification in our DB
         from .models import PhoneVerification

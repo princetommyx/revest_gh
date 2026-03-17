@@ -45,7 +45,7 @@ export default function SupportChatScreen() {
 
             const aiMsg = {
                 id: Date.now().toString(),
-                text: reply,
+                text: reply.replace(/\*/g, ''),
                 sender: 'ai',
                 timestamp: new Date().toISOString()
             };
@@ -196,7 +196,7 @@ export default function SupportChatScreen() {
                         isTyping ? (
                             <View style={styles.typingBox}>
                                 <ActivityIndicator size="small" color="#2E7D32" />
-                                <Text style={styles.typingText}>Thinking...</Text>
+                                <Text style={styles.typingText}>Typing...</Text>
                             </View>
                         ) : (
                             !handoffActive && (
