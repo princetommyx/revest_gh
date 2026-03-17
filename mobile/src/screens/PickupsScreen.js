@@ -372,8 +372,8 @@ export default function PickupsScreen({ route }) {
             const requestData = {
                 ...requestForm,
                 estimated_price: (
-                    parseFloat(requestForm.waste_value || 0) + 
-                    parseFloat(requestForm.delivery_fee || 0) + 
+                    parseFloat(requestForm.waste_value || 0) +
+                    parseFloat(requestForm.delivery_fee || 0) +
                     (userRole === 'RECYCLER' ? 5.00 : 0)
                 ).toFixed(2),
                 waste_price: parseFloat(requestForm.waste_value || 0).toFixed(2),
@@ -977,7 +977,7 @@ export default function PickupsScreen({ route }) {
                                             </View>
                                         )}
 
-                                         {userRole !== 'SELLER' && (
+                                        {userRole !== 'SELLER' && (
                                             <>
                                                 <View style={styles.estimateRow}>
                                                     <Text style={styles.estimateLabel}>Delivery Fee</Text>
@@ -993,7 +993,7 @@ export default function PickupsScreen({ route }) {
                                         )}
 
                                         <View style={styles.divider} />
-                                        
+
                                         <View style={styles.estimateTotalRow}>
                                             <Text style={styles.estimateTotalLabel}>
                                                 {userRole === 'SELLER' ? 'Total Payout' : 'Total'}
@@ -1004,7 +1004,7 @@ export default function PickupsScreen({ route }) {
                                                     : (parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee || 0) + (userRole === 'RECYCLER' ? 5.00 : 0)).toFixed(2)}
                                             </Text>
                                         </View>
-                                         <Text style={styles.estimateNote}>
+                                        <Text style={styles.estimateNote}>
                                             {userRole === 'SELLER'
                                                 ? "Revesta commission of ₵2.00 will be deducted from your payout."
                                                 : (userRole === 'RECYCLER'

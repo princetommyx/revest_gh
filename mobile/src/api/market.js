@@ -51,7 +51,7 @@ export const marketApi = {
 
         try {
             const response = await apiClient.post('market/analyze-waste/', data, {
-                timeout: 30000 // Increased timeout for AI
+                timeout: 120000 // 120s - image upload + Gemini AI processing time
             });
             console.log('[analyzeWaste] Success!');
             return response.data;
