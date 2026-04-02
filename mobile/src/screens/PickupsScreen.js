@@ -18,10 +18,43 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import Constants from 'expo-constants';
 import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// Check if running in Expo Go
+const isExpoGo = Constants.appOwnership === 'expo';
+
+// Dynamic imports to avoid PlatformConstants crash in Expo Go
+let MapView, Marker, Polyline;
+if (!isExpoGo) {
+    try {
+        const Maps = require('react-native-maps');
+        MapView = Maps.default;
+        Marker = Maps.Marker;
+        Polyline = Maps.Polyline;
+    } catch (e) {
+        console.warn("Failed to load react-native-maps:", e.message);
+    }
+}
+
+
+// Simplified Map Mock for Expo Go
+const MapMock = ({ children, style, initialRegion, onRegionChangeComplete }) => (
+    <View style={[style, { backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' }]}>
+        <MapPin size={40} color="#2E7D32" />
+        <Text style={{ marginTop: 10, color: '#2E7D32', fontWeight: 'bold' }}>Map disabled in Expo Go</Text>
+        <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
+            Use a Development Build to see the live map.
+        </Text>
+        {/* Render children (markers) as a list if needed, or skip for now */}
+    </View>
+);
+
+const ActiveMap = isExpoGo ? MapMock : MapView;
+const ActiveMarker = isExpoGo ? View : Marker;
+const ActivePolyline = isExpoGo ? View : Polyline;
 
 const { width, height } = Dimensions.get('window');
 
@@ -595,7 +628,7 @@ export default function PickupsScreen({ route }) {
         const routes = [];
 
         markers.push(
-            <Marker
+            <ActiveMarker
                 key={`pickup-${job.id}`}
                 coordinate={{ latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }}
                 title={job.material_type}
@@ -608,12 +641,12 @@ export default function PickupsScreen({ route }) {
                 ]}>
                     <MapPin size={24} color={job.status === 'PENDING' ? '#2E7D32' : (job.status === 'ACCEPTED' ? '#F39C12' : '#999')} />
                 </View>
-            </Marker>
+            </ActiveMarker>
         );
 
         if (job.status === 'ACCEPTED' && job.current_lat && job.current_lon) {
             markers.push(
-                <Marker
+                <ActiveMarker
                     key={`collector-${job.id}`}
                     coordinate={{ latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) }}
                     title="Collector"
@@ -622,11 +655,11 @@ export default function PickupsScreen({ route }) {
                     <View style={[styles.markerContainer, { borderColor: '#3498DB' }]}>
                         <Truck size={24} color="#3498DB" />
                     </View>
-                </Marker>
+                </ActiveMarker>
             );
 
             routes.push(
-                <Polyline
+                <ActivePolyline
                     key={`route-${job.id}`}
                     coordinates={[
                         { latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) },
@@ -659,7 +692,7 @@ export default function PickupsScreen({ route }) {
 
     return (
         <View style={styles.container}>
-            <MapView
+            <ActiveMap
                 ref={mapRef}
                 style={styles.map}
                 initialRegion={{
@@ -678,7 +711,7 @@ export default function PickupsScreen({ route }) {
                         <MapPin size={32} color="#E74C3C" fill="#fff" />
                     </View>
                 )}
-            </MapView>
+            </ActiveMap>
 
             {isSelectingLocation && (
                 <View style={styles.selectionOverlay}>
