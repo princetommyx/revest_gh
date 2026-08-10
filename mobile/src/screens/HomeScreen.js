@@ -84,11 +84,12 @@ export default function HomeScreen({ navigation }) {
     };
 
     const handleRefresh = async () => {
-        if (userRole === 'RECYCLER') await refetchPickups();
-        else await refetch();
+        await refetch();
     };
 
-    const dataList = userRole === 'RECYCLER' ? pickupJobs : listings;
+    // All roles show listings on home — collectors see all listings, disposers see all listings
+    // (Pickup jobs belong in the Pickups tab, not home)
+    const dataList = listings;
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
@@ -106,7 +107,7 @@ export default function HomeScreen({ navigation }) {
                 key={item.id}
                 style={styles.catWrap}
                 onPress={() => {
-                    if (userRole === 'RECYCLER') navigation.navigate('Pickups', { category: item.id });
+                    if (userRole === 'COLLECTOR' || userRole === 'RECYCLER') navigation.navigate('Pickups', { category: item.id });
                     else setFilter(item.id);
                 }}
             >
@@ -119,16 +120,13 @@ export default function HomeScreen({ navigation }) {
     };
 
     const renderGridCard = ({ item }) => {
-        const imageUri = userRole === 'RECYCLER' 
-            ? (item.listing_image ? resolveImageUrl(item.listing_image) : getMaterialImage(item.material_type))
-            : (item.image ? resolveImageUrl(item.image) : null);
-        
-        const title = userRole === 'RECYCLER' ? item.material_type : item.title;
-        const price = userRole === 'RECYCLER' ? item.estimated_price : item.price;
-        const qty = userRole === 'RECYCLER' ? item.quantity_estimate : (item.quantity || '1 Bunch');
-        const isFree = userRole === 'RECYCLER' ? false : item.is_free;
-        const navTarget = userRole === 'RECYCLER' ? 'Pickups' : 'ListingDetail';
-        const navParams = userRole === 'RECYCLER' ? {} : { listingId: item.id };
+        const imageUri = item.image ? resolveImageUrl(item.image) : null;
+        const title = item.title;
+        const price = item.price;
+        const qty = item.quantity || '1 Bunch';
+        const isFree = item.is_free;
+        const navTarget = 'ListingDetail';
+        const navParams = { listingId: item.id };
 
         return (
             <TouchableOpacity 
@@ -206,40 +204,51 @@ export default function HomeScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {/* Hero Banner */}
-                        <View style={styles.heroBanner}>
-                            <View style={styles.heroContent}>
-                                <Text style={styles.heroTitle}>Recycle & Earn!</Text>
-                                <Text style={styles.heroSubtitle}>Join the movement for a cleaner planet today.</Text>
-                                <TouchableOpacity style={styles.heroBtn}>
-                                    <Text style={styles.heroBtnText}>Start Now</Text>
-                                </TouchableOpacity>
+                        {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
+                            <View style={[styles.heroBanner, { backgroundColor: '#10B981' }]}>
+                                <View style={styles.heroContent}>
+                                    <Text style={styles.heroTitle}>Manage Pickups</Text>
+                                    <Text style={styles.heroSubtitle}>Collect waste and earn rewards efficiently.</Text>
+                                    <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
+                                        <Text style={styles.heroBtnText}>Browse All Waste</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
                             </View>
-                            <Image 
-                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
-                                style={styles.heroImage} 
-                                contentFit="cover" 
-                            />
-                        </View>
-                        <View style={styles.dotsRow}>
-                            <View style={[styles.dot, styles.dotActive]} />
-                            <View style={styles.dot} />
-                            <View style={styles.dot} />
-                        </View>
-
-                        <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Category</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
-                        </View>
-                        
-                        <View style={styles.categoriesGrid}>
-                            {CATEGORIES.slice(0, 4).map(renderCategory)}
-                        </View>
-
+                        ) : (
+                            <>
+                                <View style={styles.heroBanner}>
+                                    <View style={styles.heroContent}>
+                                        <Text style={styles.heroTitle}>Recycle & Earn!</Text>
+                                        <Text style={styles.heroSubtitle}>Join the movement for a cleaner planet today.</Text>
+                                        <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
+                                            <Text style={styles.heroBtnText}>Start Now</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <Image 
+                                        source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
+                                        style={styles.heroImage} 
+                                        contentFit="cover" 
+                                    />
+                                </View>
+                                <View style={styles.dotsRow}>
+                                    <View style={[styles.dot, styles.dotActive]} />
+                                    <View style={styles.dot} />
+                                    <View style={styles.dot} />
+                                </View>
+                                <View style={styles.sectionHeader}>
+                                    <Text style={styles.sectionTitle}>Category</Text>
+                                    <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                                </View>
+                                <View style={styles.categoriesGrid}>
+                                    {CATEGORIES.slice(0, 4).map(renderCategory)}
+                                </View>
+                            </>
+                        )}
                     </SafeAreaView>
 
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>{userRole === 'RECYCLER' ? 'Available Pickups' : 'Best Deals Today'}</Text>
+                        <Text style={styles.sectionTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Available Waste Near You' : 'Best Deals Today'}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
                     </View>
                 </>}
@@ -249,8 +258,6 @@ export default function HomeScreen({ navigation }) {
                     </View>
                 }
             />
-            
-            {/* FAB removed to match new grocery layout */}
         </View>
     );
 }

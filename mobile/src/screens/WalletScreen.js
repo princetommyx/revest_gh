@@ -10,10 +10,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
 import { useAuth } from '../context/AuthContext';
 import { SkeletonWalletPage } from '../components/Skeleton';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-    Search, PieChart, Gift, Plus,
-    ArrowUpRight, CreditCard, ChevronRight,
-    X, Smartphone, Banknote, CheckCircle2,
+    User, Settings, Plus, ArrowUpRight, ArrowDownToLine, MoreHorizontal,
+    Search, PieChart, Gift, ArrowLeftRight,
+    CreditCard, ChevronRight, X, Smartphone, Banknote, CheckCircle2,
     ArrowDownLeft, History
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -116,9 +117,13 @@ export default function WalletScreen() {
 
     const renderTransaction = ({ item }) => {
         const isCredit = ['DEPOSIT', 'JOB_EARNING', 'ESCROW_RELEASE', 'SALE_EARNING'].includes(item.transaction_type);
-        const Icon = isCredit ? ArrowDownLeft : ArrowUpRight;
-        const iconColor = isCredit ? COLORS.success : COLORS.text;
-        const iconBg = isCredit ? '#ECFDF5' : '#F3F4F6';
+        const Icon = isCredit ? Plus : ArrowUpRight;
+        const iconColor = '#111';
+        const iconBg = 'rgba(0,0,0,0.03)';
+
+        // Extract time
+        const dateObj = new Date(item.created_at);
+        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         return (
             <View style={styles.txnItem}>
@@ -126,17 +131,12 @@ export default function WalletScreen() {
                     <Icon size={20} color={iconColor} />
                 </View>
                 <View style={styles.txnContent}>
-                    <Text style={styles.txnTitle}>{item.transaction_type.replace(/_/g, ' ')}</Text>
-                    <Text style={styles.txnDate}>
-                        {new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </Text>
+                    <Text style={styles.txnTitle}>{item.transaction_type.replace(/_/g, ' ').toLowerCase()}</Text>
+                    <Text style={styles.txnDate}>{timeStr}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.txnAmount, { color: isCredit ? COLORS.success : COLORS.text }]}>
-                        {isCredit ? '+' : '-'}₵{parseFloat(item.amount).toFixed(2)}
-                    </Text>
-                    <Text style={[styles.txnStatus, { color: item.status === 'COMPLETED' ? COLORS.success : COLORS.textLight }]}>
-                        {item.status}
+                    <Text style={[styles.txnAmount, { color: isCredit ? COLORS.success : COLORS.error }]}>
+                        {isCredit ? '+' : '-'} ₵{parseFloat(item.amount).toFixed(2)}
                     </Text>
                 </View>
             </View>
@@ -151,75 +151,66 @@ export default function WalletScreen() {
     const balance = parseFloat(wallet?.balance || 0);
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FAFAFA" />
+        <LinearGradient
+            colors={['#EAE6F4', '#F4F9F2', '#FAFAFA', '#FAFAFA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.container}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
             <SafeAreaView edges={['top']} style={{ flex: 1 }}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <View>
-                        <Text style={styles.headerTitle}>My Account</Text>
-                        <Text style={styles.headerSubtitle}>{user?.phone_number || '00-00-00'}</Text>
-                    </View>
-                    <View style={styles.headerIcons}>
-                        <TouchableOpacity style={styles.iconBtn}>
-                            <Search size={22} color="#111" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconBtn}>
-                            <PieChart size={22} color="#111" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconBtn}>
-                            <Gift size={22} color="#F59E0B" />
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Profile')}>
+                        <User size={20} color="#111" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>My Wallet</Text>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Profile')}>
+                        <Settings size={20} color="#111" />
+                    </TouchableOpacity>
                 </View>
 
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}>
                     
-                    {/* Balance Card */}
-                    <View style={styles.balanceCard}>
-                        <Text style={styles.balanceLabel}>Current balance</Text>
+                    {/* Balance Section */}
+                    <View style={styles.balanceSection}>
+                        <Text style={styles.balanceLabel}>Balance</Text>
                         <Text style={styles.balanceAmount}>₵{balance.toFixed(2)}</Text>
-                        
-                        {/* Progress Bar (Mockup Style) */}
-                        <View style={styles.progressSection}>
-                            <Text style={styles.progressText}>
-                                <Text style={{color: '#EF4444'}}>₵0</Text> spent of ₵{balance.toFixed(2)}
-                            </Text>
-                            <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: '10%' }]} />
-                                <View style={[styles.progressHandle, { left: '10%' }]} />
-                            </View>
-                        </View>
                     </View>
 
-                    {/* Quick Actions */}
+                    {/* Quick Actions (2-button grid) */}
                     <View style={styles.actionsRow}>
-                        <TouchableOpacity style={styles.actionItem} onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}>
-                            <View style={styles.actionIconCircle}>
-                                <ArrowUpRight size={20} color="#111" />
+                        <TouchableOpacity style={[styles.actionItem, { backgroundColor: '#111' }]} onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}>
+                            <View style={styles.actionIconWrapper}>
+                                <Plus size={24} color="#FFF" />
                             </View>
-                            <Text style={styles.actionText}>Withdraw</Text>
+                            <Text style={[styles.actionText, { color: '#FFF' }]}>Top Up</Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.actionItem} onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}>
-                            <View style={[styles.actionIconCircle, styles.dashedCircle]}>
-                                <Plus size={20} color="#111" />
+                        <TouchableOpacity style={styles.actionItem} onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}>
+                            <View style={styles.actionIconWrapper}>
+                                <ArrowUpRight size={24} color="#111" />
                             </View>
-                            <Text style={styles.actionText}>Top Up</Text>
+                            <Text style={styles.actionText}>Withdraw</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Feed Content */}
                     <View style={styles.feedSection}>
-                        <Text style={styles.sectionTitle}>Transactions</Text>
+                        <View style={styles.feedHeader}>
+                            <Text style={styles.sectionTitle}>Transactions</Text>
+                            <TouchableOpacity style={styles.viewAllBtn}>
+                                <Text style={styles.viewAllText}>View all</Text>
+                            </TouchableOpacity>
+                        </View>
+
                         {transactions.length === 0 ? (
                             <Text style={styles.emptyText}>No recent activity</Text>
                         ) : (
                             transactions.map((item, index) => (
                                 <View key={item.id || index}>
                                     {renderTransaction({ item })}
-                                    {index < transactions.length - 1 && <View style={styles.separator} />}
                                 </View>
                             ))
                         )}
@@ -319,227 +310,132 @@ export default function WalletScreen() {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
-        </View>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA',
-    },
-    scrollContent: {
-        paddingBottom: 40,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingTop: 10,
-        paddingBottom: 20,
+        paddingVertical: 10,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
         color: '#111',
     },
-    headerSubtitle: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 2,
-    },
-    headerIcons: {
-        flexDirection: 'row',
-        gap: 12,
-    },
     iconBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.7)',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    balanceCard: {
-        backgroundColor: '#FFF',
-        marginHorizontal: 20,
-        borderRadius: 24,
-        padding: 24,
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    balanceSection: {
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 10,
-        elevation: 2,
+        marginTop: 30,
+        marginBottom: 40,
     },
     balanceLabel: {
-        fontSize: 14,
+        fontSize: 15,
         color: '#666',
+        fontWeight: '500',
         marginBottom: 8,
     },
     balanceAmount: {
-        fontSize: 36,
-        fontWeight: 'bold',
+        fontSize: 48,
+        fontWeight: '800',
         color: '#111',
-        marginBottom: 20,
-    },
-    progressSection: {
-        width: '100%',
-        alignItems: 'center',
-    },
-    progressText: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 10,
-    },
-    progressBarBg: {
-        width: '80%',
-        height: 6,
-        backgroundColor: '#F3F4F6',
-        borderRadius: 3,
-        position: 'relative',
-    },
-    progressBarFill: {
-        position: 'absolute',
-        height: '100%',
-        backgroundColor: '#111',
-        borderRadius: 3,
-        left: 0,
-    },
-    progressHandle: {
-        position: 'absolute',
-        width: 12,
-        height: 12,
-        borderRadius: 6,
-        backgroundColor: '#111',
-        top: -3,
-        marginLeft: -6,
-    },
-    cardsScroll: {
-        paddingHorizontal: 20,
-        paddingVertical: 25,
-    },
-    virtualCard: {
-        width: width - 40,
-        height: 200,
-        backgroundColor: '#111', // Dark card
-        borderRadius: 24,
-        padding: 24,
-        justifyContent: 'space-between',
-        shadowColor: '#111',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.2,
-        shadowRadius: 12,
-        elevation: 10,
-    },
-    cardTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    cardLogo: {
-        color: '#FFF',
-        fontSize: 18,
-        fontWeight: 'bold',
-        letterSpacing: 1,
-    },
-    chip: {
-        width: 40,
-        height: 30,
-        backgroundColor: '#D1D5DB',
-        borderRadius: 6,
-        opacity: 0.8,
-    },
-    cardNumber: {
-        color: '#FFF',
-        fontSize: 22,
-        letterSpacing: 3,
-        marginVertical: 10,
-    },
-    cardBottomRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-    },
-    cardLabel: {
-        color: 'rgba(255,255,255,0.6)',
-        fontSize: 10,
-        marginBottom: 4,
-    },
-    cardValue: {
-        color: '#FFF',
-        fontSize: 13,
-        fontWeight: '500',
-    },
-    mcCircles: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    mcCircle: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
     },
     actionsRow: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 30,
-        marginTop: 30,
-        marginBottom: 30,
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 40,
+        gap: 12,
     },
     actionItem: {
-        alignItems: 'center',
-    },
-    actionIconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: '#FFF',
+        flex: 1,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
+        paddingVertical: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
         elevation: 2,
     },
-    dashedCircle: {
-        borderWidth: 1.5,
-        borderColor: '#111',
-        borderStyle: 'dashed',
+    actionIconWrapper: {
+        marginBottom: 8,
     },
     actionText: {
-        fontSize: 12,
-        color: '#333',
-        fontWeight: '500',
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
     },
     feedSection: {
         paddingHorizontal: 20,
     },
+    feedHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
+        fontWeight: '700',
         color: '#111',
-        marginBottom: 15,
-        marginLeft: 5,
+    },
+    viewAllBtn: {
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+    },
+    viewAllText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
     },
     txnItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        backgroundColor: '#FFF',
-        borderRadius: 16,
+        paddingVertical: 16,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
         paddingHorizontal: 16,
-        marginBottom: 10,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 5,
+        elevation: 1,
     },
     txnIconBox: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: 15,
     },
     txnContent: {
         flex: 1,
@@ -552,20 +448,12 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     txnDate: {
-        fontSize: 12,
-        color: '#999',
+        fontSize: 13,
+        color: '#666',
     },
     txnAmount: {
         fontSize: 15,
-        fontWeight: 'bold',
-        marginBottom: 4,
-    },
-    txnStatus: {
-        fontSize: 11,
         fontWeight: '600',
-    },
-    separator: {
-        height: 0, // removed to match mockup's clean look
     },
     emptyText: {
         textAlign: 'center',

@@ -134,15 +134,9 @@ export default function ListingDetailScreen({ route, navigation }) {
             </ScrollView>
 
             <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-                <TouchableOpacity 
-                    style={styles.chatBtn} 
-                    onPress={() => navigation.navigate('Chat')}
-                >
-                    <MessageSquare size={18} color="#111" style={{marginRight: 6}} />
-                    <Text style={styles.chatBtnText}>Chat</Text>
-                </TouchableOpacity>
+
                 <TouchableOpacity
-                    style={styles.mainActionBtn}
+                    style={[styles.mainActionBtn, { flex: 1 }]}
                     onPress={() => navigation.navigate('Main', {
                         screen: 'Pickups',
                         params: {
@@ -150,13 +144,21 @@ export default function ListingDetailScreen({ route, navigation }) {
                                 material_type: listing.material_type,
                                 quantity_estimate: listing.quantity,
                                 pickup_address: listing.location,
-                                listing_id: listing.id
+                                listing_id: listing.id,
+                                waste_price: listing.price,
+                                track_type: listing.track,
+                                seller_location: {
+                                    latitude: listing.latitude,
+                                    longitude: listing.longitude,
+                                    address: listing.location
+                                }
                             }
-                        }
+                        },
+                        merge: true
                     })}
                 >
                     <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
-                    <Text style={styles.mainActionText}>{userRole === 'RECYCLER' ? 'Accept Job' : 'Request Pickup'}</Text>
+                    <Text style={styles.mainActionText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
                 </TouchableOpacity>
             </View>
         </View>

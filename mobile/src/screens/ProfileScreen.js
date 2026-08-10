@@ -161,9 +161,6 @@ export default function ProfileScreen({ navigation }) {
                 <TouchableOpacity style={styles.circleBtn} onPress={() => navigation.goBack()}>
                     <ArrowLeft size={20} color="#111" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.circleBtn}>
-                    <MoreHorizontal size={20} color="#111" />
-                </TouchableOpacity>
             </SafeAreaView>
         </View>
     );

@@ -1,5 +1,5 @@
 from django.db import models
-from rest_framework import viewsets, permissions, filters, status
+from rest_framework import viewsets, permissions, filters, status, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
 from decimal import Decimal
 from rest_framework.decorators import action
@@ -159,8 +159,15 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         
         # Check KYC Verification
         if request.user.role in ['COLLECTOR', 'RECYCLER']:
-            if not hasattr(request.user, 'identity_verification') or request.user.identity_verification.status != 'VERIFIED':
-                return Response({'error': 'You must complete Identity Verification (KYC) before accepting jobs.'}, status=403)
+            kyc_verified = (
+                hasattr(request.user, 'identity_verification') and
+                request.user.identity_verification.status == 'VERIFIED'
+            )
+            if not kyc_verified:
+                return Response(
+                    {'error': 'KYC verification required. Please complete your identity verification to accept jobs.', 'code': 'kyc_required'},
+                    status=403
+                )
 
         pickup_request.status = 'ACCEPTED'
         pickup_request.collector = request.user

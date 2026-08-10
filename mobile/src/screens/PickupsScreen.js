@@ -13,7 +13,7 @@ import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation,
     CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
-    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe
+    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
@@ -23,38 +23,11 @@ import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Check if running in Expo Go
-const isExpoGo = Constants.appOwnership === 'expo';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
-// Dynamic imports to avoid PlatformConstants crash in Expo Go
-let MapView, Marker, Polyline;
-if (!isExpoGo) {
-    try {
-        const Maps = require('react-native-maps');
-        MapView = Maps.default;
-        Marker = Maps.Marker;
-        Polyline = Maps.Polyline;
-    } catch (e) {
-        console.warn("Failed to load react-native-maps:", e.message);
-    }
-}
-
-
-// Simplified Map Mock for Expo Go
-const MapMock = ({ children, style, initialRegion, onRegionChangeComplete }) => (
-    <View style={[style, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
-        <MapPin size={40} color="#111" />
-        <Text style={{ marginTop: 10, color: '#111', fontWeight: 'bold' }}>Map disabled in Expo Go</Text>
-        <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
-            Use a Development Build to see the live map.
-        </Text>
-        {/* Render children (markers) as a list if needed, or skip for now */}
-    </View>
-);
-
-const ActiveMap = isExpoGo ? MapMock : MapView;
-const ActiveMarker = isExpoGo ? View : Marker;
-const ActivePolyline = isExpoGo ? View : Polyline;
+const ActiveMap = MapView;
+const ActiveMarker = Marker;
+const ActivePolyline = Polyline;
 
 const { width, height } = Dimensions.get('window');
 
@@ -262,7 +235,9 @@ export default function PickupsScreen({ route }) {
                 setTimeout(fetchEstimate, 500);
             }
 
-            navigation.setParams({ pickupData: null });
+            setTimeout(() => {
+                navigation.setParams({ pickupData: null });
+            }, 500);
         }
     }, [pickupData]);
 
@@ -499,7 +474,24 @@ export default function PickupsScreen({ route }) {
             Toast.show({ type: 'success', text1: 'Accepted', text2: 'Job accepted! Start navigating.' });
             refetch();
         } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to accept job' });
+            const errorData = error?.response?.data;
+            const errorMsg = errorData?.error || errorData?.detail || 'Failed to accept job';
+            const status = error?.response?.status;
+
+            if (status === 403 && errorMsg.toLowerCase().includes('kyc')) {
+                Alert.alert(
+                    'Identity Verification Required',
+                    'You must complete KYC verification before accepting jobs. Would you like to do that now?',
+                    [
+                        { text: 'Later', style: 'cancel' },
+                        { text: 'Verify Now', onPress: () => navigation.navigate('KYCVerification') }
+                    ]
+                );
+            } else if (status === 400) {
+                Toast.show({ type: 'warning', text1: 'Cannot Accept', text2: errorMsg });
+            } else {
+                Toast.show({ type: 'error', text1: 'Error', text2: errorMsg });
+            }
         }
     };
 
@@ -793,6 +785,23 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
+            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && user?.kyc_status !== 'VERIFIED' && (
+                <TouchableOpacity
+                    style={styles.kycBanner}
+                    onPress={() => navigation.navigate('KYCVerification')}
+                    activeOpacity={0.85}
+                >
+                    <View style={styles.kycBannerIcon}>
+                        <ShieldAlert size={22} color="#fff" />
+                    </View>
+                    <View style={styles.kycBannerText}>
+                        <Text style={styles.kycBannerTitle}>Identity Verification Required</Text>
+                        <Text style={styles.kycBannerSub}>Complete KYC to start accepting pickup jobs</Text>
+                    </View>
+                    <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
+            )}
+
             {!isSelectingLocation && sortedJobs.length > 0 && (
                 <View style={styles.jobListContainerAbsolute}>
                     <FlatList
@@ -843,13 +852,24 @@ export default function PickupsScreen({ route }) {
                                         {userRole === 'COLLECTOR' && (
                                             <View style={styles.actionRow}>
                                                 {item.status === 'PENDING' && (
-                                                    <TouchableOpacity
-                                                        style={styles.acceptBtn}
-                                                        onPress={() => handleAcceptJob(item.id)}
-                                                    >
-                                                        <Text style={styles.acceptBtnText}>Accept Order</Text>
-                                                        <ChevronRight size={18} color="#fff" />
-                                                    </TouchableOpacity>
+                                                    user?.kyc_status === 'VERIFIED' ? (
+                                                        <TouchableOpacity
+                                                            style={styles.acceptBtn}
+                                                            onPress={() => handleAcceptJob(item.id)}
+                                                        >
+                                                            <Text style={styles.acceptBtnText}>Accept Order</Text>
+                                                            <ChevronRight size={18} color="#fff" />
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity
+                                                            style={[styles.acceptBtn, { backgroundColor: '#111' }]}
+                                                            onPress={() => navigation.navigate('KYCVerification')}
+                                                        >
+                                                            <ShieldAlert size={16} color="#fff" style={{ marginRight: 6 }} />
+                                                            <Text style={styles.acceptBtnText}>Verify to Accept</Text>
+                                                            <ChevronRight size={18} color="#fff" />
+                                                        </TouchableOpacity>
+                                                    )
                                                 )}
 
                                                 {item.status === 'ACCEPTED' && (
@@ -1316,6 +1336,38 @@ const styles = StyleSheet.create({
     blackCircleMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
     blackCircleText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
 
+    kycBanner: {
+        position: 'absolute',
+        top: 80,
+        left: 16,
+        right: 16,
+        backgroundColor: '#111',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+        zIndex: 20,
+    },
+    kycBannerIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    kycBannerText: { flex: 1 },
+    kycBannerTitle: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 2 },
+    kycBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
     jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
 
     container: { flex: 1 },

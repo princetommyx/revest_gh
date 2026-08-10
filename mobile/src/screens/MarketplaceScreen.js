@@ -76,11 +76,13 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     // Filter if regular user (Disposer)
     let visibleListings = listings;
-    if (userRole !== 'RECYCLER' && user) {
+    if (userRole === 'SELLER' && user) {
+        // Disposers only see their own waste listings
         visibleListings = visibleListings.filter(item => 
             item.seller?.id === user.id || item.seller === user.id || item.seller_name === user.username
         );
     }
+    // COLLECTOR and RECYCLER roles see all listings
 
     // Apply local sorting
     const sortedListings = [...visibleListings].sort((a, b) => {
@@ -140,7 +142,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                 <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')}>
                     <ChevronLeft size={24} color="#111" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>{userRole === 'RECYCLER' ? 'All Waste' : 'My Waste'}</Text>
+                <Text style={styles.headerTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'All Waste' : 'My Waste'}</Text>
                 <TouchableOpacity style={styles.iconBtn}>
                     <SlidersHorizontal size={20} color="#111" />
                 </TouchableOpacity>
