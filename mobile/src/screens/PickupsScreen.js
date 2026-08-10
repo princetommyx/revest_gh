@@ -13,7 +13,7 @@ import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation,
     CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
-    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage
+    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
@@ -81,6 +81,7 @@ export default function PickupsScreen({ route }) {
     const pickupData = route?.params?.pickupData;
 
     const [location, setLocation] = useState(null);
+    const [hasLocationPermission, setHasLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
@@ -184,23 +185,39 @@ export default function PickupsScreen({ route }) {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
+            let { status } = await Location.getForegroundPermissionsAsync();
+            if (status === 'granted') {
+                setHasLocationPermission(true);
+                let loc = await Location.getCurrentPositionAsync({});
+                setLocation(loc.coords);
+                setMapRegion({
+                    latitude: loc.coords.latitude,
+                    longitude: loc.coords.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                });
+            } else {
+                setHasLocationPermission(false);
             }
+        })();
+    }, []);
 
+    const requestLocationAccess = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+            setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc.coords);
-
             setMapRegion({
                 latitude: loc.coords.latitude,
                 longitude: loc.coords.longitude,
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
             });
-        })();
-    }, []);
+        } else {
+            setErrorMsg('Permission to access location was denied');
+        }
+    };
 
     useEffect(() => {
         if (pickupData) {
@@ -686,6 +703,33 @@ export default function PickupsScreen({ route }) {
         return [...activeJobs, ...pendingJobs];
     }, [jobs, userRole]);
 
+    if (hasLocationPermission === false) {
+        return (
+            <SafeAreaView style={styles.permissionContainer}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', top: 50, left: 20}}>
+                    <ArrowLeft size={24} color="#111" />
+                </TouchableOpacity>
+                <View style={styles.permissionContent}>
+                    <View style={styles.globeIconContainer}>
+                        <Globe size={80} color="#27AE60" />
+                    </View>
+                    <Text style={styles.permissionTitle}>Allow location access</Text>
+                    <Text style={styles.permissionDesc}>
+                        We use this to show nearby stores. You can edit access in your phone's settings.
+                    </Text>
+                </View>
+                <View style={styles.permissionFooter}>
+                    <Text style={styles.privacyText}>
+                        By allowing access, you consent to share your personal info with Google Maps as stated in the <Text style={{textDecorationLine: 'underline'}}>Privacy Policy</Text>
+                    </Text>
+                    <TouchableOpacity style={styles.allowButton} onPress={requestLocationAccess}>
+                        <Text style={styles.allowButtonText}>Allow access</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     if (loading) {
         return <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>;
     }
@@ -726,52 +770,31 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && (
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#333" />
-                        </TouchableOpacity>
-                        <View style={styles.headerTextCol}>
-                            <Text style={styles.headerTitleMain}>
-                                {userRole === 'COLLECTOR' ? 'Nearby Pickups' : 'My Pickups'}
-                            </Text>
-                            <Text style={styles.headerSubText}>
-                                {userRole === 'COLLECTOR' ? 'Earn by recycling waste' : 'Track your waste collection'}
-                            </Text>
-                        </View>
-                        {userRole !== 'COLLECTOR' ? (
-                            <TouchableOpacity
-                                style={styles.historyBtn}
-                                onPress={() => navigation.navigate('PickupHistory')}
-                            >
-                                <Clock size={20} color="#333" />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.historyBtn}
-                                onPress={() => navigation.navigate('CollectorJobs')}
-                            >
-                                <Truck size={20} color="#333" />
-                            </TouchableOpacity>
-                        )}
+                <View style={styles.floatingTopBar}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.floatingBackBtn}>
+                        <ArrowLeft size={20} color="#111" />
+                    </TouchableOpacity>
+                    <View style={styles.floatingSearchBar}>
+                        <Search size={18} color="#999" style={{marginLeft: 10}} />
+                        <TextInput placeholder="Search area..." style={styles.floatingSearchInput} placeholderTextColor="#999" />
                     </View>
-
-                    {userRole !== 'COLLECTOR' && (
-                        <View style={styles.floatingActionRow}>
-                            <TouchableOpacity
-                                style={styles.requestButton}
-                                onPress={() => setShowRequestModal(true)}
-                            >
-                                <MapPin size={20} color="#fff" />
-                                <Text style={styles.requestButtonText}>Request Pickup</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <TouchableOpacity style={styles.floatingTargetBtn} onPress={() => {
+                        if (location && mapRef.current) {
+                            mapRef.current.animateToRegion({
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                latitudeDelta: 0.005,
+                                longitudeDelta: 0.005,
+                            }, 1000);
+                        }
+                    }}>
+                        <Navigation size={20} color="#111" />
+                    </TouchableOpacity>
                 </View>
             )}
 
             {!isSelectingLocation && sortedJobs.length > 0 && (
-                <View style={styles.jobListContainer}>
+                <View style={styles.jobListContainerAbsolute}>
                     <FlatList
                         data={sortedJobs}
                         keyExtractor={(item) => item.id.toString()}
@@ -1271,6 +1294,30 @@ export default function PickupsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+    // Permission Styles
+    permissionContainer: { flex: 1, backgroundColor: '#FFF' },
+    permissionContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+    globeIconContainer: { marginBottom: 30 },
+    permissionTitle: { fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 12, textAlign: 'center' },
+    permissionDesc: { fontSize: 16, color: '#666', textAlign: 'center', lineHeight: 22 },
+    permissionFooter: { paddingHorizontal: 20, paddingBottom: 110 },
+    privacyText: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 20, lineHeight: 18 },
+    allowButton: { backgroundColor: '#111', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    allowButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+
+    // Floating Map UI
+    floatingTopBar: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', zIndex: 10 },
+    floatingBackBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchBar: { flex: 1, height: 44, backgroundColor: '#FFF', borderRadius: 22, flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#111' },
+    floatingTargetBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+
+    // Map Markers
+    blackCircleMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
+    blackCircleText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+
+    jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
+
     container: { flex: 1 },
     map: { width: width, height: height },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },

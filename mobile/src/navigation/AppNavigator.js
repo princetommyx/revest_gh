@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -29,7 +29,9 @@ import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
-
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -45,6 +47,13 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     const onPress = () => {
                         const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                         if (!isFocused && !event.defaultPrevented) {
+                            const customAnim = {
+                                duration: 400,
+                                create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
+                                update: { type: LayoutAnimation.Types.spring, springDamping: 0.75 },
+                                delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity }
+                            };
+                            LayoutAnimation.configureNext(customAnim);
                             navigation.navigate(route.name);
                         }
                     };
@@ -240,6 +249,7 @@ export default function AppNavigator() {
                 ) : (
                     <>
                         <Stack.Screen name="Main" component={MainTabs} />
+                        <Stack.Screen name="Marketplace" component={MarketplaceScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false }} />

@@ -3,7 +3,7 @@ import re
 with open('mobile/src/screens/HomeScreen.js', 'r') as f:
     content = f.read()
 
-# I will write the new imports and component logic.
+# 1. Imports Update
 new_imports = """import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
@@ -15,218 +15,135 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
-    Package, ShoppingCart, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight
+    Package, ShoppingCart, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
+    LayoutGrid, Droplet, Cog, FileText, Wine, Cpu
 } from 'lucide-react-native';
-import { Ionicons } from '@expo/vector-icons';
 import apiClient, { BASE_URL } from '../api/client';
 import * as Location from 'expo-location';
 import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
+
+const { width } = Dimensions.get('window');
+
+const CATEGORIES = [
+    { id: '', name: 'All', icon: LayoutGrid, color: '#111', bg: '#F9FAFB' },
+    { id: 'Plastics', name: 'Plastics', icon: Droplet, color: '#111', bg: '#F9FAFB' },
+    { id: 'Metals', name: 'Metals', icon: Cog, color: '#111', bg: '#F9FAFB' },
+    { id: 'Paper', name: 'Paper', icon: FileText, color: '#111', bg: '#F9FAFB' },
+    { id: 'Glass', name: 'Glass', icon: Wine, color: '#111', bg: '#F9FAFB' },
+    { id: 'Electronics', name: 'E-Waste', icon: Cpu, color: '#111', bg: '#F9FAFB' }
+];
+
+export const getMaterialImage = (materialType) => {
+    switch (materialType?.toLowerCase()) {
+        case 'plastics': return 'https://images.unsplash.com/photo-1611284446314-60a58ac0deb9?w=400&q=80';
+        case 'metals': return 'https://images.unsplash.com/photo-1558611848-73f7eb4001a1?w=400&q=80';
+        case 'paper': return 'https://images.unsplash.com/photo-1532153975070-2e9ab71f1b14?w=400&q=80';
+        case 'glass': return 'https://images.unsplash.com/photo-1605389445167-9d7a26fba893?w=400&q=80';
+        case 'electronics': return 'https://images.unsplash.com/photo-1550005972-026115998dfc?w=400&q=80';
+        case 'e-waste': return 'https://images.unsplash.com/photo-1550005972-026115998dfc?w=400&q=80';
+        default: return 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80';
+    }
+};
 """
 
-# Replace imports
-content = re.sub(r'import React.*?from \'../components/Skeleton\';', new_imports, content, flags=re.DOTALL)
+content = re.sub(r'import React.*?getMaterialImage.*?};', new_imports, content, flags=re.DOTALL)
 
-component = """export default function HomeScreen({ navigation }) {
-    const insets = useSafeAreaInsets();
-    const { userRole, user } = useAuth();
-    const [filter, setFilter] = useState('');
-    const [search, setSearch] = useState('');
-    const [location, setLocation] = useState(null);
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-
-    useEffect(() => {
-        const handler = setTimeout(() => { setDebouncedSearch(search); }, 500);
-        return () => { clearTimeout(handler); };
-    }, [search]);
-
-    useEffect(() => {
-        (async () => {
-            try {
-                let { status } = await Location.requestForegroundPermissionsAsync();
-                if (status !== 'granted') return;
-                let loc = await Location.getCurrentPositionAsync({});
-                setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
-            } catch (error) { console.log(error); }
-        })();
-    }, []);
-
-    const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups, isRefetching: isRefetchingPickups } = usePickups(location);
-    const [locationFilter, setLocationFilter] = useState('');
-    const { data: listings = [], isLoading: loading, refetch, isRefetching } = useListings({
-        search: debouncedSearch,
-        material_type: filter,
-        location: locationFilter
-    });
-
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = (now - date) / 1000;
-        if (diff < 3600) return 'Just now';
-        if (diff < 86400) return 'Today';
-        if (diff < 172800) return 'Yesterday';
-        return date.toLocaleDateString();
-    };
-
-    const handleRefresh = async () => {
-        if (userRole === 'RECYCLER') await refetchPickups();
-        else await refetch();
-    };
-
-    const dataList = userRole === 'RECYCLER' ? pickupJobs : listings;
-    const featuredData = dataList.slice(0, 5);
-    const recentData = dataList.slice(5);
-
-    const resolveImageUrl = (path) => {
-        if (!path) return null;
-        if (path.startsWith('http')) return path;
-        let cleanPath = path.startsWith('/') ? path : `/${path}`;
-        if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
-        return `${BASE_URL}${cleanPath}`;
-    };
-
-    const renderCategory = (item) => {
+# 2. Render Functions Update
+# Replace from `const renderCategory =` up to `return (`
+render_funcs = """    const renderCategory = (item) => {
         const isActive = filter === item.id;
+        const IconComp = item.icon;
         return (
             <TouchableOpacity
                 key={item.id}
-                style={[styles.catBtn, isActive && styles.catBtnActive]}
+                style={styles.catWrap}
                 onPress={() => {
                     if (userRole === 'RECYCLER') navigation.navigate('Pickups', { category: item.id });
                     else setFilter(item.id);
                 }}
             >
-                {isActive ? null : <Ionicons name={item.icon} size={16} color="#111" style={{ marginRight: 6 }} />}
-                <Text style={[styles.catText, isActive && styles.catTextActive]}>{item.name}</Text>
+                <View style={[styles.catCircle, isActive && styles.catCircleActive]}>
+                    <IconComp size={24} color={isActive ? "#fff" : "#111"} />
+                </View>
+                <Text style={[styles.catLabel, isActive && styles.catLabelActive]}>{item.name}</Text>
             </TouchableOpacity>
         );
     };
 
-    const renderFeaturedCard = (item) => {
+    const renderGridCard = ({ item }) => {
         const imageUri = userRole === 'RECYCLER' 
             ? (item.listing_image ? resolveImageUrl(item.listing_image) : getMaterialImage(item.material_type))
             : (item.image ? resolveImageUrl(item.image) : null);
         
         const title = userRole === 'RECYCLER' ? item.material_type : item.title;
         const price = userRole === 'RECYCLER' ? item.estimated_price : item.price;
-        const loc = userRole === 'RECYCLER' ? (item.pickup_address || item.city || 'Nearby') : item.location;
-        const track = userRole === 'RECYCLER' ? item.track_type : item.track;
+        const qty = userRole === 'RECYCLER' ? item.quantity_estimate : (item.quantity || '1 Bunch');
         const isFree = userRole === 'RECYCLER' ? false : item.is_free;
         const navTarget = userRole === 'RECYCLER' ? 'Pickups' : 'ListingDetail';
         const navParams = userRole === 'RECYCLER' ? {} : { listingId: item.id };
 
         return (
             <TouchableOpacity 
-                key={item.id} 
-                style={styles.featuredCard}
+                style={styles.gridCard}
                 onPress={() => navigation.navigate(navTarget, navParams)}
                 activeOpacity={0.9}
             >
-                <View style={styles.featuredImageContainer}>
+                <View style={styles.gridImageContainer}>
                     {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.featuredImage} contentFit="cover" />
+                        <Image source={{ uri: imageUri }} style={styles.gridImage} contentFit="cover" />
                     ) : (
-                        <View style={[styles.featuredImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-                            <Package size={40} color="#ccc" />
+                        <View style={[styles.gridImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Package size={30} color="#ccc" />
                         </View>
                     )}
-                    <View style={styles.featuredBadgesTop}>
-                        <View style={styles.trackBadge}>
-                            <Text style={styles.trackBadgeText}>Track {track || 'A'}</Text>
-                        </View>
-                        <View style={styles.heartBtn}>
-                            <Heart size={16} color="#111" />
-                        </View>
-                    </View>
                 </View>
-                <View style={styles.featuredInfo}>
-                    <View style={styles.featuredTitleRow}>
-                        <Text style={styles.featuredTitle} numberOfLines={1}>{title}</Text>
-                        <Text style={styles.featuredPrice}>
+                <Text style={styles.gridTitle} numberOfLines={1}>{title}</Text>
+                
+                <View style={styles.gridBottomRow}>
+                    <View>
+                        <Text style={styles.gridPrice}>
                             {isFree ? 'FREE' : `₵${price || '0.00'}`}
                         </Text>
+                        <Text style={styles.gridSubtitle} numberOfLines={1}>{qty}</Text>
                     </View>
-                    <View style={styles.featuredMetaRow}>
-                        <View style={styles.featuredLocBox}>
-                            <MapPin size={12} color="#888" />
-                            <Text style={styles.featuredLocText} numberOfLines={1}>{loc}</Text>
-                        </View>
-                        <View style={styles.featuredLocBox}>
-                            <Star size={12} color="#F39C12" fill="#F39C12" />
-                            <Text style={styles.featuredLocText}>4.5</Text>
-                            <Text style={styles.featuredLocSubtext}> (12)</Text>
-                        </View>
-                    </View>
+                    <TouchableOpacity style={styles.gridAddBtn}>
+                        <Plus size={18} color="#fff" />
+                    </TouchableOpacity>
                 </View>
             </TouchableOpacity>
         );
     };
+"""
 
-    const renderRecentCard = ({ item }) => {
-        const imageUri = userRole === 'RECYCLER' 
-            ? (item.listing_image ? resolveImageUrl(item.listing_image) : getMaterialImage(item.material_type))
-            : (item.image ? resolveImageUrl(item.image) : null);
-        
-        const title = userRole === 'RECYCLER' ? item.material_type : item.title;
-        const qty = userRole === 'RECYCLER' ? item.quantity_estimate : item.quantity;
-        const navTarget = userRole === 'RECYCLER' ? 'Pickups' : 'ListingDetail';
-        const navParams = userRole === 'RECYCLER' ? {} : { listingId: item.id };
+content = re.sub(r'    const renderCategory =.*?return \(', render_funcs + '\n    return (', content, flags=re.DOTALL)
 
-        return (
-            <TouchableOpacity 
-                style={styles.recentCard}
-                onPress={() => navigation.navigate(navTarget, navParams)}
-                activeOpacity={0.8}
-            >
-                {imageUri ? (
-                    <Image source={{ uri: imageUri }} style={styles.recentImage} contentFit="cover" />
-                ) : (
-                    <View style={[styles.recentImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-                        <Package size={20} color="#ccc" />
-                    </View>
-                )}
-                <View style={styles.recentInfo}>
-                    <Text style={styles.recentTitle} numberOfLines={1}>{title}</Text>
-                    <Text style={styles.recentSubtitle}>{qty || 'Variable'} • {formatTime(item.created_at)}</Text>
-                </View>
-                <View style={styles.recentAction}>
-                    <ArrowUpRight size={18} color="#111" />
-                </View>
-            </TouchableOpacity>
-        );
-    };
 
-    return (
+# 3. Main Return Update
+main_return = """    return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            
             <FlatList
-                data={recentData}
-                renderItem={renderRecentCard}
+                data={dataList}
+                renderItem={renderGridCard}
                 keyExtractor={item => item.id.toString()}
-                contentContainerStyle={{ paddingBottom: 100 }}
+                numColumns={2}
+                columnWrapperStyle={styles.gridRow}
+                contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
                 showsVerticalScrollIndicator={false}
                 refreshControl={<RefreshControl refreshing={loading || pickupsLoading} onRefresh={handleRefresh} />}
                 ListHeaderComponent={<>
                     <SafeAreaView edges={['top']} style={styles.header}>
                         <View style={styles.headerTop}>
-                            <View style={styles.userInfoBox}>
-                                {user?.profile_photo ? (
-                                    <Image source={{ uri: resolveImageUrl(user.profile_photo) }} style={styles.avatar} />
-                                ) : (
-                                    <View style={styles.avatarPlaceholder}><User size={20} color="#111" /></View>
-                                )}
-                                <View style={styles.userInfoText}>
-                                    <Text style={styles.greetingText}>{user?.first_name || user?.username || 'User'}</Text>
-                                    <View style={styles.locationDropdown}>
-                                        <Text style={styles.locationTextHeader}>Ghana, West Africa</Text>
-                                        <ChevronDown size={14} color="#888" />
-                                    </View>
-                                </View>
-                            </View>
+                            <TouchableOpacity style={styles.locationDropdown}>
+                                <MapPin size={20} color="#111" />
+                                <Text style={styles.locationTextHeader}>{user?.city || 'Accra, Ghana'}</Text>
+                                <ChevronDown size={16} color="#111" />
+                            </TouchableOpacity>
                             <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Chat', { tab: 'Notifications' })}>
-                                <Bell size={22} color="#111" />
+                                <Bell size={20} color="#111" />
                                 <View style={styles.bellBadge} />
                             </TouchableOpacity>
                         </View>
@@ -243,32 +160,45 @@ component = """export default function HomeScreen({ navigation }) {
                                 />
                             </View>
                             <TouchableOpacity style={styles.filterBtn}>
-                                <SlidersHorizontal size={20} color="#fff" />
+                                <SlidersHorizontal size={20} color="#111" />
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll} contentContainerStyle={{ paddingRight: 20 }}>
-                            {CATEGORIES.map(renderCategory)}
-                        </ScrollView>
+                        {/* Hero Banner */}
+                        <View style={styles.heroBanner}>
+                            <View style={styles.heroContent}>
+                                <Text style={styles.heroTitle}>Recycle & Earn!</Text>
+                                <Text style={styles.heroSubtitle}>Join the movement for a cleaner planet today.</Text>
+                                <TouchableOpacity style={styles.heroBtn}>
+                                    <Text style={styles.heroBtnText}>Start Now</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Image 
+                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
+                                style={styles.heroImage} 
+                                contentFit="cover" 
+                            />
+                        </View>
+                        <View style={styles.dotsRow}>
+                            <View style={[styles.dot, styles.dotActive]} />
+                            <View style={styles.dot} />
+                            <View style={styles.dot} />
+                        </View>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Category</Text>
+                            <TouchableOpacity><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.categoriesGrid}>
+                            {CATEGORIES.slice(0, 4).map(renderCategory)}
+                        </View>
+
                     </SafeAreaView>
 
-                    {featuredData.length > 0 && (
-                        <View style={styles.section}>
-                            <View style={styles.sectionHeader}>
-                                <Text style={styles.sectionTitle}>{userRole === 'RECYCLER' ? 'Available Pickups' : 'Recommended for you'}</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('Pickups')}><Text style={styles.viewAllText}>View All</Text></TouchableOpacity>
-                            </View>
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-                                {featuredData.map(renderFeaturedCard)}
-                            </ScrollView>
-                        </View>
-                    )}
-
-                    <View style={styles.section}>
-                        <View style={[styles.sectionHeader, { paddingHorizontal: 20 }]}>
-                            <Text style={styles.sectionTitle}>{userRole === 'RECYCLER' ? 'Recent Jobs' : 'Popular Listings'}</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Pickups')}><Text style={styles.viewAllText}>View All</Text></TouchableOpacity>
-                        </View>
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionTitle}>{userRole === 'RECYCLER' ? 'Available Pickups' : 'Best Deals Today'}</Text>
+                        <TouchableOpacity onPress={() => navigation.navigate('Pickups')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
                     </View>
                 </>}
                 ListEmptyComponent={
@@ -285,70 +215,68 @@ component = """export default function HomeScreen({ navigation }) {
             )}
         </View>
     );
-}"""
+"""
 
+content = re.sub(r'    return \(.*?    \);\n}', main_return + '}', content, flags=re.DOTALL)
+
+# 4. Styles Update
 styles = """const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#fff' },
-    header: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 15, backgroundColor: '#fff' },
+    container: { flex: 1, backgroundColor: '#F8F9FA' }, // Slightly off-white for the grocery look
+    header: { paddingTop: 10, paddingBottom: 15 },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    userInfoBox: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    avatar: { width: 44, height: 44, borderRadius: 22 },
-    avatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
-    userInfoText: { justifyContent: 'center' },
-    greetingText: { fontSize: 18, fontWeight: 'bold', color: '#111', marginBottom: 2 },
-    locationDropdown: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    locationTextHeader: { fontSize: 13, color: '#888' },
-    bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#eee' },
+    
+    locationDropdown: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    locationTextHeader: { fontSize: 16, fontWeight: '700', color: '#111' },
+    
+    bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6' },
     bellBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
     
-    searchRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-    searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 16, height: 54, borderWidth: 1, borderColor: '#F3F4F6' },
+    searchRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
+    searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: '#F3F4F6' },
     searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#111' },
-    filterBtn: { width: 54, height: 54, borderRadius: 16, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+    filterBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6' },
     
-    catScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
-    catBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, marginRight: 10, borderWidth: 1, borderColor: '#eee' },
-    catBtnActive: { backgroundColor: '#111', borderColor: '#111' },
-    catText: { fontSize: 14, color: '#111', fontWeight: '500' },
-    catTextActive: { color: '#fff' },
+    heroBanner: { backgroundColor: '#111', borderRadius: 24, padding: 20, flexDirection: 'row', height: 160, overflow: 'hidden', marginBottom: 12 },
+    heroContent: { flex: 1, justifyContent: 'center', zIndex: 2 },
+    heroTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 6 },
+    heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 16, lineHeight: 18 },
+    heroBtn: { backgroundColor: '#fff', alignSelf: 'flex-start', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
+    heroBtnText: { color: '#111', fontWeight: 'bold', fontSize: 13 },
+    heroImage: { position: 'absolute', right: -20, bottom: -20, width: 140, height: 140, borderRadius: 70, opacity: 0.8 },
     
-    section: { marginTop: 10 },
-    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 20 },
+    dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 24 },
+    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB' },
+    dotActive: { width: 16, backgroundColor: '#111' },
+
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
     sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111' },
-    viewAllText: { fontSize: 13, color: '#888', fontWeight: '500' },
+    viewAllText: { fontSize: 14, color: '#111', fontWeight: '600', textDecorationLine: 'underline' },
     
-    featuredCard: { width: 280, backgroundColor: '#fff', borderRadius: 24, marginRight: 16, padding: 12, borderWidth: 1, borderColor: '#F3F4F6' },
-    featuredImageContainer: { width: '100%', height: 180, borderRadius: 16, overflow: 'hidden', position: 'relative', marginBottom: 12 },
-    featuredImage: { width: '100%', height: '100%' },
-    featuredBadgesTop: { position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between' },
-    trackBadge: { backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
-    trackBadgeText: { fontSize: 12, fontWeight: 'bold', color: '#111' },
-    heartBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+    categoriesGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
+    catWrap: { alignItems: 'center', flex: 1 },
+    catCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+    catCircleActive: { backgroundColor: '#111' },
+    catLabel: { fontSize: 13, color: '#666', fontWeight: '500' },
+    catLabelActive: { color: '#111', fontWeight: 'bold' },
     
-    featuredInfo: { paddingHorizontal: 4 },
-    featuredTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-    featuredTitle: { fontSize: 16, fontWeight: 'bold', color: '#111', flex: 1 },
-    featuredPrice: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-    featuredMetaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    featuredLocBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    featuredLocText: { fontSize: 12, color: '#888' },
-    featuredLocSubtext: { fontSize: 12, color: '#bbb' },
+    gridRow: { justifyContent: 'space-between' },
+    gridCard: { width: (width - 55) / 2, backgroundColor: '#fff', borderRadius: 20, padding: 12, marginBottom: 15, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+    gridImageContainer: { width: '100%', height: 100, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
+    gridImage: { width: '100%', height: '100%' },
+    gridTitle: { fontSize: 15, fontWeight: 'bold', color: '#111', marginBottom: 12 },
     
-    recentCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 12, marginHorizontal: 20, marginBottom: 12, borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6' },
-    recentImage: { width: 60, height: 60, borderRadius: 12, marginRight: 12 },
-    recentInfo: { flex: 1 },
-    recentTitle: { fontSize: 15, fontWeight: 'bold', color: '#111', marginBottom: 4 },
-    recentSubtitle: { fontSize: 13, color: '#888' },
-    recentAction: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
+    gridBottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+    gridPrice: { fontSize: 15, fontWeight: '800', color: '#111', marginBottom: 2 },
+    gridSubtitle: { fontSize: 12, color: '#888' },
+    gridAddBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
     
-    floatingFab: { position: 'absolute', bottom: 30, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }
+    floatingFab: { position: 'absolute', bottom: 110, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }
 });
 """
 
-# Replace component and styles
-content = re.sub(r'export default function HomeScreen.*?const styles = StyleSheet\.create\({.*?\);', component + '\n\n' + styles, content, flags=re.DOTALL)
+content = re.sub(r'const styles = StyleSheet\.create\(\{.*?\}\);', styles, content, flags=re.DOTALL)
 
 with open('mobile/src/screens/HomeScreen.js', 'w') as f:
     f.write(content)
 
-print("Done")
+print("Done HomeScreen")
