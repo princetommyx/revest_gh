@@ -96,7 +96,7 @@ export default function ChatDetailScreen({ route, navigation }) {
 
                     <View style={styles.headerActions}>
                         <TouchableOpacity style={styles.headerIconBtn}>
-                            <Phone size={20} color="#2E7D32" />
+                            <Phone size={20} color="#111" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.headerIconBtn}>
                             <MoreHorizontal size={20} color="#666" />
@@ -106,7 +106,7 @@ export default function ChatDetailScreen({ route, navigation }) {
             </SafeAreaView>
 
             {loading ? (
-                <View style={styles.center}><ActivityIndicator size="small" color="#2E7D32" /></View>
+                <View style={styles.center}><ActivityIndicator size="small" color="#111" /></View>
             ) : (
                 <FlatList
                     ref={flatListRef}
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         borderWidth: 2,
         borderColor: '#fff',
     },
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     },
     statusText: {
         fontSize: 12,
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: '500',
     },
     headerActions: {
@@ -240,9 +240,9 @@ const styles = StyleSheet.create({
         borderRadius: 22
     },
     myBubble: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         borderBottomRightRadius: 4,
-        shadowColor: '#2E7D32',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         justifyContent: 'center',
         alignItems: 'center',
     },

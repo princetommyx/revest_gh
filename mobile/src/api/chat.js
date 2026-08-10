@@ -18,5 +18,6 @@ export const chatApi = {
             content
         });
         return response.data;
-    }
+    },
+
 };

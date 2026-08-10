@@ -19,7 +19,7 @@ const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: 'grid', color: '#455A64', bg: '#fff' },
-    { id: 'Plastics', name: 'Plastics', icon: 'cube-outline', color: '#2E7D32', bg: '#fff' },
+    { id: 'Plastics', name: 'Plastics', icon: 'cube-outline', color: '#111', bg: '#fff' },
     { id: 'Metals', name: 'Metals', icon: 'hammer-outline', color: '#5D4037', bg: '#fff' },
     { id: 'Paper', name: 'Paper', icon: 'document-text-outline', color: '#FBC02D', bg: '#fff' },
     { id: 'Glass', name: 'Glass', icon: 'wine-outline', color: '#00796B', bg: '#fff' },
@@ -137,7 +137,7 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -217,7 +217,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                         columnWrapperStyle={styles.columnWrapper}
                         showsVerticalScrollIndicator={false}
                         refreshControl={
-                            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#2E7D32" />
+                            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#111" />
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyBox}>
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     },
     headerBackground: {
         height: 180,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
         width: width * 1.5,
         height: width * 1.5,
         borderRadius: width * 0.75,
-        backgroundColor: '#388E3C',
+        backgroundColor: '#222',
         opacity: 0.3,
     },
     headerContent: {
@@ -326,8 +326,8 @@ const styles = StyleSheet.create({
         borderColor: '#F3F4F6',
     },
     catChipActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     catChipText: {
         fontSize: 13,
@@ -353,8 +353,8 @@ const styles = StyleSheet.create({
         borderColor: '#F3F4F6',
     },
     locChipActive: {
-        backgroundColor: '#E8F5E9',
-        borderColor: '#2E7D32',
+        backgroundColor: '#F3F4F6',
+        borderColor: '#111',
     },
     locChipText: {
         fontSize: 12,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     locChipTextActive: {
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: 'bold',
     },
     resultsContainer: {
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 10,
         left: 10,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     listingPrice: {
         fontSize: 17,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
     },
     priceRowMain: {
         flexDirection: 'row',
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
         paddingHorizontal: 25,
         paddingVertical: 12,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         borderRadius: 18,
     },
     resetBtnText: {

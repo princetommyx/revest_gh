@@ -250,7 +250,7 @@ export default function LoginScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalIconContainer}>
-                            <Lock size={32} color="#2E7D32" />
+                            <Lock size={32} color="#111" />
                         </View>
                         <Text style={styles.modalTitle}>Verification Code</Text>
                         <Text style={styles.modalDesc}>
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     forgotPasswordText: {
-        color: '#2E7D32',
+        color: '#111',
         fontSize: 14,
         fontWeight: 'bold',
     },
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     signupLink: {
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: 'bold',
     },
     // Modal Styles
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
         borderColor: '#F3F4F6',
     },
     modalBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         width: '100%',
         height: 56,
         borderRadius: 28,

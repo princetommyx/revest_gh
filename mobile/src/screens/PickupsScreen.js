@@ -42,9 +42,9 @@ if (!isExpoGo) {
 
 // Simplified Map Mock for Expo Go
 const MapMock = ({ children, style, initialRegion, onRegionChangeComplete }) => (
-    <View style={[style, { backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' }]}>
-        <MapPin size={40} color="#2E7D32" />
-        <Text style={{ marginTop: 10, color: '#2E7D32', fontWeight: 'bold' }}>Map disabled in Expo Go</Text>
+    <View style={[style, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+        <MapPin size={40} color="#111" />
+        <Text style={{ marginTop: 10, color: '#111', fontWeight: 'bold' }}>Map disabled in Expo Go</Text>
         <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
             Use a Development Build to see the live map.
         </Text>
@@ -639,7 +639,7 @@ export default function PickupsScreen({ route }) {
                     job.status === 'COMPLETED' && { borderColor: '#999' },
                     job.status === 'ACCEPTED' && { borderColor: '#F39C12' }
                 ]}>
-                    <MapPin size={24} color={job.status === 'PENDING' ? '#2E7D32' : (job.status === 'ACCEPTED' ? '#F39C12' : '#999')} />
+                    <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#F39C12' : '#999')} />
                 </View>
             </ActiveMarker>
         );
@@ -687,7 +687,7 @@ export default function PickupsScreen({ route }) {
     }, [jobs, userRole]);
 
     if (loading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#2E7D32" /></View>;
+        return <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>;
     }
 
     return (
@@ -851,7 +851,7 @@ export default function PickupsScreen({ route }) {
 
                                                 {item.status === 'ARRIVED' && (
                                                     <TouchableOpacity
-                                                        style={[styles.acceptBtn, { backgroundColor: '#2E7D32' }]}
+                                                        style={[styles.acceptBtn, { backgroundColor: '#111' }]}
                                                         onPress={() => handleCompleteJob(item.id)}
                                                     >
                                                         <Text style={styles.acceptBtnText}>Confirm Completion</Text>
@@ -964,8 +964,8 @@ export default function PickupsScreen({ route }) {
 
                             {useCurrentLocation ? (
                                 <View style={styles.currentLocationBox}>
-                                    <Navigation size={16} color="#2E7D32" />
-                                    <Text style={{ flex: 1, color: '#2E7D32', fontSize: 13, fontWeight: '500' }}>
+                                    <Navigation size={16} color="#111" />
+                                    <Text style={{ flex: 1, color: '#111', fontSize: 13, fontWeight: '500' }}>
                                         Using your current GPS coordinates to ensure faster pickup.
                                     </Text>
                                 </View>
@@ -981,7 +981,7 @@ export default function PickupsScreen({ route }) {
                                         style={styles.mapSelectBtn}
                                         onPress={startMapSelection}
                                     >
-                                        <MapPin size={14} color="#2E7D32" />
+                                        <MapPin size={14} color="#111" />
                                         <Text style={styles.mapSelectText}>Map</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -993,7 +993,7 @@ export default function PickupsScreen({ route }) {
                                 <Text style={styles.label}>Order Estimate</Text>
                                 {requestLoading ? (
                                     <View style={styles.estimateLoading}>
-                                        <ActivityIndicator size="small" color="#2E7D32" />
+                                        <ActivityIndicator size="small" color="#111" />
                                         <Text style={styles.estimateLoadingText}>Calculating costs...</Text>
                                     </View>
                                 ) : (requestForm.waste_value) ? (
@@ -1031,7 +1031,7 @@ export default function PickupsScreen({ route }) {
                                             <Text style={styles.estimateTotalLabel}>
                                                 {userRole === 'SELLER' ? 'Total Payout' : 'Total'}
                                             </Text>
-                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#2E7D32' }]}>
+                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#111' }]}>
                                                 ₵{userRole === 'SELLER'
                                                     ? (parseFloat(requestForm.waste_value) - 2.00).toFixed(2)
                                                     : (parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee || 0) + (userRole === 'RECYCLER' ? 5.00 : 0)).toFixed(2)}
@@ -1171,7 +1171,7 @@ export default function PickupsScreen({ route }) {
                                     ]}>
                                         <Text style={[
                                             styles.trackTagText,
-                                            { color: confirmingJob.track_type === 'A' ? '#2E7D32' : '#166534' }
+                                            { color: confirmingJob.track_type === 'A' ? '#111' : '#166534' }
                                         ]}>
                                             {confirmingJob.track_type === 'A' ? 'Safe Disposal (Pay to Clear)' : 'Sell Recyclables (Earn Cash)'}
                                         </Text>
@@ -1191,10 +1191,10 @@ export default function PickupsScreen({ route }) {
                                                 onChangeText={setManualWeight}
                                             />
                                             <TouchableOpacity
-                                                style={[styles.verifyIconButton, verificationPhoto && { backgroundColor: '#E8F5E9' }]}
+                                                style={[styles.verifyIconButton, verificationPhoto && { backgroundColor: '#F3F4F6' }]}
                                                 onPress={pickVerificationImage}
                                             >
-                                                <Camera size={20} color={verificationPhoto ? '#2E7D32' : '#666'} />
+                                                <Camera size={20} color={verificationPhoto ? '#111' : '#666'} />
                                             </TouchableOpacity>
                                         </View>
 
@@ -1204,7 +1204,7 @@ export default function PickupsScreen({ route }) {
                                                 <TouchableOpacity
                                                     style={[
                                                         styles.aiVerifyBtn,
-                                                        verificationResult?.is_verified && { backgroundColor: '#2E7D32' }
+                                                        verificationResult?.is_verified && { backgroundColor: '#111' }
                                                     ]}
                                                     onPress={handleVerifyWeight}
                                                     disabled={isVerifying}
@@ -1254,7 +1254,7 @@ export default function PickupsScreen({ route }) {
                             <TouchableOpacity
                                 style={[
                                     styles.cancelModalConfirmBtn,
-                                    { backgroundColor: '#2E7D32' },
+                                    { backgroundColor: '#111' },
                                     (confirmingJob?.track_type === 'B' && !verificationResult?.is_verified) && { backgroundColor: '#ccc' }
                                 ]}
                                 onPress={confirmAndCompleteJob}
@@ -1332,7 +1332,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     requestButton: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1422,7 +1422,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     acceptBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1492,7 +1492,7 @@ const styles = StyleSheet.create({
         padding: 5,
         borderRadius: 18,
         borderWidth: 2,
-        borderColor: '#2E7D32',
+        borderColor: '#111',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
@@ -1518,7 +1518,7 @@ const styles = StyleSheet.create({
     selectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
     selectionSubtitle: { fontSize: 13, color: '#666', marginTop: 4 },
     confirmLocationBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         paddingHorizontal: 40,
         paddingVertical: 14,
         borderRadius: 15,
@@ -1572,8 +1572,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     pickerItemActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
@@ -1596,8 +1596,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     locationToggleBtnActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     locationToggleText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
     locationToggleTextActive: { color: '#fff' },
@@ -1671,7 +1671,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
-    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#2E7D32' },
+    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#111' },
     estimateNote: {
         fontSize: 11,
         color: '#9CA3AF',
@@ -1679,11 +1679,11 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
     submitRequestBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         paddingVertical: 18,
         borderRadius: 20,
         alignItems: 'center',
-        shadowColor: '#2E7D32',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -1887,7 +1887,7 @@ const styles = StyleSheet.create({
     earningsAmount: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
     },
     imageUploadBtn: {
         width: '100%',

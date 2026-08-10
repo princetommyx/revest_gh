@@ -5,6 +5,8 @@ Patches:
  - DatabaseFeatures.can_return_* → False (RETURNING added in 10.5)
  - DatabaseOperations.fetch_returned_insert_rows → None (disable server-side RETURNING)
 """
+import pymysql
+pymysql.install_as_MySQLdb()
 from django.db.backends.mysql.base import DatabaseWrapper as MySQLDatabaseWrapper
 from django.db.backends.mysql.features import DatabaseFeatures as MySQLFeatures
 from django.db.backends.mysql.operations import DatabaseOperations as MySQLOperations

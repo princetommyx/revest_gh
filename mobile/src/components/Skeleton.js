@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     // Wallet Card Skeleton
     walletCard: {
         margin: 20,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         borderRadius: 25,
         padding: 25,
         elevation: 10

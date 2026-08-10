@@ -70,7 +70,7 @@ export default function EditProfileScreen({ navigation }) {
             }
             const updatedUser = await authApi.updateProfile(data);
             setUser(updatedUser);
-            Toast.show("Profile updated!", { backgroundColor: '#2E7D32' });
+            Toast.show("Profile updated!", { backgroundColor: '#111' });
             navigation.goBack();
         } catch (error) {
             Toast.show("Update failed", { backgroundColor: '#E74C3C' });
@@ -81,7 +81,7 @@ export default function EditProfileScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -112,7 +112,7 @@ export default function EditProfileScreen({ navigation }) {
                                 <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.avatar} />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <User size={48} color="#2E7D32" />
+                                    <User size={48} color="#111" />
                                 </View>
                             )}
                             <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
@@ -206,12 +206,12 @@ export default function EditProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F7F4' },
-    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
+    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
     curvedShape: {
         position: 'absolute', bottom: -80, left: -width * 0.25,
         width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', opacity: 0.3
+        backgroundColor: '#222', opacity: 0.3
     },
     headerContent: { paddingHorizontal: 25, paddingTop: 10 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     avatarSection: { alignItems: 'center', marginBottom: 35 },
     avatarWrapper: { position: 'relative' },
     avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
-    avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#F0F7F4', borderWidth: 3, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-    cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: '#2E7D32', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
+    avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#FAFAFA', borderWidth: 3, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
+    cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
     avatarHint: { fontSize: 13, color: '#999', marginTop: 12, fontWeight: '600' },
     formSection: { gap: 20, marginBottom: 40 },
     inputBox: { gap: 8 },
@@ -237,6 +237,6 @@ const styles = StyleSheet.create({
     disabledTextCol: { flex: 1 },
     disabledLabel: { fontSize: 11, color: '#999', fontWeight: 'bold', textTransform: 'uppercase' },
     disabledValue: { fontSize: 14, color: '#666', marginTop: 2 },
-    footerBtn: { backgroundColor: '#2E7D32', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    footerBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     footerBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });

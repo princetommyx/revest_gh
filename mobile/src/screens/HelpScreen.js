@@ -34,7 +34,7 @@ export default function HelpScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -59,16 +59,16 @@ export default function HelpScreen({ navigation }) {
                     <Text style={styles.sectionTitle}>Contact Support</Text>
                     <View style={styles.contactContainer}>
                         <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
-                            <View style={[styles.iconBox, { backgroundColor: '#F0F7F4' }]}>
-                                <Mail size={22} color="#2E7D32" />
+                            <View style={[styles.iconBox, { backgroundColor: '#FAFAFA' }]}>
+                                <Mail size={22} color="#111" />
                             </View>
                             <Text style={styles.contactLabel}>Email Us</Text>
                             <Text style={styles.contactSub}>Fast response</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.contactCard} onPress={() => navigation.navigate('SupportChat')}>
-                            <View style={[styles.iconBox, { backgroundColor: '#F0F7F4' }]}>
-                                <MessageSquare size={22} color="#2E7D32" />
+                            <View style={[styles.iconBox, { backgroundColor: '#FAFAFA' }]}>
+                                <MessageSquare size={22} color="#111" />
                             </View>
                             <Text style={styles.contactLabel}>Live Chat</Text>
                             <Text style={styles.contactSub}>AI Assistant</Text>
@@ -93,7 +93,7 @@ export default function HelpScreen({ navigation }) {
                         <View key={index} style={styles.faqCard}>
                             <View style={styles.faqHeader}>
                                 <Text style={styles.faqQ}>{item.q}</Text>
-                                <ChevronDown size={18} color="#2E7D32" />
+                                <ChevronDown size={18} color="#111" />
                             </View>
                             <Text style={styles.faqA}>{item.a}</Text>
                         </View>
@@ -111,12 +111,12 @@ export default function HelpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F7F4' },
-    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
+    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
     curvedShape: {
         position: 'absolute', bottom: -80, left: -width * 0.25,
         width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', opacity: 0.3
+        backgroundColor: '#222', opacity: 0.3
     },
     headerContent: { paddingHorizontal: 25, paddingTop: 10 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },

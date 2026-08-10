@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Ionicons } from '@expo/vector-icons'; // Expo comes with vector icons
+import { Home, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -28,8 +29,135 @@ import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+const CustomTabBar = ({ state, descriptors, navigation }) => {
+    return (
+        <View style={navStyles.tabBarContainer}>
+            <BlurView intensity={70} tint="dark" style={navStyles.tabBar}>
+                {state.routes.map((route, index) => {
+                    const { options } = descriptors[route.key];
+                    const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
+                    const isFocused = state.index === index;
+
+                    const onPress = () => {
+                        const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                        if (!isFocused && !event.defaultPrevented) {
+                            navigation.navigate(route.name);
+                        }
+                    };
+
+                    let IconComp;
+                    if (route.name === 'Home') IconComp = Home;
+                    else if (route.name === 'Pickups') IconComp = MapIcon;
+                    else if (route.name === 'Marketplace') IconComp = Store;
+                    else if (route.name === 'Chat') IconComp = MessageSquare;
+                    else if (route.name === 'Wallet') IconComp = Wallet;
+
+                    return (
+                        <TouchableOpacity
+                            key={route.key}
+                            onPress={onPress}
+                            style={[navStyles.tabItem, isFocused && navStyles.tabItemActive]}
+                            activeOpacity={0.8}
+                        >
+                            {isFocused ? (
+                                <View style={navStyles.activeIconContainer}>
+                                    <IconComp size={18} color="#111" />
+                                </View>
+                            ) : (
+                                <IconComp size={22} color="rgba(255,255,255,0.4)" style={{ marginBottom: 4 }} />
+                            )}
+                            <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
+                                {label}
+                            </Text>
+                            {/* Notification Badge */}
+                            {options.tabBarBadge && (
+                                <View style={navStyles.badge}>
+                                    <Text style={navStyles.badgeText}>{options.tabBarBadge}</Text>
+                                </View>
+                            )}
+                        </TouchableOpacity>
+                    );
+                })}
+            </BlurView>
+        </View>
+    );
+};
+
+const navStyles = StyleSheet.create({
+    tabBarContainer: {
+        position: 'absolute',
+        bottom: Platform.OS === 'ios' ? 25 : 15,
+        left: 20,
+        right: 20,
+        zIndex: 100,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.25,
+        shadowRadius: 10,
+    },
+    tabBar: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(20, 20, 20, 0.45)', // very translucent black for glossy look
+        borderRadius: 40,
+        padding: 6,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        overflow: 'hidden', // to ensure blur is constrained
+    },
+    tabItem: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 10,
+    },
+    tabItemActive: {
+        backgroundColor: '#0a0a0a',
+        borderRadius: 34,
+        paddingVertical: 6,
+    },
+    activeIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    tabLabel: {
+        fontSize: 10,
+        color: 'rgba(255,255,255,0.4)',
+        fontWeight: '600',
+    },
+    tabLabelActive: {
+        color: '#fff',
+    },
+    badge: {
+        position: 'absolute',
+        top: 6,
+        right: '25%',
+        backgroundColor: '#EF4444',
+        minWidth: 16,
+        height: 16,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 4,
+        borderWidth: 1.5,
+        borderColor: '#222',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 8,
+        fontWeight: 'bold',
+    },
+});
+
 
 function MainTabs() {
     const { userRole } = useAuth();
@@ -37,28 +165,8 @@ function MainTabs() {
 
     return (
         <Tab.Navigator
-            screenOptions={({ route }) => ({
-                headerShown: false,
-                tabBarIcon: ({ focused, color, size }) => {
-                    let iconName;
-
-                    if (route.name === 'Home') {
-                        iconName = focused ? 'home' : 'home-outline';
-                    } else if (route.name === 'Pickups') {
-                        iconName = focused ? 'map' : 'map-outline';
-                    } else if (route.name === 'Marketplace') {
-                        iconName = focused ? 'storefront' : 'storefront-outline';
-                    } else if (route.name === 'Chat') {
-                        iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-                    } else if (route.name === 'Wallet') {
-                        iconName = focused ? 'wallet' : 'wallet-outline';
-                    }
-
-                    return <Ionicons name={iconName} size={size} color={color} />;
-                },
-                tabBarActiveTintColor: '#2E7D32',
-                tabBarInactiveTintColor: 'gray',
-            })}
+            tabBar={props => <CustomTabBar {...props} />}
+            screenOptions={{ headerShown: false }}
         >
             <Tab.Screen name="Home" component={HomeScreen} />
 
@@ -109,7 +217,7 @@ export default function AppNavigator() {
     if (authLoading || hasSeenOnboarding === null) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#2E7D32" />
+                <ActivityIndicator size="large" color="#111" />
             </View>
         );
     }

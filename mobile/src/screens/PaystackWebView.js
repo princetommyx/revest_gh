@@ -39,7 +39,7 @@ export default function PaystackWebView() {
                 startInLoadingState
                 renderLoading={() => (
                     <View style={styles.loading}>
-                        <ActivityIndicator size="large" color="#2E7D32" />
+                        <ActivityIndicator size="large" color="#111" />
                     </View>
                 )}
             />

@@ -1,24 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
-import { Mail, Lock, Phone, Eye, EyeOff, User, Check } from 'lucide-react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, Switch } from 'react-native';
+import { Eye, EyeOff, ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
-import { Modal, ActivityIndicator as RNActivityIndicator } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
-const Flag = () => <Text style={{ fontSize: 18, marginRight: 4 }}>🇬🇭</Text>;
+const Flag = () => <Text style={{ fontSize: 16, marginRight: 4 }}>🇬🇭</Text>;
 
 export default function LoginScreen() {
     const navigation = useNavigation();
-    const [loginMethod, setLoginMethod] = useState('phone'); // 'phone' or 'email'
+    const [loginMethod, setLoginMethod] = useState('email'); // Default to email to match design
     const [email, setEmail] = useState('');
     const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const CountryCode = '+233';
 
@@ -114,91 +113,88 @@ export default function LoginScreen() {
         }
     };
 
-    return (
-        <View style={styles.container}>
-            {/* Curved Header Background */}
-            <View style={styles.headerBackground}>
-                <LinearGradient
-                    colors={['#2E7D32', '#1B5E20']}
-                    style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.curvedShape} />
-                <SafeAreaView style={styles.headerContent}>
-                    <Text style={styles.greetingText}>Hello!</Text>
-                    <Text style={styles.welcomeText}>Welcome to Revesta</Text>
-                </SafeAreaView>
-            </View>
+    const handleSocialLogin = (provider) => {
+        Toast.show({
+            type: 'info',
+            text1: 'Coming Soon',
+            text2: `${provider} login is not yet integrated.`
+        });
+    };
 
+    return (
+        <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={{ flex: 1, marginTop: -60 }}
+                style={{ flex: 1 }}
             >
                 <ScrollView
                     contentContainerStyle={styles.scrollContent}
                     showsVerticalScrollIndicator={false}
                 >
-                    <View style={styles.formCard}>
-                        <Text style={styles.cardTitle}>Login</Text>
+                    <View style={styles.header}>
+                        <Text style={styles.greetingText}>Welcome Back</Text>
+                        <Text style={styles.welcomeText}>Stay connected by signing in with your email and password to access your account.</Text>
+                    </View>
 
-                        {/* Tab Switcher */}
-                        <View style={styles.tabContainer}>
-                            <TouchableOpacity
-                                style={[styles.tabButton, loginMethod === 'phone' && styles.activeTab]}
-                                onPress={() => setLoginMethod('phone')}
-                            >
-                                <Text style={[styles.tabText, loginMethod === 'phone' && styles.activeTabText]}>Phone</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.tabButton, loginMethod === 'email' && styles.activeTab]}
-                                onPress={() => setLoginMethod('email')}
-                            >
-                                <Text style={[styles.tabText, loginMethod === 'email' && styles.activeTabText]}>Email</Text>
-                            </TouchableOpacity>
-                        </View>
 
-                        {/* Inputs */}
-                        <View style={styles.inputGroup}>
-                            {loginMethod === 'phone' ? (
+                    {/* Tab Switcher - Kept clean to match design */}
+                    <View style={styles.tabContainer}>
+                        <TouchableOpacity
+                            style={[styles.tabButton, loginMethod === 'email' && styles.activeTab]}
+                            onPress={() => setLoginMethod('email')}
+                        >
+                            <Text style={[styles.tabText, loginMethod === 'email' && styles.activeTabText]}>Email</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.tabButton, loginMethod === 'phone' && styles.activeTab]}
+                            onPress={() => setLoginMethod('phone')}
+                        >
+                            <Text style={[styles.tabText, loginMethod === 'phone' && styles.activeTabText]}>Phone</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Inputs */}
+                    <View style={styles.formSection}>
+                        {loginMethod === 'phone' ? (
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Phone Number</Text>
                                 <View style={styles.inputWrapper}>
-                                    <View style={styles.iconContainer}>
-                                        <Phone size={20} color="#666" />
-                                    </View>
                                     <View style={styles.phoneLabel}>
                                         <Flag />
                                         <Text style={styles.countryCode}>{CountryCode}</Text>
                                     </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Phone number"
+                                        placeholder="000 000 0000"
                                         value={phoneNumber}
                                         onChangeText={setPhoneNumber}
                                         keyboardType="phone-pad"
                                         placeholderTextColor="#999"
                                     />
                                 </View>
-                            ) : (
+                            </View>
+                        ) : (
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Email Address</Text>
                                 <View style={styles.inputWrapper}>
-                                    <View style={styles.iconContainer}>
-                                        <Mail size={20} color="#666" />
-                                    </View>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="Email or username"
+                                        placeholder="ethan_miller007@gmail.com"
                                         value={email}
                                         onChangeText={setEmail}
                                         autoCapitalize="none"
                                         placeholderTextColor="#999"
                                     />
                                 </View>
-                            )}
+                            </View>
+                        )}
 
-                            <View style={[styles.inputWrapper, { marginTop: 15 }]}>
-                                <View style={styles.iconContainer}>
-                                    <Lock size={20} color="#666" />
-                                </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.inputLabel}>Password</Text>
+                            <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Password"
+                                    placeholder="••••••••••"
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
@@ -212,35 +208,63 @@ export default function LoginScreen() {
                                 </TouchableOpacity>
                             </View>
                         </View>
+                    </View>
 
-                        <TouchableOpacity
-                            style={styles.forgotPasswordButton}
-                            onPress={() => navigation.navigate('ForgotPassword')}
-                        >
+                    <View style={styles.optionsRow}>
+                        <View style={styles.rememberMeRow}>
+                            <Switch
+                                value={rememberMe}
+                                onValueChange={setRememberMe}
+                                trackColor={{ false: '#E5E7EB', true: '#000' }}
+                                thumbColor={'#fff'}
+                                ios_backgroundColor="#E5E7EB"
+                                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                            />
+                            <Text style={styles.rememberMeText}>Remember me</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                         </TouchableOpacity>
+                    </View>
 
-                        <TouchableOpacity
-                            style={styles.loginButton}
-                            onPress={handleLogin}
-                            disabled={loading}
-                        >
-                            {loading ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.loginButtonText}>Login</Text>
-                            )}
+                    <TouchableOpacity
+                        style={styles.loginButton}
+                        onPress={handleLogin}
+                        disabled={loading}
+                    >
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>Sign In</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Register')}
+                        style={styles.signupContainer}
+                    >
+                        <Text style={styles.signupText}>
+                            Don't have an account? <Text style={styles.signupLink}>Sign Up</Text>
+                        </Text>
+                    </TouchableOpacity>
+
+                    <View style={[styles.dividerRow, { marginTop: 30 }]}>
+                        <View style={styles.dividerLine} />
+                        <Text style={styles.dividerText}>or continue with</Text>
+                        <View style={styles.dividerLine} />
+                    </View>
+
+                    <View style={styles.socialRow}>
+                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Google')}>
+                            <Text style={styles.googleG}>G</Text>
+                            <Text style={styles.socialText}>Google</Text>
                         </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => navigation.navigate('Register')}
-                            style={styles.signupContainer}
-                        >
-                            <Text style={styles.signupText}>
-                                Don't have account? <Text style={styles.signupLink}>Sign Up</Text>
-                            </Text>
+                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
+                            <Text style={styles.appleIcon}></Text>
+                            <Text style={styles.socialText}>Apple</Text>
                         </TouchableOpacity>
                     </View>
+
                 </ScrollView>
             </KeyboardAvoidingView>
 
@@ -249,7 +273,7 @@ export default function LoginScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
                         <View style={styles.modalIconContainer}>
-                            <Lock size={32} color="#2E7D32" />
+                            <Lock size={32} color="#000" />
                         </View>
                         <Text style={styles.modalTitle}>Verification Code</Text>
                         <Text style={styles.modalDesc}>
@@ -287,166 +311,217 @@ export default function LoginScreen() {
                     </View>
                 </View>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4', // Very light mint/green
-    },
-    headerBackground: {
-        height: 300,
-        backgroundColor: '#2E7D32', // Revesta Primary Green
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    curvedShape: {
-        position: 'absolute',
-        bottom: -150,
-        left: -width * 0.25,
-        width: width * 1.5,
-        height: width * 1.5,
-        borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', // Slightly lighter green for depth
-        opacity: 0.3,
-    },
-    headerContent: {
-        paddingHorizontal: 30,
-        paddingTop: 40,
-    },
-    greetingText: {
-        fontSize: 42,
-        fontWeight: 'bold',
-        color: '#fff',
-    },
-    welcomeText: {
-        fontSize: 18,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginTop: 5,
-        fontWeight: '500',
+        backgroundColor: '#FAFAFA', // Light gray background
     },
     scrollContent: {
         flexGrow: 1,
-        paddingHorizontal: 20,
+        paddingHorizontal: 25,
+        paddingTop: 10,
         paddingBottom: 40,
     },
-    formCard: {
+    header: {
+        alignItems: 'center',
+        marginBottom: 30,
+        position: 'relative',
+    },
+
+    greetingText: {
+        fontSize: 26,
+        fontWeight: '700',
+        color: '#111',
+        marginTop: 40,
+        marginBottom: 10,
+    },
+    welcomeText: {
+        fontSize: 14,
+        color: '#666',
+        textAlign: 'center',
+        lineHeight: 22,
+        paddingHorizontal: 20,
+    },
+    socialRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 25,
+    },
+    socialButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: '#fff',
         borderRadius: 30,
-        padding: 30,
+        height: 56,
+        flex: 0.48,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
     },
-    cardTitle: {
-        fontSize: 24,
+    googleG: {
         fontWeight: 'bold',
-        color: '#2E7D32',
+        fontSize: 18,
+        color: '#DB4437',
+        marginRight: 8,
+    },
+    appleIcon: {
+        fontSize: 20,
+        color: '#000',
+        marginRight: 8,
+        marginTop: -2,
+    },
+    socialText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#333',
+    },
+    dividerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 25,
+    },
+    dividerLine: {
+        flex: 1,
+        height: 1,
+        backgroundColor: '#E5E7EB',
+    },
+    dividerText: {
+        paddingHorizontal: 15,
+        color: '#9CA3AF',
+        fontSize: 14,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F5F5F5',
-        borderRadius: 15,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 30,
         padding: 5,
-        marginBottom: 25,
+        marginBottom: 20,
     },
     tabButton: {
         flex: 1,
-        paddingVertical: 10,
+        paddingVertical: 12,
         alignItems: 'center',
-        borderRadius: 12,
+        borderRadius: 25,
     },
     activeTab: {
         backgroundColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
         elevation: 2,
     },
     tabText: {
         fontSize: 14,
-        color: '#999',
+        color: '#6B7280',
         fontWeight: '600',
     },
     activeTabText: {
-        color: '#2E7D32',
+        color: '#111',
+    },
+    formSection: {
+        marginBottom: 20,
     },
     inputGroup: {
-        marginBottom: 15,
+        marginBottom: 18,
+    },
+    inputLabel: {
+        fontSize: 14,
+        color: '#333',
+        marginBottom: 8,
+        marginLeft: 4,
+        fontWeight: '500',
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        height: 60,
-        paddingHorizontal: 15,
-    },
-    iconContainer: {
-        marginRight: 10,
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        height: 56,
+        paddingHorizontal: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 5,
+        elevation: 1,
     },
     phoneLabel: {
         flexDirection: 'row',
         alignItems: 'center',
         marginRight: 10,
         borderRightWidth: 1,
-        borderRightColor: '#EEE',
+        borderRightColor: '#E5E7EB',
         paddingRight: 10,
     },
     countryCode: {
-        fontSize: 16,
+        fontSize: 15,
         color: '#333',
-        fontWeight: '600',
+        fontWeight: '500',
     },
     input: {
         flex: 1,
-        fontSize: 16,
+        fontSize: 15,
         color: '#333',
         height: '100%',
     },
     eyeIcon: {
         padding: 5,
     },
-    forgotPasswordButton: {
-        alignSelf: 'flex-end',
+    optionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: 30,
+        paddingHorizontal: 4,
+    },
+    rememberMeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    rememberMeText: {
+        fontSize: 14,
+        color: '#666',
+        marginLeft: 8,
     },
     forgotPasswordText: {
-        color: '#999',
+        color: '#111',
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     loginButton: {
-        backgroundColor: '#2E7D32',
-        height: 60,
-        borderRadius: 30,
+        backgroundColor: '#000',
+        height: 56,
+        borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#2E7D32',
+        marginBottom: 25,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 5,
     },
     loginButtonText: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: 'bold',
     },
     signupContainer: {
         alignItems: 'center',
-        marginTop: 25,
     },
     signupText: {
-        color: '#999',
+        color: '#666',
         fontSize: 14,
     },
     signupLink: {
-        color: '#2E7D32',
+        color: '#000',
         fontWeight: 'bold',
     },
     // Modal Styles
@@ -458,23 +533,23 @@ const styles = StyleSheet.create({
     },
     modalCard: {
         backgroundColor: '#fff',
-        borderRadius: 25,
+        borderRadius: 30,
         padding: 30,
         alignItems: 'center',
     },
     modalIconContainer: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: '#E8F5E9',
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
     },
     modalTitle: {
-        fontSize: 22,
+        fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#111',
         marginBottom: 10,
     },
     modalDesc: {
@@ -486,19 +561,19 @@ const styles = StyleSheet.create({
     },
     otpInput: {
         width: '100%',
-        height: 60,
+        height: 56,
         backgroundColor: '#F9FAFB',
-        borderRadius: 15,
+        borderRadius: 28,
         textAlign: 'center',
         fontSize: 24,
-        letterSpacing: 10,
+        letterSpacing: 8,
         fontWeight: 'bold',
         marginBottom: 25,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: '#E5E7EB',
     },
     modalBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#000',
         width: '100%',
         height: 56,
         borderRadius: 28,
@@ -517,7 +592,6 @@ const styles = StyleSheet.create({
     modalCancel: {
         color: '#999',
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
     },
 });
-

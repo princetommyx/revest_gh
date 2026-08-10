@@ -3,18 +3,21 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     Image, ActivityIndicator, ScrollView, Linking, Alert, Dimensions, StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, User, MessageSquare, Phone, ShieldCheck, AlertTriangle, Truck, Share2, Info } from 'lucide-react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, MapPin, User, MessageSquare, Phone, ShieldCheck, AlertTriangle, Truck, Share2, Info, Star, Heart } from 'lucide-react-native';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
 
+
 const { width } = Dimensions.get('window');
+
 
 export default function ListingDetailScreen({ route, navigation }) {
     const { listingId } = route.params;
     const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -38,23 +41,14 @@ export default function ListingDetailScreen({ route, navigation }) {
         if (!path) return null;
         if (path.startsWith('http')) return path;
         let cleanPath = path.startsWith('/') ? path : `/${path}`;
-        if (!cleanPath.startsWith('/media/')) {
-            cleanPath = `/media${cleanPath}`;
-        }
+        if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
         return `${BASE_URL}${cleanPath}`;
-    };
-
-    const handleContactSeller = () => {
-        navigation.navigate('ChatDetail', {
-            contactId: listing.seller.id,
-            contactName: listing.seller_name
-        });
     };
 
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#2E7D32" />
+                <ActivityIndicator size="large" color="#111" />
             </View>
         );
     }
@@ -69,128 +63,94 @@ export default function ListingDetailScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            
+            <SafeAreaView edges={['top']} style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.roundBtn}>
+                    <ArrowLeft size={20} color="#111" />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Waste Details</Text>
+                <TouchableOpacity style={styles.roundBtn}>
+                    <Share2 size={18} color="#111" />
+                </TouchableOpacity>
+            </SafeAreaView>
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
-                {/* Header with Image and Curve */}
-                <View style={styles.imageHeader}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                <View style={styles.heroCard}>
                     {listing.image ? (
-                        <Image
-                            source={{ uri: resolveImageUrl(listing.image) }}
-                            style={styles.heroImage}
-                            resizeMode="cover"
-                        />
+                        <Image source={{ uri: resolveImageUrl(listing.image) }} style={styles.heroImage} resizeMode="cover" />
                     ) : (
-                        <View style={styles.placeholderImage}>
-                            <Image source={require('../../assets/icon.png')} style={{ width: 80, height: 80, opacity: 0.1 }} />
+                        <View style={[styles.heroImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Info size={40} color="#ccc" />
                         </View>
                     )}
-
-                    {/* Overlay for transparency/contrast */}
-                    <View style={styles.imageOverlay} />
-
-                    {/* Floating Back Button */}
-                    <SafeAreaView edges={['top']} style={styles.floatingHeader}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.roundBtn}>
-                            <ArrowLeft size={24} color="#333" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.roundBtn}>
-                            <Share2 size={20} color="#333" />
-                        </TouchableOpacity>
-                    </SafeAreaView>
-
-                    {/* Organic Curve at the bottom of the image */}
-                    <View style={styles.imageCurve} />
+                    <View style={styles.heroBadgeTop}>
+                        <View style={styles.trackBadge}>
+                            <Text style={styles.trackBadgeText}>Track {listing.track || 'A'}</Text>
+                        </View>
+                        <View style={styles.heartBtn}>
+                            <Heart size={20} color="#EF4444" fill="#EF4444" />
+                        </View>
+                    </View>
                 </View>
 
-                {/* Overlapping Content Card */}
-                <View style={styles.contentCard}>
-                    <View style={styles.priceRow}>
-                        <View>
-                            <Text style={styles.priceLabel}>
-                                {listing.track === 'B' ? 'Buyback Value' : 'Disposal Fee'}
-                            </Text>
-                            <Text style={styles.price}>
-                                {listing.is_free ? 'GIVEAWAY' : `₵${listing.price}`}
-                            </Text>
+                <View style={styles.detailsContainer}>
+                    <View style={styles.titleRow}>
+                        <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
+                        <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                    </View>
+
+                    <View style={styles.metaRow}>
+                        <View style={styles.locationBox}>
+                            <MapPin size={14} color="#888" />
+                            <Text style={styles.locationText}>{listing.location}</Text>
                         </View>
-                        <View style={[
-                            styles.trackBadge,
-                            { backgroundColor: listing.track === 'B' ? '#DCFCE7' : '#E8F5E9' }
-                        ]}>
-                            <Text style={[
-                                styles.trackText,
-                                { color: listing.track === 'B' ? '#166534' : '#2E7D32' }
-                            ]}>
-                                {listing.track === 'B' ? 'Sell Recyclables' : 'Safe Disposal'}
-                            </Text>
+                        <View style={styles.ratingBox}>
+                            <Star size={14} color="#F39C12" fill="#F39C12" />
+                            <Text style={styles.ratingText}>4.5</Text>
+                            <Text style={styles.ratingSubtext}>(23 Reviews)</Text>
                         </View>
                     </View>
 
-                    <Text style={styles.title}>{listing.title}</Text>
-
-                    <View style={styles.locationRow}>
-                        <MapPin size={16} color="#2E7D32" />
-                        <Text style={styles.locationText}>{listing.location}</Text>
-                        <View style={styles.dot} />
-                        <Text style={styles.timeText}>{new Date(listing.created_at).toLocaleDateString()}</Text>
-                    </View>
-
+                    <Text style={styles.sectionTitle}>What you will get</Text>
                     <View style={styles.statsGrid}>
-                        <View style={styles.statItem}>
-                            <Info size={18} color="#2E7D32" />
-                            <View>
-                                <Text style={styles.statLabel}>Quantity</Text>
-                                <Text style={styles.statValue}>{listing.quantity}</Text>
-                            </View>
+                        <View style={styles.statBox}>
+                            <Info size={20} color="#111" style={{ marginBottom: 4 }} />
+                            <Text style={styles.statBoxVal}>{listing.quantity}</Text>
+                            <Text style={styles.statBoxLabel}>Quantity</Text>
                         </View>
-                        <View style={styles.statItem}>
-                            <ShieldCheck size={18} color="#2E7D32" />
-                            <View>
-                                <Text style={styles.statLabel}>Condition</Text>
-                                <Text style={styles.statValue}>Recyclable</Text>
-                            </View>
+                        <View style={styles.statBox}>
+                            <ShieldCheck size={20} color="#111" style={{ marginBottom: 4 }} />
+                            <Text style={styles.statBoxVal}>Verified</Text>
+                            <Text style={styles.statBoxLabel}>Seller</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                            <Truck size={20} color="#111" style={{ marginBottom: 4 }} />
+                            <Text style={styles.statBoxVal}>Track {listing.track || 'A'}</Text>
+                            <Text style={styles.statBoxLabel}>Type</Text>
+                        </View>
+                        <View style={styles.statBox}>
+                            <Info size={20} color="#111" style={{ marginBottom: 4 }} />
+                            <Text style={styles.statBoxVal}>{listing.material_type}</Text>
+                            <Text style={styles.statBoxLabel}>Material</Text>
                         </View>
                     </View>
-
-                    <View style={styles.divider} />
 
                     <Text style={styles.sectionTitle}>Description</Text>
                     <Text style={styles.descriptionText}>{listing.description}</Text>
 
-                    <View style={styles.divider} />
-
-                    {/* Seller Card */}
+                    <Text style={styles.sectionTitle}>Seller Info</Text>
                     <View style={styles.sellerCard}>
-                        <View style={styles.sellerHeader}>
-                            <View style={styles.sellerAvatar}>
-                                <User size={26} color="#fff" />
-                            </View>
-                            <View style={styles.sellerInfo}>
-                                <View style={styles.sellerNameRow}>
-                                    <Text style={styles.sellerName}>{listing.seller_name}</Text>
-                                    {listing.seller?.is_verified && <ShieldCheck size={16} color="#2E7D32" style={{ marginLeft: 6 }} />}
-                                </View>
-                                <Text style={styles.sellerMemberText}>Verified Seller</Text>
-                            </View>
+                        <View style={styles.sellerAvatar}><User size={24} color="#fff" /></View>
+                        <View style={styles.sellerInfo}>
+                            <Text style={styles.sellerName}>{listing.seller_name}</Text>
+                            <Text style={styles.sellerSubtext}>Verified Member</Text>
                         </View>
                     </View>
-
-                    {/* Safety Notice */}
-                    <View style={styles.safetyCard}>
-                        <AlertTriangle size={20} color="#EF4444" />
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.safetyTitle}>Safety First</Text>
-                            <Text style={styles.safetyText}>Always meet in public places and inspect items carefully before any payment.</Text>
-                        </View>
-                    </View>
-
-                    <View style={{ height: 20 }} />
                 </View>
             </ScrollView>
 
-            {/* Bottom Sticky Actions */}
-            <SafeAreaView edges={['bottom']} style={styles.bottomActions}>
+            <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                 <TouchableOpacity
                     style={styles.mainActionBtn}
                     onPress={() => navigation.navigate('Main', {
@@ -199,309 +159,65 @@ export default function ListingDetailScreen({ route, navigation }) {
                             pickupData: {
                                 material_type: listing.material_type,
                                 quantity_estimate: listing.quantity,
-                                seller_location: {
-                                    latitude: listing.latitude,
-                                    longitude: listing.longitude,
-                                    address: listing.location
-                                },
-                                waste_price: listing.price,
-                                listing_id: listing.id,
-                                track_type: listing.track,
-                                estimated_price: listing.price
+                                pickup_address: listing.location,
+                                listing_id: listing.id
                             }
                         }
                     })}
                 >
-                    <Truck size={22} color="#fff" />
-                    <Text style={styles.mainActionText}>Request Pickup</Text>
+                    <Text style={styles.mainActionText}>Request Pickup Now</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity style={styles.secondaryActionBtn} onPress={handleContactSeller}>
-                    <MessageSquare size={22} color="#2E7D32" />
-                </TouchableOpacity>
-            </SafeAreaView>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-    },
-    centerContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    scrollContent: {
-        paddingBottom: 100,
-    },
-    imageHeader: {
-        width: width,
-        height: 350,
-        position: 'relative',
-        backgroundColor: '#f5f5f5',
-    },
-    heroImage: {
-        width: '100%',
-        height: '100%',
-    },
-    imageOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.05)',
-    },
-    placeholderImage: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    floatingHeader: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        zIndex: 10,
-    },
-    roundBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-    },
-    imageCurve: {
-        position: 'absolute',
-        bottom: 0,
-        width: width,
-        height: 30,
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 35,
-        borderTopRightRadius: 35,
-    },
-    contentCard: {
-        flex: 1,
-        backgroundColor: '#fff',
-        paddingHorizontal: 25,
-        marginTop: -5,
-    },
-    priceRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
-    },
-    price: {
-        fontSize: 30,
-        fontWeight: 'bold',
-        color: '#2E7D32',
-    },
-    categoryBadge: {
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 12,
-    },
-    categoryText: {
-        color: '#2E7D32',
-        fontWeight: 'bold',
-        fontSize: 12,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 12,
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 25,
-    },
-    locationText: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 6,
-    },
-    dot: {
-        width: 4,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#ccc',
-        marginHorizontal: 10,
-    },
-    timeText: {
-        fontSize: 14,
-        color: '#999',
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        gap: 20,
-        marginBottom: 25,
-    },
-    statItem: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F9FBF9',
-        padding: 15,
-        borderRadius: 18,
-        gap: 12,
-        borderWidth: 1,
-        borderColor: '#F0F4F0',
-    },
-    statLabel: {
-        fontSize: 11,
-        color: '#999',
-    },
-    statValue: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: '#F3F4F6',
-        marginVertical: 25,
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 12,
-    },
-    descriptionText: {
-        fontSize: 16,
-        color: '#555',
-        lineHeight: 24,
-    },
-    sellerCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        marginBottom: 20,
-    },
-    sellerHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 15,
-    },
-    sellerAvatar: {
-        width: 54,
-        height: 54,
-        borderRadius: 27,
-        backgroundColor: '#2E7D32',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    sellerInfo: {
-        flex: 1,
-    },
-    sellerNameRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sellerName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    sellerMemberText: {
-        fontSize: 13,
-        color: '#2E7D32',
-        fontWeight: '600',
-        marginTop: 2,
-    },
-    safetyCard: {
-        flexDirection: 'row',
-        backgroundColor: '#FFF5F5',
-        padding: 15,
-        borderRadius: 18,
-        gap: 12,
-        borderWidth: 1,
-        borderColor: '#FFEAEA',
-    },
-    safetyTitle: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#EF4444',
-        marginBottom: 2,
-    },
-    safetyText: {
-        fontSize: 12,
-        color: '#777',
-        lineHeight: 18,
-    },
-    bottomActions: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: '#fff',
-        paddingHorizontal: 20,
-        paddingTop: 15,
-        paddingBottom: 30,
-        flexDirection: 'row',
-        gap: 15,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    mainActionBtn: {
-        flex: 1,
-        height: 56,
-        backgroundColor: '#2E7D32',
-        borderRadius: 18,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
-    },
-    mainActionText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    secondaryActionBtn: {
-        width: 56,
-        height: 56,
-        borderRadius: 18,
-        backgroundColor: '#E8F5E9',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    errorText: {
-        fontSize: 16,
-        color: '#999',
-    },
-    priceLabel: {
-        fontSize: 12,
-        color: '#6B7280',
-        marginBottom: 2,
-        fontWeight: '500',
-    },
-    trackBadge: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 8,
-    },
-    trackText: {
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
+    container: { flex: 1, backgroundColor: '#fff' },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
+    errorText: { fontSize: 16, color: '#111' },
+    
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, backgroundColor: '#fff' },
+    headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
+    roundBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#eee' },
+    
+    scrollContent: { paddingBottom: 100 },
+    
+    heroCard: { marginHorizontal: 20, marginTop: 10, height: 260, borderRadius: 24, overflow: 'hidden', position: 'relative' },
+    heroImage: { width: '100%', height: '100%' },
+    heroBadgeTop: { position: 'absolute', top: 16, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between' },
+    trackBadge: { backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    trackBadgeText: { fontSize: 13, fontWeight: 'bold', color: '#111' },
+    heartBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+    
+    detailsContainer: { paddingHorizontal: 20, paddingTop: 20 },
+    titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+    title: { fontSize: 24, fontWeight: 'bold', color: '#111', flex: 1, marginRight: 10, lineHeight: 30 },
+    price: { fontSize: 22, fontWeight: 'bold', color: '#111' },
+    
+    metaRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+    locationBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 20 },
+    locationText: { fontSize: 14, color: '#666' },
+    ratingBox: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    ratingText: { fontSize: 14, fontWeight: 'bold', color: '#111' },
+    ratingSubtext: { fontSize: 13, color: '#888' },
+    
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#111', marginBottom: 16, marginTop: 10 },
+    statsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
+    statBox: { flex: 1, alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingVertical: 12, marginHorizontal: 4, borderWidth: 1, borderColor: '#eee' },
+    statBoxVal: { fontSize: 13, fontWeight: 'bold', color: '#111', marginBottom: 2 },
+    statBoxLabel: { fontSize: 11, color: '#888' },
+    
+    descriptionText: { fontSize: 15, color: '#666', lineHeight: 24, marginBottom: 24 },
+    
+    sellerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#eee', marginBottom: 20 },
+    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+    sellerInfo: { flex: 1 },
+    sellerName: { fontSize: 16, fontWeight: 'bold', color: '#111', marginBottom: 4 },
+    sellerSubtext: { fontSize: 13, color: '#888' },
+    
+    bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(255,255,255,0.95)', paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#eee' },
+    mainActionBtn: { backgroundColor: '#111', paddingVertical: 16, borderRadius: 30, alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+    mainActionText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
+

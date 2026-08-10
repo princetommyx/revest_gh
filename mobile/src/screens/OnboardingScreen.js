@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
 
     if (showAuthView) {
         return (
-            <View style={[styles.container, { backgroundColor: '#F0F7F4' }]}>
+            <View style={[styles.container, { backgroundColor: '#FAFAFA' }]}>
                 <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
                 {/* Background Shapes */}
@@ -286,11 +286,11 @@ const styles = StyleSheet.create({
     dot: {
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         marginHorizontal: 4,
     },
     button: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         height: 60,
         borderRadius: 15,
         justifyContent: 'center',
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
         paddingHorizontal: 20,
         alignItems: 'center',
-        shadowColor: '#2E7D32',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.1,
         shadowRadius: 30,
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
     welcomeHeading: {
         fontSize: 32,
         fontWeight: '900',
-        color: '#2E7D32',
+        color: '#111',
         marginBottom: 5,
     },
     brandRow: {
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     brandTextGreen: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
     },
     authActionArea: {
         width: '100%',
