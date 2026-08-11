@@ -646,9 +646,9 @@ export default function PickupsScreen({ route }) {
                 <View style={[
                     styles.markerContainer,
                     job.status === 'COMPLETED' && { borderColor: '#999' },
-                    job.status === 'ACCEPTED' && { borderColor: '#F39C12' }
+                    job.status === 'ACCEPTED' && { borderColor: '#111' }
                 ]}>
-                    <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#F39C12' : '#999')} />
+                    <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#111' : '#999')} />
                 </View>
             </ActiveMarker>
         );
@@ -661,8 +661,8 @@ export default function PickupsScreen({ route }) {
                     title="Collector"
                     description={job.collector_name || "En route"}
                 >
-                    <View style={[styles.markerContainer, { borderColor: '#3498DB' }]}>
-                        <Truck size={24} color="#3498DB" />
+                    <View style={[styles.markerContainer, { borderColor: '#111' }]}>
+                        <Truck size={24} color="#111" />
                     </View>
                 </ActiveMarker>
             );
@@ -674,7 +674,7 @@ export default function PickupsScreen({ route }) {
                         { latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) },
                         { latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }
                     ]}
-                    strokeColor="#3498DB"
+                    strokeColor="#111"
                     strokeWidth={3}
                     lineDashPattern={[5, 5]}
                 />
@@ -837,8 +837,8 @@ export default function PickupsScreen({ route }) {
                                                 <Text style={styles.jobType}>{item.material_type}</Text>
                                                 <Text style={styles.jobQty}>{item.quantity_estimate}</Text>
                                             </View>
-                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#ECFDF5' : '#FFFBEB' }]}>
-                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#10B981' : '#F59E0B' }]}>{item.status}</Text>
+                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#F3F4F6' : (item.status === 'ARRIVED' ? '#111' : '#F3F4F6') }]}>
+                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#111' : (item.status === 'ARRIVED' ? '#fff' : '#111') }]}>{item.status}</Text>
                                             </View>
                                         </View>
 
@@ -907,7 +907,7 @@ export default function PickupsScreen({ route }) {
                                         {userRole === 'SELLER' && item.status === 'ACCEPTED' && (
                                             <View style={styles.trackingContainer}>
                                                 <View style={styles.trackingPulse}>
-                                                    <Activity size={14} color="#3498DB" />
+                                                    <Activity size={14} color="#111" />
                                                     <Text style={styles.trackingTitle}>Collector En Route</Text>
                                                 </View>
                                                 <Text style={styles.trackingDetail}>
@@ -1547,19 +1547,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 8,
     },
-    navBtn: { backgroundColor: '#3498DB' },
-    arriveBtn: { backgroundColor: '#F39C12' },
+    navBtn: { backgroundColor: '#111' },
+    arriveBtn: { backgroundColor: '#333' },
     actionBtnText: {
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
     },
     trackingContainer: {
-        backgroundColor: '#EBF5FB',
+        backgroundColor: '#F3F4F6',
         padding: 15,
         borderRadius: 16,
         borderLeftWidth: 4,
-        borderLeftColor: '#3498DB',
+        borderLeftColor: '#111',
     },
     trackingPulse: {
         flexDirection: 'row',
@@ -1570,11 +1570,11 @@ const styles = StyleSheet.create({
     trackingTitle: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#2980B9',
+        color: '#111',
     },
     trackingDetail: {
         fontSize: 12,
-        color: '#5D6D7E',
+        color: '#6B7280',
     },
     cancelRequestBtn: {
         alignItems: 'center',
@@ -1718,18 +1718,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: '#F3F4F6',
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 8,
     },
-    mapSelectText: { fontSize: 12, color: '#059669', fontWeight: 'bold' },
+    mapSelectText: { fontSize: 12, color: '#111', fontWeight: 'bold' },
 
     currentLocationBox: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: '#F3F4F6',
         padding: 15,
         borderRadius: 12,
         marginBottom: 20,
@@ -1955,7 +1955,7 @@ const styles = StyleSheet.create({
     },
     aiVerifyBtn: {
         flex: 1,
-        backgroundColor: '#3498DB',
+        backgroundColor: '#111',
         paddingVertical: 10,
         borderRadius: 8,
         alignItems: 'center',

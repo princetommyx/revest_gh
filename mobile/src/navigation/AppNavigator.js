@@ -38,7 +38,7 @@ const Tab = createBottomTabNavigator();
 const CustomTabBar = ({ state, descriptors, navigation }) => {
     return (
         <View style={navStyles.tabBarContainer}>
-            <BlurView intensity={70} tint="light" style={navStyles.tabBar}>
+            <BlurView intensity={70} tint="dark" style={navStyles.tabBar}>
                 {state.routes.map((route, index) => {
                     const { options } = descriptors[route.key];
                     const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
@@ -74,10 +74,10 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                         >
                             {isFocused ? (
                                 <View style={navStyles.activeIconContainer}>
-                                    <IconComp size={18} color="#fff" />
+                                    <IconComp size={18} color="#111" />
                                 </View>
                             ) : (
-                                <IconComp size={22} color="#888" style={{ marginBottom: 4 }} />
+                                <IconComp size={22} color="#aaa" style={{ marginBottom: 4 }} />
                             )}
                             <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
                                 {label}
@@ -111,7 +111,7 @@ const navStyles = StyleSheet.create({
     },
     tabBar: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.85)',
+        backgroundColor: 'rgba(17, 17, 17, 0.85)',
         borderRadius: 40,
         padding: 6,
         justifyContent: 'space-between',
@@ -125,7 +125,7 @@ const navStyles = StyleSheet.create({
         paddingVertical: 10,
     },
     tabItemActive: {
-        backgroundColor: '#f5f5f5',
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
         borderRadius: 34,
         paddingVertical: 6,
     },
@@ -133,18 +133,18 @@ const navStyles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#111',
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 4,
     },
     tabLabel: {
         fontSize: 10,
-        color: '#888',
+        color: '#aaa',
         fontWeight: '600',
     },
     tabLabelActive: {
-        color: '#111',
+        color: '#fff',
     },
     badge: {
         position: 'absolute',
