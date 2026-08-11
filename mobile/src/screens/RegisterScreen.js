@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Smartphone, Lock, Edit2 } from 'lucide-react-native';
+import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Smartphone, Lock, Edit2, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -15,6 +15,7 @@ export default function RegisterScreen() {
     const { signUp } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -433,8 +434,11 @@ export default function RegisterScreen() {
                                     placeholderTextColor="#999"
                                     value={formData.password}
                                     onChangeText={(val) => handleChange('password', val)}
-                                    secureTextEntry
+                                    secureTextEntry={!showPassword}
                                 />
+                                <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -447,8 +451,11 @@ export default function RegisterScreen() {
                                     placeholderTextColor="#999"
                                     value={formData.confirm_password}
                                     onChangeText={(val) => handleChange('confirm_password', val)}
-                                    secureTextEntry
+                                    secureTextEntry={!showPassword}
                                 />
+                                <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+                                    {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -811,6 +818,9 @@ const styles = StyleSheet.create({
         fontSize: 15,
         color: '#333',
         height: '100%',
+    },
+    eyeIcon: {
+        padding: 5,
     },
     phoneLabel: {
         marginRight: 10,

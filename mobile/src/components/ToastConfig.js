@@ -1,22 +1,25 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { Check, Info, AlertTriangle, AlertCircle, X } from 'lucide-react-native';
-import Toast from 'react-native-toast-message';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { Check, Info, AlertTriangle, X, Bell } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import Toast from 'react-native-toast-message';
 
-const CustomToast = ({ title, text2, iconColor, iconBg, IconComponent }) => (
-    <View style={styles.toastContainer}>
-        <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
+const { width } = Dimensions.get('window');
+
+const CustomToast = ({ title, text2, iconBg, IconComponent, accentColor }) => (
+    <View style={styles.toastWrapper}>
+        <BlurView 
+            intensity={90} 
+            tint="light" 
+            style={[styles.toastContainer, { borderLeftColor: accentColor }]}
+        >
             <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-                <IconComponent size={20} color={iconColor} />
+                <IconComponent size={20} color={accentColor} strokeWidth={2.5} />
             </View>
             <View style={styles.textWrap}>
-                {title ? <Text style={styles.titleText} numberOfLines={1}>{title}</Text> : null}
-                {text2 ? <Text style={styles.subText} numberOfLines={2}>{text2}</Text> : null}
+                {title ? <Text style={styles.titleText}>{title}</Text> : null}
+                {text2 ? <Text style={styles.subText}>{text2}</Text> : null}
             </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => Toast.hide()}>
-                <X size={16} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
         </BlurView>
     </View>
 );
@@ -25,54 +28,62 @@ export const toastConfig = {
     success: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#34D399" iconBg="rgba(52, 211, 153, 0.15)" IconComponent={Check}
+            iconBg="rgba(16, 185, 129, 0.15)" IconComponent={Check} accentColor="#10B981"
         />
     ),
     info: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#60A5FA" iconBg="rgba(96, 165, 250, 0.15)" IconComponent={Info}
+            iconBg="rgba(59, 130, 246, 0.15)" IconComponent={Info} accentColor="#3B82F6"
         />
     ),
     warning: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#FBBF24" iconBg="rgba(251, 191, 36, 0.15)" IconComponent={AlertTriangle}
+            iconBg="rgba(245, 158, 11, 0.15)" IconComponent={AlertTriangle} accentColor="#F59E0B"
         />
     ),
     error: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#F87171" iconBg="rgba(248, 113, 113, 0.15)" IconComponent={AlertCircle}
+            iconBg="rgba(239, 68, 68, 0.15)" IconComponent={X} accentColor="#EF4444"
+        />
+    ),
+    notification: (props) => (
+        <CustomToast 
+            title={props.text1} text2={props.text2}
+            iconBg="rgba(139, 92, 246, 0.15)" IconComponent={Bell} accentColor="#8B5CF6"
         />
     )
 };
 
 const styles = StyleSheet.create({
-    toastContainer: {
-        width: '90%',
-        marginTop: 15,
+    toastWrapper: {
+        width: width * 0.92,
+        marginTop: 10,
+        // Premium shadow for depth
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.3,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
         shadowRadius: 16,
-        elevation: 8,
+        elevation: 6,
     },
-    blurContainer: {
+    toastContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 24,
+        padding: 16,
+        borderRadius: 20,
         overflow: 'hidden',
-        backgroundColor: 'rgba(20, 20, 20, 0.65)',
+        borderLeftWidth: 6,
+        // Fallback solid color in case blur isn't supported immediately
+        backgroundColor: 'rgba(255, 255, 255, 0.75)',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: 'rgba(255, 255, 255, 0.4)',
     },
     iconBox: {
-        width: 38,
-        height: 38,
-        borderRadius: 12, 
+        width: 44,
+        height: 44,
+        borderRadius: 16, 
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
@@ -82,20 +93,16 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     titleText: {
-        fontSize: 15,
-        color: '#FFFFFF',
-        fontWeight: '600',
+        fontSize: 16,
+        color: '#0F172A',
+        fontWeight: '800',
         marginBottom: 2,
+        letterSpacing: 0.2,
     },
     subText: {
-        fontSize: 13,
-        color: 'rgba(255, 255, 255, 0.7)',
-        fontWeight: '400',
-    },
-    closeBtn: {
-        padding: 6,
-        marginLeft: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 12,
+        fontSize: 14,
+        color: '#475569',
+        fontWeight: '500',
+        lineHeight: 20,
     }
 });
