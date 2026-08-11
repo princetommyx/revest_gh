@@ -19,7 +19,7 @@ class HubtelSMSService:
 
     def send(self, to, content):
         """
-        Send SMS to a specific number using Hubtel Standard SMS POST API.
+        Send SMS to a specific number using Hubtel Quick SMS GET API.
         """
         if not self.client_id or not self.client_secret:
             logger.error("Hubtel credentials not configured.")
@@ -32,26 +32,24 @@ class HubtelSMSService:
         elif not formatted_to.startswith('233') and len(formatted_to) == 9:
             formatted_to = '233' + formatted_to
 
-        payload = {
-            'From': self.sender,
-            'To': formatted_to,
-            'Content': content,
-            'RegisteredId': '' # Optional registered ID for some Hubtel accounts
+        # Use the GET endpoint which is very reliable for Hubtel
+        import urllib.parse
+        params = {
+            'clientid': self.client_id,
+            'clientsecret': self.client_secret,
+            'from': self.sender,
+            'to': formatted_to,
+            'content': content
         }
+        query_string = urllib.parse.urlencode(params)
+        url = f"{self.base_url}?{query_string}"
 
         try:
-            from requests.auth import HTTPBasicAuth
-            # Hubtel SMS API supports Basic Auth for POST on smsc.hubtel.com
-            response = requests.post(
-                self.base_url, 
-                json=payload, 
-                auth=HTTPBasicAuth(self.client_id, self.client_secret),
-                timeout=15
-            )
+            response = requests.get(url, timeout=15)
             
             if response.status_code in [200, 201]:
                 logger.info(f"SMS sent successfully to {formatted_to}")
-                print(f"DEBUG: Hubtel SMS Sent to {formatted_to} successfully.")
+                print(f"DEBUG: Hubtel SMS Sent to {formatted_to} successfully. Response: {response.text}")
                 return True
             else:
                 logger.error(f"Failed to send SMS to {formatted_to}: {response.status_code} - {response.text}")
