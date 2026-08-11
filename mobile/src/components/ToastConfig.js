@@ -1,23 +1,19 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Check, Info, AlertTriangle, AlertCircle, X } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
-import { BlurView } from 'expo-blur';
 
-const CustomToast = ({ title, text2, iconColor, iconBg, IconComponent }) => (
+const CustomToast = ({ title, text2, iconBg, IconComponent }) => (
     <View style={styles.toastContainer}>
-        <BlurView intensity={80} tint="dark" style={styles.blurContainer}>
+        <View style={styles.content}>
             <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-                <IconComponent size={20} color={iconColor} />
+                <IconComponent size={20} color="#FFFFFF" strokeWidth={2.5} />
             </View>
             <View style={styles.textWrap}>
-                {title ? <Text style={styles.titleText} numberOfLines={1}>{title}</Text> : null}
-                {text2 ? <Text style={styles.subText} numberOfLines={2}>{text2}</Text> : null}
+                {title ? <Text style={styles.titleText}>{title}</Text> : null}
+                {text2 ? <Text style={styles.subText}>{text2}</Text> : null}
             </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={() => Toast.hide()}>
-                <X size={16} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
-        </BlurView>
+        </View>
     </View>
 );
 
@@ -25,49 +21,50 @@ export const toastConfig = {
     success: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#34D399" iconBg="rgba(52, 211, 153, 0.15)" IconComponent={Check}
+            iconBg="#10B981" IconComponent={Check}
         />
     ),
     info: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#60A5FA" iconBg="rgba(96, 165, 250, 0.15)" IconComponent={Info}
+            iconBg="#3B82F6" IconComponent={Info}
         />
     ),
     warning: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#FBBF24" iconBg="rgba(251, 191, 36, 0.15)" IconComponent={AlertTriangle}
+            iconBg="#F59E0B" IconComponent={AlertTriangle}
         />
     ),
     error: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconColor="#F87171" iconBg="rgba(248, 113, 113, 0.15)" IconComponent={AlertCircle}
+            iconBg="#EF4444" IconComponent={X}
         />
     )
 };
 
 const styles = StyleSheet.create({
     toastContainer: {
-        width: '90%',
-        marginTop: 15,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 12 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-        elevation: 8,
+        width: '92%',
+        marginTop: 10,
     },
-    blurContainer: {
+    content: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        borderRadius: 24,
-        overflow: 'hidden',
-        backgroundColor: 'rgba(20, 20, 20, 0.65)',
+        alignItems: 'flex-start',
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        borderRadius: 20,
+        // Premium shadow for iOS
+        shadowColor: '#475569',
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.12,
+        shadowRadius: 24,
+        // Elevation for Android
+        elevation: 8,
+        // Very subtle border for depth
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: 'rgba(226, 232, 240, 0.6)',
     },
     iconBox: {
         width: 38,
@@ -76,26 +73,22 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
+        marginTop: 2,
     },
     textWrap: {
         flex: 1,
         justifyContent: 'center',
     },
     titleText: {
-        fontSize: 15,
-        color: '#FFFFFF',
-        fontWeight: '600',
-        marginBottom: 2,
+        fontSize: 16,
+        color: '#1E293B',
+        fontWeight: '700',
+        marginBottom: 4,
     },
     subText: {
-        fontSize: 13,
-        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: 14,
+        color: '#64748B',
         fontWeight: '400',
-    },
-    closeBtn: {
-        padding: 6,
-        marginLeft: 8,
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        borderRadius: 12,
+        lineHeight: 20,
     }
 });
