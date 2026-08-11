@@ -204,7 +204,7 @@ export default function CreateListingScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
                 {/* Organic Curved Header */}
@@ -242,7 +242,7 @@ export default function CreateListingScreen({ navigation }) {
                         ) : (
                             <View style={styles.uploadBox}>
                                 <View style={styles.uploadIconCircle}>
-                                    <Camera size={32} color="#2E7D32" />
+                                    <Camera size={32} color="#111" />
                                 </View>
                                 <Text style={styles.uploadTitle}>Add a Photo</Text>
                                 <Text style={styles.uploadSub}>Show potential buyers what you have</Text>
@@ -403,14 +403,14 @@ export default function CreateListingScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
     },
     scrollContent: {
         paddingBottom: 40,
     },
     headerBackground: {
         height: 220,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
         width: width * 1.5,
         height: width * 1.5,
         borderRadius: width * 0.75,
-        backgroundColor: '#388E3C',
+        backgroundColor: '#222',
         opacity: 0.3,
     },
     headerContent: {
@@ -485,7 +485,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 12,
@@ -589,8 +589,8 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     chipActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     chipText: {
         fontSize: 13,
@@ -639,13 +639,13 @@ const styles = StyleSheet.create({
     currencyPrefix: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
         marginRight: 4,
     },
     offerValue: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
     },
     offerSub: {
         fontSize: 11,
@@ -654,14 +654,14 @@ const styles = StyleSheet.create({
         marginTop: 5,
     },
     submitBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         height: 60,
         borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 12,
-        shadowColor: '#2E7D32',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -702,8 +702,8 @@ const styles = StyleSheet.create({
         borderColor: '#5D6D7E',
     },
     trackBtnActiveB: {
-        backgroundColor: '#2E7D32', // Revesta Green for sell
-        borderColor: '#2E7D32',
+        backgroundColor: '#111', // Revesta Green for sell
+        borderColor: '#111',
     },
     trackBtnText: {
         fontSize: 14,
@@ -715,7 +715,7 @@ const styles = StyleSheet.create({
     },
     lockedLabel: {
         fontSize: 10,
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: 'normal',
         fontStyle: 'italic',
     },

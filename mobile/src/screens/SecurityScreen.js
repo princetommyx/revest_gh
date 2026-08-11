@@ -36,7 +36,7 @@ export default function SecurityScreen({ navigation }) {
         setLoading(true);
         try {
             await authApi.changePassword(formData);
-            Toast.show("Password updated!", { backgroundColor: '#2E7D32' });
+            Toast.show("Password updated!", { backgroundColor: '#111' });
             navigation.goBack();
         } catch (error) {
             const msg = error.response?.data?.new_password?.[0] || error.response?.data?.detail || "Update failed";
@@ -48,7 +48,7 @@ export default function SecurityScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -70,7 +70,7 @@ export default function SecurityScreen({ navigation }) {
 
                     <View style={styles.heroSection}>
                         <View style={styles.shieldWrap}>
-                            <ShieldCheck size={50} color="#2E7D32" />
+                            <ShieldCheck size={50} color="#111" />
                         </View>
                         <Text style={styles.heroTitle}>Security Settings</Text>
                         <Text style={styles.heroSub}>Update your password regularly to keep your Revesta account safe.</Text>
@@ -139,12 +139,12 @@ export default function SecurityScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F7F4' },
-    headerBackground: { height: 160, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
+    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
     curvedShape: {
         position: 'absolute', bottom: -80, left: -width * 0.25,
         width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', opacity: 0.3
+        backgroundColor: '#222', opacity: 0.3
     },
     headerContent: { paddingHorizontal: 25, paddingTop: 10 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     heroSection: { alignItems: 'center', marginBottom: 40, marginTop: 10 },
-    shieldWrap: { width: 90, height: 90, borderRadius: 30, backgroundColor: '#F0F7F4', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+    shieldWrap: { width: 90, height: 90, borderRadius: 30, backgroundColor: '#FAFAFA', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
     heroTitle: { fontSize: 22, fontWeight: 'bold', color: '#1A1A1A' },
     heroSub: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8, paddingHorizontal: 20, lineHeight: 20 },
     formSection: { gap: 20, marginBottom: 40 },
@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     label: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginLeft: 4 },
     fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 15, height: 56 },
     fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
-    updateBtn: { backgroundColor: '#2E7D32', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    updateBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     updateBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     protectionNote: { flexDirection: 'row', gap: 10, marginTop: 25, paddingHorizontal: 15 },
     protectionText: { fontSize: 12, color: '#999', flex: 1, lineHeight: 18 }

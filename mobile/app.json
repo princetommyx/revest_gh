@@ -1,6 +1,6 @@
 {
   "expo": {
-    "sdkVersion": "54.0.0",
+    "sdkVersion": "55.0.0",
     "name": "Revesta",
     "slug": "revesta-mobile",
     "scheme": "revesta",
@@ -25,7 +25,6 @@
       },
       "package": "com.revesta.mobile",
       "googleServicesFile": "./google-services.json",
-      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
@@ -41,7 +40,9 @@
           "photosPermission": "The app accesses your photos to let you upload waste items.",
           "cameraPermission": "The app accesses your camera to let you take photos of waste items."
         }
-      ]
+      ],
+      "expo-image",
+      "expo-font"
     ],
     "extra": {
       "eas": {

@@ -2,17 +2,20 @@ import React, { useState, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     ActivityIndicator, Modal, TextInput, ScrollView,
-    Linking, KeyboardAvoidingView, Platform, Dimensions, StatusBar, RefreshControl
+    KeyboardAvoidingView, Platform, Dimensions, StatusBar, RefreshControl,
+    Image
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet, useOptimisticDeposit, useOptimisticWithdraw, useVerifyPayment } from '../hooks/useWallet';
 import { useAuth } from '../context/AuthContext';
-import { SkeletonWalletCard, SkeletonWalletPage } from '../components/Skeleton';
+import { SkeletonWalletPage } from '../components/Skeleton';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-    Wallet, Plus, ArrowUpRight, ArrowDownLeft,
-    History, X, Smartphone, CheckCircle2, AlertCircle,
-    ChevronRight, CreditCard, Banknote
+    User, Settings, Plus, ArrowUpRight, ArrowDownToLine, MoreHorizontal,
+    Search, PieChart, Gift, ArrowLeftRight,
+    CreditCard, ChevronRight, X, Smartphone, Banknote, CheckCircle2,
+    ArrowDownLeft, History
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 
@@ -25,21 +28,18 @@ const NETWORKS = [
 ];
 
 const COLORS = {
-    primary: '#2E7D32',
-    primaryDark: '#1E8449',
-    background: '#F0F7F4',
+    primary: '#111',
+    background: '#FAFAFA',
     surface: '#FFFFFF',
-    text: '#1F2937',
-    textLight: '#6B7280',
+    text: '#111',
+    textLight: '#999',
     border: '#E5E7EB',
     success: '#10B981',
     error: '#EF4444',
-    warning: '#F59E0B',
-    white: '#FFFFFF',
 };
 
 export default function WalletScreen() {
-    const { userRole, user } = useAuth();
+    const { user } = useAuth();
     const navigation = useNavigation();
 
     // Wallet hooks
@@ -53,7 +53,7 @@ export default function WalletScreen() {
 
     // Form fields
     const [amount, setAmount] = useState('');
-    const [phone, setPhone] = useState('');
+    const [phone, setPhone] = useState(user?.phone_number || '');
     const [network, setNetwork] = useState('MTN');
     const [accountName, setAccountName] = useState('');
 
@@ -87,7 +87,6 @@ export default function WalletScreen() {
                     setPendingTxn(res.transaction);
                     setModalVisible(false);
                     if (res.authorization_url) {
-                        setModalVisible(false);
                         navigation.navigate('PaystackWebView', {
                             authUrl: res.authorization_url,
                             reference: res.reference
@@ -107,8 +106,6 @@ export default function WalletScreen() {
                 onSuccess: () => {
                     setModalVisible(false);
                     setAmount('');
-                    setPhone('');
-                    setAccountName('');
                     Toast.show({ type: 'success', text1: 'Withdrawal Initiated', text2: 'Funds will be sent shortly' });
                 },
                 onError: (e) => {
@@ -118,30 +115,15 @@ export default function WalletScreen() {
         }
     };
 
-    const verifyTopUp = () => {
-        if (!pendingTxn) return;
-        verifyMutation.mutate(pendingTxn.reference, {
-            onSuccess: (result) => {
-                if (result?.verified) {
-                    setPendingTxn(null);
-                    setAmount('');
-                    setPhone('');
-                    Toast.show({ type: 'success', text1: 'Payment Verified', text2: 'Your wallet has been updated' });
-                } else {
-                    Toast.show({ type: 'error', text1: 'Not Verified Yet', text2: 'Please complete the payment first' });
-                }
-            }
-        });
-    };
-
     const renderTransaction = ({ item }) => {
         const isCredit = ['DEPOSIT', 'JOB_EARNING', 'ESCROW_RELEASE', 'SALE_EARNING'].includes(item.transaction_type);
-        const isEscrow = ['ESCROW_LOCK', 'ESCROW_RELEASE'].includes(item.transaction_type);
+        const Icon = isCredit ? Plus : ArrowUpRight;
+        const iconColor = '#111';
+        const iconBg = 'rgba(0,0,0,0.03)';
 
-        const amountColor = isCredit ? COLORS.success : (isEscrow ? COLORS.warning : COLORS.text);
-        const iconBg = isCredit ? '#ECFDF5' : (isEscrow ? '#FFFBEB' : '#F3F4F6');
-        const Icon = isCredit ? ArrowDownLeft : (isEscrow ? History : ArrowUpRight);
-        const iconColor = isCredit ? COLORS.success : (isEscrow ? COLORS.warning : COLORS.textLight);
+        // Extract time
+        const dateObj = new Date(item.created_at);
+        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         return (
             <View style={styles.txnItem}>
@@ -149,28 +131,13 @@ export default function WalletScreen() {
                     <Icon size={20} color={iconColor} />
                 </View>
                 <View style={styles.txnContent}>
-                    <View style={styles.txnTopRow}>
-                        <Text style={styles.txnTitle}>
-                            {item.transaction_type.replace(/_/g, ' ')}
-                        </Text>
-                        <Text style={[styles.txnAmount, { color: amountColor }]}>
-                            {isCredit ? '+' : '-'} {parseFloat(item.amount).toFixed(2)}
-                        </Text>
-                    </View>
-                    <View style={styles.txnBottomRow}>
-                        <Text style={styles.txnDate}>
-                            {new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                        <View style={[styles.statusBadge,
-                        { backgroundColor: item.status === 'COMPLETED' ? '#ECFDF5' : item.status === 'PENDING' ? '#FFFBEB' : '#FEF2F2' }
-                        ]}>
-                            <Text style={[styles.statusText,
-                            { color: item.status === 'COMPLETED' ? COLORS.success : item.status === 'PENDING' ? COLORS.warning : COLORS.error }
-                            ]}>
-                                {item.status}
-                            </Text>
-                        </View>
-                    </View>
+                    <Text style={styles.txnTitle}>{item.transaction_type.replace(/_/g, ' ').toLowerCase()}</Text>
+                    <Text style={styles.txnDate}>{timeStr}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.txnAmount, { color: isCredit ? COLORS.success : COLORS.error }]}>
+                        {isCredit ? '+' : '-'} ₵{parseFloat(item.amount).toFixed(2)}
+                    </Text>
                 </View>
             </View>
         );
@@ -182,135 +149,76 @@ export default function WalletScreen() {
 
     const transactions = wallet?.recent_transactions || [];
     const balance = parseFloat(wallet?.balance || 0);
-    const heldEscrow = parseFloat(wallet?.held_escrow || 0);
-    const pendingEarnings = parseFloat(wallet?.pending_earnings || 0);
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+        <LinearGradient
+            colors={['#EAE6F4', '#F4F9F2', '#FAFAFA', '#FAFAFA']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.container}
+        >
+            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                refreshControl={
-                    <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#fff" titleColor="#fff" />
-                }
-            >
-                {/* Organic Curved Header */}
-                <View style={styles.headerBackground}>
-                    <View style={styles.curvedShape} />
-                    <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                        <View style={styles.topHeaderRow}>
-                            <Text style={styles.headerTitle}>My Wallet</Text>
-                        </View>
-                        <View style={styles.balanceSection}>
-                            <Text style={styles.balanceLabel}>Total Balance</Text>
-                            <Text style={styles.balanceText}>
-                                <Text style={styles.currencySymbol}>₵ </Text>
-                                {balance.toFixed(2)}
-                            </Text>
-
-                            {/* Escrow Badges */}
-                            <View style={styles.escrowContainer}>
-                                {heldEscrow > 0 && (
-                                    <View style={styles.escrowBadge}>
-                                        <AlertCircle size={12} color="#fff" />
-                                        <Text style={styles.escrowText}>Held: ₵{heldEscrow.toFixed(2)}</Text>
-                                    </View>
-                                )}
-                                {pendingEarnings > 0 && (
-                                    <View style={[styles.escrowBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                                        <CheckCircle2 size={12} color="#fff" />
-                                        <Text style={styles.escrowText}>Pending: ₵{pendingEarnings.toFixed(2)}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    </SafeAreaView>
+            <SafeAreaView edges={['top']} style={{ flex: 1 }}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Profile')}>
+                        <User size={20} color="#111" />
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>My Wallet</Text>
+                    <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Profile')}>
+                        <Settings size={20} color="#111" />
+                    </TouchableOpacity>
                 </View>
 
-                {/* Overlapping Actions Card */}
-                <View style={styles.overlappingCard}>
-                    <View style={styles.actionsGrid}>
-                        <TouchableOpacity
-                            style={styles.actionBtn}
-                            onPress={() => {
-                                setModalType('DEPOSIT');
-                                setModalVisible(true);
-                            }}
-                        >
-                            <View style={[styles.actionIconBox, { backgroundColor: '#E8F5E9' }]}>
-                                <Plus size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionLabel}>Top Up</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.actionBtn}
-                            onPress={() => {
-                                setModalType('WITHDRAW');
-                                setModalVisible(true);
-                            }}
-                        >
-                            <View style={[styles.actionIconBox, { backgroundColor: '#FFF3E0' }]}>
-                                <ArrowUpRight size={24} color="#EF6C00" />
-                            </View>
-                            <Text style={styles.actionLabel}>Withdraw</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIconBox, { backgroundColor: '#E3F2FD' }]}>
-                                <CreditCard size={24} color="#1976D2" />
-                            </View>
-                            <Text style={styles.actionLabel}>Cards</Text>
-                        </TouchableOpacity>
+                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} />}>
+                    
+                    {/* Balance Section */}
+                    <View style={styles.balanceSection}>
+                        <Text style={styles.balanceLabel}>Balance</Text>
+                        <Text style={styles.balanceAmount}>₵{balance.toFixed(2)}</Text>
                     </View>
-                </View>
 
-                {/* Main Content */}
-                <View style={styles.mainContent}>
-                    {pendingTxn && (
-                        <TouchableOpacity style={styles.verifyCard} onPress={verifyTopUp}>
-                            <View style={styles.verifyIconBox}>
-                                <ActivityIndicator size="small" color="#fff" />
+                    {/* Quick Actions (2-button grid) */}
+                    <View style={styles.actionsRow}>
+                        <TouchableOpacity style={[styles.actionItem, { backgroundColor: '#111' }]} onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}>
+                            <View style={styles.actionIconWrapper}>
+                                <Plus size={24} color="#FFF" />
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.verifyTitle}>Payment Pending</Text>
-                                <Text style={styles.verifySub}>Tap to verify top-up of ₵{parseFloat(pendingTxn.amount).toFixed(2)}</Text>
-                            </View>
-                            <ChevronRight size={20} color="#fff" />
+                            <Text style={[styles.actionText, { color: '#FFF' }]}>Top Up</Text>
                         </TouchableOpacity>
-                    )}
 
-                    <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>Recent Activity</Text>
-                        <TouchableOpacity>
-                            <Text style={styles.seeAllText}>See All</Text>
+                        <TouchableOpacity style={styles.actionItem} onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}>
+                            <View style={styles.actionIconWrapper}>
+                                <ArrowUpRight size={24} color="#111" />
+                            </View>
+                            <Text style={styles.actionText}>Withdraw</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {transactions.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <View style={styles.emptyIconCircle}>
-                                <History size={32} color={COLORS.textLight} />
-                            </View>
-                            <Text style={styles.emptyText}>No transactions yet</Text>
-                            <Text style={styles.emptySub}>Your activity will appear here</Text>
+                    {/* Feed Content */}
+                    <View style={styles.feedSection}>
+                        <View style={styles.feedHeader}>
+                            <Text style={styles.sectionTitle}>Transactions</Text>
+                            <TouchableOpacity style={styles.viewAllBtn}>
+                                <Text style={styles.viewAllText}>View all</Text>
+                            </TouchableOpacity>
                         </View>
-                    ) : (
-                        <View style={styles.txnGroup}>
-                            {transactions.map((item, index) => (
+
+                        {transactions.length === 0 ? (
+                            <Text style={styles.emptyText}>No recent activity</Text>
+                        ) : (
+                            transactions.map((item, index) => (
                                 <View key={item.id || index}>
                                     {renderTransaction({ item })}
-                                    {index < transactions.length - 1 && <View style={styles.separator} />}
                                 </View>
-                            ))}
-                        </View>
-                    )}
-                </View>
-            </ScrollView>
+                            ))
+                        )}
+                    </View>
+                </ScrollView>
+            </SafeAreaView>
 
-            {/* Universal Modal */}
+            {/* Modal */}
             <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
                     <View style={styles.modalOverlay}>
@@ -343,16 +251,11 @@ export default function WalletScreen() {
                                     {NETWORKS.map(net => (
                                         <TouchableOpacity
                                             key={net.id}
-                                            style={[
-                                                styles.netCard,
-                                                network === net.id && { borderColor: net.color, backgroundColor: net.color + '10' }
-                                            ]}
+                                            style={[styles.netCard, network === net.id && { borderColor: '#111', backgroundColor: '#FAFAFA' }]}
                                             onPress={() => setNetwork(net.id)}
                                         >
                                             <View style={[styles.netDot, { backgroundColor: net.color }]} />
-                                            <Text style={[styles.netName, network === net.id && { color: COLORS.text, fontWeight: '600' }]}>
-                                                {net.name}
-                                            </Text>
+                                            <Text style={[styles.netName, network === net.id && { color: COLORS.text, fontWeight: '600' }]}>{net.name}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
@@ -407,245 +310,160 @@ export default function WalletScreen() {
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
-        </View>
+        </LinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
     },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    headerBackground: {
-        height: 280,
-        backgroundColor: '#2E7D32',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    curvedShape: {
-        position: 'absolute',
-        bottom: -120,
-        left: -width * 0.25,
-        width: width * 1.5,
-        height: width * 1.5,
-        borderRadius: width * 0.75,
-        backgroundColor: '#388E3C',
-        opacity: 0.3,
-    },
-    headerContent: {
-        paddingHorizontal: 25,
-        paddingTop: 20,
-        alignItems: 'center',
-    },
-    topHeaderRow: {
-        width: '100%',
+    header: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        marginTop: 10,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#fff',
-        opacity: 0.9,
+        color: '#111',
+    },
+    iconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    scrollContent: {
+        paddingBottom: 40,
     },
     balanceSection: {
         alignItems: 'center',
         marginTop: 30,
+        marginBottom: 40,
     },
     balanceLabel: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        marginBottom: 8,
+        fontSize: 15,
+        color: '#666',
         fontWeight: '500',
+        marginBottom: 8,
     },
-    balanceText: {
+    balanceAmount: {
         fontSize: 48,
-        fontWeight: 'bold',
-        color: '#fff',
+        fontWeight: '800',
+        color: '#111',
     },
-    currencySymbol: {
-        fontSize: 24,
-        opacity: 0.8,
-    },
-    overlappingCard: {
-        backgroundColor: '#fff',
-        marginHorizontal: 20,
-        marginTop: -50,
-        borderRadius: 25,
-        padding: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
-        zIndex: 1,
-    },
-    actionsGrid: {
+    actionsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    actionBtn: {
-        alignItems: 'center',
-        flex: 1,
-    },
-    actionIconBox: {
-        width: 56,
-        height: 56,
-        borderRadius: 22,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 8,
-    },
-    actionLabel: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#333',
-    },
-    mainContent: {
-        marginTop: 30,
         paddingHorizontal: 20,
-    },
-    verifyCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#F59E0B',
-        padding: 15,
-        borderRadius: 18,
-        marginBottom: 25,
+        marginBottom: 40,
         gap: 12,
     },
-    verifyIconBox: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    actionItem: {
+        flex: 1,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
+        paddingVertical: 20,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
     },
-    verifyTitle: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 14,
+    actionIconWrapper: {
+        marginBottom: 8,
     },
-    verifySub: {
-        color: 'rgba(255, 255, 255, 0.9)',
-        fontSize: 12,
+    actionText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
     },
-    sectionHeader: {
+    feedSection: {
+        paddingHorizontal: 20,
+    },
+    feedHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 15,
-        paddingHorizontal: 5,
+        marginBottom: 20,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111',
     },
-    seeAllText: {
-        fontSize: 14,
-        color: '#2E7D32',
-        fontWeight: 'bold',
-    },
-    txnGroup: {
-        backgroundColor: '#fff',
+    viewAllBtn: {
+        backgroundColor: 'rgba(255,255,255,0.5)',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
         borderRadius: 20,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
+    },
+    viewAllText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#111',
     },
     txnItem: {
         flexDirection: 'row',
-        paddingVertical: 18,
-        paddingHorizontal: 15,
         alignItems: 'center',
-        gap: 15,
+        paddingVertical: 16,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 20,
+        paddingHorizontal: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 5,
+        elevation: 1,
     },
     txnIconBox: {
         width: 44,
         height: 44,
-        borderRadius: 14,
+        borderRadius: 22,
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: 'rgba(0,0,0,0.05)',
         alignItems: 'center',
         justifyContent: 'center',
+        marginRight: 15,
     },
     txnContent: {
         flex: 1,
     },
-    txnTopRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 4,
-    },
     txnTitle: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#333',
+        color: '#111',
         textTransform: 'capitalize',
+        marginBottom: 4,
+    },
+    txnDate: {
+        fontSize: 13,
+        color: '#666',
     },
     txnAmount: {
         fontSize: 15,
-        fontWeight: 'bold',
-    },
-    txnBottomRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    txnDate: {
-        fontSize: 12,
-        color: '#999',
-    },
-    statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 6,
-    },
-    statusText: {
-        fontSize: 10,
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-    },
-    separator: {
-        height: 1,
-        backgroundColor: '#F9FAFB',
-        marginLeft: 74,
-    },
-    emptyState: {
-        alignItems: 'center',
-        paddingVertical: 60,
-    },
-    emptyIconCircle: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 15,
-        elevation: 2,
+        fontWeight: '600',
     },
     emptyText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    emptySub: {
-        fontSize: 14,
+        textAlign: 'center',
         color: '#999',
-        marginTop: 5,
+        marginTop: 20,
     },
+    // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
         justifyContent: 'flex-end',
     },
     modalContainer: {
@@ -665,7 +483,7 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#333',
+        color: '#111',
     },
     closeBtn: {
         width: 32,
@@ -693,7 +511,7 @@ const styles = StyleSheet.create({
     largeAmountInput: {
         fontSize: 42,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
         textAlign: 'center',
     },
     inputLabel: {
@@ -745,17 +563,12 @@ const styles = StyleSheet.create({
         color: '#333',
     },
     confirmBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         height: 56,
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 20,
-        shadowColor: '#2E7D32',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
     },
     confirmBtnText: {
         color: '#fff',

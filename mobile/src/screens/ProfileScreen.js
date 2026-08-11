@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, Switch, ScrollView, Alert, StatusBar, Dimensions
+    Image, ScrollView, Alert, StatusBar, Dimensions
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    User, Settings, Shield, Bell,
-    LogOut, ChevronRight, HelpCircle,
-    Star, Wallet, Package, Clock, MessageSquare
+    User, Settings, Shield,
+    LogOut, ChevronRight,
+    Wallet, Clock, MessageSquare, ArrowLeft, MoreHorizontal, Edit3
 } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { BASE_URL } from '../api/client';
 
 const { width } = Dimensions.get('window');
 
-const MenuItem = ({ icon: Icon, title, subtitle, onPress, isLast, color = "#2E7D32", iconBg }) => (
+const MenuItem = ({ icon: Icon, title, subtitle, onPress, isLast, color = "#111" }) => (
     <TouchableOpacity
         style={[styles.menuItem, isLast && styles.menuItemLast]}
         onPress={onPress}
     >
-        <View style={[styles.iconBox, { backgroundColor: iconBg || `${color}15` }]}>
+        <View style={styles.menuIconContainer}>
             <Icon size={22} color={color} />
         </View>
         <View style={styles.menuContent}>
@@ -34,6 +34,7 @@ const MenuItem = ({ icon: Icon, title, subtitle, onPress, isLast, color = "#2E7D
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
     const { data: pickups = [] } = usePickupHistory();
+    const insets = useSafeAreaInsets();
 
     const handleLogout = () => {
         Alert.alert(
@@ -52,167 +53,115 @@ export default function ProfileScreen({ navigation }) {
         return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
     };
 
+    const profilePic = resolveImageUrl(user?.profile_picture_url);
+
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+            {/* Large Image Header */}
+            <View style={styles.headerImageContainer}>
+                {profilePic ? (
+                    <Image source={{ uri: profilePic }} style={styles.headerImage} resizeMode="cover" />
+                ) : (
+                    <View style={[styles.headerImage, styles.placeholderBg]}>
+                        <User size={80} color="#666" />
+                    </View>
+                )}
+                
+            </View>
 
             <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
                 bounces={false}
             >
-                {/* Organic Curved Header */}
-                <View style={styles.headerBackground}>
-                    <View style={styles.curvedShape} />
-                    <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                        <View style={styles.profileRow}>
-                            <View style={styles.avatarContainer}>
-                                {user?.profile_picture_url ? (
-                                    <Image
-                                        source={{ uri: resolveImageUrl(user.profile_picture_url) }}
-                                        style={styles.avatar}
-                                    />
-                                ) : (
-                                    <View style={[styles.avatar, styles.placeholderAvatar]}>
-                                        <User size={40} color="#fff" />
-                                    </View>
-                                )}
-                                <TouchableOpacity style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')}>
-                                    <Settings size={14} color="#F59E0B" />
-                                </TouchableOpacity>
-                            </View>
-
-                            <View style={styles.userInfo}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <View>
-                                        <Text style={styles.greetingText}>My Profile</Text>
-                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                            <Text style={styles.name}>{user?.username || 'Guest User'}</Text>
-                                            {user?.kyc_status === 'VERIFIED' && (
-                                                <View style={{ marginLeft: 6, marginBottom: 4 }}>
-                                                    <Shield size={16} color="#4ADE80" fill="#22C55E" />
-                                                </View>
-                                            )}
-                                        </View>
-                                    </View>
-                                    <View style={[
-                                        styles.roleBadge,
-                                        userRole === 'RECYCLER' && { backgroundColor: '#0284c7' },
-                                        userRole === 'SELLER' && { backgroundColor: '#ea580c' }
-                                    ]}>
-                                        <Text style={styles.roleText}>
-                                            {userRole === 'SELLER' ? 'DISPOSER' : userRole || 'USER'}
-                                        </Text>
-                                    </View>
-                                </View>
-                                <Text style={styles.email}>{user?.email || 'No email connected'}</Text>
+                {/* Overlapping Primary Card (Info & Quick Actions) */}
+                <View style={styles.primaryCard}>
+                    <View style={styles.cardHeaderRow}>
+                        <View>
+                            <Text style={styles.userName}>{user?.username || 'Guest User'}</Text>
+                            <View style={styles.roleRow}>
+                                <Text style={styles.userRole}>{userRole === 'SELLER' ? 'DISPOSER' : userRole || 'USER'}</Text>
+                                {user?.kyc_status === 'VERIFIED' && <Shield size={14} color="#4ADE80" fill="#22C55E" style={{ marginLeft: 6 }} />}
                             </View>
                         </View>
-                    </SafeAreaView>
+                        <View style={styles.badgeBox}>
+                            <Text style={styles.badgeText}>{Array.isArray(pickups) ? pickups.length : 0} Pickups</Text>
+                        </View>
+                    </View>
+
+                    {/* Quick Action Circles */}
+                    <View style={styles.quickActionsRow}>
+                        <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('EditProfile')}>
+                            <View style={styles.actionIconCircle}>
+                                <Edit3 size={20} color="#111" />
+                            </View>
+                            <Text style={styles.actionText}>Edit Profile</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('Main', { screen: 'Wallet' })}>
+                            <View style={styles.actionIconCircle}>
+                                <Wallet size={20} color="#111" />
+                            </View>
+                            <Text style={styles.actionText}>Wallet</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.actionItem} onPress={() => navigation.navigate('SupportChat')}>
+                            <View style={styles.actionIconCircle}>
+                                <MessageSquare size={20} color="#111" />
+                            </View>
+                            <Text style={styles.actionText}>Support</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Overlapping Stats Card */}
-                <View style={styles.overlappingCard}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>{Array.isArray(pickups) ? pickups.length : 0}</Text>
-                        <Text style={styles.statLabel}>Pickups</Text>
-                    </View>
-                    <View style={styles.statDivider} />
-                    <View style={styles.statBox}>
-                        <Text style={styles.statValue}>Gold</Text>
-                        <Text style={styles.statLabel}>Member</Text>
-                    </View>
-                </View>
-
-                {/* Account Section */}
-                <View style={styles.section}>
+                {/* Secondary Card (Settings Menu) */}
+                <View style={styles.secondaryCard}>
                     <Text style={styles.sectionTitle}>Account Settings</Text>
+
                     <View style={styles.menuGroup}>
-                        {/* Only show KYC Verification for Collectors and Recyclers */}
                         {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
                             <MenuItem
                                 icon={Shield}
                                 title="Identity Verification"
-                                subtitle={
-                                    user?.kyc_status === 'VERIFIED' ? 'Verified Account' :
-                                        user?.kyc_status === 'PENDING' ? 'Verification Pending Review' :
-                                            user?.kyc_status === 'REJECTED' ? 'Verification Rejected - Try Again' :
-                                                'Required for Withdrawals'
-                                }
+                                subtitle={user?.kyc_status === 'VERIFIED' ? 'Verified Account' : 'Required for Withdrawals'}
                                 onPress={() => navigation.navigate('KYCVerification')}
-                                color={
-                                    user?.kyc_status === 'VERIFIED' ? "#2E7D32" :
-                                        user?.kyc_status === 'PENDING' ? "#D97706" :
-                                            user?.kyc_status === 'REJECTED' ? "#EF4444" :
-                                                "#2563EB"
-                                }
-                                iconBg={
-                                    user?.kyc_status === 'VERIFIED' ? "#E8F5E9" :
-                                        user?.kyc_status === 'PENDING' ? "#FEF3C7" :
-                                            user?.kyc_status === 'REJECTED' ? "#FEE2E2" :
-                                                "#DBEAFE"
-                                }
                             />
                         )}
-                        <MenuItem
-                            icon={User}
-                            title="Personal Details"
-                            subtitle="Name, Phone, City"
-                            onPress={() => navigation.navigate('EditProfile')}
-                            color="#2E7D32"
-                            iconBg="#E8F5E9"
-                        />
                         <MenuItem
                             icon={Clock}
                             title="Pickup History"
                             subtitle="View past requests"
                             onPress={() => navigation.navigate('PickupHistory')}
-                            color="#4B5563"
-                            iconBg="#F3F4F6"
-                        />
-                        <MenuItem
-                            icon={Wallet}
-                            title="Wallet & Payment"
-                            subtitle="Manage Mobile Money"
-                            onPress={() => navigation.navigate('Main', { screen: 'Wallet' })}
-                            color="#D97706"
-                            iconBg="#FEF3C7"
                         />
                         <MenuItem
                             icon={Shield}
                             title="Security & Privacy"
                             subtitle="Password, 2FA"
                             onPress={() => navigation.navigate('Security')}
-                            color="#DC2626"
-                            iconBg="#FEE2E2"
-                            isLast
+                            isLast={false}
                         />
-                    </View>
-                </View>
-
-                {/* Support Section */}
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Help & Support</Text>
-                    <View style={styles.menuGroup}>
                         <MenuItem
-                            icon={MessageSquare}
-                            title="Chat Support"
-                            subtitle="Get help with your orders"
-                            onPress={() => navigation.navigate('SupportChat')}
-                            color="#8B5CF6"
-                            iconBg="#EDE9FE"
-                            isLast
+                            icon={LogOut}
+                            title="Log Out"
+                            subtitle="Sign out of your account"
+                            color="#EF4444"
+                            onPress={handleLogout}
+                            isLast={true}
                         />
                     </View>
                 </View>
-
-                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-                    <LogOut size={20} color="#EF4444" style={{ marginRight: 8 }} />
-                    <Text style={styles.logoutText}>Log Out</Text>
-                </TouchableOpacity>
-
+                
                 <View style={{ height: 40 }} />
             </ScrollView>
+
+            {/* Header Controls Overlay */}
+            <SafeAreaView edges={['top']} style={styles.headerOverlay} pointerEvents="box-none">
+                <TouchableOpacity style={styles.circleBtn} onPress={() => navigation.goBack()}>
+                    <ArrowLeft size={20} color="#111" />
+                </TouchableOpacity>
+            </SafeAreaView>
         </View>
     );
 }
@@ -220,169 +169,162 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
     },
-    scrollContent: {
-        paddingBottom: 40,
-    },
-    headerBackground: {
-        height: 240,
-        backgroundColor: '#2E7D32',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    curvedShape: {
+    headerImageContainer: {
+        width: '100%',
+        height: 380, // Large height like the mockup
         position: 'absolute',
-        bottom: -120,
-        left: -width * 0.25,
-        width: width * 1.5,
-        height: width * 1.5,
-        borderRadius: width * 0.75,
-        backgroundColor: '#388E3C',
-        opacity: 0.3,
+        top: 0,
+        left: 0,
+        zIndex: 0,
     },
-    headerContent: {
-        paddingHorizontal: 25,
-        paddingTop: 20,
+    headerImage: {
+        width: '100%',
+        height: '100%',
     },
-    profileRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: 20,
-    },
-    avatarContainer: {
-        position: 'relative',
-        marginRight: 20,
-    },
-    avatar: {
-        width: 84,
-        height: 84,
-        borderRadius: 42,
-        borderWidth: 3,
-        borderColor: 'rgba(255, 255, 255, 0.5)',
-    },
-    placeholderAvatar: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    placeholderBg: {
+        backgroundColor: '#E5E7EB',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    editBadge: {
+    headerOverlay: {
         position: 'absolute',
-        bottom: 0,
+        top: 0,
+        left: 0,
         right: 0,
-        backgroundColor: '#fff',
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        justifyContent: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        zIndex: 100,
+    },
+    circleBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#FFF',
         alignItems: 'center',
-        elevation: 4,
+        justifyContent: 'center',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowOpacity: 0.1,
+        shadowRadius: 5,
+        elevation: 3,
     },
-    userInfo: {
-        flex: 1,
+    scrollContent: {
+        paddingTop: 320, // Start scrolling over the image
+        paddingBottom: 40,
     },
-    greetingText: {
-        fontSize: 14,
-        color: 'rgba(255, 255, 255, 0.8)',
-        fontWeight: '500',
+    primaryCard: {
+        backgroundColor: '#FFF',
+        marginHorizontal: 20,
+        borderRadius: 24,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.05,
+        shadowRadius: 15,
+        elevation: 5,
+        marginBottom: 20,
     },
-    name: {
-        fontSize: 24,
+    cardHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 30,
+    },
+    userName: {
+        fontSize: 22,
         fontWeight: 'bold',
-        color: '#fff',
+        color: '#111',
         marginBottom: 4,
     },
-    email: {
-        fontSize: 13,
-        color: 'rgba(255, 255, 255, 0.8)',
-    },
-    roleBadge: {
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 20,
-        marginLeft: 12,
-    },
-    roleText: {
-        color: '#fff',
-        fontWeight: 'bold',
-        fontSize: 10,
-        letterSpacing: 0.5,
-    },
-    overlappingCard: {
-        backgroundColor: '#fff',
-        marginHorizontal: 20,
-        marginTop: -40,
-        borderRadius: 25,
-        padding: 20,
+    roleRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
-        zIndex: 1,
     },
-    statBox: {
-        flex: 1,
+    userRole: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '500',
+    },
+    badgeBox: {
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+    },
+    badgeText: {
+        color: '#111',
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    quickActionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 30,
+    },
+    actionItem: {
         alignItems: 'center',
     },
-    statDivider: {
-        width: 1,
-        height: 40,
-        backgroundColor: '#F3F4F6',
+    actionIconCircle: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#FFF',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 5,
+        elevation: 2,
     },
-    statValue: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#2E7D32',
-    },
-    statLabel: {
+    actionText: {
         fontSize: 12,
-        color: '#999',
-        marginTop: 2,
+        color: '#111',
+        fontWeight: '600',
     },
-    section: {
-        marginTop: 30,
-        paddingHorizontal: 20,
+    secondaryCard: {
+        backgroundColor: '#FFF',
+        marginHorizontal: 20,
+        borderRadius: 24,
+        padding: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.05,
+        shadowRadius: 15,
+        elevation: 5,
     },
     sectionTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 15,
-        marginLeft: 5,
+        color: '#111',
+        marginBottom: 20,
     },
     menuGroup: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        backgroundColor: '#FFF',
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 18,
-        paddingHorizontal: 20,
+        paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F9FAFB',
+        borderBottomColor: '#F3F4F6',
     },
     menuItemLast: {
         borderBottomWidth: 0,
+        paddingBottom: 0,
     },
-    iconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 14,
+    menuIconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F9FAFB',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 15,
@@ -391,25 +333,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     menuTitle: {
-        fontSize: 16,
+        fontSize: 15,
         fontWeight: '600',
-        color: '#333',
+        color: '#111',
+        marginBottom: 2,
     },
     menuSubtitle: {
         fontSize: 12,
         color: '#999',
-        marginTop: 2,
-    },
-    logoutBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 40,
-        marginBottom: 20,
-    },
-    logoutText: {
-        color: '#EF4444',
-        fontWeight: 'bold',
-        fontSize: 16,
     },
 });

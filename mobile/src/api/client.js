@@ -6,7 +6,7 @@ import * as Device from 'expo-device';
 
 // Detect environment based on release channel or simple manual switch
 // For Android Emulator use 10.0.2.2, for Physical Device use your machine's LAN IP
-const LOCAL_IP = '172.20.10.3';
+const LOCAL_IP = '192.168.100.81';
 const EMULATOR_IP = '10.0.2.2';
 
 const getLocalURL = () => {
@@ -22,7 +22,9 @@ const getLocalURL = () => {
 const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
 const IS_PROD = !__DEV__;
 
-const baseURL = IS_PROD ? PROD_API_URL : getLocalURL();
+// Use explicit environment variable if set, otherwise default to Production URL for APK testing
+// If you want to develop locally, you can set EXPO_PUBLIC_API_URL=http://... in your .env
+const baseURL = process.env.EXPO_PUBLIC_API_URL || PROD_API_URL;
 
 const apiClient = axios.create({
     baseURL,

@@ -86,7 +86,7 @@ export default function TopUpScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -158,7 +158,7 @@ export default function TopUpScreen({ navigation }) {
                         <Text style={styles.methodTitle}>Payment Method</Text>
                         <View style={styles.methodCard}>
                             <View style={styles.methodIcon}>
-                                <CreditCard size={20} color="#2E7D32" />
+                                <CreditCard size={20} color="#111" />
                             </View>
                             <View style={styles.methodText}>
                                 <Text style={styles.methodName}>Debit Card / Mobile Money</Text>
@@ -187,7 +187,7 @@ export default function TopUpScreen({ navigation }) {
                     </TouchableOpacity>
 
                     <View style={styles.secureBadgeHorizontal}>
-                        <ShieldCheck size={14} color="#2E7D32" />
+                        <ShieldCheck size={14} color="#111" />
                         <Text style={styles.secureLabel}>Secured by Paystack Standard Encryption</Text>
                     </View>
                 </View>
@@ -208,7 +208,7 @@ export default function TopUpScreen({ navigation }) {
                         style={{ flex: 1 }}
                         onNavigationStateChange={handleWebViewNavigation}
                         startInLoadingState
-                        renderLoading={() => <ActivityIndicator size="large" color="#2E7D32" style={styles.centered} />}
+                        renderLoading={() => <ActivityIndicator size="large" color="#111" style={styles.centered} />}
                     />
                 </SafeAreaView>
             </Modal>
@@ -217,12 +217,12 @@ export default function TopUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F7F4' },
-    headerBackground: { height: 180, backgroundColor: '#2E7D32', overflow: 'hidden' },
+    container: { flex: 1, backgroundColor: '#FAFAFA' },
+    headerBackground: { height: 180, backgroundColor: '#111', overflow: 'hidden' },
     curvedShape: {
         position: 'absolute', bottom: -80, left: -width * 0.25,
         width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', opacity: 0.3
+        backgroundColor: '#222', opacity: 0.3
     },
     headerContent: { paddingHorizontal: 25, paddingTop: 10 },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     amountInput: { flex: 1, fontSize: 24, fontWeight: 'bold', color: '#1A1A1A' },
     chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
     amountChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F9FAFB', borderWidth: 1, borderColor: '#F3F4F6' },
-    activeChip: { backgroundColor: '#2E7D32', borderColor: '#2E7D32' },
+    activeChip: { backgroundColor: '#111', borderColor: '#111' },
     chipText: { fontSize: 14, fontWeight: '600', color: '#666' },
     activeChipText: { color: '#fff' },
     methodInfo: { marginBottom: 20 },
@@ -260,12 +260,12 @@ const styles = StyleSheet.create({
         padding: 18, borderRadius: 20, borderWidth: 1, borderColor: '#F3F4F6',
         shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
     },
-    methodIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#F0F7F4', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    methodIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#FAFAFA', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     methodText: { flex: 1 },
     methodName: { fontSize: 15, fontWeight: 'bold', color: '#1A1A1A' },
     methodDesc: { fontSize: 12, color: '#999', marginTop: 2 },
     footer: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', padding: 25, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-    payBtn: { backgroundColor: '#2E7D32', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#2E7D32', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    payBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     payBtnDisabled: { backgroundColor: '#D1D5DB' },
     payBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     secureBadgeHorizontal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 15 },

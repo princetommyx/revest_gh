@@ -20,6 +20,7 @@ class Listing(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     image = models.ImageField(upload_to='listings/', blank=True, null=True)
+    liked_by = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_listings', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

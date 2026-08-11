@@ -12,7 +12,7 @@ class MessageSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ('id', 'sender', 'receiver', 'content', 'timestamp', 'is_read')
+        fields = ('id', 'sender', 'receiver', 'content', 'attachment', 'timestamp', 'is_read')
         read_only_fields = ('sender', 'timestamp')
 
 
@@ -23,16 +23,19 @@ class MessageCreateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Message
-        fields = ('id', 'receiver', 'content')
+        fields = ('id', 'receiver', 'content', 'attachment')
     
-    def validate_content(self, value):
-        if not value or not value.strip():
-            raise serializers.ValidationError("Message content cannot be empty.")
-        if len(value) > 1000:
+    def validate(self, data):
+        content = data.get('content', '')
+        attachment = data.get('attachment', None)
+        
+        if not content and not attachment:
+            raise serializers.ValidationError("Message must have either content or an attachment.")
+            
+        if content and len(content) > 1000:
             raise serializers.ValidationError("Message is too long (max 1000 characters).")
-        return value
-
-        return value
+            
+        return data
 
 class SupportSessionSerializer(serializers.ModelSerializer):
     user = PublicUserSerializer(read_only=True)

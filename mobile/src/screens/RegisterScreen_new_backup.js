@@ -230,7 +230,7 @@ export default function RegisterScreen() {
                 onPress={() => handleRoleSelect(role)}
                 style={[
                     styles.roleCard,
-                    isSelected && { borderColor: '#2E7D32', backgroundColor: '#F0FDF4' }
+                    isSelected && { borderColor: '#111', backgroundColor: '#F0FDF4' }
                 ]}
             >
                 <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
@@ -240,7 +240,7 @@ export default function RegisterScreen() {
                     <Text style={styles.roleTitle}>{title}</Text>
                     <Text style={styles.roleDesc}>{desc}</Text>
                 </View>
-                {isSelected && <Check size={20} color="#2E7D32" />}
+                {isSelected && <Check size={20} color="#111" />}
             </TouchableOpacity>
         );
     };
@@ -283,7 +283,7 @@ export default function RegisterScreen() {
                                     title="Become a Collector"
                                     desc="Pick up waste and earn money"
                                     icon={Truck}
-                                    color="#2E7D32"
+                                    color="#111"
                                     bgColor="#DCFCE7"
                                 />
                                 <RoleCard
@@ -375,7 +375,7 @@ export default function RegisterScreen() {
                                     keyboardType="phone-pad"
                                 />
                                 {isPhoneVerified ? (
-                                    <Check size={20} color="#2E7D32" />
+                                    <Check size={20} color="#111" />
                                 ) : (
                                     <TouchableOpacity
                                         style={styles.verifySmallBtn}
@@ -491,7 +491,7 @@ export default function RegisterScreen() {
                                                     </View>
                                                 ) : (
                                                     <View style={styles.uploadRow}>
-                                                        <Upload size={20} color="#2E7D32" />
+                                                        <Upload size={20} color="#111" />
                                                         <Text style={styles.uploadInfo}>Business Certificate</Text>
                                                     </View>
                                                 )}
@@ -578,7 +578,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
     },
     headerBackground: {
         // removed
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     cardTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
         marginBottom: 8,
     },
     roleLabel: {
@@ -711,13 +711,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     verifySmallBtn: {
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#F3F4F6',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 8,
     },
     verifySmallText: {
-        color: '#2E7D32',
+        color: '#111',
         fontSize: 12,
         fontWeight: 'bold',
     },
@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#F5F5F5',
     },
     smallChipActive: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
     },
     smallChipText: {
         fontSize: 13,
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     },
     changeLink: {
         fontSize: 12,
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: 'bold',
     },
     termsWrapper: {
@@ -790,13 +790,13 @@ const styles = StyleSheet.create({
         height: 18,
         borderRadius: 4,
         borderWidth: 2,
-        borderColor: '#2E7D32',
+        borderColor: '#111',
         marginRight: 10,
         alignItems: 'center',
         justifyContent: 'center',
     },
     checkboxActive: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
     },
     termsText: {
         fontSize: 13,
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
         color: '#999',
     },
     footerLinkBold: {
-        color: '#2E7D32',
+        color: '#111',
         fontWeight: 'bold',
     },
     modalOverlay: {
@@ -866,7 +866,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
         marginBottom: 20,
         letterSpacing: 10,
     },

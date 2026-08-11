@@ -9,6 +9,8 @@ from .serializers import (
     ListingSerializer, ListingListSerializer, 
     ListingDetailSerializer, ListingCreateSerializer
 )
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 
 from django.utils.decorators import method_decorator
@@ -143,6 +145,50 @@ class ListingViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(listings, many=True)
         return Response(serializer.data)
+
+
+    @extend_schema(summary="Like or unlike a listing")
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def toggle_like(self, request, pk=None):
+        """Toggle like on a listing and notify the seller via WebSocket."""
+        listing = self.get_object()
+
+        # Prevent seller from liking their own listing
+        if listing.seller == request.user:
+            return Response({'error': 'You cannot like your own listing.'}, status=400)
+
+        already_liked = listing.liked_by.filter(id=request.user.id).exists()
+
+        if already_liked:
+            listing.liked_by.remove(request.user)
+            liked = False
+        else:
+            listing.liked_by.add(request.user)
+            liked = True
+
+            # Notify the seller via WebSocket
+            try:
+                channel_layer = get_channel_layer()
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{listing.seller.id}",
+                    {
+                        "type": "logistics_notification",
+                        "message": {
+                            "type": "listing_liked",
+                            "listing_id": listing.id,
+                            "listing_title": listing.title,
+                            "liked_by": request.user.get_full_name() or request.user.username,
+                            "total_likes": listing.liked_by.count(),
+                        }
+                    }
+                )
+            except Exception:
+                pass  # Don't fail the request if notification fails
+
+        return Response({
+            'liked': liked,
+            'total_likes': listing.liked_by.count()
+        })
 
 
 class IsOwnerOrAdmin(permissions.BasePermission):

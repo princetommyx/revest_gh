@@ -1,22 +1,26 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList,
-    TouchableOpacity, ActivityIndicator, Image, TextInput, Dimensions, StatusBar
+    TouchableOpacity, ActivityIndicator, Image, TextInput, Dimensions, StatusBar, ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
-import { MessageSquare, User, Clock, ChevronRight, Bot, Bell, AlertCircle, Check, Search, Filter } from 'lucide-react-native';
+import { MessageSquare, User, Bot, Bell, AlertCircle, Check, Search, Mic, MoreHorizontal } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
 import { notificationsApi } from '../api/notifications';
 import { useNotifications } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ChatScreen({ route }) {
     const navigation = useNavigation();
+    const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const { markAllRead } = useNotifications();
+    
     const [conversations, setConversations] = useState([]);
     const [filteredConversations, setFilteredConversations] = useState([]);
     const [notifications, setNotifications] = useState([]);
@@ -32,7 +36,7 @@ export default function ChatScreen({ route }) {
             setFilteredConversations(data);
         } catch (error) {
             console.error("Conversations Load Error:", error);
-            Toast.show("Failed to load conversations", { backgroundColor: '#E74C3C' });
+            Toast.show("Failed to load conversations", { backgroundColor: '#111' });
         }
     };
 
@@ -96,8 +100,34 @@ export default function ChatScreen({ route }) {
         try {
             await markAllRead();
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            Toast.show("All marked as read", { backgroundColor: '#2E7D32' });
+            Toast.show("All marked as read", { backgroundColor: '#111' });
         } catch (e) { console.log(e); }
+    };
+
+    const renderOnlineUser = (item) => {
+        const profileImg = resolveImageUrl(item.contact_profile_image);
+        return (
+            <TouchableOpacity 
+                key={item.contact_id} 
+                style={styles.onlineUserBox}
+                onPress={() => navigation.navigate('ChatDetail', {
+                    contactId: item.contact_id,
+                    contactName: item.contact_username
+                })}
+            >
+                <View style={styles.onlineAvatarWrap}>
+                    {profileImg ? (
+                        <Image source={{ uri: profileImg }} style={styles.onlineAvatar} />
+                    ) : (
+                        <View style={[styles.onlineAvatar, styles.avatarPlaceholder]}>
+                            <User size={20} color="#999" />
+                        </View>
+                    )}
+                    <View style={styles.onlineDot} />
+                </View>
+                <Text style={styles.onlineName} numberOfLines={1}>{item.contact_username.split(' ')[0]}</Text>
+            </TouchableOpacity>
+        );
     };
 
     const renderConversation = ({ item }) => {
@@ -115,27 +145,26 @@ export default function ChatScreen({ route }) {
                     {profileImg ? (
                         <Image source={{ uri: profileImg }} style={styles.avatar} />
                     ) : (
-                        <View style={styles.avatarPlaceholder}>
-                            <User size={24} color="#9BAA9B" />
+                        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                            <User size={24} color="#999" />
                         </View>
                     )}
-                    {item.unread_count > 0 && <View style={styles.unreadPulse} />}
                 </View>
                 <View style={styles.convMain}>
                     <View style={styles.convTop}>
                         <Text style={[styles.contactName, item.unread_count > 0 && styles.nameUnread]} numberOfLines={1}>
                             {item.contact_username}
                         </Text>
-                        <Text style={styles.convTime}>{formatSmartTime(item.timestamp)}</Text>
+                        <Text style={[styles.convTime, item.unread_count > 0 && styles.timeUnread]}>
+                            {formatSmartTime(item.timestamp)}
+                        </Text>
                     </View>
                     <View style={styles.convBottom}>
                         <Text style={[styles.lastMsg, item.unread_count > 0 && styles.msgUnread]} numberOfLines={1}>
                             {item.last_message || 'Tap to chat'}
                         </Text>
                         {item.unread_count > 0 && (
-                            <View style={styles.countBadge}>
-                                <Text style={styles.countText}>{item.unread_count}</Text>
-                            </View>
+                            <View style={styles.unreadDot} />
                         )}
                     </View>
                 </View>
@@ -144,9 +173,9 @@ export default function ChatScreen({ route }) {
     };
 
     const renderNotification = ({ item }) => (
-        <TouchableOpacity style={[styles.notifCard, !item.is_read && styles.notifUnread]} activeOpacity={0.7}>
-            <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? '#FEF2F2' : '#F0F7F4' }]}>
-                {item.urgency === 'URGENT' ? <AlertCircle size={20} color="#EF4444" /> : <Bell size={20} color="#2E7D32" />}
+        <TouchableOpacity style={styles.notifCard} activeOpacity={0.7}>
+            <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? '#FEF2F2' : '#F9FAFB' }]}>
+                {item.urgency === 'URGENT' ? <AlertCircle size={20} color="#EF4444" /> : <Bell size={20} color="#111" />}
             </View>
             <View style={styles.notifInfo}>
                 <View style={styles.notifTop}>
@@ -161,66 +190,85 @@ export default function ChatScreen({ route }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <Text style={styles.headerTitle}>Messages</Text>
-                        <TouchableOpacity style={styles.headerIcon}>
-                            <Bell size={20} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                    <Text style={styles.headerSubtitle}>Connect with Sellers & Recyclers</Text>
-                </SafeAreaView>
-            </View>
+            {/* Minimal Header */}
+            <SafeAreaView edges={['top']} style={styles.headerArea}>
+                <View style={styles.headerRow}>
+                    <TouchableOpacity style={styles.headerLeftBtn} onPress={() => navigation.navigate('Profile')}>
+                        {user?.profile_picture_url ? (
+                            <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.myAvatar} />
+                        ) : (
+                            <View style={[styles.myAvatar, styles.avatarPlaceholder]}>
+                                <User size={18} color="#999" />
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                    <Text style={styles.headerTitle}>Messages</Text>
+                    <TouchableOpacity style={styles.headerRightBtn}>
+                        <MoreHorizontal size={24} color="#111" />
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
 
-            {/* Content Overlap */}
             <View style={styles.contentWrap}>
-                {/* Search & Tabs */}
-                <View style={styles.stickyBar}>
+                {/* Search Bar */}
+                <View style={styles.searchContainer}>
                     <View style={styles.searchBox}>
-                        <Search size={18} color="#999" />
+                        <Search size={20} color="#999" />
                         <TextInput
                             style={styles.searchField}
-                            placeholder="Find chats..."
+                            placeholder="Search messages..."
                             value={search}
                             onChangeText={setSearch}
                             placeholderTextColor="#999"
                         />
                         <TouchableOpacity>
-                            <Filter size={18} color="#2E7D32" />
+                            <Mic size={20} color="#999" />
                         </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.tabsRow}>
-                        {['All', 'Unread', 'Notifications'].map(tab => (
-                            <TouchableOpacity
-                                key={tab}
-                                style={[styles.tabChip, activeTab === tab && styles.tabChipActive]}
-                                onPress={() => setActiveTab(tab)}
-                            >
-                                <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
-                                {tab === 'Notifications' && notifications.filter(n => !n.is_read).length > 0 && (
-                                    <View style={styles.dot} />
-                                )}
-                            </TouchableOpacity>
-                        ))}
                     </View>
                 </View>
 
+                {/* Tabs */}
+                <View style={styles.tabsContainer}>
+                    {['All', 'Unread', 'Notifications'].map(tab => (
+                        <TouchableOpacity
+                            key={tab}
+                            style={[styles.tabChip, activeTab === tab && styles.tabChipActive]}
+                            onPress={() => setActiveTab(tab)}
+                        >
+                            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
+                            {tab === 'Notifications' && notifications.filter(n => !n.is_read).length > 0 && (
+                                <View style={styles.tabRedDot} />
+                            )}
+                        </TouchableOpacity>
+                    ))}
+                </View>
+
+                {/* Online Users (Horizontal Scroll) */}
+                {activeTab === 'All' && conversations.length > 0 && (
+                    <View style={styles.onlineUsersSection}>
+                        <ScrollView 
+                            horizontal 
+                            showsHorizontalScrollIndicator={false} 
+                            contentContainerStyle={styles.onlineScrollContent}
+                        >
+                            {/* Recent contacts as online users */}
+                            {conversations.slice(0, 8).map(renderOnlineUser)}
+                        </ScrollView>
+                    </View>
+                )}
+
                 {activeTab === 'Notifications' && notifications.length > 0 && (
                     <TouchableOpacity style={styles.markAll} onPress={handleMarkAllRead}>
-                        <Check size={14} color="#2E7D32" />
+                        <Check size={14} color="#111" />
                         <Text style={styles.markAllText}>Mark all as read</Text>
                     </TouchableOpacity>
                 )}
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#2E7D32" />
+                        <ActivityIndicator size="large" color="#111" />
                     </View>
                 ) : (
                     <FlatList
@@ -229,21 +277,9 @@ export default function ChatScreen({ route }) {
                         keyExtractor={item => (activeTab === 'Notifications' ? `notif-${item.id}` : `conv-${item.contact_id}`)}
                         contentContainerStyle={styles.listPadding}
                         showsVerticalScrollIndicator={false}
-                        ListHeaderComponent={activeTab !== 'Notifications' && (
-                            <TouchableOpacity style={styles.aiBanner} onPress={() => navigation.navigate('SupportChat')}>
-                                <View style={styles.aiBotIcon}>
-                                    <Bot size={22} color="#fff" />
-                                </View>
-                                <View style={styles.aiText}>
-                                    <Text style={styles.aiLabel}>Revesta AI Assistant</Text>
-                                    <Text style={styles.aiCap}>Ask questions about recycling</Text>
-                                </View>
-                                <ChevronRight size={18} color="#A5D6A7" />
-                            </TouchableOpacity>
-                        )}
                         ListEmptyComponent={
                             <View style={styles.emptyView}>
-                                {activeTab === 'Notifications' ? <Bell size={60} color="#E8F5E9" /> : <MessageSquare size={60} color="#E8F5E9" />}
+                                {activeTab === 'Notifications' ? <Bell size={60} color="#F3F4F6" /> : <MessageSquare size={60} color="#F3F4F6" />}
                                 <Text style={styles.emptyTitle}>Nothing here yet</Text>
                                 <Text style={styles.emptySub}>Messages and alerts will show up here.</Text>
                             </View>
@@ -253,74 +289,107 @@ export default function ChatScreen({ route }) {
                     />
                 )}
             </View>
+
+            {/* Floating Chat Support Widget */}
+            <TouchableOpacity 
+                style={styles.floatingWidget} 
+                onPress={() => navigation.navigate('SupportChat')}
+                activeOpacity={0.8}
+            >
+                <Bot size={24} color="#FFF" />
+            </TouchableOpacity>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F0F7F4' },
-    headerBackground: { height: 180, backgroundColor: '#2E7D32', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#388E3C', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-    headerTitle: { fontSize: 26, fontWeight: 'bold', color: '#fff' },
-    headerIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 5 },
-    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
-    stickyBar: { paddingHorizontal: 25, paddingTop: 25, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFF' },
+    headerArea: { backgroundColor: '#FFF' },
+    headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
+    headerLeftBtn: { width: 40, height: 40, justifyContent: 'center' },
+    myAvatar: { width: 36, height: 36, borderRadius: 18 },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: '#111' },
+    headerRightBtn: { width: 40, height: 40, alignItems: 'flex-end', justifyContent: 'center' },
+    
+    contentWrap: { flex: 1, backgroundColor: '#FFF' },
+    
+    searchContainer: { paddingHorizontal: 20, paddingVertical: 10 },
     searchBox: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6',
-        borderRadius: 18, paddingHorizontal: 15, height: 52, marginBottom: 20
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB',
+        borderRadius: 24, paddingHorizontal: 16, height: 48,
+        borderWidth: 1, borderColor: '#F3F4F6'
     },
-    searchField: { flex: 1, marginLeft: 10, fontSize: 14, color: '#333' },
-    tabsRow: { flexDirection: 'row', gap: 10, marginBottom: 15 },
-    tabChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, backgroundColor: '#F9FAFB', flexDirection: 'row', alignItems: 'center', gap: 6 },
-    tabChipActive: { backgroundColor: '#2E7D32' },
-    tabText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-    tabTextActive: { color: '#fff' },
-    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' },
-    markAll: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginRight: 25, marginBottom: 10, gap: 5 },
-    markAllText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
-    listPadding: { paddingHorizontal: 25, paddingBottom: 40 },
-    aiBanner: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: '#1B5E20',
-        padding: 16, borderRadius: 24, marginBottom: 20
+    searchField: { flex: 1, marginHorizontal: 12, fontSize: 15, color: '#111' },
+    
+    tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 15, gap: 10 },
+    tabChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F9FAFB', flexDirection: 'row', alignItems: 'center' },
+    tabChipActive: { backgroundColor: '#111' },
+    tabText: { fontSize: 13, fontWeight: '600', color: '#666' },
+    tabTextActive: { color: '#FFF' },
+    tabRedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444', marginLeft: 6 },
+    
+    onlineUsersSection: { marginBottom: 20 },
+    onlineScrollContent: { paddingHorizontal: 20, gap: 20 },
+    onlineUserBox: { alignItems: 'center', width: 60 },
+    onlineAvatarWrap: { position: 'relative', marginBottom: 8 },
+    onlineAvatar: { width: 56, height: 56, borderRadius: 28 },
+    onlineDot: { 
+        position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, 
+        borderRadius: 7, backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFF' 
     },
-    aiBotIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    aiText: { flex: 1, marginLeft: 12 },
-    aiLabel: { fontSize: 15, fontWeight: 'bold', color: '#fff' },
-    aiCap: { fontSize: 12, color: '#A5D6A7' },
-    convCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-    avatarWrapper: { position: 'relative' },
-    avatar: { width: 56, height: 56, borderRadius: 28 },
-    avatarPlaceholder: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#F0F7F4', justifyContent: 'center', alignItems: 'center' },
-    unreadPulse: { position: 'absolute', top: 0, right: 2, width: 14, height: 14, borderRadius: 7, backgroundColor: '#2E7D32', borderWidth: 2, borderColor: '#fff' },
-    convMain: { flex: 1, marginLeft: 16 },
-    convTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-    contactName: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
-    nameUnread: { color: '#000' },
-    convTime: { fontSize: 12, color: '#9CA3AF' },
+    onlineName: { fontSize: 12, color: '#111', fontWeight: '500' },
+    
+    avatarPlaceholder: { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+    
+    markAll: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginRight: 20, marginBottom: 10, gap: 6 },
+    markAllText: { fontSize: 13, fontWeight: '600', color: '#111' },
+    
+    listPadding: { paddingHorizontal: 20, paddingBottom: 40 },
+    
+    convCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16 },
+    avatarWrapper: { marginRight: 16 },
+    avatar: { width: 52, height: 52, borderRadius: 26 },
+    convMain: { flex: 1 },
+    convTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+    contactName: { fontSize: 16, fontWeight: '600', color: '#111', flex: 1, paddingRight: 10 },
+    nameUnread: { fontWeight: '800' },
+    convTime: { fontSize: 12, color: '#999' },
+    timeUnread: { color: '#111', fontWeight: '600' },
     convBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    lastMsg: { fontSize: 14, color: '#6B7280', flex: 1 },
-    msgUnread: { color: '#1F2937', fontWeight: 'bold' },
-    countBadge: { backgroundColor: '#2E7D32', minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, justifyContent: 'center', alignItems: 'center' },
-    countText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
-    notifCard: { flexDirection: 'row', alignItems: 'center', padding: 15, borderRadius: 20, backgroundColor: '#fff', marginBottom: 12, borderWidth: 1, borderColor: '#F3F4F6' },
-    notifUnread: { backgroundColor: '#F9FAFB' },
-    notifIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
-    notifInfo: { flex: 1, marginLeft: 14 },
-    notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 },
-    notifTitle: { fontSize: 15, fontWeight: 'bold', color: '#1F2937' },
-    notifTitleUnread: { color: '#000' },
-    notifTimeSmall: { fontSize: 11, color: '#9CA3AF' },
-    notifBody: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
-    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#2E7D32', marginLeft: 10 },
+    lastMsg: { fontSize: 14, color: '#666', flex: 1, paddingRight: 10 },
+    msgUnread: { color: '#111', fontWeight: '600' },
+    unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111' },
+    
+    notifCard: { flexDirection: 'row', padding: 16, backgroundColor: '#FFF', marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6' },
+    notifIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    notifInfo: { flex: 1, marginLeft: 16 },
+    notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+    notifTitle: { fontSize: 15, fontWeight: '600', color: '#111', flex: 1 },
+    notifTitleUnread: { fontWeight: '800' },
+    notifTimeSmall: { fontSize: 12, color: '#999' },
+    notifBody: { fontSize: 14, color: '#666', lineHeight: 20 },
+    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111', marginLeft: 12, alignSelf: 'center' },
+    
     emptyView: { alignItems: 'center', paddingVertical: 100 },
-    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F2937', marginTop: 15 },
-    emptySub: { fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center', paddingHorizontal: 50 },
+    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#111', marginTop: 20 },
+    emptySub: { fontSize: 15, color: '#999', marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    
+    floatingWidget: {
+        position: 'absolute',
+        bottom: 110,
+        right: 20,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: '#111',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 8,
+        zIndex: 100,
+    }
 });

@@ -13,7 +13,7 @@ import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation,
     CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
-    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage
+    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
@@ -23,38 +23,11 @@ import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Check if running in Expo Go
-const isExpoGo = Constants.appOwnership === 'expo';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
-// Dynamic imports to avoid PlatformConstants crash in Expo Go
-let MapView, Marker, Polyline;
-if (!isExpoGo) {
-    try {
-        const Maps = require('react-native-maps');
-        MapView = Maps.default;
-        Marker = Maps.Marker;
-        Polyline = Maps.Polyline;
-    } catch (e) {
-        console.warn("Failed to load react-native-maps:", e.message);
-    }
-}
-
-
-// Simplified Map Mock for Expo Go
-const MapMock = ({ children, style, initialRegion, onRegionChangeComplete }) => (
-    <View style={[style, { backgroundColor: '#E8F5E9', justifyContent: 'center', alignItems: 'center' }]}>
-        <MapPin size={40} color="#2E7D32" />
-        <Text style={{ marginTop: 10, color: '#2E7D32', fontWeight: 'bold' }}>Map disabled in Expo Go</Text>
-        <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', paddingHorizontal: 40 }}>
-            Use a Development Build to see the live map.
-        </Text>
-        {/* Render children (markers) as a list if needed, or skip for now */}
-    </View>
-);
-
-const ActiveMap = isExpoGo ? MapMock : MapView;
-const ActiveMarker = isExpoGo ? View : Marker;
-const ActivePolyline = isExpoGo ? View : Polyline;
+const ActiveMap = MapView;
+const ActiveMarker = Marker;
+const ActivePolyline = Polyline;
 
 const { width, height } = Dimensions.get('window');
 
@@ -81,6 +54,7 @@ export default function PickupsScreen({ route }) {
     const pickupData = route?.params?.pickupData;
 
     const [location, setLocation] = useState(null);
+    const [hasLocationPermission, setHasLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
@@ -184,23 +158,39 @@ export default function PickupsScreen({ route }) {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') {
-                setErrorMsg('Permission to access location was denied');
-                return;
+            let { status } = await Location.getForegroundPermissionsAsync();
+            if (status === 'granted') {
+                setHasLocationPermission(true);
+                let loc = await Location.getCurrentPositionAsync({});
+                setLocation(loc.coords);
+                setMapRegion({
+                    latitude: loc.coords.latitude,
+                    longitude: loc.coords.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                });
+            } else {
+                setHasLocationPermission(false);
             }
+        })();
+    }, []);
 
+    const requestLocationAccess = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+            setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
             setLocation(loc.coords);
-
             setMapRegion({
                 latitude: loc.coords.latitude,
                 longitude: loc.coords.longitude,
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
             });
-        })();
-    }, []);
+        } else {
+            setErrorMsg('Permission to access location was denied');
+        }
+    };
 
     useEffect(() => {
         if (pickupData) {
@@ -245,7 +235,9 @@ export default function PickupsScreen({ route }) {
                 setTimeout(fetchEstimate, 500);
             }
 
-            navigation.setParams({ pickupData: null });
+            setTimeout(() => {
+                navigation.setParams({ pickupData: null });
+            }, 500);
         }
     }, [pickupData]);
 
@@ -482,7 +474,24 @@ export default function PickupsScreen({ route }) {
             Toast.show({ type: 'success', text1: 'Accepted', text2: 'Job accepted! Start navigating.' });
             refetch();
         } catch (error) {
-            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to accept job' });
+            const errorData = error?.response?.data;
+            const errorMsg = errorData?.error || errorData?.detail || 'Failed to accept job';
+            const status = error?.response?.status;
+
+            if (status === 403 && errorMsg.toLowerCase().includes('kyc')) {
+                Alert.alert(
+                    'Identity Verification Required',
+                    'You must complete KYC verification before accepting jobs. Would you like to do that now?',
+                    [
+                        { text: 'Later', style: 'cancel' },
+                        { text: 'Verify Now', onPress: () => navigation.navigate('KYCVerification') }
+                    ]
+                );
+            } else if (status === 400) {
+                Toast.show({ type: 'warning', text1: 'Cannot Accept', text2: errorMsg });
+            } else {
+                Toast.show({ type: 'error', text1: 'Error', text2: errorMsg });
+            }
         }
     };
 
@@ -637,9 +646,9 @@ export default function PickupsScreen({ route }) {
                 <View style={[
                     styles.markerContainer,
                     job.status === 'COMPLETED' && { borderColor: '#999' },
-                    job.status === 'ACCEPTED' && { borderColor: '#F39C12' }
+                    job.status === 'ACCEPTED' && { borderColor: '#111' }
                 ]}>
-                    <MapPin size={24} color={job.status === 'PENDING' ? '#2E7D32' : (job.status === 'ACCEPTED' ? '#F39C12' : '#999')} />
+                    <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#111' : '#999')} />
                 </View>
             </ActiveMarker>
         );
@@ -652,8 +661,8 @@ export default function PickupsScreen({ route }) {
                     title="Collector"
                     description={job.collector_name || "En route"}
                 >
-                    <View style={[styles.markerContainer, { borderColor: '#3498DB' }]}>
-                        <Truck size={24} color="#3498DB" />
+                    <View style={[styles.markerContainer, { borderColor: '#111' }]}>
+                        <Truck size={24} color="#111" />
                     </View>
                 </ActiveMarker>
             );
@@ -665,7 +674,7 @@ export default function PickupsScreen({ route }) {
                         { latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) },
                         { latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }
                     ]}
-                    strokeColor="#3498DB"
+                    strokeColor="#111"
                     strokeWidth={3}
                     lineDashPattern={[5, 5]}
                 />
@@ -686,8 +695,35 @@ export default function PickupsScreen({ route }) {
         return [...activeJobs, ...pendingJobs];
     }, [jobs, userRole]);
 
+    if (hasLocationPermission === false) {
+        return (
+            <SafeAreaView style={styles.permissionContainer}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', top: 50, left: 20}}>
+                    <ArrowLeft size={24} color="#111" />
+                </TouchableOpacity>
+                <View style={styles.permissionContent}>
+                    <View style={styles.globeIconContainer}>
+                        <Globe size={80} color="#27AE60" />
+                    </View>
+                    <Text style={styles.permissionTitle}>Allow location access</Text>
+                    <Text style={styles.permissionDesc}>
+                        We use this to show nearby stores. You can edit access in your phone's settings.
+                    </Text>
+                </View>
+                <View style={styles.permissionFooter}>
+                    <Text style={styles.privacyText}>
+                        By allowing access, you consent to share your personal info with Google Maps as stated in the <Text style={{textDecorationLine: 'underline'}}>Privacy Policy</Text>
+                    </Text>
+                    <TouchableOpacity style={styles.allowButton} onPress={requestLocationAccess}>
+                        <Text style={styles.allowButtonText}>Allow access</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     if (loading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#2E7D32" /></View>;
+        return <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>;
     }
 
     return (
@@ -726,52 +762,48 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && (
-                <View style={styles.header}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#333" />
-                        </TouchableOpacity>
-                        <View style={styles.headerTextCol}>
-                            <Text style={styles.headerTitleMain}>
-                                {userRole === 'COLLECTOR' ? 'Nearby Pickups' : 'My Pickups'}
-                            </Text>
-                            <Text style={styles.headerSubText}>
-                                {userRole === 'COLLECTOR' ? 'Earn by recycling waste' : 'Track your waste collection'}
-                            </Text>
-                        </View>
-                        {userRole !== 'COLLECTOR' ? (
-                            <TouchableOpacity
-                                style={styles.historyBtn}
-                                onPress={() => navigation.navigate('PickupHistory')}
-                            >
-                                <Clock size={20} color="#333" />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity
-                                style={styles.historyBtn}
-                                onPress={() => navigation.navigate('CollectorJobs')}
-                            >
-                                <Truck size={20} color="#333" />
-                            </TouchableOpacity>
-                        )}
+                <View style={styles.floatingTopBar}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.floatingBackBtn}>
+                        <ArrowLeft size={20} color="#111" />
+                    </TouchableOpacity>
+                    <View style={styles.floatingSearchBar}>
+                        <Search size={18} color="#999" style={{marginLeft: 10}} />
+                        <TextInput placeholder="Search area..." style={styles.floatingSearchInput} placeholderTextColor="#999" />
                     </View>
-
-                    {userRole !== 'COLLECTOR' && (
-                        <View style={styles.floatingActionRow}>
-                            <TouchableOpacity
-                                style={styles.requestButton}
-                                onPress={() => setShowRequestModal(true)}
-                            >
-                                <MapPin size={20} color="#fff" />
-                                <Text style={styles.requestButtonText}>Request Pickup</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                    <TouchableOpacity style={styles.floatingTargetBtn} onPress={() => {
+                        if (location && mapRef.current) {
+                            mapRef.current.animateToRegion({
+                                latitude: location.latitude,
+                                longitude: location.longitude,
+                                latitudeDelta: 0.005,
+                                longitudeDelta: 0.005,
+                            }, 1000);
+                        }
+                    }}>
+                        <Navigation size={20} color="#111" />
+                    </TouchableOpacity>
                 </View>
             )}
 
+            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && user?.kyc_status !== 'VERIFIED' && (
+                <TouchableOpacity
+                    style={styles.kycBanner}
+                    onPress={() => navigation.navigate('KYCVerification')}
+                    activeOpacity={0.85}
+                >
+                    <View style={styles.kycBannerIcon}>
+                        <ShieldAlert size={22} color="#fff" />
+                    </View>
+                    <View style={styles.kycBannerText}>
+                        <Text style={styles.kycBannerTitle}>Identity Verification Required</Text>
+                        <Text style={styles.kycBannerSub}>Complete KYC to start accepting pickup jobs</Text>
+                    </View>
+                    <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
+                </TouchableOpacity>
+            )}
+
             {!isSelectingLocation && sortedJobs.length > 0 && (
-                <View style={styles.jobListContainer}>
+                <View style={styles.jobListContainerAbsolute}>
                     <FlatList
                         data={sortedJobs}
                         keyExtractor={(item) => item.id.toString()}
@@ -805,8 +837,8 @@ export default function PickupsScreen({ route }) {
                                                 <Text style={styles.jobType}>{item.material_type}</Text>
                                                 <Text style={styles.jobQty}>{item.quantity_estimate}</Text>
                                             </View>
-                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#ECFDF5' : '#FFFBEB' }]}>
-                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#10B981' : '#F59E0B' }]}>{item.status}</Text>
+                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#F3F4F6' : (item.status === 'ARRIVED' ? '#111' : '#F3F4F6') }]}>
+                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#111' : (item.status === 'ARRIVED' ? '#fff' : '#111') }]}>{item.status}</Text>
                                             </View>
                                         </View>
 
@@ -820,13 +852,24 @@ export default function PickupsScreen({ route }) {
                                         {userRole === 'COLLECTOR' && (
                                             <View style={styles.actionRow}>
                                                 {item.status === 'PENDING' && (
-                                                    <TouchableOpacity
-                                                        style={styles.acceptBtn}
-                                                        onPress={() => handleAcceptJob(item.id)}
-                                                    >
-                                                        <Text style={styles.acceptBtnText}>Accept Order</Text>
-                                                        <ChevronRight size={18} color="#fff" />
-                                                    </TouchableOpacity>
+                                                    user?.kyc_status === 'VERIFIED' ? (
+                                                        <TouchableOpacity
+                                                            style={styles.acceptBtn}
+                                                            onPress={() => handleAcceptJob(item.id)}
+                                                        >
+                                                            <Text style={styles.acceptBtnText}>Accept Order</Text>
+                                                            <ChevronRight size={18} color="#fff" />
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity
+                                                            style={[styles.acceptBtn, { backgroundColor: '#111' }]}
+                                                            onPress={() => navigation.navigate('KYCVerification')}
+                                                        >
+                                                            <ShieldAlert size={16} color="#fff" style={{ marginRight: 6 }} />
+                                                            <Text style={styles.acceptBtnText}>Verify to Accept</Text>
+                                                            <ChevronRight size={18} color="#fff" />
+                                                        </TouchableOpacity>
+                                                    )
                                                 )}
 
                                                 {item.status === 'ACCEPTED' && (
@@ -851,7 +894,7 @@ export default function PickupsScreen({ route }) {
 
                                                 {item.status === 'ARRIVED' && (
                                                     <TouchableOpacity
-                                                        style={[styles.acceptBtn, { backgroundColor: '#2E7D32' }]}
+                                                        style={[styles.acceptBtn, { backgroundColor: '#111' }]}
                                                         onPress={() => handleCompleteJob(item.id)}
                                                     >
                                                         <Text style={styles.acceptBtnText}>Confirm Completion</Text>
@@ -864,7 +907,7 @@ export default function PickupsScreen({ route }) {
                                         {userRole === 'SELLER' && item.status === 'ACCEPTED' && (
                                             <View style={styles.trackingContainer}>
                                                 <View style={styles.trackingPulse}>
-                                                    <Activity size={14} color="#3498DB" />
+                                                    <Activity size={14} color="#111" />
                                                     <Text style={styles.trackingTitle}>Collector En Route</Text>
                                                 </View>
                                                 <Text style={styles.trackingDetail}>
@@ -964,8 +1007,8 @@ export default function PickupsScreen({ route }) {
 
                             {useCurrentLocation ? (
                                 <View style={styles.currentLocationBox}>
-                                    <Navigation size={16} color="#2E7D32" />
-                                    <Text style={{ flex: 1, color: '#2E7D32', fontSize: 13, fontWeight: '500' }}>
+                                    <Navigation size={16} color="#111" />
+                                    <Text style={{ flex: 1, color: '#111', fontSize: 13, fontWeight: '500' }}>
                                         Using your current GPS coordinates to ensure faster pickup.
                                     </Text>
                                 </View>
@@ -981,7 +1024,7 @@ export default function PickupsScreen({ route }) {
                                         style={styles.mapSelectBtn}
                                         onPress={startMapSelection}
                                     >
-                                        <MapPin size={14} color="#2E7D32" />
+                                        <MapPin size={14} color="#111" />
                                         <Text style={styles.mapSelectText}>Map</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -993,7 +1036,7 @@ export default function PickupsScreen({ route }) {
                                 <Text style={styles.label}>Order Estimate</Text>
                                 {requestLoading ? (
                                     <View style={styles.estimateLoading}>
-                                        <ActivityIndicator size="small" color="#2E7D32" />
+                                        <ActivityIndicator size="small" color="#111" />
                                         <Text style={styles.estimateLoadingText}>Calculating costs...</Text>
                                     </View>
                                 ) : (requestForm.waste_value) ? (
@@ -1031,7 +1074,7 @@ export default function PickupsScreen({ route }) {
                                             <Text style={styles.estimateTotalLabel}>
                                                 {userRole === 'SELLER' ? 'Total Payout' : 'Total'}
                                             </Text>
-                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#2E7D32' }]}>
+                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#111' }]}>
                                                 ₵{userRole === 'SELLER'
                                                     ? (parseFloat(requestForm.waste_value) - 2.00).toFixed(2)
                                                     : (parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee || 0) + (userRole === 'RECYCLER' ? 5.00 : 0)).toFixed(2)}
@@ -1171,7 +1214,7 @@ export default function PickupsScreen({ route }) {
                                     ]}>
                                         <Text style={[
                                             styles.trackTagText,
-                                            { color: confirmingJob.track_type === 'A' ? '#2E7D32' : '#166534' }
+                                            { color: confirmingJob.track_type === 'A' ? '#111' : '#166534' }
                                         ]}>
                                             {confirmingJob.track_type === 'A' ? 'Safe Disposal (Pay to Clear)' : 'Sell Recyclables (Earn Cash)'}
                                         </Text>
@@ -1191,10 +1234,10 @@ export default function PickupsScreen({ route }) {
                                                 onChangeText={setManualWeight}
                                             />
                                             <TouchableOpacity
-                                                style={[styles.verifyIconButton, verificationPhoto && { backgroundColor: '#E8F5E9' }]}
+                                                style={[styles.verifyIconButton, verificationPhoto && { backgroundColor: '#F3F4F6' }]}
                                                 onPress={pickVerificationImage}
                                             >
-                                                <Camera size={20} color={verificationPhoto ? '#2E7D32' : '#666'} />
+                                                <Camera size={20} color={verificationPhoto ? '#111' : '#666'} />
                                             </TouchableOpacity>
                                         </View>
 
@@ -1204,7 +1247,7 @@ export default function PickupsScreen({ route }) {
                                                 <TouchableOpacity
                                                     style={[
                                                         styles.aiVerifyBtn,
-                                                        verificationResult?.is_verified && { backgroundColor: '#2E7D32' }
+                                                        verificationResult?.is_verified && { backgroundColor: '#111' }
                                                     ]}
                                                     onPress={handleVerifyWeight}
                                                     disabled={isVerifying}
@@ -1254,7 +1297,7 @@ export default function PickupsScreen({ route }) {
                             <TouchableOpacity
                                 style={[
                                     styles.cancelModalConfirmBtn,
-                                    { backgroundColor: '#2E7D32' },
+                                    { backgroundColor: '#111' },
                                     (confirmingJob?.track_type === 'B' && !verificationResult?.is_verified) && { backgroundColor: '#ccc' }
                                 ]}
                                 onPress={confirmAndCompleteJob}
@@ -1271,6 +1314,62 @@ export default function PickupsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+    // Permission Styles
+    permissionContainer: { flex: 1, backgroundColor: '#FFF' },
+    permissionContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
+    globeIconContainer: { marginBottom: 30 },
+    permissionTitle: { fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 12, textAlign: 'center' },
+    permissionDesc: { fontSize: 16, color: '#666', textAlign: 'center', lineHeight: 22 },
+    permissionFooter: { paddingHorizontal: 20, paddingBottom: 110 },
+    privacyText: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 20, lineHeight: 18 },
+    allowButton: { backgroundColor: '#111', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    allowButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+
+    // Floating Map UI
+    floatingTopBar: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', zIndex: 10 },
+    floatingBackBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchBar: { flex: 1, height: 44, backgroundColor: '#FFF', borderRadius: 22, flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#111' },
+    floatingTargetBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+
+    // Map Markers
+    blackCircleMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
+    blackCircleText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+
+    kycBanner: {
+        position: 'absolute',
+        top: 80,
+        left: 16,
+        right: 16,
+        backgroundColor: '#111',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 16,
+        elevation: 8,
+        zIndex: 20,
+    },
+    kycBannerIcon: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    kycBannerText: { flex: 1 },
+    kycBannerTitle: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 2 },
+    kycBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+    jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
+
     container: { flex: 1 },
     map: { width: width, height: height },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -1332,7 +1431,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     requestButton: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1422,7 +1521,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     acceptBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -1448,19 +1547,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 8,
     },
-    navBtn: { backgroundColor: '#3498DB' },
-    arriveBtn: { backgroundColor: '#F39C12' },
+    navBtn: { backgroundColor: '#111' },
+    arriveBtn: { backgroundColor: '#333' },
     actionBtnText: {
         color: '#fff',
         fontSize: 14,
         fontWeight: 'bold',
     },
     trackingContainer: {
-        backgroundColor: '#EBF5FB',
+        backgroundColor: '#F3F4F6',
         padding: 15,
         borderRadius: 16,
         borderLeftWidth: 4,
-        borderLeftColor: '#3498DB',
+        borderLeftColor: '#111',
     },
     trackingPulse: {
         flexDirection: 'row',
@@ -1471,11 +1570,11 @@ const styles = StyleSheet.create({
     trackingTitle: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#2980B9',
+        color: '#111',
     },
     trackingDetail: {
         fontSize: 12,
-        color: '#5D6D7E',
+        color: '#6B7280',
     },
     cancelRequestBtn: {
         alignItems: 'center',
@@ -1492,7 +1591,7 @@ const styles = StyleSheet.create({
         padding: 5,
         borderRadius: 18,
         borderWidth: 2,
-        borderColor: '#2E7D32',
+        borderColor: '#111',
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
@@ -1518,7 +1617,7 @@ const styles = StyleSheet.create({
     selectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
     selectionSubtitle: { fontSize: 13, color: '#666', marginTop: 4 },
     confirmLocationBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         paddingHorizontal: 40,
         paddingVertical: 14,
         borderRadius: 15,
@@ -1572,8 +1671,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     pickerItemActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
@@ -1596,8 +1695,8 @@ const styles = StyleSheet.create({
         backgroundColor: '#F9FAFB',
     },
     locationToggleBtnActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
     },
     locationToggleText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
     locationToggleTextActive: { color: '#fff' },
@@ -1619,18 +1718,18 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: '#F3F4F6',
         paddingHorizontal: 10,
         paddingVertical: 6,
         borderRadius: 8,
     },
-    mapSelectText: { fontSize: 12, color: '#059669', fontWeight: 'bold' },
+    mapSelectText: { fontSize: 12, color: '#111', fontWeight: 'bold' },
 
     currentLocationBox: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: '#F3F4F6',
         padding: 15,
         borderRadius: 12,
         marginBottom: 20,
@@ -1671,7 +1770,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
-    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#2E7D32' },
+    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#111' },
     estimateNote: {
         fontSize: 11,
         color: '#9CA3AF',
@@ -1679,11 +1778,11 @@ const styles = StyleSheet.create({
         lineHeight: 16,
     },
     submitRequestBtn: {
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         paddingVertical: 18,
         borderRadius: 20,
         alignItems: 'center',
-        shadowColor: '#2E7D32',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
@@ -1856,7 +1955,7 @@ const styles = StyleSheet.create({
     },
     aiVerifyBtn: {
         flex: 1,
-        backgroundColor: '#3498DB',
+        backgroundColor: '#111',
         paddingVertical: 10,
         borderRadius: 8,
         alignItems: 'center',
@@ -1887,7 +1986,7 @@ const styles = StyleSheet.create({
     earningsAmount: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
     },
     imageUploadBtn: {
         width: '100%',

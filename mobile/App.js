@@ -6,6 +6,7 @@ import { NotificationProvider } from './src/context/NotificationContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Toast from 'react-native-toast-message';
+import { toastConfig } from './src/components/ToastConfig';
 
 const queryClient = new QueryClient();
 
@@ -19,7 +20,7 @@ export default function App() {
           </NotificationProvider>
         </AuthProvider>
       </SafeAreaProvider>
-      <Toast />
+      <Toast config={toastConfig} />
     </QueryClientProvider>
   );
 }

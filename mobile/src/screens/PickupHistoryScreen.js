@@ -73,7 +73,7 @@ export default function PickupHistoryScreen() {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-                <Activity size={40} color="#2E7D32" />
+                <Activity size={40} color="#111" />
             </View>
             <Text style={styles.emptyTitle}>No Activity Yet</Text>
             <Text style={styles.emptyText}>
@@ -84,7 +84,7 @@ export default function PickupHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#2E7D32" />
+            <StatusBar barStyle="light-content" backgroundColor="#111" />
 
             {/* Organic Curved Header */}
             <View style={styles.headerBackground}>
@@ -120,7 +120,7 @@ export default function PickupHistoryScreen() {
 
                 {isLoading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#2E7D32" />
+                        <ActivityIndicator size="large" color="#111" />
                     </View>
                 ) : (
                     <FlatList
@@ -134,7 +134,7 @@ export default function PickupHistoryScreen() {
                             <RefreshControl
                                 refreshing={isRefetching}
                                 onRefresh={refetch}
-                                tintColor="#2E7D32"
+                                tintColor="#111"
                             />
                         }
                     />
@@ -147,11 +147,11 @@ export default function PickupHistoryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
     },
     headerBackground: {
         height: 180,
-        backgroundColor: '#2E7D32',
+        backgroundColor: '#111',
         position: 'relative',
         overflow: 'hidden',
     },
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
         width: width * 1.5,
         height: width * 1.5,
         borderRadius: width * 0.75,
-        backgroundColor: '#388E3C',
+        backgroundColor: '#222',
         opacity: 0.3,
     },
     headerContent: {
@@ -212,9 +212,9 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     filterChipActive: {
-        backgroundColor: '#2E7D32',
-        borderColor: '#2E7D32',
-        shadowColor: '#2E7D32',
+        backgroundColor: '#111',
+        borderColor: '#111',
+        shadowColor: '#111',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     priceText: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#111',
         marginBottom: 6,
     },
     badge: {
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#F0F7F4',
+        backgroundColor: '#FAFAFA',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,

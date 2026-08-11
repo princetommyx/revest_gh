@@ -63,5 +63,10 @@ export const marketApi = {
             }
             throw error;
         }
+    },
+
+    toggleLike: async (id) => {
+        const response = await apiClient.post(`market/listings/${id}/toggle_like/`);
+        return response.data; // { liked: bool, total_likes: int }
     }
 };
