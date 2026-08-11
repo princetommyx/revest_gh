@@ -53,7 +53,7 @@ export const authApi = {
     },
 
     confirmPasswordReset: async (data) => {
-        const response = await apiClient.post('auth/password-reset/confirm/', data, config);
+        const response = await apiClient.post('auth/password-reset/confirm/', data);
         return response.data;
     },
 

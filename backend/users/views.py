@@ -262,7 +262,7 @@ class PasswordResetRequestView(views.APIView):
         if user:
             # Generate OTP
             otp_code = str(random.randint(100000, 999999))
-            expires_at = timezone.now() + timedelta(minutes=2)
+            expires_at = timezone.now() + timedelta(minutes=15)
             
             # Save OTP
             from .models import PasswordResetOTP
