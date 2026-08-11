@@ -1,0 +1,23 @@
+# Python virtual environments
+.venv/**
+venv/**
+**/__pycache__/**
+
+# Backend Django
+backend/**
+
+# Frontend React
+frontend/**
+
+# Admin template
+Bootstrap-Admin-Template-master/**
+
+# Git
+.git/**
+
+# Documentation
+*.md
+
+# Python cache
+*.pyc
+*.pyo

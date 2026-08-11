@@ -15,9 +15,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         # Room name based on sorted user IDs to ensure uniqueness per pair
         # URL route: /ws/chat/<other_user_id>/
-        self.other_user_id = int(self.scope['url_route']['kwargs']['other_user_id'])
-        users = sorted([self.user.id, self.other_user_id])
-        self.room_group_name = f"chat_{users[0]}_{users[1]}"
+        if 'other_user_id' in self.scope['url_route']['kwargs']:
+            self.other_user_id = int(self.scope['url_route']['kwargs']['other_user_id'])
+            users = sorted([self.user.id, self.other_user_id])
+            self.room_group_name = f"chat_{users[0]}_{users[1]}"
+        else:
+            # General chat or lobby (optional, for now just a user-specific channel)
+            self.room_group_name = f"user_{self.user.id}_updates"
 
         await self.channel_layer.group_add(
             self.room_group_name,

@@ -12,6 +12,7 @@ django_asgi_app = get_asgi_application()
 from channels.routing import ProtocolTypeRouter, URLRouter
 import logistics.routing
 import chat.routing
+import admin_dashboard.routing
 from .middleware import JwtAuthMiddleware
 
 application = ProtocolTypeRouter({
@@ -19,7 +20,8 @@ application = ProtocolTypeRouter({
     "websocket": JwtAuthMiddleware(
         URLRouter(
             logistics.routing.websocket_urlpatterns +
-            chat.routing.websocket_urlpatterns
+            chat.routing.websocket_urlpatterns +
+            admin_dashboard.routing.websocket_urlpatterns
         )
     ),
 })

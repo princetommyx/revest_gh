@@ -165,7 +165,7 @@ const LogisticsProvider = () => {
 
     if (acceptedJob) {
         return (
-            <div className="h-[80vh] flex flex-col relative overflow-hidden bg-gray-200 rounded-2xl">
+            <div className="h-screen flex flex-col relative overflow-hidden bg-gray-200">
                 <ErrorBoundary>
                     <MapContainer
                         center={[formData.latitude, formData.longitude]}
@@ -236,7 +236,7 @@ const LogisticsProvider = () => {
 
     if (searching) {
         return (
-            <div className="h-[80vh] flex flex-col items-center justify-center bg-gray-50 rounded-2xl relative overflow-hidden">
+            <div className="h-screen flex flex-col items-center justify-center bg-gray-50 relative overflow-hidden">
                 <div className="absolute inset-0 z-0">
                     <ErrorBoundary>
                         <MapContainer
@@ -287,7 +287,7 @@ const LogisticsProvider = () => {
     }
 
     return (
-        <div className="relative h-[80vh] bg-gray-200 rounded-2xl overflow-hidden">
+        <div className="relative h-screen bg-gray-200 overflow-hidden">
             <div className="absolute inset-0 z-0">
                 <ErrorBoundary>
                     <MapContainer
@@ -307,7 +307,9 @@ const LogisticsProvider = () => {
                 </ErrorBoundary>
             </div>
 
-            <div className="absolute bottom-0 left-0 right-0 bg-white p-6 rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] md:w-96 md:bottom-6 md:left-6 md:rounded-2xl z-10">
+            <div className="absolute bottom-0 left-0 right-0 bg-white p-6 rounded-t-3xl shadow-[0_-4px_20px_rgba(0,0,0,0.1)] max-h-[60vh] overflow-y-auto z-10">
+                {/* Drag handle */}
+                <div className="w-12 h-1 bg-gray-300 rounded-full mx-auto mb-4"></div>
                 <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <Navigation size={20} className="text-primary" />
                     Request Pickup

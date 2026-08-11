@@ -1,0 +1,10 @@
+Hello {{ user_name }},
+
+You have received a new message from {{ sender_name }}:
+
+"{{ message_content }}"
+
+Open the ReVesta app to view and reply:
+{{ app_url }}
+
+© {{ current_year }} {{ app_name }}
