@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authApi } from '../api/auth';
-import { Recycle, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 export default function Login() {
     const [credentials, setCredentials] = useState({ username: '', password: '' });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -25,119 +27,89 @@ export default function Login() {
     };
 
     return (
-        <div className="min-h-screen bg-white flex flex-col md:flex-row overflow-hidden font-sans">
-            {/* Left Side: Branding */}
-            <div className="flex-1 md:flex-[0.8] flex flex-col items-center justify-center p-12 bg-white relative z-10">
-                <div className="text-center max-w-sm animate-fade-in">
-                    <div className="mb-8 flex justify-center">
-                        <div className="relative">
-                            <Recycle size={120} className="text-primary-600 transform -rotate-12" />
-                            <div className="absolute -bottom-2 -right-2 bg-primary-100 rounded-full p-2 animate-bounce">
-                                <Recycle size={24} className="text-primary-600" />
-                            </div>
-                        </div>
-                    </div>
-                    <h1 className="text-5xl font-black text-primary-900 tracking-tighter mb-4 uppercase">
-                        Revesta <br /> Dashboard
-                    </h1>
-                    <p className="text-slate-500 font-medium text-lg leading-relaxed">
-                        Menuju Masa Depan Lingkungan <br />
-                        <span className="text-primary-600 italic">"Clean & Sustainable Solution"</span>
-                    </p>
+        <div className="min-h-screen bg-[#475569] flex items-center justify-center p-4 md:p-8 font-sans">
+            {/* Main Card */}
+            <div className="bg-[#cbd5e1] w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden flex flex-col items-center justify-between min-h-[700px] p-8 md:p-12 relative">
+                
+                {/* Logo Section */}
+                <div className="w-full flex justify-center mt-6">
+                    <img 
+                        src={logo} 
+                        alt="Revesta Logo" 
+                        className="h-28 w-auto object-contain transform transition-transform hover:scale-105" 
+                    />
                 </div>
-            </div>
 
-            {/* Right Side: Form with Diagonal Divider */}
-            <div className="flex-1 md:flex-[1.2] bg-primary-900 relative flex items-center justify-center p-8 md:p-16">
-                {/* Diagonal Divider Overlay */}
-                <div
-                    className="absolute top-0 left-0 bottom-0 w-32 bg-primary-900 hidden md:block"
-                    style={{
-                        transform: 'translateX(-50%) skewX(-10deg)',
-                        transformOrigin: 'top'
-                    }}
-                ></div>
-
-                <div className="w-full max-w-md relative z-10 animate-slide-up">
-                    <div className="mb-10 text-white md:text-left text-center">
-                        <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
-                        <p className="text-primary-200/60 font-medium">Please enter your credentials to access the admin portal.</p>
-                    </div>
+                {/* Form Section */}
+                <div className="w-full max-w-sm flex flex-col items-center mt-10">
+                    <h1 className="text-[40px] font-bold text-[#1e293b] mb-1 tracking-tight">Login</h1>
+                    <p className="text-[#475569] text-[15px] font-medium mb-12">Welcome Back to Admin</p>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm animate-shake">
-                            <p className="flex items-center">
-                                <span className="mr-2">🚨</span> {error}
-                            </p>
+                        <div className="mb-6 w-full p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-600 text-sm text-center font-medium">
+                            {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-8">
-                        {/* Username Field */}
-                        <div className="space-y-3">
-                            <label htmlFor="username" className="block text-sm font-bold text-primary-200 uppercase tracking-widest ml-1">
-                                Your Username
-                            </label>
+                    <form onSubmit={handleSubmit} className="w-full space-y-8">
+                        {/* Username */}
+                        <div className="relative">
                             <input
                                 type="text"
-                                id="username"
                                 value={credentials.username}
                                 onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                                className="w-full bg-white text-primary-900 px-6 py-4 rounded-xl focus:ring-4 focus:ring-primary-500/30 transition-all outline-none text-lg font-medium placeholder:text-slate-400"
-                                placeholder="Enter your username"
+                                className="w-full bg-transparent border-b border-[#94a3b8] py-2 px-1 text-[#1e293b] placeholder-[#64748b] focus:outline-none focus:border-[#1e293b] transition-colors text-[15px]"
+                                placeholder="Email and username"
                                 required
                             />
                         </div>
 
-                        {/* Password Field */}
-                        <div className="space-y-3">
-                            <label htmlFor="password" className="block text-sm font-bold text-primary-200 uppercase tracking-widest ml-1">
-                                Password
-                            </label>
+                        {/* Password */}
+                        <div className="relative">
                             <input
-                                type="password"
-                                id="password"
+                                type={showPassword ? 'text' : 'password'}
                                 value={credentials.password}
                                 onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                                className="w-full bg-white text-primary-900 px-6 py-4 rounded-xl focus:ring-4 focus:ring-primary-500/30 transition-all outline-none text-lg font-medium placeholder:text-slate-400"
-                                placeholder="Enter your password"
+                                className="w-full bg-transparent border-b border-[#94a3b8] py-2 px-1 pr-10 text-[#1e293b] placeholder-[#64748b] focus:outline-none focus:border-[#1e293b] transition-colors text-[15px]"
+                                placeholder="Password"
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-1 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#1e293b] transition-colors p-1"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
 
-                        {/* Remember Me Only */}
-                        <div className="flex items-center justify-between px-1">
-                            <label className="flex items-center space-x-3 cursor-pointer group text-primary-100/80 hover:text-white transition-colors">
-                                <input
-                                    type="checkbox"
-                                    className="w-5 h-5 rounded border-transparent bg-primary-800 text-primary-500 focus:ring-offset-primary-900 focus:ring-primary-500 transition-all"
-                                />
-                                <span className="text-sm font-semibold tracking-tight">Remember me</span>
-                            </label>
+                        {/* Login Button */}
+                        <div className="pt-6 flex justify-center">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="bg-[#1e293b] hover:bg-[#0f172a] text-[#f8fafc] px-16 py-3 rounded-[14px] font-medium transition-all shadow-lg disabled:opacity-70 flex items-center justify-center w-[220px]"
+                            >
+                                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Login'}
+                            </button>
                         </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-primary-500 hover:bg-primary-400 active:bg-primary-600 text-white font-black py-5 px-8 rounded-xl transition-all duration-300 transform active:scale-[0.98] shadow-2xl flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed text-xl uppercase tracking-widest"
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-6 h-6 mr-3 animate-spin" />
-                                    Sign In...
-                                </>
-                            ) : (
-                                'Sign In'
-                            )}
-                        </button>
                     </form>
 
-                    <div className="mt-12 text-center">
-                        <p className="text-primary-200/30 text-xs font-bold uppercase tracking-[0.2em]">
-                            Authorized Personnel Only
-                        </p>
+                    {/* Links */}
+                    <div className="mt-10 flex flex-col items-center space-y-2">
+                        <button className="text-[#475569] hover:text-[#1e293b] text-[15px] font-medium transition-colors">
+                            Create New Account
+                        </button>
+                        <button className="text-[#64748b] hover:text-[#1e293b] text-[15px] transition-colors">
+                            Back to Home
+                        </button>
                     </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-auto pt-16 flex space-x-6 text-[#64748b] text-[13px]">
+                    <button className="hover:text-[#1e293b] transition-colors">Term & Conditions</button>
+                    <button className="hover:text-[#1e293b] transition-colors">Privacy Policy</button>
                 </div>
             </div>
         </div>
