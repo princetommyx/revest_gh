@@ -22,7 +22,9 @@ const getLocalURL = () => {
 const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
 const IS_PROD = !__DEV__;
 
-const baseURL = IS_PROD ? PROD_API_URL : getLocalURL();
+// Use explicit environment variable if set, otherwise default to Production URL for APK testing
+// If you want to develop locally, you can set EXPO_PUBLIC_API_URL=http://... in your .env
+const baseURL = process.env.EXPO_PUBLIC_API_URL || PROD_API_URL;
 
 const apiClient = axios.create({
     baseURL,
