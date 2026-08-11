@@ -10,7 +10,6 @@ import { BlurView } from 'expo-blur';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-import OnboardingScreen from '../screens/OnboardingScreen';
 import HomeScreen from '../screens/HomeScreen';
 import PickupsScreen from '../screens/PickupsScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -206,24 +205,8 @@ function MainTabs() {
 
 export default function AppNavigator() {
     const { user, loading: authLoading } = useAuth();
-    const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
 
-    useEffect(() => {
-        const checkOnboarding = async () => {
-            try {
-                // TEMP: Clear the flag to force onboarding to show for testing
-                // await AsyncStorage.removeItem('has_seen_onboarding');
-
-                const value = await AsyncStorage.getItem('has_seen_onboarding');
-                setHasSeenOnboarding(value === 'true');
-            } catch (e) {
-                setHasSeenOnboarding(false);
-            }
-        };
-        checkOnboarding();
-    }, []);
-
-    if (authLoading || hasSeenOnboarding === null) {
+    if (authLoading) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#111" />
@@ -235,13 +218,10 @@ export default function AppNavigator() {
         <NavigationContainer>
             <Stack.Navigator
                 screenOptions={{ headerShown: false }}
-                initialRouteName={
-                    user ? "Main" : (hasSeenOnboarding ? "Login" : "Onboarding")
-                }
+                initialRouteName={user ? "Main" : "Login"}
             >
                 {user == null ? (
                     <>
-                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
                         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />

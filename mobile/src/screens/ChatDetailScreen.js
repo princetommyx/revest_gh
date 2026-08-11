@@ -120,7 +120,7 @@ export default function ChatDetailScreen({ route, navigation }) {
             )}
 
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
             >
                 <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 20 }]}>
