@@ -25,6 +25,7 @@ import HelpScreen from '../screens/HelpScreen';
 import SupportChatScreen from '../screens/SupportChatScreen';
 import PickupHistoryScreen from '../screens/PickupHistoryScreen';
 import KYCVerificationScreen from '../screens/KYCVerificationScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -205,8 +206,21 @@ function MainTabs() {
 
 export default function AppNavigator() {
     const { user, loading: authLoading } = useAuth();
+    const [isFirstLaunch, setIsFirstLaunch] = useState(null);
 
-    if (authLoading) {
+    useEffect(() => {
+        async function checkFirstLaunch() {
+            try {
+                const hasSeen = await AsyncStorage.getItem('has_seen_onboarding');
+                setIsFirstLaunch(hasSeen === null || hasSeen !== 'true');
+            } catch (err) {
+                setIsFirstLaunch(false);
+            }
+        }
+        checkFirstLaunch();
+    }, []);
+
+    if (authLoading || isFirstLaunch === null) {
         return (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#111" />
@@ -218,10 +232,11 @@ export default function AppNavigator() {
         <NavigationContainer>
             <Stack.Navigator
                 screenOptions={{ headerShown: false }}
-                initialRouteName={user ? "Main" : "Login"}
+                initialRouteName={user ? "Main" : (isFirstLaunch ? "Onboarding" : "Login")}
             >
                 {user == null ? (
                     <>
+                        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                         <Stack.Screen name="Login" component={LoginScreen} />
                         <Stack.Screen name="Register" component={RegisterScreen} />
                         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
