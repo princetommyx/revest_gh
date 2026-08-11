@@ -60,16 +60,16 @@ export default function AddAdminModal({ isOpen, onClose }) {
                     onClick={onClose}
                 />
 
-                <div className="relative inline-block overflow-hidden text-left align-bottom transition-all transform bg-white rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div className="relative inline-block overflow-hidden text-left align-bottom transition-all transform bg-white dark:bg-slate-900 rounded-2xl shadow-xl sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
                     {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-800/50">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-gray-900">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                                 Add System Administrator
                             </h3>
                             <button
                                 onClick={onClose}
-                                className="text-gray-400 hover:text-gray-500 focus:outline-none p-1 rounded-full hover:bg-gray-100 transition-colors"
+                                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none p-1 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -80,7 +80,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                     <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     First Name
                                 </label>
                                 <div className="relative">
@@ -90,7 +90,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                     <input
                                         type="text"
                                         required
-                                        className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                        className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                         value={formData.first_name}
                                         onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                                         placeholder="John"
@@ -98,7 +98,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                     Last Name
                                 </label>
                                 <div className="relative">
@@ -108,7 +108,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                     <input
                                         type="text"
                                         required
-                                        className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                        className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                         value={formData.last_name}
                                         onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                                         placeholder="Doe"
@@ -118,7 +118,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Username
                             </label>
                             <div className="relative">
@@ -128,7 +128,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                 <input
                                     type="text"
                                     required
-                                    className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                    className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/\s/g, '') })}
                                     placeholder="johndoe"
@@ -137,7 +137,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Email Address
                             </label>
                             <div className="relative">
@@ -147,7 +147,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                 <input
                                     type="email"
                                     required
-                                    className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                    className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                     placeholder="john@revesta.com"
@@ -156,8 +156,8 @@ export default function AddAdminModal({ isOpen, onClose }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Phone Number <span className="text-gray-400 font-normal">(Optional)</span>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Phone Number <span className="text-gray-400 dark:text-gray-500 font-normal">(Optional)</span>
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -165,7 +165,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                 </div>
                                 <input
                                     type="tel"
-                                    className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                    className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                     value={formData.phone_number}
                                     onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                                     placeholder="+233..."
@@ -174,7 +174,7 @@ export default function AddAdminModal({ isOpen, onClose }) {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                                 Secure Password
                             </label>
                             <div className="relative">
@@ -185,22 +185,22 @@ export default function AddAdminModal({ isOpen, onClose }) {
                                     type="password"
                                     required
                                     minLength="8"
-                                    className="pl-10 w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50"
+                                    className="pl-10 w-full rounded-xl border-gray-300 dark:border-slate-600 shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm py-2.5 bg-gray-50 dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                                     value={formData.password}
                                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                     placeholder="••••••••"
                                 />
                             </div>
-                            <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long.</p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Must be at least 8 characters long.</p>
                         </div>
 
                         {/* Footer */}
-                        <div className="pt-4 mt-6 border-t border-gray-100 flex justify-end space-x-3">
+                        <div className="pt-4 mt-6 border-t border-gray-100 dark:border-slate-700 flex justify-end space-x-3">
                             <button
                                 type="button"
                                 onClick={onClose}
                                 disabled={createAdminMutation.isLoading}
-                                className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+                                className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
                             >
                                 Cancel
                             </button>
