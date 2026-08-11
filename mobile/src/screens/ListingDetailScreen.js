@@ -102,15 +102,17 @@ export default function ListingDetailScreen({ route, navigation }) {
                     <View style={styles.priceRow}>
                         <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`} <Text style={styles.priceUnit}>/ {listing.quantity || 'bag'}</Text></Text>
                         
-                        <View style={styles.qtySelector}>
-                            <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(Math.max(1, qty - 1))}>
-                                <Minus size={16} color="#111" />
-                            </TouchableOpacity>
-                            <Text style={styles.qtyText}>{qty}</Text>
-                            <TouchableOpacity style={styles.qtyBtnActive} onPress={() => setQty(qty + 1)}>
-                                <Plus size={16} color="#fff" />
-                            </TouchableOpacity>
-                        </View>
+                        {!(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
+                            <View style={styles.qtySelector}>
+                                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(Math.max(1, qty - 1))}>
+                                    <Minus size={16} color="#111" />
+                                </TouchableOpacity>
+                                <Text style={styles.qtyText}>{qty}</Text>
+                                <TouchableOpacity style={styles.qtyBtnActive} onPress={() => setQty(qty + 1)}>
+                                    <Plus size={16} color="#fff" />
+                                </TouchableOpacity>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.metaRow}>

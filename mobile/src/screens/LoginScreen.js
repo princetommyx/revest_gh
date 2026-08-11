@@ -121,6 +121,53 @@ export default function LoginScreen() {
         });
     };
 
+    if (showOtpModal) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={[styles.header, { marginTop: 40 }]}>
+                    <View style={styles.modalIconContainer}>
+                        <Lock size={32} color="#000" />
+                    </View>
+                    <Text style={styles.greetingText}>Verification Code</Text>
+                    <Text style={styles.welcomeText}>
+                        Enter the code sent to your {pendingUser?.channel}
+                    </Text>
+                </View>
+
+                <View style={{ paddingHorizontal: 30, marginTop: 40 }}>
+                    <TextInput
+                        style={styles.otpInputFull}
+                        placeholder="000000"
+                        placeholderTextColor="#CCC"
+                        value={verificationCode}
+                        onChangeText={setVerificationCode}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                    />
+
+                    <TouchableOpacity
+                        style={styles.loginButton}
+                        onPress={confirmLoginCode}
+                        disabled={verifying}
+                    >
+                        {verifying ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>Verify & Login</Text>
+                        )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={() => setShowOtpModal(false)}
+                        style={{ alignItems: 'center', marginTop: 15 }}
+                    >
+                        <Text style={{ color: '#999', fontSize: 16, fontWeight: '600' }}>Cancel</Text>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
@@ -255,62 +302,24 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.socialRow}>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Google')}>
+                        <TouchableOpacity 
+                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]} 
+                            onPress={() => handleSocialLogin('Google')}
+                        >
                             <Text style={styles.googleG}>G</Text>
                             <Text style={styles.socialText}>Google</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
-                            <Text style={styles.appleIcon}></Text>
-                            <Text style={styles.socialText}>Apple</Text>
-                        </TouchableOpacity>
+                        
+                        {Platform.OS === 'ios' && (
+                            <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
+                                <Text style={styles.appleIcon}></Text>
+                                <Text style={styles.socialText}>Apple</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                 </ScrollView>
             </KeyboardAvoidingView>
-
-            {/* Verification Modal */}
-            <Modal visible={showOtpModal} transparent animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalCard}>
-                        <View style={styles.modalIconContainer}>
-                            <Lock size={32} color="#000" />
-                        </View>
-                        <Text style={styles.modalTitle}>Verification Code</Text>
-                        <Text style={styles.modalDesc}>
-                            Enter the code sent to your {pendingUser?.channel}
-                        </Text>
-
-                        <TextInput
-                            style={styles.otpInput}
-                            placeholder="000000"
-                            placeholderTextColor="#CCC"
-                            value={verificationCode}
-                            onChangeText={setVerificationCode}
-                            keyboardType="number-pad"
-                            maxLength={6}
-                        />
-
-                        <TouchableOpacity
-                            style={styles.modalBtn}
-                            onPress={confirmLoginCode}
-                            disabled={verifying}
-                        >
-                            {verifying ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.modalBtnText}>Verify & Login</Text>
-                            )}
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => setShowOtpModal(false)}
-                            style={styles.modalCancelBtn}
-                        >
-                            <Text style={styles.modalCancel}>Cancel</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </Modal>
         </SafeAreaView>
     );
 }
@@ -594,4 +603,22 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
     },
+    otpInputFull: {
+        width: '100%',
+        height: 60,
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        textAlign: 'center',
+        fontSize: 28,
+        letterSpacing: 12,
+        fontWeight: 'bold',
+        marginBottom: 30,
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+    }
 });

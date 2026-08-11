@@ -60,6 +60,14 @@ export default function RegisterScreen() {
     };
 
     const handleRoleSelect = (role) => {
+        if (role === 'RECYCLER') {
+            Toast.show({
+                type: 'info',
+                text1: 'Coming Soon',
+                text2: 'The Recycler role is currently under development.',
+            });
+            return;
+        }
         handleChange('role', role);
         setTimeout(() => setStep(2), 200);
     };
@@ -602,14 +610,20 @@ export default function RegisterScreen() {
                     </View>
 
                     <View style={styles.socialRow}>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Google')}>
+                        <TouchableOpacity 
+                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]} 
+                            onPress={() => handleSocialLogin('Google')}
+                        >
                             <Text style={styles.googleG}>G</Text>
                             <Text style={styles.socialText}>Google</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
-                            <Text style={styles.appleIcon}></Text>
-                            <Text style={styles.socialText}>Apple</Text>
-                        </TouchableOpacity>
+                        
+                        {Platform.OS === 'ios' && (
+                            <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
+                                <Text style={styles.appleIcon}></Text>
+                                <Text style={styles.socialText}>Apple</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
