@@ -12,7 +12,8 @@ import {
     Loader2,
     Send,
     Bot,
-    Headphones
+    Headphones,
+    ArrowLeft
 } from 'lucide-react';
 import { formatDate } from '../utils/formatters';
 import { formatDistanceToNow } from 'date-fns';
@@ -137,9 +138,9 @@ export default function SupportPage() {
     };
 
     return (
-        <div className="flex h-[calc(100vh-170px)] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-6">
+        <div className="flex h-[calc(100vh-170px)] bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden m-2 md:m-6">
             {/* Sessions List */}
-            <div className="w-1/3 border-r border-gray-100 flex flex-col">
+            <div className={`w-full md:w-1/3 border-r border-gray-100 flex-col ${selectedSession ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center space-x-2">
                         <MessageSquare className="w-5 h-5 text-purple-600" />
@@ -202,13 +203,20 @@ export default function SupportPage() {
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 flex flex-col bg-gray-50/30">
+            <div className={`flex-1 flex-col bg-gray-50/30 ${!selectedSession ? 'hidden md:flex' : 'flex'}`}>
                 {selectedSession ? (
                     <>
                         {/* Chat Header */}
                         <div className="p-4 bg-white border-b border-gray-100 flex justify-between items-center shadow-sm">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
+                            <div className="flex items-center space-x-2 md:space-x-3">
+                                {/* Mobile Back Button */}
+                                <button 
+                                    onClick={() => setSelectedSession(null)}
+                                    className="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                                >
+                                    <ArrowLeft className="w-5 h-5" />
+                                </button>
+                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
                                     <User className="w-5 h-5 text-white" />
                                 </div>
                                 <div>
@@ -224,18 +232,18 @@ export default function SupportPage() {
                                     <button
                                         onClick={() => claimMutation.mutate(selectedSession.id)}
                                         disabled={claimMutation.isLoading}
-                                        className="px-4 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-all flex items-center space-x-2"
+                                        className="px-3 py-1.5 md:px-4 bg-purple-600 text-white rounded-lg text-xs md:text-sm font-medium hover:bg-purple-700 transition-all flex items-center space-x-1 md:space-x-2"
                                     >
-                                        {claimMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Headphones className="w-4 h-4" />}
-                                        <span>Claim Session</span>
+                                        {claimMutation.isLoading ? <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : <Headphones className="w-3 h-3 md:w-4 md:h-4" />}
+                                        <span>Claim</span>
                                     </button>
                                 )}
                                 <button
                                     onClick={() => resolveMutation.mutate(selectedSession.id)}
                                     disabled={resolveMutation.isLoading}
-                                    className="px-4 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all flex items-center space-x-2"
+                                    className="px-3 py-1.5 md:px-4 bg-white border border-gray-200 text-gray-700 rounded-lg text-xs md:text-sm font-medium hover:bg-gray-50 transition-all flex items-center space-x-1 md:space-x-2"
                                 >
-                                    {resolveMutation.isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                                    {resolveMutation.isLoading ? <Loader2 className="w-3 h-3 md:w-4 md:h-4 animate-spin" /> : <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />}
                                     <span>Resolve</span>
                                 </button>
                             </div>
