@@ -37,3 +37,9 @@ urlpatterns = [
     path('api/v1/', include(router_v1.urls)),  # ViewSet routes
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
+# Force serve media files in production (for prototype/testing)
+urlpatterns += [
+    re_path(r'^media/(?P<path>.*)$', serve, {
+        'document_root': settings.MEDIA_ROOT,
+    }),
+]
