@@ -7,11 +7,12 @@ import SearchBar from '../components/common/SearchBar';
 import Toast from '../components/common/Toast';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const MEDIA_BASE_URL = API_URL.replace('/api/v1', '');
 
 const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     if (typeof imagePath === 'string' && !imagePath.startsWith('http')) {
-        return `${API_URL}${imagePath}`;
+        return `${MEDIA_BASE_URL}${imagePath}`;
     }
     return imagePath;
 };
