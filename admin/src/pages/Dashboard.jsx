@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '../api/users';
-import { Users, Truck, Trash2, Recycle, Loader2, Info, Activity, Wallet } from 'lucide-react';
+import { Users, Truck, Trash2, Recycle, Loader2, Info, Activity, Wallet, UserPlus } from 'lucide-react';
 import { formatNumber } from '../utils/formatters';
+import AddAdminModal from '../components/users/AddAdminModal';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Legend
@@ -39,6 +41,8 @@ function StatCard({ title, value, detail, icon: Icon, isPrimary, index }) {
 const COLORS = ['#0047ff', '#1e293b', '#94a3b8'];
 
 export default function Dashboard() {
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
     const { data: stats, isLoading, error } = useQuery({
         queryKey: ['dashboard-stats'],
         queryFn: usersApi.getStats,
@@ -74,7 +78,20 @@ export default function Dashboard() {
 
     return (
         <div className="p-8 space-y-8 animate-fade-in max-w-[1600px] mx-auto">
-            {/* Header / Search is in layout header */}
+            {/* Header / Actions */}
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                <div>
+                    <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Dashboard Overview</h2>
+                    <p className="text-sm text-gray-500 font-medium mt-1">Welcome back to the Revesta admin panel.</p>
+                </div>
+                <button
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="inline-flex items-center justify-center px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-500/30 w-full sm:w-auto"
+                >
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Create Admin
+                </button>
+            </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
@@ -220,6 +237,12 @@ export default function Dashboard() {
                     </div>
                 </div>
             </div>
+            
+            {/* Modals */}
+            <AddAdminModal
+                isOpen={isAddModalOpen}
+                onClose={() => setIsAddModalOpen(false)}
+            />
         </div>
     );
 }
