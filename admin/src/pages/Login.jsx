@@ -17,7 +17,13 @@ export default function Login() {
         setLoading(true);
 
         try {
-            await authApi.login(credentials);
+            const response = await authApi.login(credentials);
+            if (!response.access) {
+                // If there's no access token, it means the backend sent an OTP response
+                // Admin accounts should bypass OTP. If they get OTP, they lack admin privileges.
+                setError('You do not have admin privileges or your account is restricted.');
+                return;
+            }
             navigate('/');
         } catch (err) {
             setError(err.response?.data?.detail || 'Invalid credentials');
@@ -95,21 +101,6 @@ export default function Login() {
                         </div>
                     </form>
 
-                    {/* Links */}
-                    <div className="mt-10 flex flex-col items-center space-y-2">
-                        <button className="text-[#475569] hover:text-[#1e293b] text-[15px] font-medium transition-colors">
-                            Create New Account
-                        </button>
-                        <button className="text-[#64748b] hover:text-[#1e293b] text-[15px] transition-colors">
-                            Back to Home
-                        </button>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-auto pt-16 flex space-x-6 text-[#64748b] text-[13px]">
-                    <button className="hover:text-[#1e293b] transition-colors">Term & Conditions</button>
-                    <button className="hover:text-[#1e293b] transition-colors">Privacy Policy</button>
                 </div>
             </div>
         </div>

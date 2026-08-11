@@ -124,14 +124,14 @@ export default function TransactionsPage() {
     return (
         <div className="p-6 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Transactions</h1>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {data?.count ? `Total: ${data.count} transactions` : `${transactions.length} transactions`}
                     </p>
                 </div>
-                <div className="flex items-center space-x-2 text-primary-600">
+                <div className="flex items-center space-x-2 text-primary-600 dark:text-primary-400 self-end sm:self-auto">
                     <Wallet className="w-6 h-6" />
                 </div>
             </div>

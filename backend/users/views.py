@@ -524,6 +524,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             user = serializer.user
         except Exception as e:
             # Re-raise or return same error as standard login
+            print(f"Unauthorized: {request.path}")
             return Response(
                 {"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED
             )
