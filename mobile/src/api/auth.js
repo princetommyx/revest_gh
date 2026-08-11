@@ -21,6 +21,11 @@ export const authApi = {
         return response.data;
     },
 
+    validateRegistration: async (userData) => {
+        const response = await apiClient.post('auth/register/?validate_only=true', userData);
+        return response.data;
+    },
+
     googleLogin: async (token) => {
         const response = await apiClient.post('auth/google/', { token });
         return response.data;

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
 import Toast from 'react-native-toast-message';
+import { authApi } from '../api/auth';
 
 const { width } = Dimensions.get('window');
 
@@ -216,8 +217,66 @@ export default function RegisterScreen() {
             }
         }
 
-        // Step 1: Send verification code, if successful it will open OTP modal
-        await sendVerification();
+        // Extract payload construction to validate with backend before sending OTP
+        const payload = {
+            username: formData.username,
+            email: formData.email,
+            password: formData.password,
+            password2: formData.confirm_password,
+            phone_number: formData.phone_number,
+            city: formData.city,
+            role: formData.role,
+            ...(formData.role === 'COLLECTOR' && {
+                vehicle_type: formData.vehicle_type,
+                license_plate: formData.license_plate
+            }),
+            ...(formData.role === 'RECYCLER' && {
+                recycler_type: formData.recycler_type,
+                company_name: formData.company_name,
+                tax_id: formData.tax_id,
+                national_id: formData.national_id
+            })
+        };
+
+        let actualPayload = payload;
+
+        if (formData.role === 'RECYCLER' && formData.recycler_type === 'COMPANY') {
+            const data = new FormData();
+            Object.keys(payload).forEach(key => {
+                if (payload[key] !== undefined && payload[key] !== null) {
+                    data.append(key, payload[key]);
+                }
+            });
+
+            if (certificationImage) {
+                const localUri = certificationImage.uri;
+                const filename = localUri.split('/').pop();
+                const match = /\.(\w+)$/.exec(filename);
+                const type = match ? `image/${match[1]}` : `image`;
+
+                data.append('business_certification', {
+                    uri: localUri,
+                    name: filename,
+                    type,
+                });
+            }
+            actualPayload = data;
+        }
+
+        setLoading(true);
+        try {
+            // Validate with backend before sending OTP
+            await authApi.validateRegistration(actualPayload);
+            
+            // If validation is successful, proceed to send verification code
+            await sendVerification();
+        } catch (error) {
+            console.log("Pre-Registration Validation Error:", error);
+            const errorDetail = error.response?.data?.detail || 'Please check the details provided.';
+            Alert.alert('Registration Error', errorDetail);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleSocialLogin = (provider) => {
@@ -388,15 +447,15 @@ export default function RegisterScreen() {
 
                     <View style={styles.formFields}>
                         <View style={styles.inputGroup}>
-                            <Text style={styles.inputLabel}>Full Name</Text>
+                            <Text style={styles.inputLabel}>Username</Text>
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="Ethan Miller"
+                                    placeholder="ethan_miller"
                                     placeholderTextColor="#999"
                                     value={formData.username}
-                                    onChangeText={(val) => handleChange('username', val)}
-                                    autoCapitalize="words"
+                                    onChangeText={(val) => handleChange('username', val.toLowerCase().replace(/\s/g, ''))}
+                                    autoCapitalize="none"
                                 />
                             </View>
                         </View>
