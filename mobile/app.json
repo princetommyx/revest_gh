@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "sdkVersion": "55.0.0",
+    "name": "Revesta",
+    "slug": "revesta-mobile",
+    "scheme": "revesta",
+    "version": "1.0.4",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.revesta.mobile"
+    },
+    "android": {
+      "versionCode": 5,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.revesta.mobile",
+      "googleServicesFile": "./google-services.json",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
+        }
+      }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you upload waste items.",
+          "cameraPermission": "The app accesses your camera to let you take photos of waste items."
+        }
+      ],
+      "expo-image",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e88e5cd6-d71a-46c2-ae69-cde2531d35b6"
+      }
+    },
+    "runtimeVersion": "1.0.0",
+    "updates": {
+      "url": "https://u.expo.dev/e88e5cd6-d71a-46c2-ae69-cde2531d35b6"
+    }
+  }
+}

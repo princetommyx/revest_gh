@@ -1,78 +1,231 @@
-from rest_framework import viewsets, status, permissions
+from rest_framework import viewsets, permissions, filters, status, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import transaction
-from decimal import Decimal
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Wallet, Transaction
-from .serializers import WalletSerializer, TransactionSerializer
+from .serializers import (
+    WalletSerializer, TransactionSerializer, 
+    DepositSerializer, WithdrawalSerializer,
+    WalletPinSerializer
+)
+from decimal import Decimal
 
-class WalletViewSet(viewsets.ModelViewSet):
-    serializer_class = WalletSerializer
+@extend_schema(tags=['wallet'])
+@extend_schema_view(
+    list=extend_schema(summary="Get wallet details", description="Get your wallet balance and recent transactions."),
+)
+class WalletViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    # Only need list/retrieve really since it's 1-to-1
     permission_classes = [permissions.IsAuthenticated]
+    queryset = Wallet.objects.all()
+    serializer_class = WalletSerializer
+    throttle_scope = 'wallet'
 
     def get_queryset(self):
         return Wallet.objects.filter(user=self.request.user)
+    
+    @extend_schema(summary="Get my wallet")
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Get the current user's wallet"""
+        wallet, created = Wallet.objects.get_or_create(user=request.user)
+        serializer = self.get_serializer(wallet)
+        return Response(serializer.data)
 
-    def get_object(self):
-        # Ensure wallet exists for user
-        wallet, created = Wallet.objects.get_or_create(user=self.request.user)
-        return wallet
-
+    @extend_schema(
+        summary="Deposit funds",
+        request=DepositSerializer,
+        responses={200: WalletSerializer}
+    )
     @action(detail=False, methods=['post'])
     def deposit(self, request):
-        amount = request.data.get('amount')
-        if not amount:
-            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+        """Initialize Paystack deposit"""
+        serializer = DepositSerializer(data=request.data)
         
-        try:
-            amount = float(amount)
-            if amount <= 0:
-                raise ValueError
-        except ValueError:
-            return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+        if serializer.is_valid():
+            amount = serializer.validated_data['amount']
+            email = request.user.email
+            
+            # Use Paystack Service
+            from .services import PaystackService
+            result = PaystackService.initialize_transaction(request.user, amount, email)
+            
+            if result.get('status'):
+                # Return format expected by frontend
+                return Response({
+                    'status': True,
+                    'message': result.get('message'),
+                    'authorization_url': result['data']['authorization_url'],
+                    'access_code': result['data']['access_code'],
+                    'reference': result['data']['reference'],
+                    # Frontend expects a 'transaction' object for state
+                    'transaction': {
+                        'reference': result['data']['reference'],
+                        'amount': amount,
+                        'status': 'PENDING'
+                    }
+                })
+            
+            return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            wallet = self.get_object()
-            wallet.balance += Decimal(str(amount))
-            wallet.save()
-
-            Transaction.objects.create(
-                wallet=wallet,
-                amount=amount,
-                transaction_type='DEPOSIT',
-                status='COMPLETED',
-                description='Manual deposit'
-            )
-
-        return Response(WalletSerializer(wallet).data)
-
+    @extend_schema(
+        summary="Withdraw funds",
+        request=WithdrawalSerializer,
+        responses={200: WalletSerializer}
+    )
     @action(detail=False, methods=['post'])
     def withdraw(self, request):
-        amount = request.data.get('amount')
-        if not amount:
-            return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+        print(f"💰 Withdrawal Request Data: {request.data} from {request.user}")
+        """Request a withdrawal"""
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        serializer = WithdrawalSerializer(data=request.data, context={'request': request})
         
+        if serializer.is_valid():
+            amount = serializer.validated_data['amount']
+            
+            try:
+                # Use Service
+                from .services import WalletService
+                WalletService.request_withdrawal(
+                    request.user, 
+                    amount,
+                    serializer.validated_data['phone_number'],
+                    serializer.validated_data['network'],
+                    serializer.validated_data['account_name'],
+                    pin=serializer.validated_data.get('pin'),
+                    otp=serializer.validated_data.get('otp')
+                )
+                
+                # Audit Log
+                from admin_dashboard.utils import log_activity
+                log_activity(
+                    request.user, 
+                    'WITHDRAWAL_REQUESTED', 
+                    details={'amount': str(amount), 'network': serializer.validated_data['network']},
+                    request=request
+                )
+                
+                # Refresh wallet to show updated balance (if we deducted immediately)
+                wallet.refresh_from_db()
+                return Response(self.get_serializer(wallet).data)
+            except Exception as e:
+                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Flatten errors for simpler frontend handling
+        errors = []
+        for field, messages in serializer.errors.items():
+            for msg in messages:
+                errors.append(f"{msg}")
+        
+        return Response({'error': " ".join(errors)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(summary="List transactions")
+    @action(detail=False, methods=['get'])
+    def transactions(self, request):
+        """Get full transaction history"""
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        transactions = Transaction.objects.filter(wallet=wallet).order_by('-created_at')
+        
+        # Simple pagination if needed, but for now just list
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        summary="Initialize Paystack Payment",
+        description="Generates a Paystack checkout URL for the custom WebView flow.",
+        request=None, 
+        responses={200: WalletSerializer} # actually returns auth url
+    )
+    @action(detail=False, methods=['post'])
+    def initialize_payment(self, request):
         try:
-            amount = float(amount)
-            if amount <= 0:
-                raise ValueError
-        except ValueError:
-            return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
+            print("🚀 initialize_payment view CALLED!")
+            """Initialize transaction to get authorization URL"""
+            amount = request.data.get('amount')
+            email = request.data.get('email', request.user.email)
+            
+            if not amount:
+                return Response({'error': 'Amount is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            from .services import PaystackService
+            
+            # Pass request.user to include metadata for better reliability
+            result = PaystackService.initialize_transaction(request.user, amount, email)
+            if result['status']:
+                return Response(result['data'])
+            return Response({'error': result.get('message', 'Initialization failed')}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return Response({'error': f"Internal Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
-        wallet = self.get_object()
-        if wallet.balance < Decimal(str(amount)):
-            return Response({'error': 'Insufficient funds'}, status=status.HTTP_400_BAD_REQUEST)
+    @extend_schema(
+        summary="Verify Paystack Payment",
+        description="Call this after successful payment on mobile to credit wallet.",
+        request=None,
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def verify_payment(self, request):
+        """Verify Paystack transaction and credit wallet"""
+        reference = request.data.get('reference')
+        amount = request.data.get('amount') # Optional comparison
+        
+        if not reference:
+            return Response({'error': 'Reference required'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        from .services import PaystackService
+        success, message = PaystackService.verify_transaction(reference, amount, request.user)
+        
+        if success:
+            wallet = Wallet.objects.get(user=request.user)
+            return Response({
+                'message': message, 
+                'wallet': self.get_serializer(wallet).data
+            })
+        else:
+            return Response({'error': message}, status=status.HTTP_400_BAD_REQUEST)
 
-        with transaction.atomic():
-            wallet.balance -= Decimal(str(amount))
-            wallet.save()
-
-            Transaction.objects.create(
-                wallet=wallet,
-                amount=amount,
-                transaction_type='WITHDRAWAL',
-                status='COMPLETED',
-                description='Manual withdrawal'
+    @extend_schema(
+        summary="Set/Update Wallet PIN",
+        request=WalletPinSerializer,
+        responses={200: WalletSerializer}
+    )
+    @action(detail=False, methods=['post'])
+    def set_pin(self, request):
+        """Set or update the user's wallet PIN"""
+        wallet, _ = Wallet.objects.get_or_create(user=request.user)
+        serializer = WalletPinSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            from .services import WalletService
+            
+            # If PIN already exists, require old PIN
+            if wallet.pin:
+                old_pin = serializer.validated_data.get('old_pin')
+                if not old_pin:
+                     return Response({'error': 'Current PIN is required to set a new one'}, status=status.HTTP_400_BAD_REQUEST)
+                
+                try:
+                    if not WalletService.verify_pin(wallet, old_pin):
+                        return Response({'error': 'Current PIN is incorrect'}, status=status.HTTP_400_BAD_REQUEST)
+                except ValueError as e:
+                    return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Set new PIN
+            WalletService.set_pin(wallet, serializer.validated_data['new_pin'])
+            
+            # Audit Log
+            from admin_dashboard.utils import log_activity
+            log_activity(
+                request.user, 
+                'WALLET_PIN_CHANGED', 
+                details={'action': 'pin_set_or_updated'},
+                request=request
             )
-
-        return Response(WalletSerializer(wallet).data)
+            
+            return Response({'status': 'success', 'message': 'Wallet PIN updated successfully'})
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

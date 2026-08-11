@@ -136,7 +136,7 @@ const LogisticsCollector = () => {
     };
 
     return (
-        <div className="h-[80vh] relative bg-gray-100 rounded-2xl overflow-hidden flex flex-col">
+        <div className="h-screen relative bg-gray-100 overflow-hidden flex flex-col">
             {/* Header / Status Bar */}
             <div className="bg-white p-4 shadow-sm z-10 flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ const LogisticsCollector = () => {
                 </div>
                 <button
                     onClick={toggleOnline}
-                    className={`px-6 py-2 rounded-full font-bold transition-colors flex items-center gap-2 ${isOnline
+                    className={`ml-4 px-6 py-2 rounded-full font-bold transition-colors flex items-center gap-2 ${isOnline
                         ? 'bg-red-50 text-red-500 hover:bg-red-100'
                         : 'bg-green-50 text-green-600 hover:bg-green-100'
                         }`}

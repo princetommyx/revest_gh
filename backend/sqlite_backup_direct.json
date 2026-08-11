@@ -1,0 +1,5077 @@
+[
+  {
+    "model": "admin.logentry",
+    "pk": 1,
+    "fields": {
+      "object_id": "1",
+      "object_repr": "Valentine - Unread",
+      "action_flag": 1,
+      "change_message": "[{\"added\": {}}]",
+      "content_type_id": 13,
+      "user_id": 1,
+      "action_time": "2026-02-13 04:58:24.307055"
+    }
+  },
+  {
+    "model": "sessions.session",
+    "pk": "mt3z80kb60msjz8f1gckztjfqq2gi1mq",
+    "fields": {
+      "session_data": ".eJxVi8EOgjAQRP-lZ0N2u00Bjyae9Q-abnebEhUTKifDvwMJB73Nm5n3NSHOnxLmqlMYxJwNeXP6LTmmh477smNtDq7N9RWH5226l_eol-P0Z5ZYy6Z1gNwBMJHXlNAxo1ewPTnsW3FWKGuLW47gXZYEGRS8IKHV7LI1ywpBszT7:1vaaEr:1jS3ZjeUINOiNeS2_C_EoQWdw3UHM7fW6XPuF34ywHM",
+      "expire_date": "2026-01-13 13:58:17.742350"
+    }
+  },
+  {
+    "model": "sessions.session",
+    "pk": "tgbiqm1tkvmn66tql3bs7bfplypwzv39",
+    "fields": {
+      "session_data": ".eJxVizsOwjAQBe_iGkWON16zlEjUcAPrxR85AhIpJhXi7iRSCijnzZu38lhexS81zX6I6qRadfjdeoR7GjexYW12rs3lieFxnW9lGtN5P_2VBbWsGTkBZULnnGYxLXc9LGDEsMQjU1xFCBmZkrOrDxwNibbaOB2FoT5fFms0Xw:1vg9M3:F1i-eOQ5Uh9sZrm8amMqY7dBvkfoD1dPnCQ07ALoMgQ",
+      "expire_date": "2026-01-28 22:28:43.690528"
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 1,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Cupiditate illo maio\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 18:38:02.628629",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 2,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Cupiditate illo maio\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 18:38:02.756666",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 3,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Unde sed aut est dol\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 21:06:01.810733",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 4,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"In ipsum consectetur\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 21:06:31.251967",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 5,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Officia eiusmod quas\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 23:19:25.995846",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 6,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Iusto cupiditate tem\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 23:20:28.546580",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 7,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Doloribus velit et\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-17 23:27:42.641331",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 8,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_ONBOARDING_SCREEN\", \"title\": \"Inventore facere eni\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-20 17:11:01.963463",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.activitylog",
+    "pk": 9,
+    "fields": {
+      "action": "ADMIN_ACTION",
+      "details": "{\"action\": \"CREATE_PROMO_CARD\", \"title\": \"Dolor qui exercitati\"}",
+      "ip_address": "127.0.0.1",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:148.0) Gecko/20100101 Firefox/148.0",
+      "timestamp": "2026-02-20 21:31:40.498931",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 1,
+    "fields": {
+      "notification_type": "SYSTEM_ALERT",
+      "title": "Valentine",
+      "message": "Wishing you all happy valentine ahead of time",
+      "link": "",
+      "is_read": 1,
+      "created_at": "2026-02-13 04:58:24.295192",
+      "admin_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 2,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 1,
+      "created_at": "2026-02-16 04:16:11.596727",
+      "admin_id": 1
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 3,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.619685",
+      "admin_id": 2
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 4,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.641816",
+      "admin_id": 22
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 5,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.664011",
+      "admin_id": 23
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 6,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.679990",
+      "admin_id": 24
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 7,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.695203",
+      "admin_id": 25
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 8,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.711282",
+      "admin_id": 26
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 9,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.726729",
+      "admin_id": 27
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 10,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.742496",
+      "admin_id": 28
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 11,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.764268",
+      "admin_id": 29
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 12,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.789229",
+      "admin_id": 30
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 13,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.812937",
+      "admin_id": 31
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 14,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.838271",
+      "admin_id": 36
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 15,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.860915",
+      "admin_id": 43
+    }
+  },
+  {
+    "model": "admin_dashboard.adminnotification",
+    "pk": 16,
+    "fields": {
+      "notification_type": "SUPPORT_TICKET",
+      "title": "Support Request: yduduuru",
+      "message": "User needs human assistance. Phone: 2848486466",
+      "link": "/dashboard/support?session=1",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.883901",
+      "admin_id": 45
+    }
+  },
+  {
+    "model": "users.passwordresetotp",
+    "pk": 1,
+    "fields": {
+      "otp": "663076",
+      "created_at": "2026-02-19 23:13:08.544013",
+      "expires_at": "2026-02-19 23:28:08.537614",
+      "user_id": 47
+    }
+  },
+  {
+    "model": "wallet.commissionrule",
+    "pk": 1,
+    "fields": {
+      "material_type": "Plastic",
+      "commission_percent": 20,
+      "active": 1,
+      "created_at": "2026-01-14 22:19:56.249573",
+      "updated_at": "2026-01-14 22:21:00.277488"
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 1,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.584098",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 2,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.608748",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 3,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.630714",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 4,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.653056",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 5,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.672265",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 6,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.687703",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 7,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.702967",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 8,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.719211",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 9,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.734421",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 10,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.752123",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 11,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.776697",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 12,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.801499",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 13,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.825931",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 14,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.849841",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 15,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yduduuru (Phone: 2848486466) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 1, \"user_id\": 54}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 04:16:11.872256",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 16,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.614481",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 17,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.626985",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 18,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.638539",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 19,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.650889",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 20,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.662803",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 21,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.675057",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 22,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.686582",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 23,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.698682",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 24,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.708871",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 25,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.717261",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 26,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.725799",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 27,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.734430",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 28,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.743704",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 29,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.752529",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 30,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 2, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:25:55.761014",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 31,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.039397",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 32,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.057284",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 33,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.071450",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 34,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.087550",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 35,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.102320",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 36,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.116285",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 37,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.129972",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 38,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.143729",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 39,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.153719",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 40,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.163580",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 41,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.171478",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 42,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.180112",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 43,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.188204",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 44,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.198287",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 45,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User susuus (Phone: 208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 3, \"user_id\": 55}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-16 16:37:42.207408",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 46,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.312308",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 47,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.329830",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 48,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.348828",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 49,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.365401",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 50,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.383228",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 51,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.403099",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 52,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.418906",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 53,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.435736",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 54,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.450182",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 55,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.465411",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 56,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.480531",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 57,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.496733",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 58,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.511307",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 59,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.526057",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 60,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.540282",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 61,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User yuausi (Phone: 0208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 4, \"user_id\": 59}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-17 18:44:13.555393",
+      "user_id": 57
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 62,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.430292",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 63,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.449333",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 64,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.465702",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 65,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.483488",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 66,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.500430",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 67,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.524353",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 68,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.543487",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 69,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.559747",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 70,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.575646",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 71,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.593485",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 72,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.608476",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 73,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.623187",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 74,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.639890",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 75,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.655410",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 76,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.666601",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 77,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyh (Phone: 233208842410) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 5, \"user_id\": 62}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-18 21:25:11.678188",
+      "user_id": 57
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 78,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.790129",
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 79,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.803100",
+      "user_id": 2
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 80,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.814987",
+      "user_id": 22
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 81,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.826781",
+      "user_id": 23
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 82,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.838288",
+      "user_id": 24
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 83,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.849449",
+      "user_id": 25
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 84,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.859792",
+      "user_id": 26
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 85,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.867990",
+      "user_id": 27
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 86,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.876725",
+      "user_id": 28
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 87,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.884903",
+      "user_id": 29
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 88,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.893146",
+      "user_id": 30
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 89,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.901209",
+      "user_id": 31
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 90,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.910592",
+      "user_id": 36
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 91,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.919062",
+      "user_id": 43
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 92,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.928169",
+      "user_id": 45
+    }
+  },
+  {
+    "model": "users.notification",
+    "pk": 93,
+    "fields": {
+      "title": "🆘 Human Support Requested",
+      "body": "User tyyhh (Phone: 233543093025) needs assistance.",
+      "data": "{\"type\": \"SUPPORT_REQUEST\", \"session_id\": 6, \"user_id\": 63}",
+      "urgency": "URGENT",
+      "is_read": 0,
+      "created_at": "2026-02-20 21:35:06.936331",
+      "user_id": 57
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 4,
+    "fields": {
+      "amount": -20,
+      "transaction_type": "COMMISSION_DEDUCTION",
+      "status": "COMPLETED",
+      "description": "Commission for Cash Job #6 (20.00%)",
+      "created_at": "2026-01-14 22:21:00.311823",
+      "wallet_id": 5,
+      "pickup_id": 6,
+      "reference": "9e9cab1e636543389942d098ab0a86d4"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 5,
+    "fields": {
+      "amount": 160,
+      "transaction_type": "JOB_EARNING",
+      "status": "COMPLETED",
+      "description": "Earnings for Digital Job #7 (Net of 20.00% comm.)",
+      "created_at": "2026-01-14 22:21:00.430781",
+      "wallet_id": 5,
+      "pickup_id": 7,
+      "reference": "5a74d44f432e4d5db7352196791dce76"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 6,
+    "fields": {
+      "amount": -100,
+      "transaction_type": "WITHDRAWAL",
+      "status": "PENDING",
+      "description": "Withdrawal Request",
+      "created_at": "2026-01-14 22:21:00.476851",
+      "wallet_id": 5,
+      "pickup_id": null,
+      "reference": "a8770b6b10d44323bba3f883da1dfc79"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 7,
+    "fields": {
+      "amount": 2,
+      "transaction_type": "DEPOSIT",
+      "status": "COMPLETED",
+      "description": "Deposit",
+      "created_at": "2026-02-13 13:38:05.169765",
+      "wallet_id": 7,
+      "pickup_id": null,
+      "reference": "DEP-b35b98ea-7cb3-4eee-b218-3c74e9beacb5"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 8,
+    "fields": {
+      "amount": 2,
+      "transaction_type": "DEPOSIT",
+      "status": "COMPLETED",
+      "description": "Deposit",
+      "created_at": "2026-02-13 13:38:21.056293",
+      "wallet_id": 7,
+      "pickup_id": null,
+      "reference": "DEP-f3bcdff6-bac4-4489-b81f-23d1e428cac1"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 9,
+    "fields": {
+      "amount": 50,
+      "transaction_type": "DEPOSIT",
+      "status": "COMPLETED",
+      "description": "Deposit",
+      "created_at": "2026-02-14 06:59:10.390302",
+      "wallet_id": 7,
+      "pickup_id": null,
+      "reference": "DEP-3c6e3bda-0a44-4cb3-820c-a9bee57e5362"
+    }
+  },
+  {
+    "model": "wallet.transaction",
+    "pk": 10,
+    "fields": {
+      "amount": 50,
+      "transaction_type": "DEPOSIT",
+      "status": "COMPLETED",
+      "description": "Deposit",
+      "created_at": "2026-02-14 07:00:28.289074",
+      "wallet_id": 7,
+      "pickup_id": null,
+      "reference": "DEP-8d3e66eb-8ef2-4c9a-9e1c-c3dac2ca6cdf"
+    }
+  },
+  {
+    "model": "users.phoneverification",
+    "pk": 1,
+    "fields": {
+      "phone_number": "+233208842410",
+      "otp": "209561",
+      "created_at": "2026-02-15 23:57:58.050924",
+      "expires_at": "2026-02-20 16:45:44.485817"
+    }
+  },
+  {
+    "model": "users.phoneverification",
+    "pk": 2,
+    "fields": {
+      "phone_number": "+2332848486466",
+      "otp": "458288",
+      "created_at": "2026-02-16 03:25:04.606417",
+      "expires_at": "2026-02-16 03:35:04.601852"
+    }
+  },
+  {
+    "model": "users.phoneverification",
+    "pk": 3,
+    "fields": {
+      "phone_number": "+233543093025",
+      "otp": "837602",
+      "created_at": "2026-02-20 16:34:42.043075",
+      "expires_at": "2026-02-20 21:37:25.197366"
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 1,
+    "fields": {
+      "content": "Hi",
+      "timestamp": "2025-12-30 13:35:01.357446",
+      "receiver_id": 32,
+      "sender_id": 35,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 2,
+    "fields": {
+      "content": "ggggggggggggggggg",
+      "timestamp": "2026-02-13 21:28:43.890530",
+      "receiver_id": 36,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 3,
+    "fields": {
+      "content": "Tommorrow is valentine",
+      "timestamp": "2026-02-13 22:01:47.377647",
+      "receiver_id": 36,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 4,
+    "fields": {
+      "content": "Happy Valentine",
+      "timestamp": "2026-02-13 22:04:49.912099",
+      "receiver_id": 36,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 5,
+    "fields": {
+      "content": "Welcome",
+      "timestamp": "2026-02-13 22:05:27.968599",
+      "receiver_id": 36,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 6,
+    "fields": {
+      "content": "Happy valentine",
+      "timestamp": "2026-02-13 22:51:43.369277",
+      "receiver_id": 48,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 7,
+    "fields": {
+      "content": "welcome",
+      "timestamp": "2026-02-13 23:07:42.207920",
+      "receiver_id": 48,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 8,
+    "fields": {
+      "content": "Hi",
+      "timestamp": "2026-02-15 03:19:15.553231",
+      "receiver_id": 49,
+      "sender_id": 50,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 9,
+    "fields": {
+      "content": "Hi",
+      "timestamp": "2026-02-15 04:10:17.421970",
+      "receiver_id": 50,
+      "sender_id": 49,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 10,
+    "fields": {
+      "content": "hello",
+      "timestamp": "2026-02-16 03:47:03.327484",
+      "receiver_id": 36,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 11,
+    "fields": {
+      "content": "Hi welcome to revesta",
+      "timestamp": "2026-02-16 04:20:41.961447",
+      "receiver_id": 54,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 12,
+    "fields": {
+      "content": "Okay",
+      "timestamp": "2026-02-16 04:21:44.248446",
+      "receiver_id": 1,
+      "sender_id": 54,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 13,
+    "fields": {
+      "content": "How may i help you",
+      "timestamp": "2026-02-16 04:23:24.444343",
+      "receiver_id": 54,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 14,
+    "fields": {
+      "content": "I need support with withdrawal",
+      "timestamp": "2026-02-16 04:23:42.310147",
+      "receiver_id": 1,
+      "sender_id": 54,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 15,
+    "fields": {
+      "content": "Okay",
+      "timestamp": "2026-02-16 04:24:21.098398",
+      "receiver_id": 54,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 16,
+    "fields": {
+      "content": "Hi",
+      "timestamp": "2026-02-16 16:27:16.877767",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 17,
+    "fields": {
+      "content": "Welcome to Revesta",
+      "timestamp": "2026-02-16 16:27:40.949093",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 18,
+    "fields": {
+      "content": "Hi good morning",
+      "timestamp": "2026-02-16 16:37:08.013603",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 19,
+    "fields": {
+      "content": "How may i help you",
+      "timestamp": "2026-02-16 16:38:07.629315",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 20,
+    "fields": {
+      "content": "Need help with how to withdraw",
+      "timestamp": "2026-02-16 16:38:23.093291",
+      "receiver_id": 1,
+      "sender_id": 55,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 21,
+    "fields": {
+      "content": "Oh okay sure",
+      "timestamp": "2026-02-16 16:45:07.292370",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 22,
+    "fields": {
+      "content": "How much do you want to withdraw",
+      "timestamp": "2026-02-16 16:45:25.455733",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 23,
+    "fields": {
+      "content": "200gh",
+      "timestamp": "2026-02-16 16:45:31.740899",
+      "receiver_id": 1,
+      "sender_id": 55,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 24,
+    "fields": {
+      "content": "Oh okay, can you provide your momo details",
+      "timestamp": "2026-02-16 16:45:48.461741",
+      "receiver_id": 55,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 25,
+    "fields": {
+      "content": "045678990",
+      "timestamp": "2026-02-16 16:45:56.498553",
+      "receiver_id": 1,
+      "sender_id": 55,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 26,
+    "fields": {
+      "content": "Hi this is Prince",
+      "timestamp": "2026-02-17 18:44:52.100253",
+      "receiver_id": 59,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 27,
+    "fields": {
+      "content": "How may i help you",
+      "timestamp": "2026-02-17 18:45:03.887541",
+      "receiver_id": 59,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 28,
+    "fields": {
+      "content": "Hi",
+      "timestamp": "2026-02-17 21:07:55.539391",
+      "receiver_id": 1,
+      "sender_id": 59,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 29,
+    "fields": {
+      "content": "Good afternoon",
+      "timestamp": "2026-02-17 21:08:12.729354",
+      "receiver_id": 59,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 30,
+    "fields": {
+      "content": "Please i need help with withdrawl",
+      "timestamp": "2026-02-17 21:08:25.298670",
+      "receiver_id": 1,
+      "sender_id": 59,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 31,
+    "fields": {
+      "content": "rrsdgdhd",
+      "timestamp": "2026-02-20 17:02:52.658889",
+      "receiver_id": 59,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 32,
+    "fields": {
+      "content": "hi",
+      "timestamp": "2026-02-20 17:03:50.665172",
+      "receiver_id": 62,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 33,
+    "fields": {
+      "content": "Good morning",
+      "timestamp": "2026-02-20 17:04:05.474842",
+      "receiver_id": 1,
+      "sender_id": 62,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 34,
+    "fields": {
+      "content": "hi",
+      "timestamp": "2026-02-20 21:35:53.909162",
+      "receiver_id": 63,
+      "sender_id": 1,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.message",
+    "pk": 35,
+    "fields": {
+      "content": "Good Afternoon",
+      "timestamp": "2026-02-20 21:36:03.531323",
+      "receiver_id": 1,
+      "sender_id": 63,
+      "is_read": 0
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 1,
+    "fields": {
+      "status": "RESOLVED",
+      "created_at": "2026-02-16 04:16:11.557380",
+      "resolved_at": "2026-02-16 04:24:03.298628",
+      "admin_id": 1,
+      "user_id": 54
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 2,
+    "fields": {
+      "status": "RESOLVED",
+      "created_at": "2026-02-16 16:25:55.569578",
+      "resolved_at": "2026-02-16 16:37:20.916058",
+      "admin_id": 1,
+      "user_id": 55
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 3,
+    "fields": {
+      "status": "ACTIVE",
+      "created_at": "2026-02-16 16:37:42.019093",
+      "resolved_at": null,
+      "admin_id": 1,
+      "user_id": 55
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 4,
+    "fields": {
+      "status": "ACTIVE",
+      "created_at": "2026-02-17 18:44:13.282924",
+      "resolved_at": null,
+      "admin_id": 1,
+      "user_id": 59
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 5,
+    "fields": {
+      "status": "ACTIVE",
+      "created_at": "2026-02-18 21:25:11.408075",
+      "resolved_at": null,
+      "admin_id": 1,
+      "user_id": 62
+    }
+  },
+  {
+    "model": "chat.supportsession",
+    "pk": 6,
+    "fields": {
+      "status": "ACTIVE",
+      "created_at": "2026-02-20 21:35:06.774414",
+      "resolved_at": null,
+      "admin_id": 1,
+      "user_id": 63
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 1,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$dekWwdqnGqnwWieuVbKuJm$qBifiza5qJO9LU9DT8y2sAqFSQtcc0XDeNxe0JEpH3g=",
+      "last_login": "2026-02-20 21:23:17.382862",
+      "is_superuser": 1,
+      "username": "admin",
+      "first_name": "",
+      "last_name": "",
+      "email": "agcjude@gmail.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-03 09:25:56.133762",
+      "role": "ADMIN",
+      "vehicle_type": "TRICYCLE",
+      "license_plate": "567-765",
+      "current_lat": 5.6037,
+      "current_lon": -0.187,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$VWKdjTQneSPuDze9Kyah5n$7X+MPoBQ2ER4NzpN8Qp/vK+PgCZljHHNLqoIFhU/gz0=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "Support",
+      "first_name": "",
+      "last_name": "",
+      "email": "support@revesta.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-03 09:26:55.679467",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 1,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 3,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$RmELMcXXdX9gniKDcC1CdZ$QODZjnFNJHKDj/KLEMJAuvU81pDZhGaepkUb+qbAzlQ=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "prince",
+      "first_name": "",
+      "last_name": "",
+      "email": "lyon2626@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-03 09:27:28.671507",
+      "role": "SELLER",
+      "vehicle_type": "",
+      "license_plate": "",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 4,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$lPEB6u7MTwTfJm2qvFRbkR$ijb5zBtLLEcfwg7rXe61Q/nuH7RNyoYS7JP0sjOYQtU=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "gjjgjgj@gmail.com",
+      "first_name": "",
+      "last_name": "",
+      "email": "gjjgjgj@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-04 19:23:45.630034",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRICYCLE",
+      "license_plate": "4848-39939",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "0275972844",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 5,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$cdvswhnIfUf2L7zfTTmAi3$FtitjguZC1WNuW3XCMk32iO6hQwv+VVve0hWWUiMxZ4=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "suqowoz@mailinator.com",
+      "first_name": "",
+      "last_name": "",
+      "email": "suqowoz@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-04 19:35:35.297077",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRICYCLE",
+      "license_plate": "Totam placeat perfe",
+      "current_lat": 5.6037,
+      "current_lon": -0.187,
+      "is_online": 1,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Tamale",
+      "phone_number": "+1 (788) 676-2507",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 6,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$smTeHvfpjTwpXWa3k5eD0d$W5ylkLH0P9S1rkF78S77TA9ekvz8NvwkhTqx+UUVTbc=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_20edc4bf",
+      "first_name": "",
+      "last_name": "",
+      "email": "ryfy@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 21:51:26.507828",
+      "role": "SELLER",
+      "vehicle_type": "",
+      "license_plate": "",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Tamale",
+      "phone_number": "0244440007",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 7,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$vLbyP5nXwzUCt7K71LP39K$+6oph8M2y/QuEf5aUr261eaLMIKiurlpGUghho4VF4E=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_104a0748",
+      "first_name": "",
+      "last_name": "",
+      "email": "molov@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 21:54:21.839274",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "Omnis corrupti non",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Kumasi",
+      "phone_number": "+1 (275) 998-3641",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 8,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$HOq6mVTW6oSTrWolMeQrEc$idKLEyMh6okLpepKQQxyk1faGWiMVcu/TbwmkE4AeN0=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_4220a1a7",
+      "first_name": "",
+      "last_name": "",
+      "email": "lehicuwy@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 21:58:19.829653",
+      "role": "SELLER",
+      "vehicle_type": "",
+      "license_plate": "",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "+1 (378) 428-2799",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 9,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$CDnv1a3CFcE0GS4WE4sLsv$y1bRGt8FpeyNX1syIEOYTtnTCpahU/7sAN8C1NEpT1o=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_507c4d76",
+      "first_name": "",
+      "last_name": "",
+      "email": "test_fix_final_01@test.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:23:50.019411",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "GT-999-24",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "0555000999",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 10,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$6IbsC5QU7FbuGP0ILq43mo$PIbBlM+zY0y0bl0eOSVElN8X2gZnLPzmTOx7D/ZnR38=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_ae426b8f",
+      "first_name": "",
+      "last_name": "",
+      "email": "cikowoxy@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:24:10.132986",
+      "role": "SELLER",
+      "vehicle_type": "",
+      "license_plate": "",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Tamale",
+      "phone_number": "+1 (236) 392-6565",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 11,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$yuSPXP8mLGNbABvrTOBJlX$xHK2+se/yi4yvRshdY4ncZYjxRzbWUU30/InQFhPslE=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_be8b38a0",
+      "first_name": "",
+      "last_name": "",
+      "email": "wavovycoje@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:24:34.747205",
+      "role": "COLLECTOR",
+      "vehicle_type": "MOTORBIKE",
+      "license_plate": "Saepe pariatur Ipsa",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "+1 (893) 443-9857",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 12,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$UXRVJeyK0RqgtYZkCekU41$TpITNiEmT6UHqtvHUcIFiSow1iSK6cArQ53h8gEhsGA=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_cebdbd19",
+      "first_name": "",
+      "last_name": "",
+      "email": "test_disposer_399921@example.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:30:10.466372",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "055399921",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 13,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$fSBuUhFgqbp7v69KSRkOGf$/gtXeGrQdl6RDgmt9o6aYsNbbmnb7aXjSvEOJhoifmE=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "user_5fdbd9f9",
+      "first_name": "",
+      "last_name": "",
+      "email": "test_disposer_fc676d@example.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:30:42.865793",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "055fc676d",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 14,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$jRmwTtOGxs6bhRdLA1Urrr$M6CNsh8OuozNz/VgaBJqbGlVSy5VDCOW9K0LqCBJJfU=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "test_user_final",
+      "first_name": "",
+      "last_name": "",
+      "email": "test_user_final@test.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-15 22:33:21.166652",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "GT-111-22",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "0559999999",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 15,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$0uxxxd2ZSnm7qPecuik2Q1$sse2jUa1EpL20dlO8fdOQvjKPnOIn6Q0n8m2IAABSEw=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "reset_test",
+      "first_name": "",
+      "last_name": "",
+      "email": "reset@test.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-18 06:19:06.577362",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": "0558888888",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 16,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$tSnBb9hDuV0690HNRp4wrz$VEHNtzoB9vgEvPKrSh4vehkt1BXA5Ak94/HULcIcs0E=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "ralazadisy",
+      "first_name": "",
+      "last_name": "",
+      "email": "tommy.prince.x@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-18 08:36:36.999112",
+      "role": "SELLER",
+      "vehicle_type": "",
+      "license_plate": "",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "543214567",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 17,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$8REfJS4OQxEoqNCO0ttsBk$qa/A+aRZNB2nFxgncN/+3edT+ndbLHYEk85C0ytsAxA=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "fetajoceby",
+      "first_name": "",
+      "last_name": "",
+      "email": "trishayoung85@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-18 09:31:12.425616",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRICYCLE",
+      "license_plate": "Ullamco sed labore a",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Takoradi",
+      "phone_number": "+1 (583) 103-3136",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 18,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$I9ytrXaaROKGWyl9exw7Ty$SZxDAVG9mrj9FH/RWkxFtyEZVS8XcA0HpoJhV+GiGHc=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "hitalefuwy",
+      "first_name": "",
+      "last_name": "",
+      "email": "dasex@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-18 13:50:47.880246",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "Et omnis quis conseq",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Kumasi",
+      "phone_number": "+1 (372) 622-7615",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 19,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$yX9l3VGBMoLZKvYf7UzDjK$vCA0+tEUvIXXcNDlOP0neV6ZuYxYPXuluUV0yJeRe7U=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "wewihy",
+      "first_name": "",
+      "last_name": "",
+      "email": "kujucyqewu@mailinator.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-19 12:12:12.078496",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "Ab aliqua Voluptate",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Kumasi",
+      "phone_number": "+1 (857) 641-3874",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 20,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$h7APpo6lDkEUcY1opwYBNw$+3SGdAEAZaVrFIseUhlUbtOJbt7DLQ7CY4tvrEe2JJo=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "zodibivybo",
+      "first_name": "",
+      "last_name": "",
+      "email": "lyonlee350@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-19 21:20:14.269133",
+      "role": "COLLECTOR",
+      "vehicle_type": "TRUCK",
+      "license_plate": "Molestiae mollitia e",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "",
+      "tax_id": "",
+      "city": "Kumasi",
+      "phone_number": "+1 (435) 797-3687",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 21,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$dzYtbUIsl1B0YApuEryqzo$qO1x/cpzAwJR8EX3jSJoCXkzzpwRb9CpTlng1kYZ/xM=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "prince123",
+      "first_name": "",
+      "last_name": "",
+      "email": "lyonlee350@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-21 00:11:48.274403",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 22,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$zxEXJIpxmGM7W91eraBeqK$idPQa1W2gBtlIsde6doHuIq9A8l8Hw1U58g7JFd+Vqo=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "kofi123",
+      "first_name": "",
+      "last_name": "",
+      "email": "ghagcdesignhub@gmail.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-21 00:15:05.141571",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 23,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$xQJWBRsV0jjneLsQL0e5Ss$3zcUAEwCu/PtIzCultZoOinFpBHVWWTPjQX1CUNPXkk=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "rjjtjjtt",
+      "first_name": "",
+      "last_name": "",
+      "email": "tommylee12@gmail.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-22 19:12:07.372223",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 24,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$GEoU0nN0pDlUlNmzFXSCNS$cIXtg85T05Nl8f52qIhJjzNLeVNtEBADHC4Q/B2vYa8=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "qyxeqer",
+      "first_name": "",
+      "last_name": "",
+      "email": "kozahoc@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-24 13:24:24.674359",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 25,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$oMQ0otR5IJ0ODyV0JSoMKz$t+WlrMivQq4eGC+gMZUAaMnejbK+RJHcAJ1FcABGf20=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "admin_v2_1766582884",
+      "first_name": "",
+      "last_name": "",
+      "email": "admin_v2_1766582884@test.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-24 13:28:06.858927",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 26,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$RK2VQn2dRPK8RsdF7TsQFu$XWtW6dii5Ycd/rCKhrmqqmXUmtKVqmquUF1Xfymw30w=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "admin_v2_1766582938",
+      "first_name": "",
+      "last_name": "",
+      "email": "admin_v2_1766582938@test.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-24 13:29:01.229774",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 27,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$T9BLd9NohX76VNGCpYDcT9$roa5zf+7SxrjqXMNryAE8rbi+dQJdeCHG6QcVs9OhHg=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "tommy111",
+      "first_name": "",
+      "last_name": "",
+      "email": "pefexexaj@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-24 13:30:29.017355",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 28,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$eE7oNWgSCHfc99SLiY0OS7$8O3RGLV1NoAU2DopxDUeWjgHKOD9A+qHkxjt/PPO/Mc=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "tawel",
+      "first_name": "",
+      "last_name": "",
+      "email": "xynokuce@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-26 10:14:10.219175",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 29,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$DZdxQ1jEFUoH3B1EMlAcai$MQbAhoWpz0DNQZbZio5L1OCmXR/j+JpvWiv/7teN3Zo=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "vesuze",
+      "first_name": "",
+      "last_name": "",
+      "email": "fosuw@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-26 10:19:59.853579",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 30,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$5049xTbM1ON1UVmpGBZX7C$wGGb8ExKaJdMrCmZ33mGOcN424yqFnQOgV9Vg0Rd+Tc=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "zipevamim",
+      "first_name": "",
+      "last_name": "",
+      "email": "rofyfucada@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-26 10:27:02.353472",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 31,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$zFKbZKygo1f86JBPXQIvts$Bnu6l5asZmKDEK/bEy9C++SzavGOAfwZIWXtBb4xPGM=",
+      "last_login": "2025-12-28 13:58:56.572943",
+      "is_superuser": 1,
+      "username": "botoky",
+      "first_name": "",
+      "last_name": "",
+      "email": "pobivad@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-28 13:58:43.696850",
+      "role": "ADMIN",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 32,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$FZvm9RVJEmROs92rFYrfr2$Q+dXIv9W/+mpDAmB4/FrieoYwxFhVCSSLnhxcDgQLu0=",
+      "last_login": "2025-12-30 08:35:06.505121",
+      "is_superuser": 0,
+      "username": "tuuggg",
+      "first_name": "",
+      "last_name": "",
+      "email": "ryyt@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-30 06:48:20.411101",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "254782371",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 33,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$kXqm6437Qqqyu84hunjoRr$nm0ZR7MszxAkb4/8wXFBxUHgdLMkV4kkpWDT/FhEuA4=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "yeuehe",
+      "first_name": "",
+      "last_name": "",
+      "email": "suushs@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-30 08:02:30.174441",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "24554554",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 34,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$eZj6xz5w51iWSgouaxyJxJ$4OWbs770hWBIBmoY1wQGzPrB4/l6/+ltTlhSzKRShOQ=",
+      "last_login": "2025-12-30 08:32:56.646614",
+      "is_superuser": 0,
+      "username": "uusidi",
+      "first_name": "",
+      "last_name": "",
+      "email": "ysusuue@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-30 08:32:39.667313",
+      "role": "COLLECTOR",
+      "vehicle_type": "Truck",
+      "license_plate": "True-83893",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "422155848",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 35,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$g90sHpNdTwmJF4ojA9r5iZ$7FhJ7/ejJbDCEd2VHoezUNEuT0JJhh8zXWjJrkSS8kU=",
+      "last_login": "2025-12-31 06:47:28.139998",
+      "is_superuser": 0,
+      "username": "tujfh",
+      "first_name": "",
+      "last_name": "",
+      "email": "prince@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2025-12-30 13:28:54.911883",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "",
+      "phone_number": "",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 36,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$fudBT82fhxWMtI3PKXGdTY$YkNzuI+DbzzPv+OMTB7Tys09mqrQzCNNMcuaOhZ7iSo=",
+      "last_login": "2025-12-30 13:58:17.719504",
+      "is_superuser": 1,
+      "username": "princelee",
+      "first_name": "",
+      "last_name": "",
+      "email": "lyonlee350@gmail.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2025-12-30 13:57:48.850429",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 37,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$9sZxaNXLpsJrRNsFEvUsPD$UevMSaNvyFzEttwMLl4sXiVoUjPamXprROrXjAtJvD4=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "prince124",
+      "first_name": "",
+      "last_name": "",
+      "email": "tp@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-06 22:50:23.169297",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "54646464",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 38,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$nDnROnAQgvN5pcL9gJlTTh$XmGHAG8JaGTocGtiR7PdmYe5EblGFCwHOGf+FFM6fG0=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "prince0000",
+      "first_name": "",
+      "last_name": "",
+      "email": "tp1@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-06 22:51:19.942669",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "54646464",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 39,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$F6EA4mX1bnKOuaZ3mEIO5Q$ofbxbV1dlCZ5718A6NljibGXJeT+r44Nm1YhtfP//dM=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "kofi",
+      "first_name": "",
+      "last_name": "",
+      "email": "pimpong@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-06 22:54:56.200977",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "2548554122",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 40,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$s3XE9V2oWEOELnA8Jcduh9$Ky2uR4q6KGarKEDLsl68tX1PmodZ8BrLnt6o27yjZdc=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "kofipim",
+      "first_name": "",
+      "last_name": "",
+      "email": "pimpong11@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-06 22:57:57.182350",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "2548554122",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 42,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$v1psXjvs50XIu3TlbzuMib$ETXHNnDjk1IszNJVMFKsmq5EfU8a8D6116aXFnsn9Kw=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "test_collector_fin_v2",
+      "first_name": "",
+      "last_name": "",
+      "email": "",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-14 22:20:54.851738",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 1,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 43,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$rWSJ6OM1H2S7m37dAsek4K$uOF0qBynWSy9MBJ+ce0mbiIUkVCeERw/zAzWjZw7B1M=",
+      "last_login": null,
+      "is_superuser": 1,
+      "username": "revesta",
+      "first_name": "",
+      "last_name": "",
+      "email": "revestagh@gmail.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2026-01-16 21:09:02.924651",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": null,
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 44,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$n6Nc93gXMuj7ixJM2v1Zak$t5PRc7iGOAOKoBQGfUpitBiKWfbeFvaDMHLy7fJ7Qfo=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "William",
+      "first_name": "",
+      "last_name": "",
+      "email": "william@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-01-19 02:21:39.590119",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "Gha-2566777888-22",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "2888522555",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 45,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$6bZnWjtRb39NJXVWIEIQ7l$5CTrfb7xpbn3Deb+bhzB4m3HBxLa4uZu6FBsBgWL6RQ=",
+      "last_login": "2026-01-20 22:34:34.871768",
+      "is_superuser": 1,
+      "username": "xazekecaco",
+      "first_name": "",
+      "last_name": "",
+      "email": "rafereh@mailinator.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2026-01-20 22:34:27.166949",
+      "role": "ADMIN",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 1,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 46,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$N9NWFQz4F1EAbR4eB1Exyz$jbnWennt3n1Ts4GgIB6qtCvknww/yseFFXcFuBz0HOc=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "testuser",
+      "first_name": "",
+      "last_name": "",
+      "email": "test@revesta.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-12 16:02:37.279401",
+      "role": "COLLECTOR",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 47,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$2z43wRMYHwuQJ1uU2MWfdv$DATg+VaKXf22I60tQnrECO6kzmXBTF61DJND8VXvRhk=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "ibrahim",
+      "first_name": "",
+      "last_name": "",
+      "email": "ibrahimi@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-12 16:08:10.794932",
+      "role": "COLLECTOR",
+      "vehicle_type": "Truck",
+      "license_plate": "5666777666",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 48,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$7l5rcrNE1K7Fdfyee1ihfI$mXMr0N/WHKUPgKRiGXVzGzgmoAx+Y/o8/JYK6HHMU9g=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "mary",
+      "first_name": "",
+      "last_name": "",
+      "email": "mary@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-13 13:23:50.955449",
+      "role": "COLLECTOR",
+      "vehicle_type": "Truck",
+      "license_plate": "672728828",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": "ExponentPushToken[PwF8w6JC45hbj6o6VgHIEx]",
+      "profile_picture": null,
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 49,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$9Fm63pH6hkQH46nq4fU5OY$J1LyZ6Z8+Fa29auctDsJj0GiufY/s7RX7UeNUz/7PjQ=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "usjjsjsj",
+      "first_name": "",
+      "last_name": "",
+      "email": "taiwisiisj@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-14 07:16:08.752795",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "546343334",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": "ExponentPushToken[PwF8w6JC45hbj6o6VgHIEx]",
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 50,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$mW1x0pktyBONyjonUvcEcK$TObssJreNZzN4IePv+fCQWvHXKPlQJBkeMVOXvsIk9E=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "taylor",
+      "first_name": "",
+      "last_name": "",
+      "email": "kobbyniche@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-15 02:55:26.123393",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": "ExponentPushToken[FHskQpGpTpelIsaq_KuLpT]",
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 51,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$LTJtomogFbROiUisGdVA5a$XAL6ZDhDg7gW1LpE/gQIo4yXw6iHPw6c2LM4oJKNXGw=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "ysueuue",
+      "first_name": "",
+      "last_name": "",
+      "email": "gsyshys@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-15 23:58:57.981045",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "6266737377",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 52,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$6oyhu6qov4m7DlPsi6Pa2E$M/wRE6GKl7/KkEfsZuhiv1srf1/5iArZFnW0IXKTObk=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "usuus",
+      "first_name": "",
+      "last_name": "",
+      "email": "wiisi@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-16 01:05:27.899182",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "7277272",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 53,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$4GdxPXsKJ0YiRzDBnhcyZJ$y9cJ1LE1T+S9/boI+Rar8OWbJhYnD6xva35Oe1UlcRY=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "kofiandrews",
+      "first_name": "",
+      "last_name": "",
+      "email": "koffi@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-16 02:32:16.264794",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "6262727",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 54,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$IAkUbQHuhJMW3uJfR4Ezes$+s64EqlyqZ2mX73jk27K299Dy//zUvvZSaI+aNw8T3k=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "yduduuru",
+      "first_name": "",
+      "last_name": "",
+      "email": "ywuueu@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-16 03:25:26.082868",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "2848486466",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 55,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$WAYLDeOQVwAaKSA99GMq29$uQgKAvyYAVBtYPQMIf1n4P2WBPO0I2cK5l7qPChQKuE=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "susuus",
+      "first_name": "",
+      "last_name": "",
+      "email": "tausuuus@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-16 04:47:33.273495",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 56,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$NvER3eDN7qLRzFfI6jEw2u$IZ7bIjOn9p2TxM1UhlobaK3cHT166eC6XUDvBFK8qoA=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "gideos",
+      "first_name": "",
+      "last_name": "",
+      "email": "thuuh@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-16 19:23:02.682985",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 57,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$Z6ICvpbD8afUxljuZKJEam$tS5NjeE19q5SeksyGJzgd/HQK4/Jy+Q9bTqYaeHExTs=",
+      "last_login": "2026-02-17 16:17:50.485478",
+      "is_superuser": 1,
+      "username": "admin_test",
+      "first_name": "",
+      "last_name": "",
+      "email": "admin_test@example.com",
+      "is_staff": 1,
+      "is_active": 1,
+      "date_joined": "2026-02-17 16:11:58.215523",
+      "role": "ADMIN",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": null,
+      "phone_number": null,
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 58,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$85T2UYU2VNAPpvmTHg8U7R$ZOpKCI2RbexsRi5SeZzsFXUWEJDx3vsxhOVnaaXdowU=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "usuueu",
+      "first_name": "",
+      "last_name": "",
+      "email": "hsuhsh@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-17 16:32:48.857583",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 59,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$ojgYoNirLm9wDhdxmPrQsv$PBBRa2Jm+GYhJEL9Ivzf8yqugXbW+VO0X5JEqRXCvrU=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "yuausi",
+      "first_name": "",
+      "last_name": "",
+      "email": "yeuus@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-17 16:34:22.846561",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "56w667277",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 60,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$HS7CiXsJs9nNVgA8FWLQAl$xOiwPHEoKFBjI80omIbv1x1OCwx0Y7izq28kzztHcWE=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "ywuuu",
+      "first_name": "",
+      "last_name": "",
+      "email": "tsysu@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-17 22:32:30.744662",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 61,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$m6AFfMmrd0ZpJAYd7Hmvfz$T7S4NX8ZeB3nI82BkBj3oqbuF9L+yk2qOCjoYxvfLKc=",
+      "last_login": null,
+      "is_superuser": 0,
+      "username": "ysuuu",
+      "first_name": "",
+      "last_name": "",
+      "email": "ysusu@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-17 22:39:59.281903",
+      "role": "SELLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "0208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 62,
+    "fields": {
+      "password": "pbkdf2_sha256$1000000$XnSRqXKJvHgWL4GZQF7B9Z$7kbogn8hjYNxmpVG2g5i7vx5P37icQW6VgNRNA4iJtg=",
+      "last_login": "2026-02-20 20:14:30.032990",
+      "is_superuser": 0,
+      "username": "tyyh",
+      "first_name": "",
+      "last_name": "",
+      "email": "ihhhb@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-18 21:20:09.814043",
+      "role": "RECYCLER",
+      "vehicle_type": null,
+      "license_plate": null,
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": "",
+      "is_verified": 0,
+      "national_id": "66777777",
+      "tax_id": "",
+      "city": "Accra",
+      "phone_number": "233208842410",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "users.user",
+    "pk": 63,
+    "fields": {
+      "password": "pbkdf2_sha256$1200000$ltSZ6eGEA3ZghMl9bD4FyS$TiRONUmRos1LAFbwpgC4juWUka9KhnxETJyGn7xvfjs=",
+      "last_login": "2026-02-20 21:55:46.924043",
+      "is_superuser": 0,
+      "username": "tyyhh",
+      "first_name": "",
+      "last_name": "",
+      "email": "tgyuh@gmail.com",
+      "is_staff": 0,
+      "is_active": 1,
+      "date_joined": "2026-02-20 21:27:45.594344",
+      "role": "COLLECTOR",
+      "vehicle_type": "Truck",
+      "license_plate": "4555556",
+      "current_lat": null,
+      "current_lon": null,
+      "is_online": 0,
+      "is_support": 0,
+      "company_name": null,
+      "is_verified": 0,
+      "national_id": null,
+      "tax_id": null,
+      "city": "Accra",
+      "phone_number": "233543093025",
+      "auth_provider": "EMAIL",
+      "google_id": null,
+      "profile_picture_url": null,
+      "business_certification": "",
+      "expo_push_token": null,
+      "profile_picture": "",
+      "last_device_id": null,
+      "mfa_enabled": 0
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 1,
+    "fields": {
+      "balance": 0,
+      "currency": "GHS",
+      "created_at": "2025-12-03 09:26:01.747789",
+      "updated_at": "2025-12-03 09:26:01.747848",
+      "user_id": 1,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 2,
+    "fields": {
+      "balance": 0,
+      "currency": "GHS",
+      "created_at": "2025-12-03 09:26:58.140769",
+      "updated_at": "2025-12-03 09:26:58.140799",
+      "user_id": 2,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 3,
+    "fields": {
+      "balance": 0,
+      "currency": "GHS",
+      "created_at": "2025-12-03 09:27:30.612378",
+      "updated_at": "2025-12-03 09:27:30.612424",
+      "user_id": 3,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 5,
+    "fields": {
+      "balance": 40,
+      "currency": "GHS",
+      "created_at": "2026-01-14 22:21:00.258429",
+      "updated_at": "2026-01-14 22:21:00.492052",
+      "user_id": 42,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 6,
+    "fields": {
+      "balance": 500,
+      "currency": "GHS",
+      "created_at": "2026-02-12 16:02:40.093285",
+      "updated_at": "2026-02-12 16:02:40.102155",
+      "user_id": 46,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 7,
+    "fields": {
+      "balance": 104,
+      "currency": "GHS",
+      "created_at": "2026-02-13 13:24:19.019316",
+      "updated_at": "2026-02-14 07:00:28.307040",
+      "user_id": 48,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 8,
+    "fields": {
+      "balance": 0,
+      "currency": "GHS",
+      "created_at": "2026-02-15 02:56:49.336000",
+      "updated_at": "2026-02-15 02:56:49.336129",
+      "user_id": 50,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "wallet.wallet",
+    "pk": 9,
+    "fields": {
+      "balance": 0,
+      "currency": "GHS",
+      "created_at": "2026-02-16 03:34:15.434028",
+      "updated_at": "2026-02-16 03:34:15.434084",
+      "user_id": 54,
+      "is_frozen": 0,
+      "trust_score": 100,
+      "daily_withdrawal_limit": 5000,
+      "pin": null,
+      "pin_attempts": 0,
+      "pin_locked_until": null,
+      "transaction_withdrawal_limit": 2000,
+      "last_pin_change": null
+    }
+  },
+  {
+    "model": "admin_dashboard.promocard",
+    "pk": 4,
+    "fields": {
+      "title": "Unde sed aut est dol",
+      "subtitle": "Atque et in vitae in",
+      "image": "promos/Sunlit_Group_of_Friends_Photo_Featuring_Happy_People_and_Youth_Spirit.jpeg",
+      "image_url": null,
+      "badge_text": "Placeat cumque anim",
+      "badge_color": "#869f03",
+      "target_role": "RECYCLER",
+      "action_type": "URL",
+      "action_value": "Qui et in non conseq",
+      "is_active": 1,
+      "order": 14,
+      "created_at": "2026-02-17 21:06:01.768675",
+      "updated_at": "2026-02-18 20:11:34.442423"
+    }
+  },
+  {
+    "model": "admin_dashboard.promocard",
+    "pk": 6,
+    "fields": {
+      "title": "Officia eiusmod quas",
+      "subtitle": "Laborum culpa sed ut",
+      "image": "promos/Sentz_Earn_Campaign_-_Amazing_Klef.jpeg",
+      "image_url": null,
+      "badge_text": "Aut esse culpa face",
+      "badge_color": "#164f18",
+      "target_role": "ALL",
+      "action_type": "NAVIGATE",
+      "action_value": "Tempor corrupti lib",
+      "is_active": 1,
+      "order": 40,
+      "created_at": "2026-02-17 23:19:25.960513",
+      "updated_at": "2026-02-18 20:11:54.846840"
+    }
+  },
+  {
+    "model": "admin_dashboard.promocard",
+    "pk": 7,
+    "fields": {
+      "title": "Iusto cupiditate tem",
+      "subtitle": "Incididunt voluptate",
+      "image": "promos/Female_holding_money_40m28jh.jpeg",
+      "image_url": null,
+      "badge_text": "Consectetur rerum ab",
+      "badge_color": "#cad128",
+      "target_role": "SELLER",
+      "action_type": "URL",
+      "action_value": "Expedita officiis as",
+      "is_active": 1,
+      "order": 75,
+      "created_at": "2026-02-17 23:20:28.531901",
+      "updated_at": "2026-02-18 22:39:40.778919"
+    }
+  },
+  {
+    "model": "admin_dashboard.promocard",
+    "pk": 8,
+    "fields": {
+      "title": "Doloribus velit et",
+      "subtitle": "Alias temporibus ut",
+      "image": "promos/ABYSSEs_plastic_sustainability_report___CleanHub_i34iH2M.jpeg",
+      "image_url": null,
+      "badge_text": "Libero pariatur Ut",
+      "badge_color": "#b25971",
+      "target_role": "COLLECTOR",
+      "action_type": "URL",
+      "action_value": "Rerum excepturi sunt",
+      "is_active": 1,
+      "order": 78,
+      "created_at": "2026-02-17 23:27:42.545679",
+      "updated_at": "2026-02-17 23:27:42.545916"
+    }
+  },
+  {
+    "model": "admin_dashboard.promocard",
+    "pk": 9,
+    "fields": {
+      "title": "Dolor qui exercitati",
+      "subtitle": "Voluptatem doloremq",
+      "image": "promos/Uber-for-trash-uses-rideshare-technology-to-collect-waste-1024x622_z8GfxuK.jpg",
+      "image_url": null,
+      "badge_text": "Aliquid voluptatem s",
+      "badge_color": "#16cf6a",
+      "target_role": "COLLECTOR",
+      "action_type": "NAVIGATE",
+      "action_value": "Maiores sit nesciun",
+      "is_active": 1,
+      "order": 49,
+      "created_at": "2026-02-20 21:31:40.482687",
+      "updated_at": "2026-02-20 21:32:40.373127"
+    }
+  },
+  {
+    "model": "users.loginotp",
+    "pk": 6,
+    "fields": {
+      "otp": "610523",
+      "created_at": "2026-02-18 21:33:28.790325",
+      "expires_at": "2026-02-18 21:43:27.815460",
+      "is_verified": 0,
+      "user_id": 1
+    }
+  },
+  {
+    "model": "users.loginotp",
+    "pk": 15,
+    "fields": {
+      "otp": "582389",
+      "created_at": "2026-02-20 20:14:30.096998",
+      "expires_at": "2026-02-20 20:24:30.059816",
+      "is_verified": 0,
+      "user_id": 62
+    }
+  },
+  {
+    "model": "users.loginotp",
+    "pk": 16,
+    "fields": {
+      "otp": "376673",
+      "created_at": "2026-02-20 21:55:46.973208",
+      "expires_at": "2026-02-20 22:05:46.957050",
+      "is_verified": 1,
+      "user_id": 63
+    }
+  },
+  {
+    "model": "logistics.pickuprequest",
+    "pk": 1,
+    "fields": {
+      "material_type": "Plastics",
+      "quantity_estimate": "1-2 Bags",
+      "latitude": 5.683452237664413,
+      "longitude": -0.16021550476038302,
+      "status": "ACCEPTED",
+      "created_at": "2025-12-30 08:10:14.120573",
+      "current_lat": null,
+      "current_lon": null,
+      "collector_id": 34,
+      "provider_id": 32,
+      "actual_price": null,
+      "distance_km": null,
+      "duration_min": null,
+      "estimated_price": null,
+      "payment_method": "CASH",
+      "destination_address": null,
+      "destination_latitude": null,
+      "destination_longitude": null,
+      "delivery_fee": null,
+      "listing_id": null,
+      "waste_price": null,
+      "ai_verified_weight": null,
+      "bag_size": null,
+      "is_verified": 0,
+      "manual_weight": null,
+      "track_type": "A",
+      "verification_photo": null,
+      "weight_kg": null,
+      "verification_data": null,
+      "image": null
+    }
+  },
+  {
+    "model": "logistics.pickuprequest",
+    "pk": 2,
+    "fields": {
+      "material_type": "Plastics",
+      "quantity_estimate": "1-2 Bags",
+      "latitude": 5.6834894,
+      "longitude": -0.1602187,
+      "status": "PENDING",
+      "created_at": "2025-12-30 14:20:39.315464",
+      "current_lat": null,
+      "current_lon": null,
+      "collector_id": null,
+      "provider_id": 35,
+      "actual_price": null,
+      "distance_km": 9.35,
+      "duration_min": 14.0,
+      "estimated_price": 40.4,
+      "payment_method": "CASH",
+      "destination_address": null,
+      "destination_latitude": null,
+      "destination_longitude": null,
+      "delivery_fee": null,
+      "listing_id": null,
+      "waste_price": null,
+      "ai_verified_weight": null,
+      "bag_size": null,
+      "is_verified": 0,
+      "manual_weight": null,
+      "track_type": "A",
+      "verification_photo": null,
+      "weight_kg": null,
+      "verification_data": null,
+      "image": null
+    }
+  },
+  {
+    "model": "logistics.pickuprequest",
+    "pk": 3,
+    "fields": {
+      "material_type": "Paper",
+      "quantity_estimate": "Pickup Truck Load",
+      "latitude": 5.6833464,
+      "longitude": -0.1604961,
+      "status": "PENDING",
+      "created_at": "2025-12-31 06:50:45.713094",
+      "current_lat": null,
+      "current_lon": null,
+      "collector_id": null,
+      "provider_id": 35,
+      "actual_price": null,
+      "distance_km": 9.33,
+      "duration_min": 14.0,
+      "estimated_price": 40.32,
+      "payment_method": "CASH",
+      "destination_address": null,
+      "destination_latitude": null,
+      "destination_longitude": null,
+      "delivery_fee": null,
+      "listing_id": null,
+      "waste_price": null,
+      "ai_verified_weight": null,
+      "bag_size": null,
+      "is_verified": 0,
+      "manual_weight": null,
+      "track_type": "A",
+      "verification_photo": null,
+      "weight_kg": null,
+      "verification_data": null,
+      "image": null
+    }
+  },
+  {
+    "model": "logistics.pickuprequest",
+    "pk": 6,
+    "fields": {
+      "material_type": "Plastic",
+      "quantity_estimate": "10kg",
+      "latitude": 5.0,
+      "longitude": 5.0,
+      "status": "ACCEPTED",
+      "created_at": "2026-01-14 22:21:00.290949",
+      "current_lat": null,
+      "current_lon": null,
+      "collector_id": 42,
+      "provider_id": 42,
+      "actual_price": 100,
+      "distance_km": null,
+      "duration_min": null,
+      "estimated_price": 100,
+      "payment_method": "CASH",
+      "destination_address": null,
+      "destination_latitude": null,
+      "destination_longitude": null,
+      "delivery_fee": null,
+      "listing_id": null,
+      "waste_price": null,
+      "ai_verified_weight": null,
+      "bag_size": null,
+      "is_verified": 0,
+      "manual_weight": null,
+      "track_type": "A",
+      "verification_photo": null,
+      "weight_kg": null,
+      "verification_data": null,
+      "image": null
+    }
+  },
+  {
+    "model": "logistics.pickuprequest",
+    "pk": 7,
+    "fields": {
+      "material_type": "Plastic",
+      "quantity_estimate": "20kg",
+      "latitude": 5.0,
+      "longitude": 5.0,
+      "status": "ACCEPTED",
+      "created_at": "2026-01-14 22:21:00.411592",
+      "current_lat": null,
+      "current_lon": null,
+      "collector_id": 42,
+      "provider_id": 42,
+      "actual_price": 200,
+      "distance_km": null,
+      "duration_min": null,
+      "estimated_price": 200,
+      "payment_method": "DIGITAL",
+      "destination_address": null,
+      "destination_latitude": null,
+      "destination_longitude": null,
+      "delivery_fee": null,
+      "listing_id": null,
+      "waste_price": null,
+      "ai_verified_weight": null,
+      "bag_size": null,
+      "is_verified": 0,
+      "manual_weight": null,
+      "track_type": "A",
+      "verification_photo": null,
+      "weight_kg": null,
+      "verification_data": null,
+      "image": null
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 1,
+    "fields": {
+      "title": "Metal parts",
+      "material_type": "Metals",
+      "description": "Metal parts",
+      "quantity": "50 bags",
+      "price": 200,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/06E65616-84C3-47EE-9F8B-1A0B9BB0020A.jpg",
+      "created_at": "2025-12-30 08:36:06.999277",
+      "seller_id": 32,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 2,
+    "fields": {
+      "title": "Laptop",
+      "material_type": "Electronics",
+      "description": "Slightly used laptop",
+      "quantity": "1",
+      "price": 1000,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/b766f08d-fa41-457e-9590-04b26a2d7c47.jpeg",
+      "created_at": "2026-02-14 16:33:35.787924",
+      "seller_id": 49,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 3,
+    "fields": {
+      "title": "Laptop",
+      "material_type": "Electronics",
+      "description": "Slightly used laptop",
+      "quantity": "1",
+      "price": 10000,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/72811d41-a137-45d6-995d-3997b4a1e818.jpeg",
+      "created_at": "2026-02-14 16:37:52.202266",
+      "seller_id": 49,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 4,
+    "fields": {
+      "title": "Laptop",
+      "material_type": "Electronics",
+      "description": "Laptop",
+      "quantity": "1-2 Bags",
+      "price": 64,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/9d410ab8-2f5d-45fd-8d75-705ee75ce96b.jpeg",
+      "created_at": "2026-02-14 17:02:56.537065",
+      "seller_id": 49,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 5,
+    "fields": {
+      "title": "verified Metals Waste",
+      "material_type": "Metals",
+      "description": "Automatically verified by Revesta AI. Material appears clean and sortable.",
+      "quantity": "1-2 Bags",
+      "price": 32,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/6f5fdc37-6e50-46e7-84b4-f25b9e1f672d.jpeg",
+      "created_at": "2026-02-14 17:30:32.801546",
+      "seller_id": 49,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 6,
+    "fields": {
+      "title": "Pile of PET Plastic Bottles for Recycling",
+      "material_type": "Plastics",
+      "description": "A substantial quantity of clear plastic beverage bottles, primarily made of PET, accumulated for recycling. Bottles feature a mix of blue and green screw caps, and appear to be in good condition, suitable for processing.",
+      "quantity": "Several hundred plastic bottles",
+      "price": 9.6,
+      "is_free": 0,
+      "location": "Madina",
+      "image": "listings/3764bc3c-6678-409a-8411-1751e7a5d546.jpeg",
+      "created_at": "2026-02-15 03:03:15.847428",
+      "seller_id": 50,
+      "latitude": null,
+      "longitude": null,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 7,
+    "fields": {
+      "title": "Scrap Dell Laptop",
+      "material_type": "Electronics",
+      "description": "A complete Dell laptop, likely non-functional or obsolete, with visible marks and wear on the screen and chassis. Suitable for electronic waste recycling.",
+      "quantity": "1 Laptop",
+      "price": 12.8,
+      "is_free": 0,
+      "location": "Accra",
+      "image": "listings/801d636f-5b72-4531-afb6-8d0a5fc598c1.jpeg",
+      "created_at": "2026-02-16 03:40:01.826863",
+      "seller_id": 54,
+      "latitude": 5.683409,
+      "longitude": -0.160557,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "market.listing",
+    "pk": 8,
+    "fields": {
+      "title": "Dell Laptop",
+      "material_type": "Electronics",
+      "description": "A used Dell laptop with visible wear and smudges on the screen. The device is open, showing the keyboard and display.",
+      "quantity": "1 Laptop",
+      "price": 12.8,
+      "is_free": 0,
+      "location": "Accra",
+      "image": "listings/0d6b95e1-ee1e-47c8-bb38-47697b44cd93.jpeg",
+      "created_at": "2026-02-16 03:44:39.231501",
+      "seller_id": 54,
+      "latitude": 5.683409,
+      "longitude": -0.160557,
+      "track": "TRACK_A"
+    }
+  },
+  {
+    "model": "admin_dashboard.onboardingscreen",
+    "pk": 1,
+    "fields": {
+      "title": "Inventore facere eni",
+      "description": "Officia facilis dolo",
+      "image": "onboarding/Amazed_Young_Black_Woman_Pointing_Sideways_on_Purple_Background2vrtqr.jpeg",
+      "image_url": null,
+      "button_text": "Quis voluptate ut qu",
+      "order": 24,
+      "is_active": 1,
+      "created_at": "2026-02-20 17:11:01.952258",
+      "updated_at": "2026-02-20 17:11:01.952297"
+    }
+  }
+]

@@ -1,0 +1,19 @@
+New Login Detected - ReVesta
+=============================
+
+Hello {{ user_name }},
+
+We noticed a new login to your ReVesta account.
+
+Login Details:
+- Time: {{ login_time }}
+- Email: {{ user_email }}
+
+Was this you?
+If yes, you can safely ignore this email.
+
+If this wasn't you, please reset your password immediately:
+{{ app_url }}/forgot-password
+
+---
+© {{ current_year }} ReVesta Security Team

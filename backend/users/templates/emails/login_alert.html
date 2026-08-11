@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Login Detected</title>
+</head>
+
+<body
+    style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td align="center" style="padding: 40px 0;">
+                <table role="presentation"
+                    style="width: 600px; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td
+                            style="padding: 30px 40px; text-align: center; background-color: #fce7f3; border-radius: 16px 16px 0 0; border-bottom: 2px solid #fbcfe8;">
+                            <h2 style="margin: 0; font-size: 24px; font-weight: bold; color: #be185d;">
+                                🔐 New Login Detected
+                            </h2>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <p style="margin: 0 0 16px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                                Hello <strong>{{ user_name }}</strong>,
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                                We noticed a new login to your ReVesta account just now.
+                            </p>
+
+                            <!-- Login Details -->
+                            <div
+                                style="background-color: #f9fafb; border: 1px solid #e5e7eb; padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                                <table role="presentation" style="width: 100%;">
+                                    <tr>
+                                        <td style="padding-bottom: 8px; color: #6b7280; font-size: 14px;">Time:</td>
+                                        <td
+                                            style="padding-bottom: 8px; color: #111827; font-weight: medium; font-size: 14px;">
+                                            {{ login_time }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="color: #6b7280; font-size: 14px;">Email:</td>
+                                        <td style="color: #111827; font-weight: medium; font-size: 14px;">{{ user_email
+                                            }}</td>
+                                    </tr>
+                                </table>
+                            </div>
+
+                            <p style="margin: 0 0 24px 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                                <strong>Was this you?</strong><br>
+                                If yes, you can ignore this email.<br>
+                                <br>
+                                <strong>If this wasn't you,</strong> please reset your password immediately to secure
+                                your account.
+                            </p>
+
+                            <div style="text-align: center;">
+                                <a href="{{ app_url }}/forgot-password"
+                                    style="display: inline-block; padding: 12px 24px; background-color: #4b5563; color: white; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px;">
+                                    Reset Password
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td
+                            style="padding: 20px 40px; background-color: #f9fafb; border-radius: 0 0 16px 16px; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                © 2025 ReVesta Security Team
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

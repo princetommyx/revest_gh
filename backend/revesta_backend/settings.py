@@ -13,6 +13,19 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 import dj_database_url
+from dotenv import load_dotenv
+
+# PyMySQL compatibility patch for XAMPP/MariaDB 10.4
+# Allows Django 6 to work with MariaDB < 10.6 by spoofing the version string
+try:
+    import pymysql
+    pymysql.install_as_MySQLdb()
+    pymysql.version_info = (10, 6, 0, "final", 0)
+except ImportError:
+    pass
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,14 +38,36 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = 'RENDER' not in os.environ
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = []
-RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
-if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
-if 'ALLOWED_HOSTS' in os.environ:
-    ALLOWED_HOSTS.extend(os.environ.get('ALLOWED_HOSTS').split(','))
+# ALLOWED_HOSTS configuration
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+if '*' in ALLOWED_HOSTS and not DEBUG:
+    # If in production and still wildcard, restrict it if possible or warn
+    print("WARNING: ALLOWED_HOSTS is '*' in production. Please set this in environment variables.")
+
+# Trust Railway/Render domains automatically
+RAILWAY_STATIC_URL = os.environ.get('RAILWAY_STATIC_URL')
+if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+    ALLOWED_HOSTS.append(os.environ.get('RENDER_EXTERNAL_HOSTNAME'))
+if RAILWAY_STATIC_URL:
+    ALLOWED_HOSTS.append(RAILWAY_STATIC_URL.replace('https://', '').replace('http://', ''))
+
+# Production Security Headers
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    X_FRAME_OPTIONS = 'DENY'
+
+# Encryption Key for sensitive data (e.g. KYC ID numbers)
+FERNET_KEY = os.environ.get('FERNET_KEY', b'osLlL5AzQozSnG3c6TLOptUE1lAr_3kO3nyiOO88b38=')
 
 
 # Application definition
@@ -49,15 +84,19 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'channels',
+    'drf_spectacular',  # API documentation
+    'django_filters',   # Advanced filtering
     # Local apps
     'users',
     'market',
     'logistics',
     'chat',
-    # 'wallet',  # Temporarily disabled
+    'admin_dashboard',  # Admin dashboard system
+    'wallet',  # Enabled for mobile app
 ]
 
 MIDDLEWARE = [
+    'revesta_backend.middleware.RequestLoggingMiddleware', # Custom debugging middleware
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware', # Add WhiteNoise
@@ -74,7 +113,7 @@ ROOT_URLCONF = 'revesta_backend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'users' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -93,12 +132,24 @@ ASGI_APPLICATION = 'revesta_backend.asgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
-        conn_max_age=600
-    )
-}
+_db_config = dj_database_url.config(
+    default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+    conn_max_age=600,
+    conn_health_checks=True,
+)
+
+# Add MySQL-specific production options when using MySQL
+if _db_config.get('ENGINE') == 'django.db.backends.mysql':
+    _db_config.setdefault('OPTIONS', {})
+    _db_config['OPTIONS'].update({
+        'charset': 'utf8mb4',
+        'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        'connect_timeout': 10,
+    })
+    # Use our custom backend that skips the MariaDB version check (XAMPP ships 10.4)
+    _db_config['ENGINE'] = 'revesta_backend.mysql_compat'
+
+DATABASES = {'default': _db_config}
 
 
 # Password validation
@@ -139,6 +190,11 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Additional static files locations
+STATICFILES_DIRS = [
+    # Add other static directories here
+]
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -146,21 +202,62 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
 
+# CORS configuration
 CORS_ALLOW_ALL_ORIGINS = True
-# CORS_ALLOWED_ORIGINS = [
-#     "http://localhost:5173",
-#     "http://127.0.0.1:5173",
-#     "http://localhost:5174",
-#     "http://localhost:5175",
-# ]
+if not CORS_ALLOW_ALL_ORIGINS:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://localhost:5174",
+    ]
+    if os.environ.get('CORS_ALLOWED_ORIGINS'):
+        CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+else:
+    # Warning for production
+    if not DEBUG:
+        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
 
+CORS_ALLOW_CREDENTIALS = True
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000"]
+if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
+if RAILWAY_STATIC_URL:
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RAILWAY_STATIC_URL}")
 if 'CORS_ALLOWED_ORIGINS' in os.environ:
-    CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+    # Also trust frontend origins for CSRF (though mainly backend needed for Admin)
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS').split(','):
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '20/minute',  # Limit for unauthenticated users
+        'user': '10000/day',   # Increased for polling admin dashboard
+        'register': '5/minute', # Strict limit for registration
+        'login': '20/minute',    # Strict limit for login
+        'wallet': '100/minute',   # Increased for usability
+    },
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
 }
 
 AUTHENTICATION_BACKENDS = [
@@ -168,6 +265,26 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+
+# Redis Cache Configuration
+# Redis Cache Configuration
+if 'REDIS_URL' in os.environ:
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": os.environ.get('REDIS_URL'),
+            "OPTIONS": {
+                "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            }
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
 
 # Redis Channel Layer
 if 'REDIS_URL' in os.environ:
@@ -188,3 +305,80 @@ else:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Paystack
+PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')
+
+# Hubtel SMS
+HUBTEL_CLIENT_ID = os.environ.get('HUBTEL_CLIENT_ID')
+HUBTEL_CLIENT_SECRET = os.environ.get('HUBTEL_CLIENT_SECRET')
+HUBTEL_FROM = os.environ.get('HUBTEL_FROM', 'Revesta')
+
+# Email Configuration
+# Use Resend if API key is available (bypasses SMTP port blocking)
+import logging
+email_logger = logging.getLogger('revesta.email')
+
+if os.environ.get('RESEND_API_KEY'):
+    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Resend sandbox email
+    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)})")
+else:
+    # Fallback to SMTP (for local development)
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
+    
+    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+        email_logger.info(f"✓ Email configured with SMTP ({EMAIL_HOST}:{EMAIL_PORT})")
+    else:
+        email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or SMTP credentials")
+
+EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
+
+# JWT Configuration for Mobile API
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+}
+
+# API Documentation Configuration
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'ReVesta API',
+    'DESCRIPTION': 'RESTful API for ReVesta mobile application - waste management and recycling platform',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v1',
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Local development server'},
+        {'url': 'https://your-app.onrender.com', 'description': 'Production server'},
+    ],
+    'TAGS': [
+        {'name': 'auth', 'description': 'Authentication endpoints'},
+        {'name': 'users', 'description': 'User profile and management'},
+        {'name': 'market', 'description': 'Marketplace listings'},
+        {'name': 'logistics', 'description': 'Pickup requests and tracking'},
+        {'name': 'chat', 'description': 'Messaging system'},
+        {'name': 'wallet', 'description': 'Financial transactions'},
+        {'name': 'admin', 'description': 'Admin dashboard (staff only)'},
+    ],
+}
+
+# Mobile App Configuration
+MOBILE_APP_SCHEME = os.environ.get('MOBILE_APP_SCHEME', 'revesta://')  # For deep linking

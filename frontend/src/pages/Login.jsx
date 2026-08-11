@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { Eye, EyeOff, Phone, Mail, ArrowLeft } from 'lucide-react';
 import PageTransition from '../components/PageTransition';
+import { useToast } from '../contexts/ToastContext';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Login = () => {
     const [loginMethod, setLoginMethod] = useState('phone'); // 'phone' or 'email'
@@ -14,7 +16,9 @@ const Login = () => {
     });
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { login } = useAuth();
+    const { showSuccess, showError } = useToast();
     const navigate = useNavigate();
 
     const handleChange = (e) => {
@@ -24,20 +28,25 @@ const Login = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setIsSubmitting(true);
         try {
             // For now, we'll assume the backend handles "username" as the identifier
             // In a real app, you might need to format the phone number or send a different field
+            // Send raw phone number to match registration data format
             const identifier = loginMethod === 'phone'
-                ? `${formData.countryCode}${formData.phoneNumber}`
+                ? formData.phoneNumber
                 : formData.username;
 
             // Note: If backend expects 'username' field, we send identifier as username
             await login(identifier, formData.password);
-            alert('Login successful!');
+            showSuccess('Login successful!');
             navigate('/');
         } catch (err) {
             console.error(err);
+            showError('Invalid credentials');
             setError('Invalid credentials');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -96,7 +105,7 @@ const Login = () => {
                                         value={formData.phoneNumber}
                                         onChange={handleChange}
                                         placeholder="Phone number"
-                                        className="w-full px-4 py-3 bg-white border border-green-500 rounded-xl focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                                        className="w-full px-4 py-3 bg-gray-100 border-transparent focus:bg-white border focus:border-primary rounded-xl outline-none transition-all"
                                         required
                                     />
                                 </div>
@@ -134,14 +143,41 @@ const Login = () => {
                                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                                 </button>
                             </div>
+                            <div className="flex justify-end mt-2">
+                                <Link to="/forgot-password" className="text-sm font-medium text-primary hover:text-green-700 transition-colors">
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
 
                         <button
                             type="submit"
-                            className="w-full bg-primary text-white font-bold py-4 rounded-full mt-8 hover:bg-green-600 transition-all duration-300 shadow-md"
+                            disabled={isSubmitting}
+                            className="w-full bg-primary text-white font-bold py-4 rounded-full mt-8 hover:bg-green-600 transition-all duration-300 shadow-md flex items-center justify-center disabled:opacity-70 disabled:cursor-not-allowed"
                         >
-                            Continue
+                            {isSubmitting ? (
+                                <div className="flex items-center space-x-2">
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>Continue...</span>
+                                </div>
+                            ) : (
+                                "Continue"
+                            )}
                         </button>
+
+                        <div className="relative my-8">
+                            <div className="absolute inset-0 flex items-center">
+                                <span className="w-full border-t border-gray-300"></span>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
+                            </div>
+                        </div>
+
+                        <GoogleAuthButton />
                     </form>
                 </div>
             </div>
