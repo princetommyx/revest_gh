@@ -128,6 +128,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_support', 'date_joined', 'last_login',
             'auth_provider', 'google_id'
         )
+        
+    def get_kyc_status(self, obj):
+        if hasattr(obj, 'kyc_submission'):
+            return obj.kyc_submission.status
+        return 'UNSUBMITTED'
+        
+    def get_kyc_rejection_reason(self, obj):
+        if hasattr(obj, 'kyc_submission') and obj.kyc_submission.status == 'REJECTED':
+            return obj.kyc_submission.rejection_reason
+        return None
     
     def to_representation(self, instance):
         """
