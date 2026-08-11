@@ -132,21 +132,21 @@ export default function Dashboard() {
             {/* Main Charts Area */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Registrations Chart */}
-                <div className="lg:col-span-2 bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
-                    <div className="flex justify-between items-center mb-8">
+                <div className="lg:col-span-2 bg-white rounded-3xl sm:rounded-[32px] p-4 sm:p-8 shadow-premium border border-gray-100/50 overflow-hidden w-full max-w-full">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                         <div>
                             <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">January 2025</h3>
                             <p className="text-sm text-gray-400 font-medium">Platform Growth Analysis</p>
                         </div>
-                        <div className="flex items-center space-x-2 bg-gray-50 p-1 rounded-xl">
-                            <button className="px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600">Daily</button>
-                            <button className="px-4 py-2 text-xs font-bold rounded-lg text-gray-400">Weekly</button>
+                        <div className="flex items-center space-x-2 bg-gray-50 p-1 rounded-xl self-stretch sm:self-auto justify-center">
+                            <button className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600">Daily</button>
+                            <button className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg text-gray-400">Weekly</button>
                         </div>
                     </div>
 
-                    <div className="h-[300px] w-full">
+                    <div className="h-[250px] sm:h-[300px] w-full -ml-2 sm:ml-0">
                         <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={trendData}>
+                            <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="#0047ff" stopOpacity={0.1} />
@@ -172,11 +172,11 @@ export default function Dashboard() {
                     </div>
 
                     {/* Simple Date Selector as seen in image */}
-                    <div className="mt-8 flex justify-between items-center px-4">
+                    <div className="mt-8 flex justify-between overflow-x-auto hide-scrollbar items-center px-2 sm:px-4 gap-2 sm:gap-4 pb-2">
                         {[5, 6, 7, 8, 9, 10, 11].map(day => (
-                            <div key={day} className={`flex flex-col items-center p-3 rounded-2xl transition-all ${day === 7 ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
+                            <div key={day} className={`flex-shrink-0 flex flex-col items-center p-2 sm:p-3 rounded-2xl transition-all ${day === 7 ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
                                 <span className="text-[10px] font-bold uppercase opacity-60 mb-1">Mon</span>
-                                <span className="text-lg font-extrabold">{day}</span>
+                                <span className="text-lg font-extrabold min-w-[1.5rem] text-center">{day}</span>
                             </div>
                         ))}
                     </div>
