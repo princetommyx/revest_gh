@@ -18,3 +18,5 @@ node_modules/**
 # Exclude development files
 *.log
 .DS_Store
+android/
+ios/
