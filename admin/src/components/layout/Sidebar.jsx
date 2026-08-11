@@ -20,7 +20,7 @@ const navItems = [
     { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -29,7 +29,12 @@ export default function Sidebar() {
     };
 
     return (
-        <aside className="w-64 sidebar-bg text-white h-screen sticky top-0 flex flex-col transition-colors duration-200">
+        <aside className={`
+            w-64 sidebar-bg text-white h-screen flex flex-col transition-transform duration-300
+            fixed z-40 top-0 left-0
+            ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+            md:relative md:translate-x-0
+        `}>
             {/* Logo */}
             <div className="p-6 pb-8">
                 <div className="flex items-center space-x-3">
@@ -50,6 +55,7 @@ export default function Sidebar() {
                         key={item.to}
                         to={item.to}
                         end={item.to === '/'}
+                        onClick={onClose}
                         className={({ isActive }) =>
                             `flex items-center space-x-4 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
                                 ? 'bg-blue-600 text-white shadow-lg'
