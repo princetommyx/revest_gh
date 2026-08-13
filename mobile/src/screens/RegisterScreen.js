@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Smartphone, Lock, Edit2, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Smartphone, Lock, Edit2, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -371,9 +371,9 @@ export default function RegisterScreen() {
             <SafeAreaView style={styles.container}>
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                        <View style={styles.header}>
-                            <TouchableOpacity onPress={() => setStep(2)} style={styles.backButton}>
-                                <ArrowLeft size={24} color="#000" />
+                        <View style={styles.otpHeader}>
+                            <TouchableOpacity onPress={() => setStep(2)} style={styles.otpBackButton}>
+                                <ArrowLeft size={20} color="#111" />
                             </TouchableOpacity>
                         </View>
 
@@ -682,18 +682,22 @@ export default function RegisterScreen() {
             <Modal visible={showSuccessModal} transparent animationType="fade">
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalCard}>
+                        <TouchableOpacity style={styles.modalCloseIcon} onPress={() => setShowSuccessModal(false)}>
+                            <Text style={styles.modalCloseText}>✕</Text>
+                        </TouchableOpacity>
+                        
                         <View style={styles.successIconWrapper}>
-                            <Check size={40} color="#fff" />
+                            <CheckCircle size={50} color="#10B981" />
                         </View>
+                        
                         <Text style={styles.modalTitle}>Successful!</Text>
                         <Text style={styles.modalDesc}>Your account is created successfully and ready now.</Text>
+                        
                         <TouchableOpacity
-                            style={styles.modalBtn}
-                            onPress={() => {
-                                setShowSuccessModal(false);
-                            }}
+                            style={styles.modalDoneBtn}
+                            onPress={() => setShowSuccessModal(false)}
                         >
-                            <Text style={styles.modalBtnText}>Browse Home</Text>
+                            <Text style={styles.modalDoneBtnText}>Browse Home</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -1001,29 +1005,88 @@ const styles = StyleSheet.create({
     // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        backgroundColor: 'rgba(0,0,0,0.4)',
         justifyContent: 'center',
+        alignItems: 'center',
         padding: 20,
     },
     modalCard: {
+        width: '100%',
         backgroundColor: '#fff',
-        borderRadius: 30,
+        borderRadius: 24,
         padding: 30,
         alignItems: 'center',
+        position: 'relative',
+    },
+    modalCloseIcon: {
+        position: 'absolute',
+        top: -50,
+        alignSelf: 'center',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#fff',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalCloseText: {
+        fontSize: 20,
+        color: '#111',
+        fontWeight: '600',
+    },
+    successIconWrapper: {
+        width: 150,
+        height: 120,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 25,
+        marginTop: 10,
     },
     modalTitle: {
         fontSize: 22,
         fontWeight: 'bold',
         color: '#111',
-        marginBottom: 10,
+        marginBottom: 12,
         textAlign: 'center',
     },
     modalDesc: {
         fontSize: 14,
         color: '#666',
         textAlign: 'center',
-        marginBottom: 25,
         lineHeight: 22,
+        marginBottom: 30,
+        paddingHorizontal: 10,
+    },
+    modalDoneBtn: {
+        width: '100%',
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#111',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    modalDoneBtnText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    // OTP Header styles to match ForgotPassword
+    otpHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    otpBackButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#FAFAFA',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: '#F3F4F6'
     },
     otpInput: {
         width: '100%',
