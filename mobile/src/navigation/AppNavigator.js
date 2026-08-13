@@ -191,13 +191,7 @@ function MainTabs() {
                 }}
             />
 
-            <Tab.Screen
-                name="Chat"
-                component={ChatScreen}
-                options={{
-                    tabBarBadge: unreadCount > 0 ? unreadCount : null
-                }}
-            />
+
 
             <Tab.Screen name="Wallet" component={WalletScreen} />
         </Tab.Navigator>
@@ -247,6 +241,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Marketplace" component={MarketplaceScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />

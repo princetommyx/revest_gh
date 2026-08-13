@@ -111,40 +111,9 @@ export default function CreateListingScreen({ navigation }) {
             if (!result.canceled) {
                 const asset = result.assets[0];
                 setSelectedAsset(asset);
-                analyzeImage(asset.uri);
             }
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Error', text2: 'Error picking image' });
-        }
-    };
-
-    const analyzeImage = async (uri) => {
-        setIsScanning(true);
-        try {
-            const data = await marketApi.analyzeWaste(uri);
-            if (data) {
-                const isTrackA = data.track_type === 'A';
-                setFormData(prev => ({
-                    ...prev,
-                    material_type: data.material_type || prev.material_type,
-                    quantity: data.quantity_estimate || prev.quantity,
-                    weight_kg: data.suggested_weight_kg || prev.weight_kg,
-                    title: data.title_suggestion || prev.title,
-                    description: data.description || prev.description,
-                    track_type: data.track_type || 'A',
-                    price: isTrackA ? (data.estimated_cost || '10.00') : (data.estimated_earnings || '5.00')
-                }));
-                setScanResult(data);
-                Toast.show({
-                    type: 'success',
-                    text1: isTrackA ? 'General Waste (Safe Disposal)' : 'Recyclables (Sell)',
-                    text2: isTrackA ? 'Estimated disposal fee calculated' : 'Estimated buyback value calculated'
-                });
-            }
-        } catch (error) {
-            Toast.show({ type: 'error', text1: 'AI Scan failed', text2: 'Could not analyze waste' });
-        } finally {
-            setIsScanning(false);
         }
     };
 
@@ -353,32 +322,7 @@ export default function CreateListingScreen({ navigation }) {
                             />
                         </View>
 
-                        {/* AI Price Offer */}
-                        <View style={[
-                            styles.offerCard,
-                            formData.track_type === 'A' ? styles.offerCardA : styles.offerCardB
-                        ]}>
-                            <View style={styles.offerHeader}>
-                                <View style={styles.offerBadge}>
-                                    <Text style={styles.offerBadgeText}>✨ AI ESTIMATE</Text>
-                                </View>
-                                <Text style={styles.offerTitle}>
-                                    {formData.track_type === 'A' ? 'Estimated Cost to' : 'Estimated Cash to'}
-                                </Text>
-                            </View>
-                            <View style={styles.offerValueRow}>
-                                <Text style={styles.currencyPrefix}>₵</Text>
-                                <Text style={styles.offerValue}>{formData.price || '0.00'}</Text>
-                                <Text style={styles.trackIndicator}>
-                                    {formData.track_type === 'A' ? ' (Debit)' : ' (Earn)'}
-                                </Text>
-                            </View>
-                            <Text style={styles.offerSub}>
-                                {formData.track_type === 'A'
-                                    ? 'Flat fee for safe disposal and logistics'
-                                    : 'Market buyback value after commission'}
-                            </Text>
-                        </View>
+
 
                         <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
                             {loading ? (

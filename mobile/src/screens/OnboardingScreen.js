@@ -41,7 +41,6 @@ const FALLBACK_SLIDES = [
 export default function OnboardingScreen() {
     const navigation = useNavigation();
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [showAuthView, setShowAuthView] = useState(false);
     const [dynamicSlides, setDynamicSlides] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const scrollX = useRef(new Animated.Value(0)).current;
@@ -87,7 +86,7 @@ export default function OnboardingScreen() {
         if (currentIndex < slides.length - 1) {
             slidesRef.current.scrollToIndex({ index: currentIndex + 1 });
         } else {
-            setShowAuthView(true);
+            finishOnboarding('Login');
         }
     };
 
@@ -118,54 +117,7 @@ export default function OnboardingScreen() {
         );
     };
 
-    if (showAuthView) {
-        return (
-            <View style={[styles.container, { backgroundColor: '#FAFAFA' }]}>
-                <StatusBar translucent backgroundColor="transparent" barStyle="dark-content" />
 
-                {/* Background Shapes */}
-                <View style={styles.topShape}>
-                    <LinearGradient colors={['rgba(215, 255, 235, 0.8)', 'rgba(215, 255, 235, 0)']} style={StyleSheet.absoluteFill} />
-                </View>
-                <View style={styles.bottomShape}>
-                    <LinearGradient colors={['rgba(224, 231, 255, 0.8)', 'rgba(224, 231, 255, 0)']} style={StyleSheet.absoluteFill} />
-                </View>
-
-                <SafeAreaView style={styles.authContainer}>
-                    <View style={styles.authContent}>
-                        <Image
-                            source={require('../../assets/auth_illustration.png')}
-                            style={styles.heroIllustration}
-                            resizeMode="contain"
-                        />
-                        <View style={styles.welcomeTextContainer}>
-                            <Text style={styles.welcomeHeading}>Welcome !</Text>
-                            <View style={styles.brandRow}>
-                                <Text style={styles.brandTextDark}>Re</Text>
-                                <Text style={styles.brandTextGreen}>Vesta</Text>
-                            </View>
-                        </View>
-
-                        <View style={styles.authActionArea}>
-                            <TouchableOpacity
-                                style={styles.primaryBtn}
-                                onPress={() => finishOnboarding('Register')}
-                            >
-                                <Text style={styles.primaryBtnText}>Sign up</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.secondaryBtn}
-                                onPress={() => finishOnboarding('Login')}
-                            >
-                                <Text style={styles.secondaryBtnText}>Login</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </SafeAreaView>
-            </View>
-        );
-    }
 
     return (
         <View style={styles.container}>
@@ -189,7 +141,7 @@ export default function OnboardingScreen() {
             />
 
             <SafeAreaView style={styles.skipContainer}>
-                <TouchableOpacity onPress={() => setShowAuthView(true)}>
+                <TouchableOpacity onPress={() => finishOnboarding('Login')}>
                     <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
             </SafeAreaView>

@@ -126,9 +126,9 @@ export default function MarketplaceScreen({ navigation, route }) {
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
                 <View style={styles.listingSubRow}>
                     <Text style={styles.listingLoc} numberOfLines={1}>{item.location}</Text>
-                    <Text style={styles.listingPrice}>
-                        {item.is_free ? 'FREE' : `₵${item.price}`}
-                    </Text>
+                    {item.quantity && (
+                        <Text style={[styles.listingLoc, { fontWeight: '600' }]} numberOfLines={1}>{item.quantity}</Text>
+                    )}
                 </View>
             </View>
         </TouchableOpacity>

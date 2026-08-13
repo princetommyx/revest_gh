@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
-    Truck, MapPin, Navigation,
+    Truck, MapPin, Navigation, Menu, Bell,
     CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
     ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert
 } from 'lucide-react-native';
@@ -387,22 +387,13 @@ export default function PickupsScreen({ route }) {
             return;
         }
 
-        if (!requestForm.delivery_fee) {
-            fetchEstimate();
-            return;
-        }
-
         setRequestLoading(true);
         try {
             const requestData = {
                 ...requestForm,
-                estimated_price: (
-                    parseFloat(requestForm.waste_value || 0) +
-                    parseFloat(requestForm.delivery_fee || 0) +
-                    (userRole === 'RECYCLER' ? 5.00 : 0)
-                ).toFixed(2),
-                waste_price: parseFloat(requestForm.waste_value || 0).toFixed(2),
-                delivery_fee: parseFloat(requestForm.delivery_fee || 0).toFixed(2),
+                estimated_price: '0.00',
+                waste_price: '0.00',
+                delivery_fee: '0.00',
                 listing: requestForm.listing_id ? parseInt(requestForm.listing_id) : null,
                 latitude: location.latitude,
                 longitude: location.longitude,
@@ -744,7 +735,7 @@ export default function PickupsScreen({ route }) {
 
                 {isSelectingLocation && (
                     <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -16, marginTop: -32 }}>
-                        <MapPin size={32} color="#E74C3C" fill="#fff" />
+                        <MapPin size={32} color="#111" fill="#111" />
                     </View>
                 )}
             </ActiveMap>
@@ -762,207 +753,136 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && (
-                <View style={styles.floatingTopBar}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.floatingBackBtn}>
-                        <ArrowLeft size={20} color="#111" />
+                <View style={styles.floatingTopBarUbride}>
+                    <TouchableOpacity style={styles.menuBtn}>
+                        <Menu size={20} color="#fff" />
                     </TouchableOpacity>
-                    <View style={styles.floatingSearchBar}>
-                        <Search size={18} color="#999" style={{marginLeft: 10}} />
-                        <TextInput placeholder="Search area..." style={styles.floatingSearchInput} placeholderTextColor="#999" />
-                    </View>
-                    <TouchableOpacity style={styles.floatingTargetBtn} onPress={() => {
-                        if (location && mapRef.current) {
-                            mapRef.current.animateToRegion({
-                                latitude: location.latitude,
-                                longitude: location.longitude,
-                                latitudeDelta: 0.005,
-                                longitudeDelta: 0.005,
-                            }, 1000);
-                        }
-                    }}>
-                        <Navigation size={20} color="#111" />
+                    <Text style={styles.ubrideLogo}>Ubride</Text>
+                    <TouchableOpacity style={styles.bellBtnUbride}>
+                        <Bell size={20} color="#fff" />
                     </TouchableOpacity>
                 </View>
             )}
 
-            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && user?.kyc_status !== 'VERIFIED' && (
-                <TouchableOpacity
-                    style={styles.kycBanner}
-                    onPress={() => navigation.navigate('KYCVerification')}
-                    activeOpacity={0.85}
-                >
-                    <View style={styles.kycBannerIcon}>
-                        <ShieldAlert size={22} color="#fff" />
-                    </View>
-                    <View style={styles.kycBannerText}>
-                        <Text style={styles.kycBannerTitle}>Identity Verification Required</Text>
-                        <Text style={styles.kycBannerSub}>Complete KYC to start accepting pickup jobs</Text>
-                    </View>
-                    <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
-                </TouchableOpacity>
-            )}
-
-            {!isSelectingLocation && sortedJobs.length > 0 && (
-                <View style={styles.jobListContainerAbsolute}>
-                    <FlatList
-                        data={sortedJobs}
-                        keyExtractor={(item) => item.id.toString()}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        snapToInterval={width * 0.85 + 20}
-                        decelerationRate="fast"
-                        contentContainerStyle={{ paddingHorizontal: 10 }}
-                        renderItem={({ item, index }) => {
-                            const previousItem = index > 0 ? sortedJobs[index - 1] : null;
-                            const showSeparator = previousItem &&
-                                (previousItem.status === 'ACCEPTED' || previousItem.status === 'ARRIVED') &&
-                                item.status === 'PENDING';
-
-                            return (
-                                <>
-                                    {showSeparator && (
-                                        <View style={styles.jobSeparator}>
-                                            <Text style={styles.separatorText}>Available Jobs</Text>
-                                        </View>
-                                    )}
-                                    <View style={styles.jobCard}>
-                                        <View style={styles.cardHeader}>
-                                            <Image
-                                                source={{ uri: item.listing_image ? (item.listing_image.startsWith('http') ? item.listing_image : `${BASE_URL}${item.listing_image}`) : getMaterialImage(item.material_type) }}
-                                                style={{ width: 44, height: 44, borderRadius: 14, marginRight: 12 }}
-                                                contentFit="cover"
-                                                cachePolicy="memory-disk"
-                                            />
-                                            <View style={styles.jobMainInfo}>
-                                                <Text style={styles.jobType}>{item.material_type}</Text>
-                                                <Text style={styles.jobQty}>{item.quantity_estimate}</Text>
-                                            </View>
-                                            <View style={[styles.statusBadge, { backgroundColor: item.status === 'PENDING' ? '#F3F4F6' : (item.status === 'ARRIVED' ? '#111' : '#F3F4F6') }]}>
-                                                <Text style={[styles.statusText, { color: item.status === 'PENDING' ? '#111' : (item.status === 'ARRIVED' ? '#fff' : '#111') }]}>{item.status}</Text>
-                                            </View>
-                                        </View>
-
-                                        <View style={styles.jobDivider} />
-
-                                        <View style={styles.jobLocationRow}>
-                                            <MapPin size={16} color="#999" />
-                                            <Text style={styles.jobLoc} numberOfLines={1}>{item.pickup_address}</Text>
-                                        </View>
-
-                                        {userRole === 'COLLECTOR' && (
-                                            <View style={styles.actionRow}>
-                                                {item.status === 'PENDING' && (
-                                                    user?.kyc_status === 'VERIFIED' ? (
-                                                        <TouchableOpacity
-                                                            style={styles.acceptBtn}
-                                                            onPress={() => handleAcceptJob(item.id)}
-                                                        >
-                                                            <Text style={styles.acceptBtnText}>Accept Order</Text>
-                                                            <ChevronRight size={18} color="#fff" />
-                                                        </TouchableOpacity>
-                                                    ) : (
-                                                        <TouchableOpacity
-                                                            style={[styles.acceptBtn, { backgroundColor: '#111' }]}
-                                                            onPress={() => navigation.navigate('KYCVerification')}
-                                                        >
-                                                            <ShieldAlert size={16} color="#fff" style={{ marginRight: 6 }} />
-                                                            <Text style={styles.acceptBtnText}>Verify to Accept</Text>
-                                                            <ChevronRight size={18} color="#fff" />
-                                                        </TouchableOpacity>
-                                                    )
-                                                )}
-
-                                                {item.status === 'ACCEPTED' && (
-                                                    <View style={styles.collectorActions}>
-                                                        <TouchableOpacity
-                                                            style={[styles.actionBtn, styles.navBtn]}
-                                                            onPress={() => openNavigation(item)}
-                                                        >
-                                                            <Navigation size={18} color="#fff" />
-                                                            <Text style={styles.actionBtnText}>Navigate</Text>
-                                                        </TouchableOpacity>
-
-                                                        <TouchableOpacity
-                                                            style={[styles.actionBtn, styles.arriveBtn]}
-                                                            onPress={() => handleArriveJob(item.id)}
-                                                        >
-                                                            <CheckCircle2 size={18} color="#fff" />
-                                                            <Text style={styles.actionBtnText}>Arrived</Text>
-                                                        </TouchableOpacity>
-                                                    </View>
-                                                )}
-
-                                                {item.status === 'ARRIVED' && (
-                                                    <TouchableOpacity
-                                                        style={[styles.acceptBtn, { backgroundColor: '#111' }]}
-                                                        onPress={() => handleCompleteJob(item.id)}
-                                                    >
-                                                        <Text style={styles.acceptBtnText}>Confirm Completion</Text>
-                                                        <CheckCircle2 size={18} color="#fff" />
-                                                    </TouchableOpacity>
-                                                )}
-                                            </View>
-                                        )}
-
-                                        {userRole === 'SELLER' && item.status === 'ACCEPTED' && (
-                                            <View style={styles.trackingContainer}>
-                                                <View style={styles.trackingPulse}>
-                                                    <Activity size={14} color="#111" />
-                                                    <Text style={styles.trackingTitle}>Collector En Route</Text>
-                                                </View>
-                                                <Text style={styles.trackingDetail}>
-                                                    {item.collector_name || "Collector"} is picking up your waste.
-                                                </Text>
-                                            </View>
-                                        )}
-
-                                        {userRole === 'SELLER' && (item.status === 'PENDING' || item.status === 'ACCEPTED') && (
-                                            <TouchableOpacity
-                                                style={styles.cancelRequestBtn}
-                                                onPress={() => openCancelModal(item.id)}
-                                            >
-                                                <Text style={styles.cancelText}>Cancel Pickup</Text>
-                                            </TouchableOpacity>
-                                        )}
-                                    </View>
-                                </>
-                            );
-                        }}
-                    />
-                </View>
-            )}
-
-            {jobs.length === 0 && (
-                <View style={styles.emptyState}>
-                    <Text style={styles.emptyText}>
-                        {userRole === 'COLLECTOR' ? 'No jobs available nearby' : 'You have no active pickups'}
-                    </Text>
-                </View>
-            )}
-
-            {errorMsg && (
-                <View style={styles.errorBox}>
-                    <AlertCircle size={20} color="#E74C3C" />
-                    <Text style={styles.errorText}>{errorMsg}</Text>
-                </View>
-            )}
-
-            {isError && apiError && (
-                <View style={styles.errorBox}>
-                    <AlertCircle size={20} color="#E74C3C" />
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.errorText}>
-                            {apiError.message?.includes('Network') || apiError.message?.includes('timeout')
-                                ? 'Network error. Check your connection and try again.'
-                                : 'Failed to load pickup requests'}
-                        </Text>
-                        <TouchableOpacity
-                            onPress={() => refetch()}
-                            style={{ marginTop: 8, backgroundColor: '#E74C3C', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, alignSelf: 'flex-start' }}
-                        >
-                            <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>Retry</Text>
+            {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && (
+                <View style={styles.bottomSheetUbride}>
+                    <View style={styles.locationInputBox}>
+                        <Text style={styles.locationInputLabel}>PICKUP</Text>
+                        <TouchableOpacity style={styles.locationInputRow} onPress={() => startMapSelection('PICKUP')}>
+                            <View style={styles.locationInputIconBox}>
+                                <View style={styles.dotIndicatorPickup} />
+                            </View>
+                            <Text style={styles.locationInputText} numberOfLines={1}>
+                                {customAddress || 'Current Location'}
+                            </Text>
+                            <ChevronRight size={20} color="#999" />
                         </TouchableOpacity>
+
+                        <TouchableOpacity style={[styles.locationInputRow, { marginTop: 15, backgroundColor: '#111', padding: 15, borderRadius: 12 }]} onPress={() => startMapSelection('DESTINATION')}>
+                            <View style={styles.locationInputIconBox}>
+                                <View style={styles.dotIndicatorDest} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>Enter your Destination</Text>
+                                <Text style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>{destinationAddress || 'Please tell us your drop location!'}</Text>
+                            </View>
+                            <X size={16} color="#999" onPress={() => setDestinationAddress('')} />
+                        </TouchableOpacity>
+                        
+                        {(customAddress || location) && destinationAddress && (
+                            <TouchableOpacity style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
+                                <Text style={styles.continueBtnTextUbride}>Continue</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
+                </View>
+            )}
+
+            {!isSelectingLocation && userRole === 'SELLER' && uiState === 'VEHICLE_SELECT' && (
+                <View style={styles.bottomSheetUbrideVehicles}>
+                    <TouchableOpacity style={styles.backVehicleBtn} onPress={() => setUiState('IDLE')}>
+                        <View style={styles.dragHandle} />
+                    </TouchableOpacity>
+                    <View style={styles.vehicleCategories}>
+                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Economy' && styles.vehicleCatTextActive]}>Economy</Text>
+                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Premium' && styles.vehicleCatTextActive]}>Premium</Text>
+                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Extras' && styles.vehicleCatTextActive]}>Extras</Text>
+                    </View>
+                    
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
+                        {VEHICLES.map(v => (
+                            <TouchableOpacity 
+                                key={v.id} 
+                                style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
+                                onPress={() => setSelectedVehicle(v.id)}
+                            >
+                                <v.icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
+                                <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
+                                <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
+                                {selectedVehicle === v.id && (
+                                    <View style={styles.vehicleCheckBadge}>
+                                        <CheckCircle2 size={12} color="#fff" />
+                                    </View>
+                                )}
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
+                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>REQUEST PICKUP</Text>}
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && sortedJobs.length > 0 && (
+                <View style={styles.collectorBottomSheetUbride}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width * 0.9} decelerationRate="fast">
+                        {sortedJobs.map(item => (
+                            <View key={item.id} style={styles.collectorJobCardUbride}>
+                                <View style={styles.collectorJobHeader}>
+                                    <View style={styles.jobInfoBadge}>
+                                        <Package size={16} color="#111" />
+                                        <Text style={styles.jobInfoText}>{item.material_type} ({item.quantity_estimate})</Text>
+                                    </View>
+                                    <Text style={styles.jobTimeText}>2 mins away</Text>
+                                </View>
+
+                                <View style={styles.jobRouteBox}>
+                                    <View style={styles.routeDots}>
+                                        <View style={styles.dotIndicatorPickup} />
+                                        <View style={styles.routeLine} />
+                                        <View style={styles.dotIndicatorDest} />
+                                    </View>
+                                    <View style={styles.routeTexts}>
+                                        <Text style={styles.routeAddressText} numberOfLines={2}>{item.pickup_address}</Text>
+                                        <View style={styles.routeDivider} />
+                                        <Text style={styles.routeAddressText} numberOfLines={2}>{item.destination_address || 'Recycling Center'}</Text>
+                                    </View>
+                                </View>
+
+                                {item.status === 'PENDING' && (
+                                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => handleAcceptJob(item.id)}>
+                                        <Text style={styles.bookRideBtnText}>ACCEPT JOB</Text>
+                                    </TouchableOpacity>
+                                )}
+                                {item.status === 'ACCEPTED' && (
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <TouchableOpacity style={[styles.bookRideBtn, { flex: 1, backgroundColor: '#333' }]} onPress={() => openNavigation(item)}>
+                                            <Text style={styles.bookRideBtnText}>NAVIGATE</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity style={[styles.bookRideBtn, { flex: 1, backgroundColor: '#111' }]} onPress={() => handleArriveJob(item.id)}>
+                                            <Text style={styles.bookRideBtnText}>ARRIVED</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                                {item.status === 'ARRIVED' && (
+                                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => handleCompleteJob(item.id)}>
+                                        <Text style={styles.bookRideBtnText}>COMPLETE JOB</Text>
+                                    </TouchableOpacity>
+                                )}
+                            </View>
+                        ))}
+                    </ScrollView>
                 </View>
             )}
 
@@ -1031,74 +951,8 @@ export default function PickupsScreen({ route }) {
                             )}
 
 
-                            {/* Price Estimate Section */}
-                            <View style={styles.estimateContainer}>
-                                <Text style={styles.label}>Order Estimate</Text>
-                                {requestLoading ? (
-                                    <View style={styles.estimateLoading}>
-                                        <ActivityIndicator size="small" color="#111" />
-                                        <Text style={styles.estimateLoadingText}>Calculating costs...</Text>
-                                    </View>
-                                ) : (requestForm.waste_value) ? (
-                                    <View style={styles.estimateBox}>
-                                        <View style={styles.estimateRow}>
-                                            <Text style={styles.estimateLabel}>Order Price (Waste)</Text>
-                                            <Text style={styles.estimateValue}>₵{requestForm.waste_value}</Text>
-                                        </View>
-
-                                        {userRole === 'SELLER' && (
-                                            <View style={styles.estimateRow}>
-                                                <Text style={[styles.estimateLabel, { color: '#C62828' }]}>Platform Fee</Text>
-                                                <Text style={[styles.estimateValue, { color: '#C62828' }]}>-₵2.00</Text>
-                                            </View>
-                                        )}
-
-                                        {userRole !== 'SELLER' && (
-                                            <>
-                                                <View style={styles.estimateRow}>
-                                                    <Text style={styles.estimateLabel}>Delivery Fee</Text>
-                                                    <Text style={styles.estimateValue}>₵{requestForm.delivery_fee}</Text>
-                                                </View>
-                                                {userRole === 'RECYCLER' && (
-                                                    <View style={styles.estimateRow}>
-                                                        <Text style={styles.estimateLabel}>Service Fee</Text>
-                                                        <Text style={styles.estimateValue}>₵5.00</Text>
-                                                    </View>
-                                                )}
-                                            </>
-                                        )}
-
-                                        <View style={styles.divider} />
-
-                                        <View style={styles.estimateTotalRow}>
-                                            <Text style={styles.estimateTotalLabel}>
-                                                {userRole === 'SELLER' ? 'Total Payout' : 'Total'}
-                                            </Text>
-                                            <Text style={[styles.estimateTotalValue, userRole === 'SELLER' && { color: '#111' }]}>
-                                                ₵{userRole === 'SELLER'
-                                                    ? (parseFloat(requestForm.waste_value) - 2.00).toFixed(2)
-                                                    : (parseFloat(requestForm.waste_value) + parseFloat(requestForm.delivery_fee || 0) + (userRole === 'RECYCLER' ? 5.00 : 0)).toFixed(2)}
-                                            </Text>
-                                        </View>
-                                        <Text style={styles.estimateNote}>
-                                            {userRole === 'SELLER'
-                                                ? "Revesta commission of ₵2.00 will be deducted from your payout."
-                                                : (userRole === 'RECYCLER'
-                                                    ? "Funds will be held in escrow and released to Seller & Collector upon arrival."
-                                                    : "Includes waste cost & rider delivery fee")}
-                                        </Text>
-                                    </View>
-                                ) : (
-                                    <View style={styles.estimateBox}>
-                                        <Text style={{ color: '#999', textAlign: 'center' }}>
-                                            Enter materials & location to see estimate
-                                        </Text>
-                                    </View>
-                                )}
-                            </View>
-
                             <TouchableOpacity
-                                style={[styles.submitRequestBtn, !requestForm.waste_value && { backgroundColor: '#ccc' }]}
+                                style={styles.submitRequestBtn}
                                 onPress={handleCreateRequest}
                                 disabled={requestLoading}
                             >

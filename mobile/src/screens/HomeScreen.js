@@ -87,9 +87,14 @@ export default function HomeScreen({ navigation }) {
         await refetch();
     };
 
-    // All roles show listings on home — collectors see all listings, disposers see all listings
+    // All roles show listings on home — collectors see all listings, disposers see their own listings
     // (Pickup jobs belong in the Pickups tab, not home)
-    const dataList = listings;
+    let dataList = listings;
+    if (userRole === 'SELLER' && user) {
+        dataList = dataList.filter(item => 
+            item.seller?.id === user.id || item.seller === user.id || item.seller_name === user.username
+        );
+    }
 
     const resolveImageUrl = (path) => {
         if (!path) return null;
@@ -147,9 +152,6 @@ export default function HomeScreen({ navigation }) {
                 
                 <View style={styles.gridBottomRow}>
                     <View>
-                        <Text style={styles.gridPrice}>
-                            {isFree ? 'FREE' : `₵${price || '0.00'}`}
-                        </Text>
                         <Text style={styles.gridSubtitle} numberOfLines={1}>{qty}</Text>
                     </View>
                 </View>
@@ -248,7 +250,7 @@ export default function HomeScreen({ navigation }) {
                     </SafeAreaView>
 
                     <View style={styles.sectionHeader}>
-                        <Text style={styles.sectionTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Available Waste Near You' : 'Best Deals Today'}</Text>
+                        <Text style={styles.sectionTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Available Waste Near You' : 'My Deals'}</Text>
                         <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
                     </View>
                 </>}
