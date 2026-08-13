@@ -469,7 +469,8 @@ export default function RegisterScreen() {
                             <Text style={styles.inputLabel}>Mobile Number</Text>
                             <View style={styles.inputWrapper}>
                                 <View style={styles.phoneLabel}>
-                                    <Text style={styles.countryCode}>🇬🇭 +233</Text>
+                                    <Text style={{ fontSize: 18 }}>🇬🇭</Text>
+                                    <Text style={styles.countryCode}>+233</Text>
                                 </View>
                                 <TextInput
                                     style={styles.input}
