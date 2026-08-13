@@ -92,7 +92,7 @@ export default function HomeScreen({ navigation }) {
     let dataList = listings;
     if (userRole === 'SELLER' && user) {
         dataList = dataList.filter(item => 
-            item.seller?.id === user.id || item.seller === user.id || item.seller_name === user.username
+            item?.seller?.id === user.id || item?.seller === user.id || item?.seller_name === user.username
         );
     }
 
@@ -166,7 +166,7 @@ export default function HomeScreen({ navigation }) {
             <FlatList
                 data={dataList}
                 renderItem={renderGridCard}
-                keyExtractor={item => item.id.toString()}
+                keyExtractor={item => item?.id?.toString() || Math.random().toString()}
                 numColumns={2}
                 columnWrapperStyle={styles.gridRow}
                 contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}

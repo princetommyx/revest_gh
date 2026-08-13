@@ -9,17 +9,24 @@ export default function TrackingWidget() {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
     
-    const { data: jobs = [] } = usePickups(null);
+    const { data: jobs } = usePickups(null);
     const pulseAnim = useRef(new Animated.Value(1)).current;
 
-    // Get current route name to hide widget on Pickups screen
+    // Safely get current route name
     const currentRoute = useNavigationState(state => {
-        if (!state) return null;
-        let route = state.routes[state.index];
-        while (route.state && route.state.index !== undefined) {
-            route = route.state.routes[route.state.index];
+        if (!state || !state.routes) return null;
+        try {
+            let route = state.routes[state.index];
+            if (!route) return null;
+            while (route.state && route.state.index !== undefined) {
+                route = route.state.routes[route.state.index];
+                if (!route) return null;
+            }
+            return route.name;
+        } catch (e) {
+            console.log('Error getting current route', e);
+            return null;
         }
-        return route.name;
     });
 
     useEffect(() => {
@@ -37,7 +44,7 @@ export default function TrackingWidget() {
                 })
             ])
         ).start();
-    }, []);
+    }, [pulseAnim]);
 
     // Only show for SELLER for now, as COLLECTOR needs location for usePickups
     if (!user || userRole !== 'SELLER') return null;
@@ -45,14 +52,15 @@ export default function TrackingWidget() {
     // Hide if already on Pickups screen
     if (currentRoute === 'Pickups') return null;
 
-    const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+    const safeJobs = Array.isArray(jobs) ? jobs : [];
+    const activeJobs = safeJobs.filter(j => j && (j.status === 'ACCEPTED' || j.status === 'ARRIVED'));
     
     if (activeJobs.length === 0) return null;
 
     const activeJob = activeJobs[0];
 
     const getStatusText = () => {
-        if (activeJob.status === 'ARRIVED') return 'Collector Arrived';
+        if (activeJob?.status === 'ARRIVED') return 'Collector Arrived';
         return 'Collector En Route';
     };
 

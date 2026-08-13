@@ -34,6 +34,12 @@ const { width, height } = Dimensions.get('window');
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
+const VEHICLES = [
+    { id: 'tricycle', label: 'Tricycle', time: '5 min', icon: Truck },
+    { id: 'pickup', label: 'Pickup', time: '12 min', icon: Truck }
+];
+
+
 // Helper: Calculate distance between two coordinates (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth radius in km
@@ -82,6 +88,7 @@ export default function PickupsScreen({ route }) {
     const [destinationLocation, setDestinationLocation] = useState(null);
     const [selectionMode, setSelectionMode] = useState('PICKUP'); // 'PICKUP' or 'DESTINATION'
     const [uiState, setUiState] = useState('IDLE');
+    const [selectedVehicle, setSelectedVehicle] = useState('tricycle');
 
     // Cancel request state
     const [showCancelModal, setShowCancelModal] = useState(false);
@@ -628,10 +635,15 @@ export default function PickupsScreen({ route }) {
         const markers = [];
         const routes = [];
 
+        if (!job.latitude || !job.longitude) return [];
+        const lat = parseFloat(job.latitude);
+        const lon = parseFloat(job.longitude);
+        if (isNaN(lat) || isNaN(lon)) return [];
+
         markers.push(
             <ActiveMarker
                 key={`pickup-${job.id}`}
-                coordinate={{ latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }}
+                coordinate={{ latitude: lat, longitude: lon }}
                 title={job.material_type}
                 description={`Pickup: ${job.status}`}
             >
@@ -646,31 +658,36 @@ export default function PickupsScreen({ route }) {
         );
 
         if (job.status === 'ACCEPTED' && job.current_lat && job.current_lon) {
-            markers.push(
-                <ActiveMarker
-                    key={`collector-${job.id}`}
-                    coordinate={{ latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) }}
-                    title="Collector"
-                    description={job.collector_name || "En route"}
-                >
+            const currentLat = parseFloat(job.current_lat);
+            const currentLon = parseFloat(job.current_lon);
+            
+            if (!isNaN(currentLat) && !isNaN(currentLon)) {
+                markers.push(
+                    <ActiveMarker
+                        key={`collector-${job.id}`}
+                        coordinate={{ latitude: currentLat, longitude: currentLon }}
+                        title="Collector"
+                        description={job.collector_name || "En route"}
+                    >
                     <View style={[styles.markerContainer, { borderColor: '#111' }]}>
                         <Truck size={24} color="#111" />
                     </View>
                 </ActiveMarker>
             );
 
-            routes.push(
-                <ActivePolyline
-                    key={`route-${job.id}`}
-                    coordinates={[
-                        { latitude: parseFloat(job.current_lat), longitude: parseFloat(job.current_lon) },
-                        { latitude: parseFloat(job.latitude), longitude: parseFloat(job.longitude) }
-                    ]}
-                    strokeColor="#111"
-                    strokeWidth={3}
-                    lineDashPattern={[5, 5]}
-                />
-            );
+                routes.push(
+                    <ActivePolyline
+                        key={`route-${job.id}`}
+                        coordinates={[
+                            { latitude: currentLat, longitude: currentLon },
+                            { latitude: lat, longitude: lon }
+                        ]}
+                        strokeColor="#111"
+                        strokeWidth={3}
+                        lineDashPattern={[5, 5]}
+                    />
+                );
+            }
         }
 
         return [...markers, ...routes];
@@ -811,22 +828,25 @@ export default function PickupsScreen({ route }) {
                     </View>
                     
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
-                        {VEHICLES.map(v => (
-                            <TouchableOpacity 
-                                key={v.id} 
-                                style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
-                                onPress={() => setSelectedVehicle(v.id)}
-                            >
-                                <v.icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
-                                <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
-                                <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
-                                {selectedVehicle === v.id && (
-                                    <View style={styles.vehicleCheckBadge}>
-                                        <CheckCircle2 size={12} color="#fff" />
-                                    </View>
-                                )}
-                            </TouchableOpacity>
-                        ))}
+                        {VEHICLES.map(v => {
+                            const Icon = v.icon;
+                            return (
+                                <TouchableOpacity 
+                                    key={v.id} 
+                                    style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
+                                    onPress={() => setSelectedVehicle(v.id)}
+                                >
+                                    <Icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
+                                    <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
+                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
+                                    {selectedVehicle === v.id && (
+                                        <View style={styles.vehicleCheckBadge}>
+                                            <CheckCircle2 size={12} color="#fff" />
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
                     </ScrollView>
 
                     <TouchableOpacity style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
