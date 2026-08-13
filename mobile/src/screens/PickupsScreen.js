@@ -1168,6 +1168,53 @@ export default function PickupsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+    // Ubride Styles
+    floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 50 : 40, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
+    menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
+    ubrideLogo: { color: '#111', fontSize: 24, fontWeight: '900', letterSpacing: -1 },
+    bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
+    
+    bottomSheetUbride: { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+    locationInputBox: { },
+    locationInputLabel: { fontSize: 12, fontWeight: 'bold', color: '#111', marginBottom: 10, letterSpacing: 1 },
+    locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    locationInputIconBox: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+    dotIndicatorPickup: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' },
+    dotIndicatorDest: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#60A5FA' },
+    locationInputText: { flex: 1, fontSize: 15, color: '#111', fontWeight: '500' },
+    continueBtnUbride: { marginTop: 20, backgroundColor: '#34D399', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+
+    bottomSheetUbrideVehicles: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
+    backVehicleBtn: { alignItems: 'center', marginBottom: 20, paddingVertical: 10 },
+    dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
+    vehicleCategories: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
+    vehicleCatText: { fontSize: 15, color: '#999', fontWeight: '500' },
+    vehicleCatTextActive: { color: '#111', fontWeight: 'bold' },
+    vehicleScroll: { gap: 15, paddingBottom: 20 },
+    vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
+    vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
+    vehicleName: { fontSize: 14, fontWeight: 'bold', color: '#666' },
+    vehicleNameActive: { color: '#111' },
+    vehicleTime: { fontSize: 11, color: '#999', marginTop: 4 },
+    vehicleTimeActive: { color: '#34D399' },
+    vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
+    bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
+    bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+
+    collectorBottomSheetUbride: { position: 'absolute', bottom: 20, left: 0, right: 0 },
+    collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+    collectorJobHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+    jobInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+    jobInfoText: { fontSize: 13, fontWeight: 'bold', color: '#111' },
+    jobTimeText: { fontSize: 13, color: '#34D399', fontWeight: '600' },
+    jobRouteBox: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 15, flexDirection: 'row', marginBottom: 20 },
+    routeDots: { alignItems: 'center', marginRight: 15, paddingVertical: 5 },
+    routeLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
+    routeTexts: { flex: 1, justifyContent: 'space-between' },
+    routeAddressText: { fontSize: 14, color: '#111', fontWeight: '500' },
+    routeDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 12 },
+
     // Permission Styles
     permissionContainer: { flex: 1, backgroundColor: '#FFF' },
     permissionContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },

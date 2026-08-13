@@ -191,9 +191,15 @@ function MainTabs() {
                 }}
             />
 
-
-
-            <Tab.Screen name="Wallet" component={WalletScreen} />
+            {(userRole === 'SELLER') && (
+                <Tab.Screen
+                    name="Chat"
+                    component={ChatScreen}
+                    options={{
+                        tabBarBadge: unreadCount > 0 ? unreadCount : null
+                    }}
+                />
+            )}            <Tab.Screen name="Wallet" component={WalletScreen} />
         </Tab.Navigator>
     );
 }
