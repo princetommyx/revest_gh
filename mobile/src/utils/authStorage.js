@@ -90,6 +90,21 @@ export const authStorage = {
     },
 
     /**
+     * Update user data in storage
+     */
+    async updateUserData(userData) {
+        try {
+            if (isSecureSupported) {
+                await SecureStore.setItemAsync(USER_DATA, JSON.stringify(userData));
+            } else {
+                await AsyncStorage.setItem(USER_DATA, JSON.stringify(userData));
+            }
+        } catch (error) {
+            console.error('Error updating user data:', error);
+        }
+    },
+
+    /**
      * Clear all auth data (Logout)
      */
     async clearSession() {

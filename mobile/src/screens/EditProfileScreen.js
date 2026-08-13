@@ -15,7 +15,7 @@ import apiClient, { BASE_URL } from '../api/client';
 const { width } = Dimensions.get('window');
 
 export default function EditProfileScreen({ navigation }) {
-    const { user, setUser } = useAuth();
+    const { user, updateUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [image, setImage] = useState(null);
     const [formData, setFormData] = useState({
@@ -61,15 +61,21 @@ export default function EditProfileScreen({ navigation }) {
         setLoading(true);
         try {
             const data = new FormData();
-            Object.keys(formData).forEach(key => data.append(key, formData[key]));
+            Object.keys(formData).forEach(key => {
+                if (formData[key] !== null && formData[key] !== undefined) {
+                    data.append(key, formData[key].toString());
+                }
+            });
             if (image) {
-                const filename = image.split('/').pop();
+                const uri = image;
+                let filename = uri.split('/').pop() || 'photo.jpg';
+                if (!filename.includes('.')) filename += '.jpg';
                 const match = /\.(\w+)$/.exec(filename);
-                const type = match ? `image/${match[1]}` : `image`;
-                data.append('profile_picture', { uri: image, name: filename, type });
+                const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : `image/jpeg`;
+                data.append('profile_picture', { uri, name: filename, type });
             }
             const updatedUser = await authApi.updateProfile(data);
-            setUser(updatedUser);
+            updateUser(updatedUser);
             Toast.show("Profile updated!", { backgroundColor: '#111' });
             navigation.goBack();
         } catch (error) {

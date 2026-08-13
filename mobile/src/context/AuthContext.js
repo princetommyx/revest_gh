@@ -118,9 +118,15 @@ export const AuthProvider = ({ children }) => {
         setUserRole(null);
     }, []);
 
+    const updateUser = useCallback(async (updatedUserData) => {
+        await authStorage.updateUserData(updatedUserData);
+        setUser(updatedUserData);
+    }, []);
+
     const value = useMemo(() => ({
         user,
         setUser,
+        updateUser,
         userRole,
         loading,
         signIn,
@@ -129,7 +135,7 @@ export const AuthProvider = ({ children }) => {
         googleSignIn,
         signOut,
         isAuthenticated: !!user
-    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut]);
+    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut, updateUser]);
 
     return (
         <AuthContext.Provider value={value}>
