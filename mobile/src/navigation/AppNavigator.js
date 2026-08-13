@@ -28,6 +28,7 @@ import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import TrackingWidget from '../components/TrackingWidget';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -261,6 +262,7 @@ export default function AppNavigator() {
                     </>
                 )}
             </Stack.Navigator>
+            {user && <TrackingWidget />}
         </NavigationContainer>
     );
 }

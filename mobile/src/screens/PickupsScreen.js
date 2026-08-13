@@ -81,6 +81,7 @@ export default function PickupsScreen({ route }) {
     const [destinationAddress, setDestinationAddress] = useState('');
     const [destinationLocation, setDestinationLocation] = useState(null);
     const [selectionMode, setSelectionMode] = useState('PICKUP'); // 'PICKUP' or 'DESTINATION'
+    const [uiState, setUiState] = useState('IDLE');
 
     // Cancel request state
     const [showCancelModal, setShowCancelModal] = useState(false);

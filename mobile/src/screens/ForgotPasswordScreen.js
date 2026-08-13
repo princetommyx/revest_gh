@@ -156,7 +156,7 @@ export default function ForgotPasswordScreen() {
                         <Text style={styles.inputLabel}>Phone Number</Text>
                         <View style={styles.inputWrapperFilled}>
                             <View style={styles.phoneLabel}>
-                                <Flag size={18} color="#111" />
+                                <Text style={{ fontSize: 18 }}>🇬🇭</Text>
                                 <Text style={styles.countryCode}>{CountryCode}</Text>
                             </View>
                             <TextInput

@@ -375,25 +375,18 @@ export default function RegisterScreen() {
                             <TouchableOpacity onPress={() => setStep(2)} style={styles.backButton}>
                                 <ArrowLeft size={24} color="#000" />
                             </TouchableOpacity>
-                            <Text style={styles.greetingText}>Verification</Text>
                         </View>
 
-                        <View style={styles.verificationContainer}>
-                            <View style={styles.verificationIconWrapper}>
-                                <View style={styles.verificationInnerCircle}>
-                                    <Smartphone size={32} color="#fff" strokeWidth={1.5} />
-                                    <View style={{ position: 'absolute', right: -2, bottom: -2, backgroundColor: '#fff', borderRadius: 10, padding: 2 }}>
-                                        <Lock size={12} color="#111" />
-                                    </View>
-                                </View>
-                            </View>
-
-                            <Text style={styles.verificationTitle}>Verification Code</Text>
-                            <Text style={styles.verificationDesc}>
-                                We have sent the code verification to your Mobile Number
+                        <View style={styles.stepContainer}>
+                            <Text style={styles.titleCentered}>Enter otp</Text>
+                            <Text style={styles.subtitleCentered}>
+                                A magic code to sign in was sent to{"\n"}
+                                <Text style={{ color: '#000', fontWeight: '500' }}>
+                                    {formData.phone_number.startsWith('+') ? formData.phone_number : `+233 ${formData.phone_number.replace(/^0+/, '')}`}
+                                </Text>
                             </Text>
 
-                            <View style={styles.otpContainer}>
+                            <View style={styles.otpContainerCircles}>
                                 <TextInput
                                     style={styles.hiddenOtpInput}
                                     value={verificationCode}
@@ -403,27 +396,24 @@ export default function RegisterScreen() {
                                     autoFocus
                                 />
                                 {[0, 1, 2, 3, 4, 5].map(i => (
-                                    <View key={i} style={[styles.otpBox, verificationCode.length === i && styles.otpBoxActive]}>
+                                    <View key={i} style={[styles.otpCircle, verificationCode.length === i && styles.otpCircleActive]}>
                                         <Text style={styles.otpText}>{verificationCode[i] || ''}</Text>
                                     </View>
                                 ))}
                             </View>
 
-                            <View style={styles.phoneDisplayRow}>
-                                <Text style={styles.phoneDisplayText}>
-                                    {formData.phone_number.startsWith('+') ? formData.phone_number : `+233 ${formData.phone_number.replace(/^0+/, '')}`}
-                                </Text>
-                                <TouchableOpacity style={styles.editPhoneBtn} onPress={() => setStep(2)}>
-                                    <Edit2 size={16} color="#111" />
-                                </TouchableOpacity>
-                            </View>
+                            <View style={styles.spacer} />
 
-                            <TouchableOpacity style={styles.sendAgainBtn} onPress={sendVerification} disabled={loading}>
-                                <Text style={styles.sendAgainText}>Send Again</Text>
+                            <TouchableOpacity
+                                style={[styles.mainBtn, verificationCode.length < 6 && styles.btnDisabled]}
+                                onPress={confirmCode}
+                                disabled={verifying || verificationCode.length < 6}
+                            >
+                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Continue</Text>}
                             </TouchableOpacity>
 
-                            <TouchableOpacity style={styles.verifySubmitBtn} onPress={confirmCode} disabled={verifying}>
-                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.verifySubmitText}>Submit</Text>}
+                            <TouchableOpacity onPress={sendVerification} style={styles.resendBtn} disabled={loading}>
+                                <Text style={styles.resendText}>Didn't get OTP? <Text style={styles.resendLink}>Resend OTP</Text></Text>
                             </TouchableOpacity>
                         </View>
                     </ScrollView>
@@ -1201,5 +1191,79 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: '#fff',
+    },
+    stepContainer: {
+        flex: 1,
+    },
+    titleCentered: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#111',
+        marginBottom: 10,
+        textAlign: 'center',
+    },
+    subtitleCentered: {
+        fontSize: 14,
+        color: '#666',
+        lineHeight: 22,
+        marginBottom: 30,
+        textAlign: 'center',
+        paddingHorizontal: 20,
+    },
+    otpContainerCircles: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 12,
+        marginBottom: 30,
+        position: 'relative',
+        width: '100%',
+    },
+    otpCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#F7F7F9',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    otpCircleActive: {
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#111',
+    },
+    spacer: {
+        flex: 1,
+        minHeight: 40,
+    },
+    mainBtn: {
+        width: '100%',
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: '#111',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 'auto',
+        marginBottom: 15,
+    },
+    btnDisabled: {
+        backgroundColor: '#E5E7EB',
+    },
+    btnText: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#fff',
+    },
+    resendBtn: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    resendText: {
+        fontSize: 14,
+        color: '#666',
+    },
+    resendLink: {
+        color: '#111',
+        fontWeight: 'bold',
+        textDecorationLine: 'underline',
     }
 });
