@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { Check, Info, AlertTriangle, X, Bell } from 'lucide-react-native';
+import { Check, Info, TriangleAlert, X, Bell } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import Toast from 'react-native-toast-message';
 
@@ -40,7 +40,7 @@ export const toastConfig = {
     warning: (props) => (
         <CustomToast 
             title={props.text1} text2={props.text2}
-            iconBg="rgba(245, 158, 11, 0.15)" IconComponent={AlertTriangle} accentColor="#F59E0B"
+            iconBg="rgba(245, 158, 11, 0.15)" IconComponent={TriangleAlert} accentColor="#F59E0B"
         />
     ),
     error: (props) => (

@@ -12,8 +12,9 @@ import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation, Menu, Bell,
-    CheckCircle2, AlertCircle, Info, Clock, Search, X, ArrowLeft, Calendar,
-    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert
+    CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, Calendar,
+    ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
+    User
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { usePickups } from '../hooks/usePickups';
@@ -40,7 +41,6 @@ const VEHICLES = [
 ];
 
 
-// Helper: Calculate distance between two coordinates (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -51,6 +51,193 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Distance in km
 };
+
+const darkMapStyle = [
+  {
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#212121"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.icon",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#212121"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.country",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#9e9e9e"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.land_parcel",
+    "stylers": [
+      {
+        "visibility": "off"
+      }
+    ]
+  },
+  {
+    "featureType": "administrative.locality",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#bdbdbd"
+      }
+    ]
+  },
+  {
+    "featureType": "poi",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#181818"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "poi.park",
+    "elementType": "labels.text.stroke",
+    "stylers": [
+      {
+        "color": "#1b1b1b"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry.fill",
+    "stylers": [
+      {
+        "color": "#2c2c2c"
+      }
+    ]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#8a8a8a"
+      }
+    ]
+  },
+  {
+    "featureType": "road.arterial",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#373737"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#3c3c3c"
+      }
+    ]
+  },
+  {
+    "featureType": "road.highway.controlled_access",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#4e4e4e"
+      }
+    ]
+  },
+  {
+    "featureType": "road.local",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#616161"
+      }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#757575"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "geometry",
+    "stylers": [
+      {
+        "color": "#000000"
+      }
+    ]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels.text.fill",
+    "stylers": [
+      {
+        "color": "#3d3d3d"
+      }
+    ]
+  }
+];
 
 export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
@@ -398,17 +585,21 @@ export default function PickupsScreen({ route }) {
         setRequestLoading(true);
         try {
             const requestData = {
-                ...requestForm,
+                material_type: requestForm.material_type || 'General Waste',
+                quantity_estimate: requestForm.quantity_estimate || 'Standard',
                 estimated_price: '0.00',
                 waste_price: '0.00',
                 delivery_fee: '0.00',
-                listing: requestForm.listing_id ? parseInt(requestForm.listing_id) : null,
                 latitude: location.latitude,
                 longitude: location.longitude,
                 destination_address: destinationAddress,
                 destination_latitude: destinationLocation?.latitude,
                 destination_longitude: destinationLocation?.longitude
             };
+
+            if (requestForm.listing_id) {
+                requestData.listing = parseInt(requestForm.listing_id);
+            }
 
             if (customAddress.trim()) {
                 requestData.pickup_address = customAddress.trim();
@@ -748,6 +939,8 @@ export default function PickupsScreen({ route }) {
                 }}
                 onRegionChangeComplete={setMapRegion}
                 showsUserLocation={true}
+                userInterfaceStyle="dark"
+                customMapStyle={darkMapStyle}
             >
                 {memoizedMarkers}
 
@@ -772,12 +965,12 @@ export default function PickupsScreen({ route }) {
 
             {!isSelectingLocation && (
                 <View style={styles.floatingTopBarUbride}>
-                    <TouchableOpacity style={styles.menuBtn}>
-                        <Menu size={20} color="#fff" />
+                    <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
+                        <User size={20} color="#fff" />
                     </TouchableOpacity>
-                    <Text style={styles.ubrideLogo}>Ubride</Text>
-                    <TouchableOpacity style={styles.bellBtnUbride}>
-                        <Bell size={20} color="#fff" />
+                    <Text style={styles.ubrideLogo}>Revesta</Text>
+                    <TouchableOpacity style={styles.bellBtnUbride} onPress={() => navigation.navigate('PickupHistory')}>
+                        <Clock size={20} color="#fff" />
                     </TouchableOpacity>
                 </View>
             )}
@@ -841,7 +1034,7 @@ export default function PickupsScreen({ route }) {
                                     <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
                                     {selectedVehicle === v.id && (
                                         <View style={styles.vehicleCheckBadge}>
-                                            <CheckCircle2 size={12} color="#fff" />
+                                            <CircleCheck size={12} color="#fff" />
                                         </View>
                                     )}
                                 </TouchableOpacity>
@@ -863,7 +1056,7 @@ export default function PickupsScreen({ route }) {
                                 <View style={styles.collectorJobHeader}>
                                     <View style={styles.jobInfoBadge}>
                                         <Package size={16} color="#111" />
-                                        <Text style={styles.jobInfoText}>{item.material_type} ({item.quantity_estimate})</Text>
+                                        <Text style={styles.jobInfoText} numberOfLines={1}>{item.material_type} ({item.quantity_estimate})</Text>
                                     </View>
                                     <Text style={styles.jobTimeText}>2 mins away</Text>
                                 </View>
@@ -875,9 +1068,14 @@ export default function PickupsScreen({ route }) {
                                         <View style={styles.dotIndicatorDest} />
                                     </View>
                                     <View style={styles.routeTexts}>
-                                        <Text style={styles.routeAddressText} numberOfLines={2}>{item.pickup_address}</Text>
-                                        <View style={styles.routeDivider} />
-                                        <Text style={styles.routeAddressText} numberOfLines={2}>{item.destination_address || 'Recycling Center'}</Text>
+                                        <View style={styles.addressContainer}>
+                                            <Text style={styles.routeLabel}>PICKUP</Text>
+                                            <Text style={styles.routeAddressText} numberOfLines={1}>{item.pickup_address || item.listing?.location || item.location || 'Unknown Location'}</Text>
+                                        </View>
+                                        <View style={styles.addressContainer}>
+                                            <Text style={styles.routeLabel}>DROP-OFF</Text>
+                                            <Text style={styles.routeAddressText} numberOfLines={1}>{item.destination_address || 'Recycling Center'}</Text>
+                                        </View>
                                     </View>
                                 </View>
 
@@ -1029,7 +1227,7 @@ export default function PickupsScreen({ route }) {
                                         selectedCancelReason === reason.id && styles.cancelReasonTextActive
                                     ]}>{reason.label}</Text>
                                     {selectedCancelReason === reason.id && (
-                                        <CheckCircle2 size={20} color="#E74C3C" />
+                                        <CircleCheck size={20} color="#E74C3C" />
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -1192,10 +1390,10 @@ const styles = StyleSheet.create({
     // Ubride Styles
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 50 : 40, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
-    ubrideLogo: { color: '#111', fontSize: 24, fontWeight: '900', letterSpacing: -1 },
+    ubrideLogo: { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: -1 },
     bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
     
-    bottomSheetUbride: { position: 'absolute', bottom: 20, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+    bottomSheetUbride: { position: 'absolute', bottom: 110, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
     locationInputBox: { },
     locationInputLabel: { fontSize: 12, fontWeight: 'bold', color: '#111', marginBottom: 10, letterSpacing: 1 },
     locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
@@ -1223,18 +1421,19 @@ const styles = StyleSheet.create({
     bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 
-    collectorBottomSheetUbride: { position: 'absolute', bottom: 20, left: 0, right: 0 },
+    collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
     collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
     collectorJobHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    jobInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-    jobInfoText: { fontSize: 13, fontWeight: 'bold', color: '#111' },
+    jobInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, flexShrink: 1, marginRight: 10 },
+    jobInfoText: { fontSize: 13, fontWeight: 'bold', color: '#111', flexShrink: 1 },
     jobTimeText: { fontSize: 13, color: '#34D399', fontWeight: '600' },
     jobRouteBox: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 15, flexDirection: 'row', marginBottom: 20 },
-    routeDots: { alignItems: 'center', marginRight: 15, paddingVertical: 5 },
+    routeDots: { alignItems: 'center', marginRight: 15, paddingVertical: 10 },
     routeLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
-    routeTexts: { flex: 1, justifyContent: 'space-between' },
-    routeAddressText: { fontSize: 14, color: '#111', fontWeight: '500' },
-    routeDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 12 },
+    routeTexts: { flex: 1, justifyContent: 'space-between', paddingVertical: 2 },
+    addressContainer: { justifyContent: 'center', marginBottom: 12 },
+    routeLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 },
+    routeAddressText: { fontSize: 15, color: '#111', fontWeight: '600' },
 
     // Permission Styles
     permissionContainer: { flex: 1, backgroundColor: '#FFF' },

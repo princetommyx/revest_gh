@@ -12,9 +12,9 @@ import { useAuth } from '../context/AuthContext';
 import { SkeletonWalletPage } from '../components/Skeleton';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-    User, Settings, Plus, ArrowUpRight, ArrowDownToLine, MoreHorizontal,
+    User, Settings, Plus, ArrowUpRight, ArrowDownToLine, Ellipsis,
     Search, PieChart, Gift, ArrowLeftRight,
-    CreditCard, ChevronRight, X, Smartphone, Banknote, CheckCircle2,
+    CreditCard, ChevronRight, X, Smartphone, Banknote, CircleCheck,
     ArrowDownLeft, History
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
@@ -175,24 +175,17 @@ export default function WalletScreen() {
                     
                     {/* Balance Section */}
                     <View style={styles.balanceSection}>
-                        <Text style={styles.balanceLabel}>Balance</Text>
+                        <Text style={styles.balanceLabel}>Outstanding Commission</Text>
                         <Text style={styles.balanceAmount}>₵{balance.toFixed(2)}</Text>
                     </View>
 
-                    {/* Quick Actions (2-button grid) */}
+                    {/* Quick Actions */}
                     <View style={styles.actionsRow}>
                         <TouchableOpacity style={[styles.actionItem, { backgroundColor: '#111' }]} onPress={() => { setModalType('DEPOSIT'); setModalVisible(true); }}>
                             <View style={styles.actionIconWrapper}>
-                                <Plus size={24} color="#FFF" />
+                                <CreditCard size={24} color="#FFF" />
                             </View>
-                            <Text style={[styles.actionText, { color: '#FFF' }]}>Top Up</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionItem} onPress={() => { setModalType('WITHDRAW'); setModalVisible(true); }}>
-                            <View style={styles.actionIconWrapper}>
-                                <ArrowUpRight size={24} color="#111" />
-                            </View>
-                            <Text style={styles.actionText}>Withdraw</Text>
+                            <Text style={[styles.actionText, { color: '#FFF' }]}>Pay Commission</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -225,7 +218,7 @@ export default function WalletScreen() {
                         <TouchableOpacity style={{ flex: 1 }} onPress={() => setModalVisible(false)} />
                         <View style={styles.modalContainer}>
                             <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'Top Up Wallet' : 'Withdraw Funds'}</Text>
+                                <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'Pay Commission' : 'Withdraw Funds'}</Text>
                                 <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                                     <X size={20} color={COLORS.textLight} />
                                 </TouchableOpacity>

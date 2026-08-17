@@ -8,7 +8,7 @@ import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
 import { useWallet, useVerifyPayment } from '../hooks/useWallet';
-import { X, ChevronLeft, Wallet, CheckCircle2, ShieldCheck, CreditCard, Landmark } from 'lucide-react-native';
+import { X, ChevronLeft, Wallet, CircleCheck, ShieldCheck, CreditCard, Landmark } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 const QUICK_AMOUNTS = [10, 20, 50, 100, 200, 500];

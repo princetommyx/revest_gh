@@ -1,6 +1,6 @@
 {
   "expo": {
-    "sdkVersion": "55.0.0",
+    "sdkVersion": "54.0.0",
     "name": "Revesta",
     "slug": "revesta-mobile",
     "scheme": "revesta",
@@ -41,8 +41,8 @@
           "cameraPermission": "The app accesses your camera to let you take photos of waste items."
         }
       ],
-      "expo-image",
-      "expo-font"
+      "expo-font",
+      "expo-build-properties"
     ],
     "extra": {
       "eas": {

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ActivityIndicator, ScrollView, Dimensions, StatusBar
+    Image, ActivityIndicator, ScrollView, Dimensions, StatusBar, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock, ShoppingCart, Info, Star, Heart, Weight, Minus, Plus, MessageSquare } from 'lucide-react-native';
+import { ArrowLeft, Clock, ShoppingCart, Info, Star, Heart, Weight, Minus, Plus, MessageSquare, Trash, Pencil } from 'lucide-react-native';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
@@ -42,6 +42,32 @@ export default function ListingDetailScreen({ route, navigation }) {
         let cleanPath = path.startsWith('/') ? path : `/${path}`;
         if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
         return `${BASE_URL}${cleanPath}`;
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Listing",
+            "Are you sure you want to delete this listing? This action cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setLoading(true);
+                            await marketApi.deleteListing(listing.id);
+                            Toast.show({ type: 'success', text1: 'Listing deleted successfully' });
+                            navigation.goBack();
+                        } catch (error) {
+                            console.error("Delete Listing Error:", error);
+                            Toast.show({ type: 'error', text1: 'Failed to delete listing' });
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     if (loading) {
@@ -102,17 +128,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                     <View style={styles.priceRow}>
                         <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`} <Text style={styles.priceUnit}>/ {listing.quantity || 'bag'}</Text></Text>
                         
-                        {!(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
-                            <View style={styles.qtySelector}>
-                                <TouchableOpacity style={styles.qtyBtn} onPress={() => setQty(Math.max(1, qty - 1))}>
-                                    <Minus size={16} color="#111" />
-                                </TouchableOpacity>
-                                <Text style={styles.qtyText}>{qty}</Text>
-                                <TouchableOpacity style={styles.qtyBtnActive} onPress={() => setQty(qty + 1)}>
-                                    <Plus size={16} color="#fff" />
-                                </TouchableOpacity>
-                            </View>
-                        )}
+                        {/* Quantity selector removed as requested */}
                     </View>
 
                     <View style={styles.metaRow}>
@@ -136,32 +152,75 @@ export default function ListingDetailScreen({ route, navigation }) {
             </ScrollView>
 
             <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+                {user?.id === listing?.seller?.id ? (
+                    <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                        <TouchableOpacity
+                            style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#eee' }}
+                            onPress={() => navigation.navigate('CreateListing', { editListing: listing })}
+                        >
+                            <Pencil size={20} color="#111" />
+                        </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={[styles.mainActionBtn, { flex: 1 }]}
-                    onPress={() => navigation.navigate('Main', {
-                        screen: 'Pickups',
-                        params: {
-                            pickupData: {
-                                material_type: listing.material_type,
-                                quantity_estimate: listing.quantity,
-                                pickup_address: listing.location,
-                                listing_id: listing.id,
-                                waste_price: listing.price,
-                                track_type: listing.track,
-                                seller_location: {
-                                    latitude: listing.latitude,
-                                    longitude: listing.longitude,
-                                    address: listing.location
+                        <TouchableOpacity
+                            style={[styles.mainActionBtn, { flex: 1 }]}
+                            onPress={() => navigation.navigate('Main', {
+                                screen: 'Pickups',
+                                params: {
+                                    pickupData: {
+                                        material_type: listing.material_type,
+                                        quantity_estimate: listing.quantity,
+                                        pickup_address: listing.location,
+                                        listing_id: listing.id,
+                                        waste_price: listing.price,
+                                        track_type: listing.track,
+                                        seller_location: {
+                                            latitude: listing.latitude,
+                                            longitude: listing.longitude,
+                                            address: listing.location
+                                        }
+                                    }
+                                },
+                                merge: true
+                            })}
+                        >
+                            <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
+                            <Text style={styles.mainActionText}>Request Pickup</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2' }}
+                            onPress={handleDelete}
+                        >
+                            <Trash size={20} color="#EF4444" />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <TouchableOpacity
+                        style={[styles.mainActionBtn, { flex: 1 }]}
+                        onPress={() => navigation.navigate('Main', {
+                            screen: 'Pickups',
+                            params: {
+                                pickupData: {
+                                    material_type: listing.material_type,
+                                    quantity_estimate: listing.quantity,
+                                    pickup_address: listing.location,
+                                    listing_id: listing.id,
+                                    waste_price: listing.price,
+                                    track_type: listing.track,
+                                    seller_location: {
+                                        latitude: listing.latitude,
+                                        longitude: listing.longitude,
+                                        address: listing.location
+                                    }
                                 }
-                            }
-                        },
-                        merge: true
-                    })}
-                >
-                    <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
-                    <Text style={styles.mainActionText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
-                </TouchableOpacity>
+                            },
+                            merge: true
+                        })}
+                    >
+                        <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
+                        <Text style={styles.mainActionText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );
@@ -194,10 +253,7 @@ const styles = StyleSheet.create({
     price: { fontSize: 20, fontWeight: 'bold', color: '#111' },
     priceUnit: { fontSize: 14, color: '#888', fontWeight: 'normal' },
     
-    qtySelector: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    qtyBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
-    qtyBtnActive: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
-    qtyText: { fontSize: 16, fontWeight: 'bold', color: '#111' },
+    // Removed qtySelector styles
     
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
     metaBox: { flexDirection: 'row', alignItems: 'center', gap: 6 },

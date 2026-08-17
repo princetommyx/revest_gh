@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatApi } from '../api/chat';
-import { Send, User, ChevronLeft, MoreHorizontal, Phone, MessageSquare } from 'lucide-react-native';
+import { Send, User, ChevronLeft, Ellipsis, Phone, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-root-toast';
 
@@ -99,7 +99,7 @@ export default function ChatDetailScreen({ route, navigation }) {
                             <Phone size={20} color="#111" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.headerIconBtn}>
-                            <MoreHorizontal size={20} color="#666" />
+                            <Ellipsis size={20} color="#666" />
                         </TouchableOpacity>
                     </View>
                 </View>

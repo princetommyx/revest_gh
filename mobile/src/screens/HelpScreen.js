@@ -4,7 +4,7 @@ import {
     ScrollView, Linking, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Mail, MessageSquare, ChevronDown, HelpCircle, Phone, Globe, ExternalLink } from 'lucide-react-native';
+import { ArrowLeft, Mail, MessageSquare, ChevronDown, Info, Phone, Globe, ExternalLink } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -46,7 +46,7 @@ export default function HelpScreen({ navigation }) {
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>Help Center</Text>
                         <TouchableOpacity style={styles.iconBtn}>
-                            <HelpCircle size={22} color="#fff" />
+                            <Info size={22} color="#fff" />
                         </TouchableOpacity>
                     </View>
                 </SafeAreaView>

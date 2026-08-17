@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
-import { ArrowLeft, Eye, EyeOff, CheckCircle, Flag } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, CircleCheck, Flag } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -312,7 +312,7 @@ export default function ForgotPasswordScreen() {
                         </TouchableOpacity>
                         
                         <View style={styles.successIconWrapper}>
-                            <CheckCircle size={50} color="#10B981" />
+                            <CircleCheck size={50} color="#10B981" />
                         </View>
                         
                         <Text style={styles.modalTitle}>Password Changed!</Text>
@@ -441,6 +441,7 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         color: '#111',
+        paddingVertical: 0,
     },
     eyeIcon: {
         padding: 5,

@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Mail, Facebook, Github, Chrome } from 'lucide-react-native';
+import { Mail, Facebook, Github, Globe } from 'lucide-react-native';
 import { adminApi } from '../api/admin';
 import { BASE_URL } from '../api/client';
 

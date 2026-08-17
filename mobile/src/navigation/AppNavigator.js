@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Home, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid } from 'lucide-react-native';
+import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 
 import LoginScreen from '../screens/LoginScreen';
@@ -60,7 +60,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     };
 
                     let IconComp;
-                    if (route.name === 'Home') IconComp = Home;
+                    if (route.name === 'House') IconComp = House;
                     else if (route.name === 'Pickups') IconComp = MapIcon;
                     else if (route.name === 'Marketplace') IconComp = Store;
                     else if (route.name === 'Chat') IconComp = MessageSquare;
@@ -174,34 +174,38 @@ function MainTabs() {
     const { unreadCount } = useNotifications();
 
     return (
-        <Tab.Navigator
-            tabBar={props => <CustomTabBar {...props} />}
-            screenOptions={{ headerShown: false }}
-        >
-            <Tab.Screen name="Home" component={HomeScreen} />
+        <View style={{ flex: 1 }}>
+            <Tab.Navigator
+                tabBar={props => <CustomTabBar {...props} />}
+                screenOptions={{ headerShown: false }}
+            >
+                <Tab.Screen name="House" component={HomeScreen} />
 
-            {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
-                <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
-            )}
+                {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
+                    <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
+                )}
 
-            <Tab.Screen
-                name="Pickups"
-                component={PickupsScreen}
-                options={{
-                    tabBarLabel: 'Pickups'
-                }}
-            />
-
-            {(userRole === 'SELLER') && (
                 <Tab.Screen
-                    name="Chat"
-                    component={ChatScreen}
+                    name="Pickups"
+                    component={PickupsScreen}
                     options={{
-                        tabBarBadge: unreadCount > 0 ? unreadCount : null
+                        tabBarLabel: 'Pickups'
                     }}
                 />
-            )}            <Tab.Screen name="Wallet" component={WalletScreen} />
-        </Tab.Navigator>
+
+                {(userRole === 'SELLER') && (
+                    <Tab.Screen
+                        name="Chat"
+                        component={ChatScreen}
+                        options={{
+                            tabBarBadge: unreadCount > 0 ? unreadCount : null
+                        }}
+                    />
+                )}
+                <Tab.Screen name="Wallet" component={WalletScreen} />
+            </Tab.Navigator>
+            <TrackingWidget />
+        </View>
     );
 }
 
@@ -262,7 +266,6 @@ export default function AppNavigator() {
                     </>
                 )}
             </Stack.Navigator>
-            {user && <TrackingWidget />}
         </NavigationContainer>
     );
 }

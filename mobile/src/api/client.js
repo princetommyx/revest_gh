@@ -31,7 +31,7 @@ const apiClient = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
-    timeout: 30000, // 30s timeout - fail fast with retry logic
+    timeout: 60000, // 60s timeout to allow Render free tier to spin up
 });
 
 // Request Interceptor: Attach Token

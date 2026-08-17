@@ -15,23 +15,31 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const { width } = Dimensions.get('window');
 
-export default function CreateListingScreen({ navigation }) {
+export default function CreateListingScreen({ route, navigation }) {
+    const editListing = route?.params?.editListing;
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
     const [selectedAsset, setSelectedAsset] = useState(null);
     const [formData, setFormData] = useState({
-        title: '',
-        material_type: '',
-        description: '',
-        quantity: '',
-        weight_kg: 0,
-        price: '',
-        track_type: 'A', // Default to Track A
-        is_free: false,
-        location: '',
-        latitude: null,
-        longitude: null
+        title: editListing?.title || '',
+        material_type: editListing?.material_type || '',
+        description: editListing?.description || '',
+        quantity: editListing?.quantity || '',
+        weight_kg: editListing?.quantity ? parseInt(editListing.quantity) : 0,
+        price: editListing?.price || '',
+        track_type: editListing?.track || 'A',
+        is_free: editListing?.is_free || false,
+        location: editListing?.location || '',
+        latitude: editListing?.latitude || null,
+        longitude: editListing?.longitude || null
     });
+    
+    // Set initial image if editing
+    React.useEffect(() => {
+        if (editListing?.image) {
+            setSelectedAsset({ uri: editListing.image, isExisting: true });
+        }
+    }, [editListing]);
 
     const handleChange = (name, value) => {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -137,7 +145,7 @@ export default function CreateListingScreen({ navigation }) {
         setLoading(true);
         try {
             const data = new FormData();
-            if (selectedAsset) {
+            if (selectedAsset && !selectedAsset.isExisting) {
                 const uri = selectedAsset.uri;
                 let name = selectedAsset.fileName || uri.split('/').pop();
                 if (!name.includes('.')) name += '.jpg';
@@ -145,27 +153,38 @@ export default function CreateListingScreen({ navigation }) {
                 data.append('image', { uri, name, type });
             }
 
+            let finalPrice = formData.price || '5.00';
+            let isFree = formData.track_type === 'A' ? 'true' : 'false';
+            if (isFree === 'true') finalPrice = '0.00';
+
             // Append formatted data
             Object.keys(formData).forEach(key => {
-                if (formData[key] !== null && formData[key] !== undefined) {
+                if (key === 'price') {
+                    data.append('price', finalPrice);
+                } else if (key === 'is_free') {
+                    data.append('is_free', isFree);
+                } else if (formData[key] !== null && formData[key] !== undefined) {
                     data.append(key, formData[key].toString());
                 }
             });
 
             // Specific mapping if backend expects 'track' instead of 'track_type'
-            // My backend change used 'track' for Listing but PickupRequest used 'track_type'.
-            // In market/models.py I used 'track'.
             data.append('track', formData.track_type);
 
             if (scanResult && scanResult.confidence > 0.8) data.append('is_verified_waste', 'true');
 
-            await marketApi.createListing(data);
+            if (editListing) {
+                await marketApi.updateListing(editListing.id, data);
+                Toast.show({ type: 'success', text1: 'Success', text2: 'Waste updated' });
+            } else {
+                await marketApi.createListing(data);
+                Toast.show({ type: 'success', text1: 'Success', text2: 'Waste posted' });
+            }
             queryClient.invalidateQueries(['listings']);
-            Toast.show({ type: 'success', text1: 'Success', text2: 'Waste posted' });
             navigation.goBack();
         } catch (error) {
             console.error("Submission Error:", error.response?.data || error.message);
-            Toast.show({ type: 'error', text1: 'Submission failed', text2: 'Failed to create listing' });
+            Toast.show({ type: 'error', text1: 'Submission failed', text2: editListing ? 'Failed to update listing' : 'Failed to create listing' });
         } finally {
             setLoading(false);
         }
@@ -184,10 +203,10 @@ export default function CreateListingScreen({ navigation }) {
                             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                                 <ArrowLeft size={24} color="#fff" />
                             </TouchableOpacity>
-                            <Text style={styles.headerTitle}>New Post</Text>
+                            <Text style={styles.headerTitle}>{editListing ? 'Update Post' : 'New Post'}</Text>
                             <View style={{ width: 40 }} />
                         </View>
-                        <Text style={styles.headerSubtitle}>Post your waste for sale or recycling</Text>
+                        <Text style={styles.headerSubtitle}>{editListing ? 'Update the details of your waste' : 'Post your waste for sale or recycling'}</Text>
                     </SafeAreaView>
                 </View>
 
@@ -329,7 +348,7 @@ export default function CreateListingScreen({ navigation }) {
                                 <ActivityIndicator color="#fff" />
                             ) : (
                                 <>
-                                    <Text style={styles.submitBtnText}>Post Waste Now</Text>
+                                    <Text style={styles.submitBtnText}>{editListing ? 'Update Waste' : 'Post Waste Now'}</Text>
                                     <View style={styles.btnIcon}>
                                         <Check size={20} color="#fff" />
                                     </View>

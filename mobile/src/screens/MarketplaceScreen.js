@@ -139,7 +139,7 @@ export default function MarketplaceScreen({ navigation, route }) {
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             <SafeAreaView edges={['top']} style={styles.header}>
-                <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('Home')}>
+                <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('House')}>
                     <ChevronLeft size={24} color="#111" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'All Waste' : 'My Waste'}</Text>

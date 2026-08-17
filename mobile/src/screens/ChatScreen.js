@@ -6,7 +6,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
-import { MessageSquare, User, Bot, Bell, AlertCircle, Check, Search, Mic, MoreHorizontal } from 'lucide-react-native';
+import { MessageSquare, User, Bot, Bell, CircleAlert, Check, Search, Mic, Ellipsis } from 'lucide-react-native';
 import Toast from 'react-native-root-toast';
 import { BASE_URL } from '../api/client';
 import { notificationsApi } from '../api/notifications';
@@ -175,7 +175,7 @@ export default function ChatScreen({ route }) {
     const renderNotification = ({ item }) => (
         <TouchableOpacity style={styles.notifCard} activeOpacity={0.7}>
             <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? '#FEF2F2' : '#F9FAFB' }]}>
-                {item.urgency === 'URGENT' ? <AlertCircle size={20} color="#EF4444" /> : <Bell size={20} color="#111" />}
+                {item.urgency === 'URGENT' ? <CircleAlert size={20} color="#EF4444" /> : <Bell size={20} color="#111" />}
             </View>
             <View style={styles.notifInfo}>
                 <View style={styles.notifTop}>
@@ -206,7 +206,7 @@ export default function ChatScreen({ route }) {
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Messages</Text>
                     <TouchableOpacity style={styles.headerRightBtn}>
-                        <MoreHorizontal size={24} color="#111" />
+                        <Ellipsis size={24} color="#111" />
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>

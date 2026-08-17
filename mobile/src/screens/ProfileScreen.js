@@ -91,7 +91,7 @@ export default function ProfileScreen({ navigation }) {
                                 <View style={styles.bronzeBadgeInner} />
                             </View>
                         }
-                        title="Membership Status - Revesta"
+                        title="Membership Status - Active"
                         onPress={() => {}}
                     />
                     <MenuItem
@@ -109,16 +109,7 @@ export default function ProfileScreen({ navigation }) {
                         title="KYC information"
                         onPress={() => navigation.navigate('KYCVerification')}
                     />
-                    <MenuItem
-                        icon={FileText}
-                        title="My documents"
-                        onPress={() => {}}
-                    />
-                    <MenuItem
-                        icon={Clock}
-                        title="Automated Top-ups"
-                        onPress={() => {}}
-                    />
+
                     <MenuItem
                         icon={Wallet}
                         title="View wallets"

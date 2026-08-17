@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash2, Recycle, Check, Upload, Smartphone, Lock, Edit2, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Truck, Trash, Recycle, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -348,7 +348,7 @@ export default function RegisterScreen() {
                             role="SELLER"
                             title="Become a Disposer"
                             desc="Dispose of waste responsibly"
-                            icon={Trash2}
+                            icon={Trash}
                             color="#333"
                             bgColor="#F3F4F6"
                         />
@@ -493,6 +493,8 @@ export default function RegisterScreen() {
                                     value={formData.password}
                                     onChangeText={(val) => handleChange('password', val)}
                                     secureTextEntry={!showPassword}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
                                 />
                                 <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
@@ -510,6 +512,8 @@ export default function RegisterScreen() {
                                     value={formData.confirm_password}
                                     onChangeText={(val) => handleChange('confirm_password', val)}
                                     secureTextEntry={!showPassword}
+                                    autoCorrect={false}
+                                    autoCapitalize="none"
                                 />
                                 <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
                                     {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
@@ -688,7 +692,7 @@ export default function RegisterScreen() {
                         </TouchableOpacity>
                         
                         <View style={styles.successIconWrapper}>
-                            <CheckCircle size={50} color="#10B981" />
+                            <CircleCheck size={50} color="#10B981" />
                         </View>
                         
                         <Text style={styles.modalTitle}>Successful!</Text>
@@ -698,7 +702,7 @@ export default function RegisterScreen() {
                             style={styles.modalDoneBtn}
                             onPress={() => setShowSuccessModal(false)}
                         >
-                            <Text style={styles.modalDoneBtnText}>Browse Home</Text>
+                            <Text style={styles.modalDoneBtnText}>Browse House</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -885,12 +889,14 @@ const styles = StyleSheet.create({
         flex: 1,
         fontSize: 15,
         color: '#333',
-        height: '100%',
+        paddingVertical: 0, 
     },
     eyeIcon: {
         padding: 5,
     },
     phoneLabel: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginRight: 10,
         borderRightWidth: 1,
         borderRightColor: '#E5E7EB',

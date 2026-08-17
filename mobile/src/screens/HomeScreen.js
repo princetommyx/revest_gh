@@ -13,6 +13,7 @@ import {
     LayoutGrid, Droplet, Cog, FileText, Wine, Cpu
 } from 'lucide-react-native';
 import apiClient, { BASE_URL } from '../api/client';
+import { adminApi } from '../api/admin';
 import * as Location from 'expo-location';
 import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
@@ -65,6 +66,21 @@ export default function HomeScreen({ navigation }) {
         })();
     }, []);
 
+    const [promos, setPromos] = useState([]);
+
+    const fetchPromos = useCallback(async () => {
+        try {
+            const data = await adminApi.getPromoCards(userRole);
+            setPromos(data);
+        } catch (e) {
+            console.error('Failed to load promos', e);
+        }
+    }, [userRole]);
+
+    useEffect(() => {
+        fetchPromos();
+    }, [fetchPromos]);
+
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
     const [locationFilter, setLocationFilter] = useState('');
     const { data: listings = [], isLoading: loading, refetch } = useListings({
@@ -84,6 +100,7 @@ export default function HomeScreen({ navigation }) {
     };
 
     const handleRefresh = async () => {
+        await fetchPromos();
         await refetch();
     };
 
@@ -102,6 +119,78 @@ export default function HomeScreen({ navigation }) {
         let cleanPath = path.startsWith('/') ? path : `/${path}`;
         if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
         return `${BASE_URL}${cleanPath}`;
+    };
+
+    const renderPromoBanners = () => {
+        if (!promos || promos.length === 0) {
+            return (
+                <View style={[styles.heroBanner, { backgroundColor: userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? '#10B981' : '#111' }]}>
+                    <View style={styles.heroContent}>
+                        <Text style={styles.heroTitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Manage Pickups' : 'Recycle & Earn!'}</Text>
+                        <Text style={styles.heroSubtitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Collect waste and earn rewards efficiently.' : 'Join the movement for a cleaner planet today.'}</Text>
+                        <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
+                            <Text style={styles.heroBtnText}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Browse All Waste' : 'Start Now'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                    {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
+                        <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                    ) : (
+                        <Image source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} style={styles.heroImage} contentFit="cover" />
+                    )}
+                </View>
+            );
+        }
+
+        return (
+            <View>
+                <ScrollView 
+                    horizontal 
+                    showsHorizontalScrollIndicator={false} 
+                    snapToInterval={width - 40 + 16} 
+                    snapToAlignment="start"
+                    decelerationRate="fast" 
+                >
+                    {promos.map((promo, idx) => (
+                        <View key={promo.id || idx} style={[styles.heroBanner, { backgroundColor: promo.badge_color || '#10B981', width: width - 40, marginRight: idx === promos.length - 1 ? 0 : 16 }]}>
+                            <View style={styles.heroContent}>
+                                {promo.badge_text ? (
+                                    <View style={{ alignSelf: 'flex-start', backgroundColor: '#fff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginBottom: 8 }}>
+                                        <Text style={[styles.badgeText, { color: promo.badge_color || '#10B981', fontSize: 10, fontWeight: 'bold' }]}>{promo.badge_text}</Text>
+                                    </View>
+                                ) : null}
+                                <Text style={styles.heroTitle}>{promo.title}</Text>
+                                <Text style={styles.heroSubtitle}>{promo.subtitle}</Text>
+                                <TouchableOpacity style={styles.heroBtn} onPress={() => {
+                                    if (promo.action_type === 'NAVIGATE' && promo.action_value) {
+                                        const validScreens = ['Home', 'Marketplace', 'Pickups', 'Wallet', 'Profile', 'CreateListing', 'TopUp', 'SupportChat'];
+                                        if (validScreens.includes(promo.action_value)) {
+                                            navigation.navigate(promo.action_value);
+                                        } else {
+                                            // Fallback for dummy backend data
+                                            navigation.navigate('Marketplace');
+                                        }
+                                    }
+                                }}>
+                                    <Text style={[styles.heroBtnText, { color: promo.badge_color || '#111' }]}>Start Now</Text>
+                                </TouchableOpacity>
+                            </View>
+                            {promo.image || promo.image_url ? (
+                                <Image source={{ uri: promo.image ? resolveImageUrl(promo.image) : promo.image_url }} style={styles.heroImage} contentFit="cover" />
+                            ) : (
+                                <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                            )}
+                        </View>
+                    ))}
+                </ScrollView>
+                {promos.length > 1 && (
+                    <View style={styles.dotsRow}>
+                        {promos.map((_, i) => (
+                            <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+                        ))}
+                    </View>
+                )}
+            </View>
+        );
     };
 
     const renderCategory = (item) => {
@@ -206,38 +295,10 @@ export default function HomeScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
-                            <View style={[styles.heroBanner, { backgroundColor: '#10B981' }]}>
-                                <View style={styles.heroContent}>
-                                    <Text style={styles.heroTitle}>Manage Pickups</Text>
-                                    <Text style={styles.heroSubtitle}>Collect waste and earn rewards efficiently.</Text>
-                                    <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
-                                        <Text style={styles.heroBtnText}>Browse All Waste</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
-                            </View>
-                        ) : (
+                        {renderPromoBanners()}
+
+                        {!(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
                             <>
-                                <View style={styles.heroBanner}>
-                                    <View style={styles.heroContent}>
-                                        <Text style={styles.heroTitle}>Recycle & Earn!</Text>
-                                        <Text style={styles.heroSubtitle}>Join the movement for a cleaner planet today.</Text>
-                                        <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
-                                            <Text style={styles.heroBtnText}>Start Now</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                    <Image 
-                                        source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
-                                        style={styles.heroImage} 
-                                        contentFit="cover" 
-                                    />
-                                </View>
-                                <View style={styles.dotsRow}>
-                                    <View style={[styles.dot, styles.dotActive]} />
-                                    <View style={styles.dot} />
-                                    <View style={styles.dot} />
-                                </View>
                                 <View style={styles.sectionHeader}>
                                     <Text style={styles.sectionTitle}>Category</Text>
                                     <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
@@ -279,7 +340,7 @@ const styles = StyleSheet.create({
     
     searchRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
     searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: '#F3F4F6' },
-    searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#111' },
+    searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#111', padding: 0, letterSpacing: 0, height: '100%' },
     filterBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6' },
     
     heroBanner: { backgroundColor: '#111', borderRadius: 24, padding: 20, flexDirection: 'row', height: 160, overflow: 'hidden', marginBottom: 12 },
