@@ -12,7 +12,7 @@ import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
     Truck, MapPin, Navigation, Menu, Bell,
-    CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, Calendar,
+    CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, ArrowRight, Plus, Calendar,
     ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
     User
 } from 'lucide-react-native';
@@ -252,6 +252,11 @@ export default function PickupsScreen({ route }) {
 
     const [location, setLocation] = useState(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    
+    // Navigation Tracking UI
+    const [navigatingJob, setNavigatingJob] = useState(null);
+    const [routeEta, setRouteEta] = useState({ duration: 0, distance: 0 });
+
     const [hasLocationPermission, setHasLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
@@ -705,14 +710,15 @@ export default function PickupsScreen({ route }) {
     };
 
     const openNavigation = (job) => {
-        setIsCollapsed(prev => !prev);
+        setIsCollapsed(true);
+        setNavigatingJob(job);
         const { latitude, longitude } = job;
         if (mapRef.current && location) {
             mapRef.current.fitToCoordinates([
                 { latitude: location.latitude, longitude: location.longitude },
                 { latitude: parseFloat(latitude), longitude: parseFloat(longitude) }
             ], {
-                edgePadding: { top: 100, right: 50, bottom: 400, left: 50 },
+                edgePadding: { top: 150, right: 50, bottom: 100, left: 50 },
                 animated: true,
             });
         }
@@ -840,40 +846,80 @@ export default function PickupsScreen({ route }) {
         const lon = parseFloat(job.longitude);
         if (isNaN(lat) || isNaN(lon)) return [];
 
-        markers.push(
-            <ActiveMarker
-                key={`pickup-${job.id}`}
-                coordinate={{ latitude: lat, longitude: lon }}
-                title={job.material_type}
-                description={`Pickup: ${job.status}`}
-            >
-                <View style={[
-                    styles.markerContainer,
-                    job.status === 'COMPLETED' && { borderColor: '#999' },
-                    job.status === 'ACCEPTED' && { borderColor: '#111' }
-                ]}>
-                    <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#111' : '#999')} />
-                </View>
-            </ActiveMarker>
-        );
+        const isNavigatingThis = navigatingJob?.id === job.id;
+
+        if (isNavigatingThis) {
+            markers.push(
+                <ActiveMarker
+                    key={`pickup-${job.id}`}
+                    coordinate={{ latitude: lat, longitude: lon }}
+                >
+                    <View style={styles.bubbleDotContainer}>
+                        <View style={styles.customMapBubble}>
+                            <Text style={styles.customMapBubbleText}>Dropoff</Text>
+                            <Text style={styles.customMapBubbleTime}>
+                                {job.status === 'ARRIVED' ? 'Arrived' : `${routeEta.duration ? Math.ceil(routeEta.duration) : '--'} min`}
+                            </Text>
+                        </View>
+                        <View style={styles.customMapBubbleTriangle} />
+                        <View style={styles.bubbleDot} />
+                    </View>
+                </ActiveMarker>
+            );
+        } else {
+            markers.push(
+                <ActiveMarker
+                    key={`pickup-${job.id}`}
+                    coordinate={{ latitude: lat, longitude: lon }}
+                    title={job.material_type}
+                    description={`Pickup: ${job.status}`}
+                >
+                    <View style={[
+                        styles.markerContainer,
+                        job.status === 'COMPLETED' && { borderColor: '#999' },
+                        job.status === 'ACCEPTED' && { borderColor: '#111' }
+                    ]}>
+                        <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#111' : '#999')} />
+                    </View>
+                </ActiveMarker>
+            );
+        }
 
         if (job.status === 'ACCEPTED' && job.current_lat && job.current_lon) {
             const currentLat = parseFloat(job.current_lat);
             const currentLon = parseFloat(job.current_lon);
             
             if (!isNaN(currentLat) && !isNaN(currentLon)) {
-                markers.push(
-                    <ActiveMarker
-                        key={`collector-${job.id}`}
-                        coordinate={{ latitude: currentLat, longitude: currentLon }}
-                        title="Collector"
-                        description={job.collector_name || "En route"}
-                    >
-                    <View style={[styles.markerContainer, { borderColor: '#111' }]}>
-                        <Truck size={24} color="#111" />
-                    </View>
-                </ActiveMarker>
-            );
+                if (isNavigatingThis) {
+                    markers.push(
+                        <ActiveMarker
+                            key={`collector-${job.id}`}
+                            coordinate={{ latitude: currentLat, longitude: currentLon }}
+                        >
+                            <View style={styles.bubbleDotContainer}>
+                                <View style={[styles.customMapBubble, { backgroundColor: '#111' }]}>
+                                    <Text style={styles.customMapBubbleText}>Collector</Text>
+                                    <Text style={styles.customMapBubbleTime}>Here</Text>
+                                </View>
+                                <View style={[styles.customMapBubbleTriangle, { borderBottomColor: '#111' }]} />
+                                <View style={styles.bubbleDot} />
+                            </View>
+                        </ActiveMarker>
+                    );
+                } else {
+                    markers.push(
+                        <ActiveMarker
+                            key={`collector-${job.id}`}
+                            coordinate={{ latitude: currentLat, longitude: currentLon }}
+                            title="Collector"
+                            description={job.collector_name || "En route"}
+                        >
+                            <View style={[styles.markerContainer, { borderColor: '#111' }]}>
+                                <Truck size={24} color="#111" />
+                            </View>
+                        </ActiveMarker>
+                    );
+                }
 
                 routes.push(
                     <MapViewDirections
@@ -884,6 +930,14 @@ export default function PickupsScreen({ route }) {
                         strokeWidth={4}
                         strokeColor="#3B82F6"
                         optimizeWaypoints={true}
+                        onReady={(result) => {
+                            if (navigatingJob?.id === job.id) {
+                                setRouteEta({
+                                    distance: result.distance,
+                                    duration: result.duration
+                                });
+                            }
+                        }}
                     />
                 );
             }
@@ -894,7 +948,7 @@ export default function PickupsScreen({ route }) {
 
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
-    }, [jobs]);
+    }, [jobs, navigatingJob, routeEta]);
 
     const sortedJobs = useMemo(() => {
         if (userRole !== 'COLLECTOR') return jobs;
@@ -996,7 +1050,7 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-            {!isSelectingLocation && (
+            {!isSelectingLocation && !navigatingJob && (
                 <View style={styles.floatingTopBarUbride}>
                     <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
                         <User size={20} color="#fff" />
@@ -1006,6 +1060,24 @@ export default function PickupsScreen({ route }) {
                         <Clock size={20} color="#fff" />
                     </TouchableOpacity>
                 </View>
+            )}
+
+            {navigatingJob && (
+                <SafeAreaView style={styles.navTopBarContainer}>
+                    <View style={styles.navTopBar}>
+                        <TouchableOpacity style={styles.navCloseBtn} onPress={() => { setNavigatingJob(null); setIsCollapsed(false); }}>
+                            <X size={24} color="#111" />
+                        </TouchableOpacity>
+                        <View style={styles.navAddresses}>
+                            <Text style={styles.navAddressText} numberOfLines={1}>{navigatingJob.pickup_address}</Text>
+                            <ArrowRight size={16} color="#666" style={{ marginHorizontal: 8 }} />
+                            <Text style={styles.navAddressText} numberOfLines={1}>{navigatingJob.destination_address || 'Destination'}</Text>
+                        </View>
+                        <TouchableOpacity style={styles.navAddBtn}>
+                            <Plus size={24} color="#111" />
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
             )}
 
             {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && !activeSellerJob && (
@@ -1732,6 +1804,104 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#E74C3C',
         fontWeight: '600',
+    },
+    imageUploadText: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500',
+    },
+    navTopBarContainer: {
+        position: 'absolute',
+        top: 0,
+        width: '100%',
+        paddingHorizontal: 20,
+        zIndex: 50,
+    },
+    navTopBar: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 30,
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 10,
+        elevation: 5,
+        marginTop: 10,
+    },
+    navCloseBtn: {
+        padding: 5,
+    },
+    navAddresses: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 10,
+    },
+    navAddressText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#111',
+        maxWidth: 100,
+    },
+    navAddBtn: {
+        padding: 5,
+    },
+    customMapBubble: {
+        backgroundColor: '#059669',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        flexDirection: 'column',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    customMapBubbleText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    customMapBubbleTime: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    customMapBubbleTriangle: {
+        width: 0,
+        height: 0,
+        backgroundColor: 'transparent',
+        borderStyle: 'solid',
+        borderLeftWidth: 6,
+        borderRightWidth: 6,
+        borderBottomWidth: 8,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderBottomColor: '#059669',
+        transform: [{ rotate: '180deg' }],
+        marginTop: -1, // Overlap slightly to fix gaps
+    },
+    bubbleDotContainer: {
+        alignItems: 'center',
+        marginTop: 2,
+    },
+    bubbleDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#111',
+        borderWidth: 2,
+        borderColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 2,
     },
 
     markerContainer: {
