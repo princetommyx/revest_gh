@@ -317,6 +317,7 @@ export default function PickupsScreen({ route }) {
     // Location Selection State
     const [isSelectingLocation, setIsSelectingLocation] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
+    const [locationSubscription, setLocationSubscription] = useState(null);
 
     // Load recent locations on mount
     useEffect(() => {
@@ -453,15 +454,100 @@ export default function PickupsScreen({ route }) {
     const startMapSelection = () => {
         setShowRequestModal(false);
         setIsSelectingLocation(true);
-        if (mapRef.current && location) {
-            mapRef.current.animateToRegion({
-                latitude: location.latitude,
-                longitude: location.longitude,
-                latitudeDelta: 0.005,
-                longitudeDelta: 0.005,
+        
+        // Stop tracking if active
+        if (locationSubscription) {
+            locationSubscription.remove();
+            setLocationSubscription(null);
+        }
+        
+        // Reset camera
+        if (location) {
+            mapRef.current?.animateToRegion({
+                latitude: location.coords?.latitude || location.latitude,
+                longitude: location.coords?.longitude || location.longitude,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
             }, 1000);
         }
     };
+
+    // Refetch polling for Disposer to see live collector updates
+    useEffect(() => {
+        let interval;
+        if (userRole !== 'COLLECTOR') {
+            // Disposer polls every 10 seconds to get updated collector locations
+            interval = setInterval(() => {
+                refetch();
+            }, 10000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [userRole, refetch]);
+
+    // Disposer camera following
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR' && navigatingJob && mapRef.current) {
+            // Find the active job from the latest fetched jobs to get new coordinates
+            const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
+            if (activeLiveJob?.current_lat && activeLiveJob?.current_lon) {
+                mapRef.current.animateCamera({
+                    center: { latitude: activeLiveJob.current_lat, longitude: activeLiveJob.current_lon },
+                    pitch: 45,
+                    zoom: 17
+                }, { duration: 1000 });
+            }
+        }
+    }, [jobs, navigatingJob, userRole]);
+
+    // Collector camera following & auto-tracking
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR') return;
+
+        let activeJobId = null;
+        if (navigatingJob) {
+            activeJobId = navigatingJob.id;
+        } else {
+            const acceptedJob = jobs.find(j => j.status === 'ACCEPTED');
+            if (acceptedJob) activeJobId = acceptedJob.id;
+        }
+
+        if (activeJobId && !locationSubscription) {
+            let sub = null;
+            const startTracking = async () => {
+                sub = await Location.watchPositionAsync(
+                    {
+                        accuracy: Location.Accuracy.High,
+                        distanceInterval: 10,
+                        timeInterval: 5000,
+                    },
+                    async (loc) => {
+                        setLocation(loc);
+                        if (mapRef.current && navigatingJob) {
+                            mapRef.current.animateCamera({
+                                center: { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
+                                pitch: 45,
+                                heading: loc.coords.heading || 0,
+                                zoom: 18
+                            }, { duration: 1000 });
+                        }
+                        
+                        try {
+                            await logisticsApi.updateLocation(activeJobId, loc.coords.latitude, loc.coords.longitude);
+                        } catch (e) {
+                            console.warn("Failed to update collector location", e);
+                        }
+                    }
+                );
+                setLocationSubscription(sub);
+            };
+            startTracking();
+        } else if (!activeJobId && locationSubscription) {
+            locationSubscription.remove();
+            setLocationSubscription(null);
+        }
+    }, [userRole, jobs, navigatingJob, locationSubscription]);
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
@@ -480,27 +566,6 @@ export default function PickupsScreen({ route }) {
             setShowRequestModal(true);
         }
     };
-
-    useEffect(() => {
-        if (userRole !== 'COLLECTOR' || !location) return;
-        const activeJob = jobs.find(j => j.status === 'ACCEPTED' && j.collector?.id === user?.id);
-        if (!activeJob) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const currentLocation = await Location.getCurrentPositionAsync({});
-                await logisticsApi.updateLocation(
-                    activeJob.id,
-                    currentLocation.coords.latitude,
-                    currentLocation.coords.longitude
-                );
-            } catch (error) {
-                console.log('Location update error:', error);
-            }
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [userRole, location, jobs, user]);
 
     const fetchEstimate = async () => {
         if (!location) {
@@ -847,8 +912,10 @@ export default function PickupsScreen({ route }) {
         if (isNaN(lat) || isNaN(lon)) return [];
 
         const isNavigatingThis = navigatingJob?.id === job.id;
+        const currentLat = job.current_lat || job.latitude;
+        const currentLon = job.current_lon || job.longitude;
 
-        if (isNavigatingThis) {
+        if (isNavigatingThis || job.status === 'PENDING') {
             markers.push(
                 <ActiveMarker
                     key={`pickup-${job.id}`}
@@ -885,38 +952,31 @@ export default function PickupsScreen({ route }) {
             );
         }
 
-        if (job.status === 'ACCEPTED' && job.current_lat && job.current_lon) {
-            const currentLat = parseFloat(job.current_lat);
-            const currentLon = parseFloat(job.current_lon);
+        if (job.status === 'ACCEPTED' || job.status === 'ARRIVED') {
+            const currentL = parseFloat(currentLat);
+            const currentLo = parseFloat(currentLon);
             
-            if (!isNaN(currentLat) && !isNaN(currentLon)) {
-                if (isNavigatingThis) {
+            if (!isNaN(currentL) && !isNaN(currentLo)) {
+                if (userRole === 'SELLER') {
                     markers.push(
                         <ActiveMarker
                             key={`collector-${job.id}`}
-                            coordinate={{ latitude: currentLat, longitude: currentLon }}
-                        >
-                            <View style={styles.bubbleDotContainer}>
-                                <View style={[styles.customMapBubble, { backgroundColor: '#111' }]}>
-                                    <Text style={styles.customMapBubbleText}>Collector</Text>
-                                    <Text style={styles.customMapBubbleTime}>Here</Text>
-                                </View>
-                                <View style={[styles.customMapBubbleTriangle, { borderBottomColor: '#111' }]} />
-                                <View style={styles.bubbleDot} />
-                            </View>
-                        </ActiveMarker>
-                    );
-                } else {
-                    markers.push(
-                        <ActiveMarker
-                            key={`collector-${job.id}`}
-                            coordinate={{ latitude: currentLat, longitude: currentLon }}
+                            coordinate={{ latitude: currentL, longitude: currentLo }}
                             title="Collector"
                             description={job.collector_name || "En route"}
                         >
-                            <View style={[styles.markerContainer, { borderColor: '#111' }]}>
-                                <Truck size={24} color="#111" />
-                            </View>
+                            {isNavigatingThis ? (
+                                <View style={styles.bubbleDotContainer}>
+                                    <View style={[styles.customMapBubble, { backgroundColor: '#111', padding: 8, borderRadius: 20 }]}>
+                                        <Truck size={20} color="#fff" />
+                                    </View>
+                                    <View style={[styles.customMapBubbleTriangle, { borderBottomColor: '#111' }]} />
+                                </View>
+                            ) : (
+                                <View style={[styles.markerContainer, { borderColor: '#111' }]}>
+                                    <Truck size={24} color="#111" />
+                                </View>
+                            )}
                         </ActiveMarker>
                     );
                 }
@@ -924,14 +984,24 @@ export default function PickupsScreen({ route }) {
                 routes.push(
                     <MapViewDirections
                         key={`route-${job.id}`}
-                        origin={{ latitude: currentLat, longitude: currentLon }}
+                        origin={{ latitude: currentL, longitude: currentLo }}
                         destination={{ latitude: lat, longitude: lon }}
                         apikey="AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
                         strokeWidth={4}
                         strokeColor="#3B82F6"
                         optimizeWaypoints={true}
+                        onError={(errorMessage) => {
+                            console.warn("MapViewDirections Error:", errorMessage);
+                            if (isNavigatingThis) {
+                                Toast.show({
+                                    type: 'error',
+                                    text1: 'Route Error',
+                                    text2: 'Could not load route. ' + errorMessage
+                                });
+                            }
+                        }}
                         onReady={(result) => {
-                            if (navigatingJob?.id === job.id) {
+                            if (isNavigatingThis) {
                                 setRouteEta({
                                     distance: result.distance,
                                     duration: result.duration
@@ -1018,14 +1088,15 @@ export default function PickupsScreen({ route }) {
             <ActiveMap
                 ref={mapRef}
                 style={styles.map}
-                initialRegion={{
-                    latitude: location?.latitude || 5.6037,
-                    longitude: location?.longitude || -0.1870,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                }}
-                onRegionChangeComplete={setMapRegion}
+                initialRegion={location ? {
+                    latitude: location.coords?.latitude || location.latitude,
+                    longitude: location.coords?.longitude || location.longitude,
+                    latitudeDelta: 0.0922,
+                    longitudeDelta: 0.0421,
+                } : null}
                 showsUserLocation={true}
+                showsMyLocationButton={false}
+                followsUserLocation={!!navigatingJob && userRole === 'COLLECTOR'}
                 userInterfaceStyle="dark"
                 customMapStyle={darkMapStyle}
             >
@@ -1063,21 +1134,41 @@ export default function PickupsScreen({ route }) {
             )}
 
             {navigatingJob && (
-                <SafeAreaView style={styles.navTopBarContainer}>
-                    <View style={styles.navTopBar}>
+                <View style={[styles.navTopBarContainer, { paddingTop: 40 }]} pointerEvents="box-none">
+                    <View style={styles.navTopBar} pointerEvents="auto">
                         <TouchableOpacity style={styles.navCloseBtn} onPress={() => { setNavigatingJob(null); setIsCollapsed(false); }}>
                             <X size={24} color="#111" />
                         </TouchableOpacity>
-                        <View style={styles.navAddresses}>
-                            <Text style={styles.navAddressText} numberOfLines={1}>{navigatingJob.pickup_address}</Text>
+                        <TouchableOpacity 
+                            style={styles.navAddresses}
+                            onPress={() => {
+                                const lat = navigatingJob.pickup_latitude || navigatingJob.latitude;
+                                const lon = navigatingJob.pickup_longitude || navigatingJob.longitude;
+                                if (lat && lon) {
+                                    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+                                    const latLng = `${lat},${lon}`;
+                                    const label = 'Pickup Location';
+                                    const url = Platform.select({
+                                        ios: `${scheme}${label}@${latLng}`,
+                                        android: `${scheme}${latLng}(${label})`
+                                    });
+                                    Linking.openURL(url);
+                                }
+                            }}
+                        >
+                            <Text style={styles.navAddressText} numberOfLines={1}>
+                                {userRole === 'COLLECTOR' ? 'My Location' : 'Collector'}
+                            </Text>
                             <ArrowRight size={16} color="#666" style={{ marginHorizontal: 8 }} />
-                            <Text style={styles.navAddressText} numberOfLines={1}>{navigatingJob.destination_address || 'Destination'}</Text>
-                        </View>
+                            <Text style={styles.navAddressText} numberOfLines={1}>
+                                {userRole === 'COLLECTOR' ? navigatingJob.pickup_address : 'My Location'}
+                            </Text>
+                        </TouchableOpacity>
                         <TouchableOpacity style={styles.navAddBtn}>
                             <Plus size={24} color="#111" />
                         </TouchableOpacity>
                     </View>
-                </SafeAreaView>
+                </View>
             )}
 
             {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && !activeSellerJob && (

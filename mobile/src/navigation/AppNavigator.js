@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager, Image } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager, Image, Animated, Easing } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid } from 'lucide-react-native';
+import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid, Truck } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 
@@ -210,9 +210,71 @@ function MainTabs() {
     );
 }
 
+const CustomSplashScreen = () => {
+    const scaleAnim = useRef(new Animated.Value(0.3)).current;
+    const opacityAnim = useRef(new Animated.Value(0)).current;
+    const truckAnim = useRef(new Animated.Value(-60)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 4,
+                tension: 40,
+                useNativeDriver: true,
+            }),
+            Animated.timing(opacityAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            })
+        ]).start();
+
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(truckAnim, {
+                    toValue: 60,
+                    duration: 1500,
+                    easing: Easing.linear,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(truckAnim, {
+                    toValue: -60,
+                    duration: 0,
+                    useNativeDriver: true,
+                })
+            ])
+        ).start();
+    }, [scaleAnim, opacityAnim, truckAnim]);
+
+    return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+            <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+                <Image source={require('../../assets/icon.png')} style={{ width: 150, height: 150, marginBottom: 30 }} resizeMode="contain" />
+            </Animated.View>
+            
+            <View style={{ width: 120, height: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
+                <Animated.View style={{ transform: [{ translateX: truckAnim }] }}>
+                    <Truck size={32} color="#059669" />
+                </Animated.View>
+            </View>
+            <Text style={{ fontSize: 16, color: '#059669', fontWeight: '600', marginTop: 10, letterSpacing: 1 }}>Loading Revesta...</Text>
+        </View>
+    );
+};
+
 export default function AppNavigator() {
     const { user, loading: authLoading } = useAuth();
     const [isFirstLaunch, setIsFirstLaunch] = useState(null);
+    const [minSplashFinished, setMinSplashFinished] = useState(false);
+
+    useEffect(() => {
+        // Enforce a minimum splash screen duration so the animation can be seen
+        const timer = setTimeout(() => {
+            setMinSplashFinished(true);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         async function checkFirstLaunch() {
@@ -226,13 +288,8 @@ export default function AppNavigator() {
         checkFirstLaunch();
     }, []);
 
-    if (authLoading || isFirstLaunch === null) {
-        return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-                <Image source={require('../../assets/icon.png')} style={{ width: 150, height: 150, marginBottom: 20 }} resizeMode="contain" />
-                <ActivityIndicator size="large" color="#059669" />
-            </View>
-        );
+    if (authLoading || isFirstLaunch === null || !minSplashFinished) {
+        return <CustomSplashScreen />;
     }
 
     return (

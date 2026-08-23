@@ -41,7 +41,7 @@ export const logisticsApi = {
     },
 
     updateLocation: async (id, lat, lon) => {
-        const response = await apiClient.post(`logistics/pickups/${id}/track/`, {
+        const response = await apiClient.patch(`logistics/pickups/${id}/update_location/`, {
             latitude: lat,
             longitude: lon
         });

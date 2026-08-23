@@ -380,7 +380,7 @@ export default function RegisterScreen() {
                         <View style={styles.stepContainer}>
                             <Text style={styles.titleCentered}>Enter otp</Text>
                             <Text style={styles.subtitleCentered}>
-                                A magic code to sign in was sent to{"\n"}
+                                A code to verify your account was sent to{"\n"}
                                 <Text style={{ color: '#000', fontWeight: '500' }}>
                                     {formData.phone_number.startsWith('+') ? formData.phone_number : `+233 ${formData.phone_number.replace(/^0+/, '')}`}
                                 </Text>

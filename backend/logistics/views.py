@@ -199,6 +199,29 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         self.notify_provider(pickup_request, 'driver_arrived')
         return Response({'status': 'driver arrived'})
 
+    @extend_schema(summary="Update collector location")
+    @action(detail=True, methods=['patch'])
+    def update_location(self, request, pk=None):
+        pickup_request = self.get_object()
+        
+        # Only the assigned collector can update their location
+        if pickup_request.collector != request.user:
+            return Response({'error': 'Not authorized to update location for this job'}, status=403)
+            
+        lat = request.data.get('latitude')
+        lon = request.data.get('longitude')
+        
+        if lat is None or lon is None:
+            return Response({'error': 'latitude and longitude are required'}, status=400)
+            
+        try:
+            pickup_request.current_lat = float(lat)
+            pickup_request.current_lon = float(lon)
+            pickup_request.save(update_fields=['current_lat', 'current_lon'])
+            return Response({'status': 'location updated'})
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid coordinates provided'}, status=400)
+
     @extend_schema(summary="Verify weight with scale photo")
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def verify_weight(self, request, pk=None):

@@ -142,7 +142,7 @@ export default function ForgotPasswordScreen() {
                         <View style={styles.inputWrapperFilled}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="Email I'D"
+                                placeholder="revestagh@gmail.com"
                                 value={identifier}
                                 onChangeText={setIdentifier}
                                 autoCapitalize="none"
@@ -190,7 +190,7 @@ export default function ForgotPasswordScreen() {
             <View style={styles.stepContainer}>
                 <Text style={styles.titleCentered}>Enter otp</Text>
                 <Text style={styles.subtitleCentered}>
-                    A magic code to sign in was sent to{"\n"}
+                    A code to reset your password was sent to{"\n"}
                     <Text style={{ color: '#000', fontWeight: '500' }}>
                         {resetMethod === 'phone' ? (identifier.startsWith('+') ? identifier : `+233 ${identifier.replace(/^0+/, '')}`) : identifier}
                     </Text>
