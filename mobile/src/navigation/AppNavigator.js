@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager } from 'react-native';
+import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -49,7 +49,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     const onPress = () => {
                         const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                         if (!isFocused && !event.defaultPrevented) {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             const customAnim = {
                                 duration: 400,
                                 create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
@@ -229,8 +228,9 @@ export default function AppNavigator() {
 
     if (authLoading || isFirstLaunch === null) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color="#111" />
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+                <Image source={require('../../assets/icon.png')} style={{ width: 150, height: 150, marginBottom: 20 }} resizeMode="contain" />
+                <ActivityIndicator size="large" color="#059669" />
             </View>
         );
     }

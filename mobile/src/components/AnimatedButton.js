@@ -9,7 +9,7 @@ export default function AnimatedButton({
     containerStyle,
     disabled, 
     activeOpacity = 0.9,
-    haptic = true 
+    haptic = false 
 }) {
     const scaleAnim = useRef(new Animated.Value(1)).current;
 
