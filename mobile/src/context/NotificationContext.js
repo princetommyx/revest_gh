@@ -1,31 +1,42 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
 import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { notificationsApi } from '../api/notifications';
 import { useAuth } from './AuthContext';
+
+let Notifications;
+const isAndroidExpoGo = Platform.OS === 'android' && Constants.appOwnership === 'expo';
+if (!isAndroidExpoGo) {
+    try {
+        Notifications = require('expo-notifications');
+    } catch (e) {
+        console.warn("Failed to load expo-notifications:", e);
+    }
+}
 
 const NotificationContext = createContext();
 
 // 1. Configure how notifications appear when app is in foreground
 try {
-    Notifications.setNotificationHandler({
-        handleNotification: async (notification) => {
-            // Check for OTP or URGENT data
-            const data = notification.request.content.data;
-            const isUrgent = data?.urgency === 'URGENT' || data?.type?.includes('otp');
+    if (!isAndroidExpoGo && Notifications) {
+        Notifications.setNotificationHandler({
+            handleNotification: async (notification) => {
+                // Check for OTP or URGENT data
+                const data = notification.request.content.data;
+                const isUrgent = data?.urgency === 'URGENT' || data?.type?.includes('otp');
 
-            return {
-                shouldShowAlert: true,
-                shouldPlaySound: true,
-                shouldSetBadge: true,
-                priority: isUrgent ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.DEFAULT,
-            };
-        },
-    });
+                return {
+                    shouldShowAlert: true,
+                    shouldPlaySound: true,
+                    shouldSetBadge: true,
+                    priority: isUrgent ? Notifications.AndroidNotificationPriority.MAX : Notifications.AndroidNotificationPriority.DEFAULT,
+                };
+            },
+        });
+    }
 } catch (error) {
-    console.warn("Notifications.setNotificationHandler failed (likely in Expo Go):", error.message);
+    console.warn("Notifications.setNotificationHandler failed:", error.message);
 }
 
 export const NotificationProvider = ({ children }) => {
@@ -46,7 +57,7 @@ export const NotificationProvider = ({ children }) => {
                 return;
             }
 
-            if (user) {
+            if (user && Notifications) {
                 try {
                     const token = await registerForPushNotificationsAsync();
                     setExpoPushToken(token);
@@ -83,20 +94,22 @@ export const NotificationProvider = ({ children }) => {
 
         // Listeners - wrap in try-catch as well
         try {
-            notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-                setNotification(notification);
-                // Increment badge count locally for immediate feedback
-                setUnreadCount(prev => prev + 1);
-            });
+            if (!isAndroidExpoGo && Notifications) {
+                notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+                    setNotification(notification);
+                    // Increment badge count locally for immediate feedback
+                    setUnreadCount(prev => prev + 1);
+                });
 
-            responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-                try {
-                    const data = response.notification.request.content.data;
-                    console.log("Notification Tapped with data:", data);
-                } catch (err) {
-                    console.log("Error handling notification response:", err.message);
-                }
-            });
+                responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+                    try {
+                        const data = response.notification.request.content.data;
+                        console.log("Notification Tapped with data:", data);
+                    } catch (err) {
+                        console.log("Error handling notification response:", err.message);
+                    }
+                });
+            }
         } catch (err) {
             console.log("Failed to setup notification listeners (non-critical):", err.message);
         }
@@ -142,6 +155,8 @@ export const NotificationProvider = ({ children }) => {
 export const useNotifications = () => useContext(NotificationContext);
 
 async function registerForPushNotificationsAsync() {
+    if (!Notifications) return null;
+
     let token;
 
     // Check for Expo Go on Android where remote notifications are removed in SDK 53+
@@ -173,46 +188,30 @@ async function registerForPushNotificationsAsync() {
             }
         }
 
-        if (!Device.isDevice) {
+        if (Device.isDevice) {
+            const { status: existingStatus } = await Notifications.getPermissionsAsync();
+            let finalStatus = existingStatus;
+            if (existingStatus !== 'granted') {
+                const { status } = await Notifications.requestPermissionsAsync();
+                finalStatus = status;
+            }
+            if (finalStatus !== 'granted') {
+                console.log('Failed to get push token for push notification!');
+                return null;
+            }
+            try {
+                const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+                if (!projectId) {
+                    console.log('Project ID not found');
+                }
+                token = (await Notifications.getExpoPushTokenAsync({
+                    projectId,
+                })).data;
+            } catch (e) {
+                token = `${e}`;
+            }
+        } else {
             console.log('Must use physical device for Push Notifications');
-            return null;
-        }
-
-        const { status: existingStatus } = await Notifications.getPermissionsAsync();
-        let finalStatus = existingStatus;
-
-        if (existingStatus !== 'granted') {
-            const { status } = await Notifications.requestPermissionsAsync();
-            finalStatus = status;
-        }
-
-        if (finalStatus !== 'granted') {
-            console.log('Push notification permission not granted');
-            return null;
-        }
-
-        try {
-            // Get Project ID with multiple fallbacks
-            let projectId = Constants?.expoConfig?.extra?.eas?.projectId;
-
-            if (!projectId) {
-                projectId = Constants?.easConfig?.projectId;
-            }
-
-            // Hardcoded fallback as last resort (from app.json)
-            if (!projectId) {
-                projectId = 'e88e5cd6-d71a-46c2-ae69-cde2531d35b6';
-                console.log('Using hardcoded projectId fallback');
-            }
-
-            token = (await Notifications.getExpoPushTokenAsync({
-                projectId: projectId
-            })).data;
-
-            console.log("Expo Push Token obtained successfully");
-        } catch (e) {
-            console.error("Error getting push token:", e.message);
-            return null;
         }
     } catch (outerError) {
         console.error("Unexpected error in push notification setup:", outerError.message);

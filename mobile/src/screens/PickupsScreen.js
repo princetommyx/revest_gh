@@ -23,13 +23,17 @@ import Constants from 'expo-constants';
 import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { marketApi } from '../api/market';
+import CollectorBottomSheet from '../components/CollectorBottomSheet';
+import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
+import RatingModal from '../components/RatingModal';
+import AnimatedButton from '../components/AnimatedButton';
 
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
 const ActiveMap = MapView;
 const ActiveMarker = Marker;
-const ActivePolyline = Polyline;
-
+import MapViewDirections from 'react-native-maps-directions';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
@@ -247,6 +251,7 @@ export default function PickupsScreen({ route }) {
     const pickupData = route?.params?.pickupData;
 
     const [location, setLocation] = useState(null);
+    const [isCollapsed, setIsCollapsed] = useState(false);
     const [hasLocationPermission, setHasLocationPermission] = useState(null);
     const [errorMsg, setErrorMsg] = useState(null);
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
@@ -282,6 +287,10 @@ export default function PickupsScreen({ route }) {
     const [cancelJobId, setCancelJobId] = useState(null);
     const [selectedCancelReason, setSelectedCancelReason] = useState(null);
     const [cancelLoading, setCancelLoading] = useState(false);
+
+    // Rating Modal
+    const [showRatingModal, setShowRatingModal] = useState(false);
+    const [jobToRate, setJobToRate] = useState(null);
 
     // Waste confirmation modal for collectors
     const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -696,17 +705,17 @@ export default function PickupsScreen({ route }) {
     };
 
     const openNavigation = (job) => {
-        const { latitude, longitude, pickup_address } = job;
-        const label = encodeURIComponent(pickup_address || 'Pickup Location');
-        const scheme = Platform.select({
-            ios: `maps:0,0?q=${label}@${latitude},${longitude}`,
-            android: `geo:0,0?q=${latitude},${longitude}(${label})`
-        });
-
-        Linking.openURL(scheme).catch(() => {
-            const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`;
-            Linking.openURL(webUrl);
-        });
+        setIsCollapsed(prev => !prev);
+        const { latitude, longitude } = job;
+        if (mapRef.current && location) {
+            mapRef.current.fitToCoordinates([
+                { latitude: location.latitude, longitude: location.longitude },
+                { latitude: parseFloat(latitude), longitude: parseFloat(longitude) }
+            ], {
+                edgePadding: { top: 100, right: 50, bottom: 400, left: 50 },
+                animated: true,
+            });
+        }
     };
 
     const pickVerificationImage = async () => {
@@ -867,15 +876,14 @@ export default function PickupsScreen({ route }) {
             );
 
                 routes.push(
-                    <ActivePolyline
+                    <MapViewDirections
                         key={`route-${job.id}`}
-                        coordinates={[
-                            { latitude: currentLat, longitude: currentLon },
-                            { latitude: lat, longitude: lon }
-                        ]}
-                        strokeColor="#111"
-                        strokeWidth={3}
-                        lineDashPattern={[5, 5]}
+                        origin={{ latitude: currentLat, longitude: currentLon }}
+                        destination={{ latitude: lat, longitude: lon }}
+                        apikey="AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
+                        strokeWidth={4}
+                        strokeColor="#3B82F6"
+                        optimizeWaypoints={true}
                     />
                 );
             }
@@ -894,6 +902,31 @@ export default function PickupsScreen({ route }) {
         const pendingJobs = jobs.filter(j => j.status === 'PENDING');
         return [...activeJobs, ...pendingJobs];
     }, [jobs, userRole]);
+
+    const activeSellerJob = useMemo(() => {
+        if (userRole !== 'SELLER') return null;
+        return jobs.find(j => ['ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
+    }, [jobs, userRole]);
+
+    useEffect(() => {
+        if (userRole === 'SELLER') {
+            const completedUnratedJob = jobs.find(j => j.status === 'COMPLETED' && !j.is_rated);
+            if (completedUnratedJob && !showRatingModal && jobToRate?.id !== completedUnratedJob.id) {
+                setJobToRate(completedUnratedJob);
+                setShowRatingModal(true);
+            }
+        }
+    }, [jobs, userRole]);
+
+    const handleRatingSubmit = async (rating, feedback) => {
+        try {
+            // await logisticsApi.submitRating(jobToRate.id, rating, feedback);
+            Toast.show({ type: 'success', text1: 'Thank you!', text2: 'Your feedback has been submitted.' });
+            // Ideally we should refetch or update local state to mark as rated
+        } catch (error) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit rating' });
+        }
+    };
 
     if (hasLocationPermission === false) {
         return (
@@ -975,7 +1008,7 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-            {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && (
+            {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && !activeSellerJob && (
                 <View style={styles.bottomSheetUbride}>
                     <View style={styles.locationInputBox}>
                         <Text style={styles.locationInputLabel}>PICKUP</Text>
@@ -1000,10 +1033,10 @@ export default function PickupsScreen({ route }) {
                             <X size={16} color="#999" onPress={() => setDestinationAddress('')} />
                         </TouchableOpacity>
                         
-                        {(customAddress || location) && destinationAddress && (
-                            <TouchableOpacity style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
-                                <Text style={styles.continueBtnTextUbride}>Continue</Text>
-                            </TouchableOpacity>
+                        {requestForm.pickup && requestForm.destination && (
+                            <AnimatedButton style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
+                                <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                            </AnimatedButton>
                         )}
                     </View>
                 </View>
@@ -1042,63 +1075,39 @@ export default function PickupsScreen({ route }) {
                         })}
                     </ScrollView>
 
-                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
-                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>REQUEST PICKUP</Text>}
-                    </TouchableOpacity>
+                    <AnimatedButton style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
+                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideText}>Request Pickup</Text>}
+                    </AnimatedButton>
                 </View>
             )}
 
             {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && sortedJobs.length > 0 && (
-                <View style={styles.collectorBottomSheetUbride}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width * 0.9} decelerationRate="fast">
+                <View style={[styles.collectorBottomSheetUbride, { bottom: 0 }]}>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width} decelerationRate="fast" pagingEnabled>
                         {sortedJobs.map(item => (
-                            <View key={item.id} style={styles.collectorJobCardUbride}>
-                                <View style={styles.collectorJobHeader}>
-                                    <View style={styles.jobInfoBadge}>
-                                        <Package size={16} color="#111" />
-                                        <Text style={styles.jobInfoText} numberOfLines={1}>{item.material_type} ({item.quantity_estimate})</Text>
-                                    </View>
-                                    <Text style={styles.jobTimeText}>2 mins away</Text>
-                                </View>
-
-                                <View style={styles.jobRouteBox}>
-                                    <View style={styles.routeDots}>
-                                        <View style={styles.dotIndicatorPickup} />
-                                        <View style={styles.routeLine} />
-                                        <View style={styles.dotIndicatorDest} />
-                                    </View>
-                                    <View style={styles.routeTexts}>
-                                        <View style={styles.addressContainer}>
-                                            <Text style={styles.routeLabel}>PICKUP</Text>
-                                            <Text style={styles.routeAddressText} numberOfLines={1}>{item.pickup_address || item.listing?.location || item.location || 'Unknown Location'}</Text>
-                                        </View>
-                                        <View style={styles.addressContainer}>
-                                            <Text style={styles.routeLabel}>DROP-OFF</Text>
-                                            <Text style={styles.routeAddressText} numberOfLines={1}>{item.destination_address || 'Recycling Center'}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-
-                                {item.status === 'PENDING' && (
-                                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => handleAcceptJob(item.id)}>
-                                        <Text style={styles.bookRideBtnText}>ACCEPT JOB</Text>
-                                    </TouchableOpacity>
-                                )}
-                                {item.status === 'ACCEPTED' && (
-                                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                                        <TouchableOpacity style={[styles.bookRideBtn, { flex: 1, backgroundColor: '#333' }]} onPress={() => openNavigation(item)}>
-                                            <Text style={styles.bookRideBtnText}>NAVIGATE</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity style={[styles.bookRideBtn, { flex: 1, backgroundColor: '#111' }]} onPress={() => handleArriveJob(item.id)}>
-                                            <Text style={styles.bookRideBtnText}>ARRIVED</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                                {item.status === 'ARRIVED' && (
-                                    <TouchableOpacity style={styles.bookRideBtn} onPress={() => handleCompleteJob(item.id)}>
-                                        <Text style={styles.bookRideBtnText}>COMPLETE JOB</Text>
-                                    </TouchableOpacity>
-                                )}
+                            <View key={item.id} style={{ width }}>
+                                <ActiveJobBottomSheet 
+                                    job={item} 
+                                    onChatPress={() => {
+                                        Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
+                                    }} 
+                                    onCallPress={() => {
+                                        if (item.provider?.phone) {
+                                            import('react-native').then(({ Linking }) => {
+                                                Linking.openURL(`tel:${item.provider.phone}`);
+                                            });
+                                        } else {
+                                            Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Disposer phone number not available.' });
+                                        }
+                                    }} 
+                                    onNavigate={openNavigation}
+                                    onArrive={handleArriveJob}
+                                    onComplete={handleCompleteJob}
+                                    onAccept={handleAcceptJob}
+                                    requestLoading={requestLoading}
+                                    isCollapsed={isCollapsed}
+                                    onToggleCollapse={() => setIsCollapsed(prev => !prev)}
+                                />
                             </View>
                         ))}
                     </ScrollView>
@@ -1170,19 +1179,13 @@ export default function PickupsScreen({ route }) {
                             )}
 
 
-                            <TouchableOpacity
-                                style={styles.submitRequestBtn}
+                            <AnimatedButton
+                                style={styles.modalConfirmBtn}
                                 onPress={handleCreateRequest}
                                 disabled={requestLoading}
                             >
-                                {requestLoading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.submitRequestBtnText}>
-                                        {userRole === 'RECYCLER' ? 'Confirm & Pay' : 'Confirm Request'}
-                                    </Text>
-                                )}
-                            </TouchableOpacity>
+                                {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalConfirmText}>Confirm Request</Text>}
+                            </AnimatedButton>
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
@@ -1367,21 +1370,45 @@ export default function PickupsScreen({ route }) {
                                 <Text style={styles.cancelModalKeepText}>Go Back</Text>
                             </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[
-                                    styles.cancelModalConfirmBtn,
-                                    { backgroundColor: '#111' },
-                                    (confirmingJob?.track_type === 'B' && !verificationResult?.is_verified) && { backgroundColor: '#ccc' }
-                                ]}
+                            <AnimatedButton
+                                style={[styles.modalConfirmBtn, { flex: 1, marginTop: 0, paddingHorizontal: 5 }, confirmingJob?.track_type === 'B' && !verificationResult?.is_verified && { opacity: 0.5 }]}
                                 onPress={confirmAndCompleteJob}
                                 disabled={confirmingJob?.track_type === 'B' && !verificationResult?.is_verified}
                             >
-                                <Text style={styles.cancelModalConfirmText}>Complete & Get Paid</Text>
-                            </TouchableOpacity>
+                                <Text style={[styles.cancelModalConfirmText, { fontSize: 13, textAlign: 'center' }]}>Complete & Get Paid</Text>
+                            </AnimatedButton>
                         </View>
                     </View>
                 </View>
             </Modal>
+
+            <RatingModal
+                visible={showRatingModal}
+                job={jobToRate}
+                onClose={() => setShowRatingModal(false)}
+                onSubmit={handleRatingSubmit}
+            />
+
+            {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
+                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50 }}>
+                    <CollectorBottomSheet
+                        job={activeSellerJob}
+                        collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
+                        onChatPress={() => {
+                            Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
+                        }}
+                        onCallPress={() => {
+                            if (activeSellerJob.collector?.phone) {
+                                // import { Linking } from 'react-native';
+                                // Linking.openURL(`tel:${activeSellerJob.collector.phone}`);
+                                Toast.show({ type: 'info', text1: 'Calling...', text2: `Dialing ${activeSellerJob.collector.phone}` });
+                            } else {
+                                Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Collector phone number not available.' });
+                            }
+                        }}
+                    />
+                </View>
+            )}
         </View>
     );
 }
@@ -1927,6 +1954,19 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 10,
+    },
+    modalConfirmBtn: {
+        backgroundColor: '#111',
+        paddingVertical: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 20,
+    },
+    modalConfirmText: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
     cancelModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
     cancelModalSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 20 },

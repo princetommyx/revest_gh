@@ -192,7 +192,7 @@ export default function WalletScreen() {
                     {/* Feed Content */}
                     <View style={styles.feedSection}>
                         <View style={styles.feedHeader}>
-                            <Text style={styles.sectionTitle}>Transactions</Text>
+                            <Text style={styles.sectionTitle}>{user?.role === 'SELLER' ? 'Pickup history' : 'Transactions'}</Text>
                             <TouchableOpacity style={styles.viewAllBtn}>
                                 <Text style={styles.viewAllText}>View all</Text>
                             </TouchableOpacity>

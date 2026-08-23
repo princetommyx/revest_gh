@@ -25,11 +25,15 @@
       },
       "package": "com.revesta.mobile",
       "googleServicesFile": "./google-services.json",
+      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
         }
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-secure-store",
@@ -40,18 +44,14 @@
           "photosPermission": "The app accesses your photos to let you upload waste items.",
           "cameraPermission": "The app accesses your camera to let you take photos of waste items."
         }
-      ],
-      "expo-font",
-      "expo-build-properties"
+      ]
     ],
+    "runtimeVersion": "1.0.0",
     "extra": {
       "eas": {
-        "projectId": "e88e5cd6-d71a-46c2-ae69-cde2531d35b6"
+        "projectId": "570609bc-1e83-4c39-981a-3d91bc6aab3f"
       }
     },
-    "runtimeVersion": "1.0.0",
-    "updates": {
-      "url": "https://u.expo.dev/e88e5cd6-d71a-46c2-ae69-cde2531d35b6"
-    }
+    "owner": "princetommy.x"
   }
 }

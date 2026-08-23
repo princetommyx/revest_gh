@@ -6,6 +6,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import * as Haptics from 'expo-haptics';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -48,6 +49,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     const onPress = () => {
                         const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                         if (!isFocused && !event.defaultPrevented) {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             const customAnim = {
                                 duration: 400,
                                 create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
@@ -60,7 +62,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                     };
 
                     let IconComp;
-                    if (route.name === 'House') IconComp = House;
+                    if (route.name === 'Home') IconComp = House;
                     else if (route.name === 'Pickups') IconComp = MapIcon;
                     else if (route.name === 'Marketplace') IconComp = Store;
                     else if (route.name === 'Chat') IconComp = MessageSquare;
@@ -179,7 +181,7 @@ function MainTabs() {
                 tabBar={props => <CustomTabBar {...props} />}
                 screenOptions={{ headerShown: false }}
             >
-                <Tab.Screen name="House" component={HomeScreen} />
+                <Tab.Screen name="Home" component={HomeScreen} />
 
                 {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
                     <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
@@ -236,7 +238,10 @@ export default function AppNavigator() {
     return (
         <NavigationContainer>
             <Stack.Navigator
-                screenOptions={{ headerShown: false }}
+                screenOptions={{ 
+                    headerShown: false,
+                    animation: 'slide_from_right'
+                }}
                 initialRouteName={user ? "Main" : (isFirstLaunch ? "Onboarding" : "Login")}
             >
                 {user == null ? (
@@ -248,21 +253,21 @@ export default function AppNavigator() {
                     </>
                 ) : (
                     <>
-                        <Stack.Screen name="Main" component={MainTabs} />
+                        <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
                         <Stack.Screen name="Marketplace" component={MarketplaceScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Profile" component={ProfileScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
-                        <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false }} />
-                        <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="CreateListing" component={CreateListingScreen} options={{ headerShown: false, presentation: 'modal' }} />
+                        <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Security" component={SecurityScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
-                        <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false }} />
-                        <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false }} />
-                        <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false }} />
+                        <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false, presentation: 'modal' }} />
+                        <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false, presentation: 'modal' }} />
+                        <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false, presentation: 'modal' }} />
                     </>
                 )}
             </Stack.Navigator>

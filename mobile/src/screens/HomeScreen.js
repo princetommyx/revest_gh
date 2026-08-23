@@ -18,6 +18,7 @@ import * as Location from 'expo-location';
 import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
+import AnimatedButton from '../components/AnimatedButton';
 
 const { width } = Dimensions.get('window');
 
@@ -128,9 +129,9 @@ export default function HomeScreen({ navigation }) {
                     <View style={styles.heroContent}>
                         <Text style={styles.heroTitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Manage Pickups' : 'Recycle & Earn!'}</Text>
                         <Text style={styles.heroSubtitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Collect waste and earn rewards efficiently.' : 'Join the movement for a cleaner planet today.'}</Text>
-                        <TouchableOpacity style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
+                        <AnimatedButton style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
                             <Text style={styles.heroBtnText}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Browse All Waste' : 'Start Now'}</Text>
-                        </TouchableOpacity>
+                        </AnimatedButton>
                     </View>
                     {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
                         <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
@@ -160,7 +161,7 @@ export default function HomeScreen({ navigation }) {
                                 ) : null}
                                 <Text style={styles.heroTitle}>{promo.title}</Text>
                                 <Text style={styles.heroSubtitle}>{promo.subtitle}</Text>
-                                <TouchableOpacity style={styles.heroBtn} onPress={() => {
+                                <AnimatedButton style={styles.heroBtn} onPress={() => {
                                     if (promo.action_type === 'NAVIGATE' && promo.action_value) {
                                         const validScreens = ['Home', 'Marketplace', 'Pickups', 'Wallet', 'Profile', 'CreateListing', 'TopUp', 'SupportChat'];
                                         if (validScreens.includes(promo.action_value)) {
@@ -172,7 +173,7 @@ export default function HomeScreen({ navigation }) {
                                     }
                                 }}>
                                     <Text style={[styles.heroBtnText, { color: promo.badge_color || '#111' }]}>Start Now</Text>
-                                </TouchableOpacity>
+                                </AnimatedButton>
                             </View>
                             {promo.image || promo.image_url ? (
                                 <Image source={{ uri: promo.image ? resolveImageUrl(promo.image) : promo.image_url }} style={styles.heroImage} contentFit="cover" />
@@ -223,10 +224,10 @@ export default function HomeScreen({ navigation }) {
         const navParams = { listingId: item.id };
 
         return (
-            <TouchableOpacity 
+            <AnimatedButton 
                 style={styles.gridCard}
                 onPress={() => navigation.navigate(navTarget, navParams)}
-                activeOpacity={0.9}
+                activeOpacity={1}
             >
                 <View style={styles.gridImageContainer}>
                     {imageUri ? (
@@ -244,7 +245,7 @@ export default function HomeScreen({ navigation }) {
                         <Text style={styles.gridSubtitle} numberOfLines={1}>{qty}</Text>
                     </View>
                 </View>
-            </TouchableOpacity>
+            </AnimatedButton>
         );
     };
 
@@ -316,9 +317,15 @@ export default function HomeScreen({ navigation }) {
                     </View>
                 </>}
                 ListEmptyComponent={
-                    <View style={{ alignItems: 'center', marginTop: 40 }}>
-                        <Text style={{ color: '#999' }}>No items found.</Text>
-                    </View>
+                    loading || pickupsLoading ? (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 15 }}>
+                            {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+                        </View>
+                    ) : (
+                        <View style={{ alignItems: 'center', marginTop: 40 }}>
+                            <Text style={{ color: '#999' }}>No items found.</Text>
+                        </View>
+                    )
                 }
             />
         </View>

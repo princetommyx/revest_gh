@@ -5,9 +5,10 @@ import {
     Platform, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft, Database, FileText, Wine, Monitor, Grid } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import AnimatedButton from '../components/AnimatedButton';
 import { marketApi } from '../api/market';
 import Toast from 'react-native-toast-message';
 
@@ -257,8 +258,16 @@ export default function CreateListingScreen({ route, navigation }) {
                             'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
                             'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
                         ].includes(formData.material_type)) && <Text style={styles.lockedLabel}>(AI Locked)</Text>}</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-                            {['Plastics', 'Metals', 'Paper', 'Glass', 'Electronics', 'Other'].map(type => {
+                        
+                        <View style={styles.categoryGrid}>
+                            {[
+                                { id: 'Plastics', icon: Package, color: '#3B82F6' },
+                                { id: 'Metals', icon: Database, color: '#64748B' },
+                                { id: 'Paper', icon: FileText, color: '#EAB308' },
+                                { id: 'Glass', icon: Wine, color: '#10B981' },
+                                { id: 'Electronics', icon: Monitor, color: '#8B5CF6' },
+                                { id: 'Other', icon: Grid, color: '#F97316' }
+                            ].map(cat => {
                                 const isFixedItem = [
                                     'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
                                     'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
@@ -266,23 +275,28 @@ export default function CreateListingScreen({ route, navigation }) {
 
                                 // Map backend types to UI category for highlighting
                                 const activeType = (formData.material_type.includes('WATER') || formData.material_type.includes('BOTTLE')) ? 'Plastics' : formData.material_type;
+                                const isActive = activeType === cat.id;
+                                const IconComp = cat.icon;
 
                                 return (
-                                    <TouchableOpacity
-                                        key={type}
+                                    <AnimatedButton
+                                        key={cat.id}
                                         disabled={isFixedItem}
                                         style={[
-                                            styles.chip,
-                                            activeType === type && styles.chipActive,
-                                            isFixedItem && type !== activeType && { opacity: 0.5 }
+                                            styles.categoryItem,
+                                            isActive && styles.categoryItemActive,
+                                            isFixedItem && !isActive && { opacity: 0.5 }
                                         ]}
-                                        onPress={() => handleChange('material_type', type)}
+                                        onPress={() => handleChange('material_type', cat.id)}
                                     >
-                                        <Text style={[styles.chipText, activeType === type && styles.chipTextActive]}>{type}</Text>
-                                    </TouchableOpacity>
+                                        <View style={[styles.categoryIconCircle, isActive && { backgroundColor: cat.color }]}>
+                                            <IconComp size={24} color={isActive ? '#fff' : cat.color} />
+                                        </View>
+                                        <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>{cat.id}</Text>
+                                    </AnimatedButton>
                                 );
                             })}
-                        </ScrollView>
+                        </View>
 
                         <View style={styles.row}>
                             <View style={styles.flex1}>
@@ -343,7 +357,7 @@ export default function CreateListingScreen({ route, navigation }) {
 
 
 
-                        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
+                        <AnimatedButton style={styles.submitBtn} onPress={handleSubmit} disabled={loading}>
                             {loading ? (
                                 <ActivityIndicator color="#fff" />
                             ) : (
@@ -354,7 +368,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                     </View>
                                 </>
                             )}
-                        </TouchableOpacity>
+                        </AnimatedButton>
                     </View>
                 </View>
                 <View style={{ height: 40 }} />
@@ -539,29 +553,50 @@ const styles = StyleSheet.create({
     flex1: {
         flex: 1,
     },
-    chipScroll: {
+    categoryGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
         marginBottom: 20,
+        justifyContent: 'space-between',
     },
-    chip: {
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 12,
+    categoryItem: {
+        width: '31%',
+        aspectRatio: 0.9,
         backgroundColor: '#F9FAFB',
+        borderRadius: 16,
         borderWidth: 1,
         borderColor: '#F3F4F6',
-        marginRight: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
     },
-    chipActive: {
-        backgroundColor: '#111',
+    categoryItemActive: {
+        backgroundColor: '#fff',
         borderColor: '#111',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 3,
     },
-    chipText: {
-        fontSize: 13,
+    categoryIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 8,
+    },
+    categoryText: {
+        fontSize: 12,
         color: '#666',
         fontWeight: '500',
+        textAlign: 'center',
     },
-    chipTextActive: {
-        color: '#fff',
+    categoryTextActive: {
+        color: '#111',
         fontWeight: 'bold',
     },
     offerCard: {
