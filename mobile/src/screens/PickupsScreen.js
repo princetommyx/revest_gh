@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Dimensions, Modal, TextInput, ScrollView,
+    Dimensions, Modal, TextInput, ScrollView, StatusBar,
     ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
+import { tomtomApi } from '../api/tomtom';
 import { useAuth } from '../context/AuthContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -279,6 +280,13 @@ export default function PickupsScreen({ route }) {
     const [useCurrentLocation, setUseCurrentLocation] = useState(true);
     const [customAddress, setCustomAddress] = useState('');
     const [recentLocations, setRecentLocations] = useState([]);
+    
+    // Search State
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+    const [showSearchModal, setShowSearchModal] = useState(false);
+
 
     // Destination State
     const [destinationAddress, setDestinationAddress] = useState('');
@@ -735,6 +743,68 @@ export default function PickupsScreen({ route }) {
             }
         } finally {
             setRequestLoading(false);
+        }
+    };
+
+    // Custom Location Debounced Search
+    useEffect(() => {
+        let isMounted = true;
+        
+        const fetchSearchResults = async () => {
+            if (searchQuery.trim().length < 2) {
+                setSearchResults([]);
+                return;
+            }
+            
+            setIsSearchingLocation(true);
+            try {
+                const results = await tomtomApi.searchPlaces(
+                    searchQuery, 
+                    location?.latitude, 
+                    location?.longitude
+                );
+                if (isMounted) setSearchResults(results);
+            } catch (err) {
+                console.log('Search Error', err);
+            } finally {
+                if (isMounted) setIsSearchingLocation(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            fetchSearchResults();
+        }, 500);
+
+        return () => {
+            isMounted = false;
+            clearTimeout(timeoutId);
+        };
+    }, [searchQuery, location]);
+
+    const handleSelectSearchedLocation = (place) => {
+        setCustomAddress(place.name);
+        setRequestForm(prev => ({
+            ...prev,
+            pickup_lat: place.lat,
+            pickup_lon: place.lon,
+        }));
+        
+        // Save to recents (simplified)
+        setRecentLocations(prev => {
+            const filtered = prev.filter(l => l.name !== place.name);
+            return [place, ...filtered].slice(0, 5);
+        });
+        
+        setSearchQuery('');
+        setShowSearchModal(false);
+        
+        // Optional: center map on new location
+        if (mapRef.current) {
+            mapRef.current.animateCamera({
+                center: { latitude: place.lat, longitude: place.lon },
+                pitch: 45,
+                zoom: 15
+            });
         }
     };
 
@@ -1298,7 +1368,7 @@ export default function PickupsScreen({ route }) {
 
             {/* Request Pickup Modal */}
             <Modal
-                visible={showRequestModal}
+                visible={showRequestModal && !showSearchModal}
                 transparent={true}
                 animationType="slide"
                 onRequestClose={() => setShowRequestModal(false)}
@@ -1344,12 +1414,14 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             ) : (
                                 <View style={{ position: 'relative' }}>
-                                    <TextInput
-                                        style={styles.addressInput}
-                                        placeholder="Enter landmark or street address"
-                                        value={customAddress}
-                                        onChangeText={setCustomAddress}
-                                    />
+                                    <TouchableOpacity 
+                                        style={[styles.addressInput, { justifyContent: 'center' }]}
+                                        onPress={() => setShowSearchModal(true)}
+                                    >
+                                        <Text style={{ color: customAddress ? '#111' : '#9CA3AF' }}>
+                                            {customAddress || "Enter landmark or street address"}
+                                        </Text>
+                                    </TouchableOpacity>
                                     <TouchableOpacity
                                         style={styles.mapSelectBtn}
                                         onPress={startMapSelection}
@@ -1371,6 +1443,125 @@ export default function PickupsScreen({ route }) {
                         </ScrollView>
                     </View>
                 </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Location Search Modal */}
+            <Modal
+                visible={showSearchModal}
+                transparent={false}
+                animationType="slide"
+                onRequestClose={() => setShowSearchModal(false)}
+            >
+                <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+                    <StatusBar barStyle="dark-content" />
+                    
+                    {/* Search Header */}
+                    <View style={styles.searchHeader}>
+                        <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
+                            <X size={24} color="#111" />
+                        </TouchableOpacity>
+                        <Text style={styles.searchTitle}>Choose Location</Text>
+                        <View style={{ width: 40 }} />
+                    </View>
+
+                    {/* Search Input */}
+                    <View style={styles.searchInputContainer}>
+                        <Search size={20} color="#6B7280" />
+                        <TextInput
+                            style={styles.searchTextInput}
+                            placeholder="Search for a location..."
+                            placeholderTextColor="#9CA3AF"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            autoFocus={true}
+                            returnKeyType="search"
+                        />
+                        {searchQuery.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchQuery('')}>
+                                <X size={20} color="#9CA3AF" />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* Search Results */}
+                    {isSearchingLocation ? (
+                        <View style={styles.searchCenterContent}>
+                            <ActivityIndicator size="small" color="#059669" />
+                            <Text style={styles.searchHintText}>Searching...</Text>
+                        </View>
+                    ) : searchQuery.length > 0 ? (
+                        searchResults.length > 0 ? (
+                            <ScrollView style={styles.searchResultsContainer} keyboardShouldPersistTaps="handled">
+                                {searchResults.map((item, index) => (
+                                    <TouchableOpacity 
+                                        key={index} 
+                                        style={styles.searchResultItem}
+                                        onPress={() => handleSelectSearchedLocation(item)}
+                                    >
+                                        <View style={styles.searchResultIcon}>
+                                            <MapPin size={20} color="#6B7280" />
+                                        </View>
+                                        <View style={styles.searchResultText}>
+                                            <Text style={styles.searchResultName}>{item.name}</Text>
+                                            <Text style={styles.searchResultAddress} numberOfLines={1}>
+                                                {[item.address, item.city, item.region].filter(Boolean).join(', ')}
+                                            </Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        ) : (
+                            <View style={styles.searchCenterContent}>
+                                <Text style={styles.searchHintText}>No locations found</Text>
+                            </View>
+                        )
+                    ) : (
+                        <ScrollView style={styles.searchResultsContainer} keyboardShouldPersistTaps="handled">
+                            {location && (
+                                <>
+                                    <Text style={styles.searchSectionTitle}>NEARBY</Text>
+                                    <TouchableOpacity 
+                                        style={styles.searchResultItem}
+                                        onPress={() => {
+                                            setUseCurrentLocation(true);
+                                            setShowSearchModal(false);
+                                        }}
+                                    >
+                                        <View style={[styles.searchResultIcon, { backgroundColor: '#ECFDF5' }]}>
+                                            <Navigation size={20} color="#059669" />
+                                        </View>
+                                        <View style={styles.searchResultText}>
+                                            <Text style={[styles.searchResultName, { color: '#059669' }]}>Use my current location</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                </>
+                            )}
+
+                            {recentLocations.length > 0 && (
+                                <>
+                                    <Text style={styles.searchSectionTitle}>RECENT</Text>
+                                    {recentLocations.map((item, index) => (
+                                        <TouchableOpacity 
+                                            key={`recent-${index}`} 
+                                            style={styles.searchResultItem}
+                                            onPress={() => handleSelectSearchedLocation(item)}
+                                        >
+                                            <View style={styles.searchResultIcon}>
+                                                <Clock size={20} color="#6B7280" />
+                                            </View>
+                                            <View style={styles.searchResultText}>
+                                                <Text style={styles.searchResultName}>{item.name}</Text>
+                                                <Text style={styles.searchResultAddress} numberOfLines={1}>
+                                                    {[item.address, item.city, item.region].filter(Boolean).join(', ')}
+                                                </Text>
+                                            </View>
+                                        </TouchableOpacity>
+                                    ))}
+                                </>
+                            )}
+                        </ScrollView>
+                    )}
+                </SafeAreaView>
             </Modal>
 
             {/* Cancel Request Modal */}
@@ -1602,6 +1793,101 @@ export default function PickupsScreen({ route }) {
 }
 
 const styles = StyleSheet.create({
+    searchHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'ios' ? 50 : 20,
+        paddingBottom: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    searchCloseBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    searchTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    searchInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F9FAFB',
+        marginHorizontal: 20,
+        marginTop: 16,
+        marginBottom: 8,
+        paddingHorizontal: 16,
+        height: 52,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    searchTextInput: {
+        flex: 1,
+        height: '100%',
+        marginLeft: 12,
+        fontSize: 16,
+        color: '#111827',
+    },
+    searchResultsContainer: {
+        flex: 1,
+        paddingHorizontal: 20,
+    },
+    searchSectionTitle: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        letterSpacing: 1.2,
+        marginTop: 24,
+        marginBottom: 12,
+    },
+    searchResultItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F3F4F6',
+    },
+    searchResultIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    searchResultText: {
+        flex: 1,
+    },
+    searchResultName: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    searchResultAddress: {
+        fontSize: 14,
+        color: '#6B7280',
+    },
+    searchCenterContent: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    searchHintText: {
+        marginTop: 12,
+        fontSize: 15,
+        color: '#6B7280',
+        fontWeight: '500',
+    },
     // Ubride Styles
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },

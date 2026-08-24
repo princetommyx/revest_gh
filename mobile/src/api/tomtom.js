@@ -49,5 +49,47 @@ export const tomtomApi = {
             console.error('TomTom Routing Error:', error.response?.data || error.message);
             throw error;
         }
+    },
+    
+    /**
+     * Search for places using Nominatim (OpenStreetMap)
+     * @param {string} query Search term
+     * @param {number} lat Optional current latitude to bias results
+     * @param {number} lon Optional current longitude to bias results
+     * @returns {Promise<Array>} Array of place objects
+     */
+    searchPlaces: async (query, lat, lon) => {
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=gh&limit=10`;
+            
+            const response = await axios.get(url, {
+                headers: {
+                    'User-Agent': 'RevestaApp/1.0'
+                }
+            });
+            
+            if (response.data && response.data.length > 0) {
+                return response.data.map(r => {
+                    const addressParts = r.display_name.split(', ');
+                    const name = addressParts[0];
+                    const address = addressParts.slice(1, 3).join(', ');
+                    
+                    return {
+                        id: r.place_id.toString(),
+                        name: name,
+                        address: address,
+                        city: '',
+                        region: addressParts[addressParts.length - 2] || '',
+                        lat: parseFloat(r.lat),
+                        lon: parseFloat(r.lon),
+                        distance: 0
+                    };
+                });
+            }
+            return [];
+        } catch (error) {
+            console.error('Location Search Error:', error.response?.data || error.message);
+            throw error;
+        }
     }
 };
