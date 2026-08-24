@@ -920,16 +920,17 @@ export default function PickupsScreen({ route }) {
                 <ActiveMarker
                     key={`pickup-${job.id}`}
                     coordinate={{ latitude: lat, longitude: lon }}
+                    anchor={{ x: 0.5, y: 1 }}
                 >
-                    <View style={styles.bubbleDotContainer}>
-                        <View style={styles.customMapBubble}>
-                            <Text style={styles.customMapBubbleText}>Dropoff</Text>
-                            <Text style={styles.customMapBubbleTime}>
-                                {job.status === 'ARRIVED' ? 'Arrived' : `${routeEta.duration ? Math.ceil(routeEta.duration) : '--'} min`}
+                    <View style={{ alignItems: 'center' }}>
+                        <View style={styles.destinationPin}>
+                            <View style={styles.destinationPinInner} />
+                        </View>
+                        <View style={styles.compactMarkerLabel}>
+                            <Text style={styles.compactMarkerText}>
+                                {job.status === 'ARRIVED' ? 'Arrived' : (routeEta.duration ? `${Math.ceil(routeEta.duration)} min` : 'Dropoff')}
                             </Text>
                         </View>
-                        <View style={styles.customMapBubbleTriangle} />
-                        <View style={styles.bubbleDot} />
                     </View>
                 </ActiveMarker>
             );
@@ -1124,11 +1125,11 @@ export default function PickupsScreen({ route }) {
             {!isSelectingLocation && !navigatingJob && (
                 <View style={styles.floatingTopBarUbride}>
                     <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
-                        <User size={20} color="#fff" />
+                        <User size={20} color="#111" />
                     </TouchableOpacity>
-                    <Text style={styles.ubrideLogo}>Revesta</Text>
+                    <View style={{ flex: 1 }} />
                     <TouchableOpacity style={styles.bellBtnUbride} onPress={() => navigation.navigate('PickupHistory')}>
-                        <Clock size={20} color="#fff" />
+                        <Clock size={20} color="#111" />
                     </TouchableOpacity>
                 </View>
             )}
@@ -1173,30 +1174,47 @@ export default function PickupsScreen({ route }) {
 
             {!isSelectingLocation && userRole === 'SELLER' && uiState === 'IDLE' && !activeSellerJob && (
                 <View style={styles.bottomSheetUbride}>
+                    <View style={styles.dragHandleContainer}>
+                        <View style={styles.dragHandle} />
+                    </View>
                     <View style={styles.locationInputBox}>
-                        <Text style={styles.locationInputLabel}>PICKUP</Text>
+                        <Text style={styles.locationInputLabel}>PICKUP LOCATION</Text>
                         <TouchableOpacity style={styles.locationInputRow} onPress={() => startMapSelection('PICKUP')}>
                             <View style={styles.locationInputIconBox}>
                                 <View style={styles.dotIndicatorPickup} />
                             </View>
-                            <Text style={styles.locationInputText} numberOfLines={1}>
-                                {customAddress || 'Current Location'}
-                            </Text>
-                            <ChevronRight size={20} color="#999" />
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.locationInputText} numberOfLines={1}>
+                                    {customAddress || 'Current Location'}
+                                </Text>
+                                <Text style={styles.locationInputSubtext}>Current pickup location</Text>
+                            </View>
+                            <ChevronRight size={20} color="#9CA3AF" />
                         </TouchableOpacity>
 
-                        <TouchableOpacity style={[styles.locationInputRow, { marginTop: 15, backgroundColor: '#111', padding: 15, borderRadius: 12 }]} onPress={() => startMapSelection('DESTINATION')}>
+                        <View style={styles.dividerLine} />
+
+                        <Text style={[styles.locationInputLabel, { marginTop: 4 }]}>DESTINATION</Text>
+                        <TouchableOpacity style={styles.destinationInputRow} onPress={() => startMapSelection('DESTINATION')}>
                             <View style={styles.locationInputIconBox}>
                                 <View style={styles.dotIndicatorDest} />
                             </View>
                             <View style={{ flex: 1 }}>
-                                <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold' }}>Enter your Destination</Text>
-                                <Text style={{ color: '#aaa', fontSize: 11, marginTop: 4 }}>{destinationAddress || 'Please tell us your drop location!'}</Text>
+                                <Text style={styles.destinationInputText} numberOfLines={1}>
+                                    {destinationAddress || 'Choose destination'}
+                                </Text>
+                                <Text style={styles.destinationInputSubtext}>
+                                    {destinationAddress ? 'Waste dropoff location' : 'Where should your waste be taken?'}
+                                </Text>
                             </View>
-                            <X size={16} color="#999" onPress={() => setDestinationAddress('')} />
+                            {destinationAddress ? (
+                                <X size={20} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
+                            ) : (
+                                <ChevronRight size={20} color="#9CA3AF" />
+                            )}
                         </TouchableOpacity>
                         
-                        {requestForm.pickup && requestForm.destination && (
+                        {requestForm.pickup_address && requestForm.destination_address && (
                             <AnimatedButton style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
                                 <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
                             </AnimatedButton>
@@ -1578,21 +1596,32 @@ export default function PickupsScreen({ route }) {
 
 const styles = StyleSheet.create({
     // Ubride Styles
-    floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 50 : 40, left: 20, right: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
-    menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
-    ubrideLogo: { color: '#FFF', fontSize: 24, fontWeight: '900', letterSpacing: -1 },
-    bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(17,17,17,0.8)', justifyContent: 'center', alignItems: 'center' },
+    floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
+    menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+    bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     
-    bottomSheetUbride: { position: 'absolute', bottom: 110, left: 20, right: 20, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+    bottomSheetUbride: { position: 'absolute', bottom: 90, left: 16, right: 16, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12 },
+    dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
+    dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    locationInputLabel: { fontSize: 12, fontWeight: 'bold', color: '#111', marginBottom: 10, letterSpacing: 1 },
-    locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+    locationInputLabel: { fontSize: 11, fontWeight: '700', color: '#6B7280', marginBottom: 8, letterSpacing: 0.5 },
+    locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
     locationInputIconBox: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    dotIndicatorPickup: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' },
-    dotIndicatorDest: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#60A5FA' },
-    locationInputText: { flex: 1, fontSize: 15, color: '#111', fontWeight: '500' },
-    continueBtnUbride: { marginTop: 20, backgroundColor: '#34D399', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    dotIndicatorPickup: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111' },
+    dotIndicatorDest: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669' },
+    locationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
+    locationInputSubtext: { fontSize: 13, color: '#6B7280' },
+    dividerLine: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12, marginLeft: 36 },
+    destinationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, backgroundColor: '#F9FAFB', paddingHorizontal: 16, borderRadius: 12 },
+    destinationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
+    destinationInputSubtext: { fontSize: 13, color: '#6B7280' },
+    continueBtnUbride: { marginTop: 24, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700' },
+
+    destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+    destinationPinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
+    compactMarkerLabel: { backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+    compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
     bottomSheetUbrideVehicles: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
     backVehicleBtn: { alignItems: 'center', marginBottom: 20, paddingVertical: 10 },

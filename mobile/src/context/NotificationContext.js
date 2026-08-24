@@ -47,6 +47,13 @@ export const NotificationProvider = ({ children }) => {
     const notificationListener = useRef();
     const responseListener = useRef();
 
+    // Sync unreadCount with the OS App Icon Badge
+    useEffect(() => {
+        if (!isAndroidExpoGo && Notifications) {
+            Notifications.setBadgeCountAsync(unreadCount).catch(e => console.log('Error setting badge:', e.message));
+        }
+    }, [unreadCount]);
+
     useEffect(() => {
         // Wrap all async operations in try-catch to prevent crashes
         const initializeNotifications = async () => {
@@ -192,7 +199,13 @@ async function registerForPushNotificationsAsync() {
             const { status: existingStatus } = await Notifications.getPermissionsAsync();
             let finalStatus = existingStatus;
             if (existingStatus !== 'granted') {
-                const { status } = await Notifications.requestPermissionsAsync();
+                const { status } = await Notifications.requestPermissionsAsync({
+                    ios: {
+                        allowAlert: true,
+                        allowBadge: true,
+                        allowSound: true,
+                    },
+                });
                 finalStatus = status;
             }
             if (finalStatus !== 'granted') {

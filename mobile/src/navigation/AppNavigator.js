@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid, Truck } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -40,118 +41,84 @@ const Tab = createBottomTabNavigator();
 const CustomTabBar = ({ state, descriptors, navigation }) => {
     return (
         <View style={navStyles.tabBarContainer}>
-            <BlurView intensity={70} tint="dark" style={navStyles.tabBar}>
-                {state.routes.map((route, index) => {
-                    const { options } = descriptors[route.key];
-                    const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
-                    const isFocused = state.index === index;
+            {state.routes.map((route, index) => {
+                const { options } = descriptors[route.key];
+                const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
+                const isFocused = state.index === index;
 
-                    const onPress = () => {
-                        const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                        if (!isFocused && !event.defaultPrevented) {
-                            const customAnim = {
-                                duration: 400,
-                                create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-                                update: { type: LayoutAnimation.Types.spring, springDamping: 0.75 },
-                                delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity }
-                            };
-                            LayoutAnimation.configureNext(customAnim);
-                            navigation.navigate(route.name);
-                        }
-                    };
+                const onPress = () => {
+                    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                    if (!isFocused && !event.defaultPrevented) {
+                        navigation.navigate(route.name);
+                    }
+                };
 
-                    let IconComp;
-                    if (route.name === 'Home') IconComp = House;
-                    else if (route.name === 'Pickups') IconComp = MapIcon;
-                    else if (route.name === 'Marketplace') IconComp = Store;
-                    else if (route.name === 'Chat') IconComp = MessageSquare;
-                    else if (route.name === 'Wallet') IconComp = Wallet;
+                let IconComp;
+                if (route.name === 'Home') IconComp = House;
+                else if (route.name === 'Pickups') IconComp = MapIcon;
+                else if (route.name === 'Marketplace') IconComp = Store;
+                else if (route.name === 'Chat') IconComp = MessageSquare;
+                else if (route.name === 'Wallet') IconComp = Wallet;
 
-                    return (
-                        <TouchableOpacity
-                            key={route.key}
-                            onPress={onPress}
-                            style={[navStyles.tabItem, isFocused && navStyles.tabItemActive]}
-                            activeOpacity={0.8}
-                        >
-                            {isFocused ? (
-                                <View style={navStyles.activeIconContainer}>
-                                    <IconComp size={18} color="#111" />
-                                </View>
-                            ) : (
-                                <IconComp size={22} color="#aaa" style={{ marginBottom: 4 }} />
-                            )}
-                            <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
-                                {label}
-                            </Text>
-                            {/* Notification Badge */}
+                const color = isFocused ? '#111' : '#9CA3AF';
+
+                return (
+                    <TouchableOpacity
+                        key={route.key}
+                        onPress={onPress}
+                        style={navStyles.tabItem}
+                        activeOpacity={0.8}
+                    >
+                        <View style={navStyles.iconWrapper}>
+                            <IconComp size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
                             {options.tabBarBadge && (
                                 <View style={navStyles.badge}>
                                     <Text style={navStyles.badgeText}>{options.tabBarBadge}</Text>
                                 </View>
                             )}
-                        </TouchableOpacity>
-                    );
-                })}
-            </BlurView>
+                        </View>
+                        <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
+                            {label}
+                        </Text>
+                    </TouchableOpacity>
+                );
+            })}
         </View>
     );
 };
 
 const navStyles = StyleSheet.create({
     tabBarContainer: {
-        position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 25 : 15,
-        left: 20,
-        right: 20,
-        zIndex: 100,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 10,
-    },
-    tabBar: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(17, 17, 17, 0.85)',
-        borderRadius: 40,
-        padding: 6,
-        justifyContent: 'space-between',
+        backgroundColor: '#FFFFFF',
+        paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#F3F4F6',
+        justifyContent: 'space-around',
         alignItems: 'center',
-        overflow: 'hidden',
     },
     tabItem: {
-        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
     },
-    tabItemActive: {
-        backgroundColor: 'rgba(255, 255, 255, 0.15)',
-        borderRadius: 34,
-        paddingVertical: 6,
-    },
-    activeIconContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#fff',
-        justifyContent: 'center',
-        alignItems: 'center',
+    iconWrapper: {
+        position: 'relative',
         marginBottom: 4,
     },
     tabLabel: {
         fontSize: 10,
-        color: '#aaa',
-        fontWeight: '600',
+        color: '#9CA3AF',
+        fontWeight: '500',
     },
     tabLabelActive: {
-        color: '#fff',
+        color: '#111',
+        fontWeight: '700',
     },
     badge: {
         position: 'absolute',
-        top: 6,
-        right: '25%',
+        top: -4,
+        right: -8,
         backgroundColor: '#EF4444',
         minWidth: 16,
         height: 16,
@@ -164,7 +131,7 @@ const navStyles = StyleSheet.create({
     },
     badgeText: {
         color: '#fff',
-        fontSize: 8,
+        fontSize: 9,
         fontWeight: 'bold',
     },
 });
@@ -210,71 +177,136 @@ function MainTabs() {
     );
 }
 
-const CustomSplashScreen = () => {
-    const scaleAnim = useRef(new Animated.Value(0.3)).current;
+const CustomSplashScreen = ({ isAppReady, onFinish }) => {
+    const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    const truckAnim = useRef(new Animated.Value(-60)).current;
+    const truckAnim = useRef(new Animated.Value(0)).current;
+    const dot1 = useRef(new Animated.Value(0.2)).current;
+    const dot2 = useRef(new Animated.Value(0.2)).current;
+    const dot3 = useRef(new Animated.Value(0.2)).current;
+    const exitOpacity = useRef(new Animated.Value(1)).current;
+
+    const [statusText, setStatusText] = useState('Preparing your experience...');
 
     useEffect(() => {
+        // Entrance animation
         Animated.parallel([
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                friction: 4,
-                tension: 40,
-                useNativeDriver: true,
-            }),
             Animated.timing(opacityAnim, {
                 toValue: 1,
-                duration: 600,
+                duration: 800,
+                easing: Easing.out(Easing.cubic),
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
                 useNativeDriver: true,
             })
         ]).start();
 
+        // Subtle logistics truck route animation
         Animated.loop(
-            Animated.sequence([
-                Animated.timing(truckAnim, {
-                    toValue: 60,
-                    duration: 1500,
-                    easing: Easing.linear,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(truckAnim, {
-                    toValue: -60,
-                    duration: 0,
-                    useNativeDriver: true,
-                })
-            ])
+            Animated.timing(truckAnim, {
+                toValue: 1,
+                duration: 2000,
+                easing: Easing.linear,
+                useNativeDriver: true,
+            })
         ).start();
-    }, [scaleAnim, opacityAnim, truckAnim]);
+
+        // 3-dot loading indicator
+        const animateDots = () => {
+            Animated.sequence([
+                Animated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot1, { toValue: 0.2, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot2, { toValue: 0.2, duration: 300, useNativeDriver: true }),
+                Animated.timing(dot3, { toValue: 0.2, duration: 300, useNativeDriver: true }),
+            ]).start(({ finished }) => {
+                if (finished && !isAppReady) {
+                    animateDots();
+                }
+            });
+        };
+        animateDots();
+    }, []);
+
+    // Dynamic messaging
+    useEffect(() => {
+        if (isAppReady) {
+            setStatusText('Almost there...');
+            return;
+        }
+        const t1 = setTimeout(() => setStatusText('Connecting you to Revesta...'), 1000);
+        const t2 = setTimeout(() => setStatusText('Getting things ready...'), 2500);
+        return () => { clearTimeout(t1); clearTimeout(t2); };
+    }, [isAppReady]);
+
+    // Smooth exit transition
+    useEffect(() => {
+        if (isAppReady) {
+            // Wait slightly so the animation doesn't cut off immediately if load is instant
+            setTimeout(() => {
+                Animated.timing(exitOpacity, {
+                    toValue: 0,
+                    duration: 400,
+                    easing: Easing.inOut(Easing.ease),
+                    useNativeDriver: true
+                }).start(() => {
+                    onFinish();
+                });
+            }, 800);
+        }
+    }, [isAppReady]);
+
+    const truckTranslateX = truckAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [-100, 100]
+    });
+    
+    // Truck opacity fades in and out at edges
+    const truckOpacity = truckAnim.interpolate({
+        inputRange: [0, 0.2, 0.8, 1],
+        outputRange: [0, 1, 1, 0]
+    });
 
     return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-            <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-                <Image source={require('../../assets/icon.png')} style={{ width: 150, height: 150, marginBottom: 30 }} resizeMode="contain" />
-            </Animated.View>
-            
-            <View style={{ width: 120, height: 40, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-                <Animated.View style={{ transform: [{ translateX: truckAnim }] }}>
-                    <Truck size={32} color="#059669" />
+        <Animated.View style={{ flex: 1, opacity: exitOpacity }}>
+            <LinearGradient colors={['#FAFAFA', '#F3F4F6', '#E5E7EB']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
+                    <Image source={require('../../assets/icon.png')} style={{ width: 140, height: 140, marginBottom: 20 }} resizeMode="contain" />
                 </Animated.View>
-            </View>
-            <Text style={{ fontSize: 16, color: '#059669', fontWeight: '600', marginTop: 10, letterSpacing: 1 }}>Loading Revesta...</Text>
-        </View>
+                
+                {/* Logistics Route Indicator */}
+                <View style={{ width: 140, height: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 40, position: 'relative' }}>
+                    {/* Subtle Route Line */}
+                    <View style={{ width: '100%', height: 2, backgroundColor: 'rgba(17, 17, 17, 0.05)', position: 'absolute', bottom: 4, borderRadius: 1 }} />
+                    {/* Moving Truck */}
+                    <Animated.View style={{ transform: [{ translateX: truckTranslateX }], opacity: truckOpacity }}>
+                        <Truck size={16} color="#059669" />
+                    </Animated.View>
+                </View>
+
+                {/* Dynamic Message & Dots */}
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500', marginRight: 8, letterSpacing: 0.5 }}>{statusText}</Text>
+                    <View style={{ flexDirection: 'row', gap: 3 }}>
+                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot1 }} />
+                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot2 }} />
+                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot3 }} />
+                    </View>
+                </View>
+            </LinearGradient>
+        </Animated.View>
     );
 };
 
 export default function AppNavigator() {
     const { user, loading: authLoading } = useAuth();
     const [isFirstLaunch, setIsFirstLaunch] = useState(null);
-    const [minSplashFinished, setMinSplashFinished] = useState(false);
-
-    useEffect(() => {
-        // Enforce a minimum splash screen duration so the animation can be seen
-        const timer = setTimeout(() => {
-            setMinSplashFinished(true);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, []);
+    const [showSplash, setShowSplash] = useState(true);
 
     useEffect(() => {
         async function checkFirstLaunch() {
@@ -288,8 +320,10 @@ export default function AppNavigator() {
         checkFirstLaunch();
     }, []);
 
-    if (authLoading || isFirstLaunch === null || !minSplashFinished) {
-        return <CustomSplashScreen />;
+    const isAppReady = !authLoading && isFirstLaunch !== null;
+
+    if (showSplash) {
+        return <CustomSplashScreen isAppReady={isAppReady} onFinish={() => setShowSplash(false)} />;
     }
 
     return (
