@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ScrollView, Image, ActivityIndicator,
-    Platform, Dimensions, StatusBar
+    Platform, Dimensions, StatusBar, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft, Database, FileText, Wine, Monitor, Grid } from 'lucide-react-native';
@@ -192,10 +192,13 @@ export default function CreateListingScreen({ route, navigation }) {
     };
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView 
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : null}
+        >
             <StatusBar barStyle="light-content" backgroundColor="#111" />
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false} keyboardShouldPersistTaps="handled">
                 {/* Organic Curved Header */}
                 <View style={styles.headerBackground}>
                     <View style={styles.curvedShape} />
@@ -292,7 +295,13 @@ export default function CreateListingScreen({ route, navigation }) {
                                         <View style={[styles.categoryIconCircle, isActive && { backgroundColor: cat.color }]}>
                                             <IconComp size={24} color={isActive ? '#fff' : cat.color} />
                                         </View>
-                                        <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>{cat.id}</Text>
+                                        <Text 
+                                            style={[styles.categoryText, isActive && styles.categoryTextActive]} 
+                                            numberOfLines={1} 
+                                            adjustsFontSizeToFit
+                                        >
+                                            {cat.id}
+                                        </Text>
                                     </AnimatedButton>
                                 );
                             })}
@@ -373,7 +382,7 @@ export default function CreateListingScreen({ route, navigation }) {
                 </View>
                 <View style={{ height: 40 }} />
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -556,20 +565,21 @@ const styles = StyleSheet.create({
     categoryGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 20,
         justifyContent: 'space-between',
+        marginBottom: 8,
     },
     categoryItem: {
         width: '31%',
-        aspectRatio: 0.9,
+        aspectRatio: 1,
         backgroundColor: '#F9FAFB',
         borderRadius: 16,
         borderWidth: 1,
         borderColor: '#F3F4F6',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 8,
+        paddingHorizontal: 4,
+        paddingVertical: 8,
+        marginBottom: 12,
     },
     categoryItemActive: {
         backgroundColor: '#fff',
