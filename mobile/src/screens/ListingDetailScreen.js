@@ -3,12 +3,13 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     Image, ActivityIndicator, ScrollView, Dimensions, StatusBar, Alert
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock, ShoppingCart, Info, Star, Heart, Weight, Minus, Plus, MessageSquare, Trash, Pencil } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, Clock, ShoppingCart, Info, Star, Heart, Weight, MapPin, Trash, Pencil } from 'lucide-react-native';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -18,7 +19,6 @@ export default function ListingDetailScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [qty, setQty] = useState(1);
 
     useEffect(() => {
         fetchListing();
@@ -46,7 +46,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
     const handleDelete = () => {
         Alert.alert(
-            "Delete Listing",
+            "Delete Waste Listing",
             "Are you sure you want to delete this listing? This action cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
@@ -73,7 +73,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     if (loading) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#111" />
+                <ActivityIndicator size="large" color="#10B981" />
             </View>
         );
     }
@@ -81,88 +81,143 @@ export default function ListingDetailScreen({ route, navigation }) {
     if (!listing) {
         return (
             <View style={styles.centerContainer}>
-                <Text style={styles.errorText}>Listing not found</Text>
+                <Text style={styles.errorText}>Waste listing not found</Text>
+                <TouchableOpacity style={styles.backButtonFallback} onPress={() => navigation.goBack()}>
+                    <Text style={styles.backButtonText}>Go Back</Text>
+                </TouchableOpacity>
             </View>
         );
     }
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+            <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
             
-            <SafeAreaView edges={['top']} style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.roundBtn}>
-                    <ArrowLeft size={20} color="#111" />
-                </TouchableOpacity>
-                <Text style={styles.headerTitle}>Waste Details</Text>
-                <TouchableOpacity style={styles.roundBtn} onPress={() => navigation.navigate('Main', { screen: 'Pickups' })}>
-                    <ShoppingCart size={18} color="#111" />
-                </TouchableOpacity>
-            </SafeAreaView>
-
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.heroCard}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} bounces={false}>
+                {/* Hero Section */}
+                <View style={styles.heroSection}>
                     {listing.image ? (
                         <Image source={{ uri: resolveImageUrl(listing.image) }} style={styles.heroImage} resizeMode="cover" />
                     ) : (
-                        <View style={[styles.heroImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
-                            <Info size={40} color="#ccc" />
+                        <View style={[styles.heroImage, styles.heroPlaceholder]}>
+                            <Info size={48} color="#ccc" />
                         </View>
                     )}
-                </View>
-                
-                <View style={styles.dotsRow}>
-                    <View style={[styles.dot, styles.dotActive]} />
-                    <View style={styles.dot} />
-                    <View style={styles.dot} />
+                    <LinearGradient
+                        colors={['rgba(0,0,0,0.5)', 'transparent', 'rgba(0,0,0,0.0)']}
+                        style={styles.heroGradient}
+                    />
+                    
+                    <View style={[styles.headerOverlay, { top: Math.max(insets.top, 20) }]}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.roundBlurBtn}>
+                            <ArrowLeft size={20} color="#111" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.roundBlurBtn} onPress={() => navigation.navigate('Main', { screen: 'Pickups' })}>
+                            <ShoppingCart size={18} color="#111" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
+                {/* Main Content */}
                 <View style={styles.detailsContainer}>
+                    <View style={styles.badgeRow}>
+                        <View style={styles.typeBadge}>
+                            <Text style={styles.typeBadgeText}>{listing.material_type || 'Waste'}</Text>
+                        </View>
+                        <View style={styles.timeBadge}>
+                            <Clock size={12} color="#F59E0B" />
+                            <Text style={styles.timeBadgeText}>12 min</Text>
+                        </View>
+                    </View>
+
                     <View style={styles.titleRow}>
                         <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
-                        <TouchableOpacity style={styles.heartBtnSmall}>
-                            <Heart size={20} color="#888" />
-                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.priceRow}>
-                        <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`} <Text style={styles.priceUnit}>/ {listing.quantity || 'bag'}</Text></Text>
-                        
-                        {/* Quantity selector removed as requested */}
+                        <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                        <Text style={styles.priceUnit}>/ {listing.quantity || 'unit'}</Text>
                     </View>
 
-                    <View style={styles.metaRow}>
-                        <View style={styles.metaBox}>
-                            <Clock size={14} color="#888" />
-                            <Text style={styles.metaText}>12 min</Text>
+                    <View style={styles.divider} />
+
+                    {/* Stats Row */}
+                    <View style={styles.statsContainer}>
+                        <View style={styles.statBox}>
+                            <View style={[styles.statIconWrapper, { backgroundColor: '#EEF2FF' }]}>
+                                <Weight size={18} color="#4F46E5" />
+                            </View>
+                            <Text style={styles.statLabel}>Est. Weight</Text>
+                            <Text style={styles.statValue}>{listing.quantity || '10kg'}</Text>
                         </View>
-                        <View style={styles.metaBox}>
-                            <Weight size={14} color="#888" />
-                            <Text style={styles.metaText}>{listing.quantity || '10kg'}</Text>
-                        </View>
-                        <View style={styles.metaBox}>
-                            <Star size={14} color="#F39C12" fill="#F39C12" />
-                            <Text style={styles.metaText}>4.5 Rating</Text>
-                        </View>
+                        
+                        {user?.id === listing?.seller?.id ? (
+                            <>
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconWrapper, { backgroundColor: '#FEF3C7' }]}>
+                                        <Clock size={18} color="#D97706" />
+                                    </View>
+                                    <Text style={styles.statLabel}>Posted</Text>
+                                    <Text style={styles.statValue}>Just now</Text>
+                                </View>
+
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconWrapper, { backgroundColor: '#ECFDF5' }]}>
+                                        <Info size={18} color="#059669" />
+                                    </View>
+                                    <Text style={styles.statLabel}>Status</Text>
+                                    <Text style={styles.statValue}>Active</Text>
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconWrapper, { backgroundColor: '#FEF3C7' }]}>
+                                        <Star size={18} color="#D97706" fill="#D97706" />
+                                    </View>
+                                    <Text style={styles.statLabel}>Rating</Text>
+                                    <Text style={styles.statValue}>4.5</Text>
+                                </View>
+
+                                <View style={styles.statBox}>
+                                    <View style={[styles.statIconWrapper, { backgroundColor: '#ECFDF5' }]}>
+                                        <MapPin size={18} color="#059669" />
+                                    </View>
+                                    <Text style={styles.statLabel}>Distance</Text>
+                                    <Text style={styles.statValue}>2.4 km</Text>
+                                </View>
+                            </>
+                        )}
                     </View>
 
                     <Text style={styles.sectionTitle}>Description</Text>
-                    <Text style={styles.descriptionText}>{listing.description || 'Verified waste ready for pickup. Ensure you have the appropriate vehicle for collection.'}</Text>
+                    <Text style={styles.descriptionText}>
+                        {listing.description || 'Verified waste ready for pickup. Ensure you have the appropriate vehicle for collection. Please arrive on time and contact the seller if you need directions.'}
+                    </Text>
+
                 </View>
             </ScrollView>
 
+            {/* Bottom Actions */}
             <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                 {user?.id === listing?.seller?.id ? (
-                    <View style={{ flexDirection: 'row', gap: 10, flex: 1 }}>
+                    <View style={styles.actionRow}>
                         <TouchableOpacity
-                            style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#eee' }}
+                            style={styles.secondaryBtn}
                             onPress={() => navigation.navigate('CreateListing', { editListing: listing })}
                         >
-                            <Pencil size={20} color="#111" />
+                            <Pencil size={20} color="#374151" />
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={[styles.mainActionBtn, { flex: 1 }]}
+                            style={styles.deleteBtn}
+                            onPress={handleDelete}
+                        >
+                            <Trash size={20} color="#EF4444" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.primaryBtn, { flex: 1 }]}
                             onPress={() => navigation.navigate('Main', {
                                 screen: 'Pickups',
                                 params: {
@@ -184,19 +239,12 @@ export default function ListingDetailScreen({ route, navigation }) {
                             })}
                         >
                             <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
-                            <Text style={styles.mainActionText}>Request Pickup</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2' }}
-                            onPress={handleDelete}
-                        >
-                            <Trash size={20} color="#EF4444" />
+                            <Text style={styles.primaryBtnText}>Request Pickup</Text>
                         </TouchableOpacity>
                     </View>
                 ) : (
                     <TouchableOpacity
-                        style={[styles.mainActionBtn, { flex: 1 }]}
+                        style={styles.primaryBtnFull}
                         onPress={() => navigation.navigate('Main', {
                             screen: 'Pickups',
                             params: {
@@ -218,7 +266,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                         })}
                     >
                         <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
-                        <Text style={styles.mainActionText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
+                        <Text style={styles.primaryBtnText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -229,42 +277,51 @@ export default function ListingDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#fff' },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-    errorText: { fontSize: 16, color: '#111' },
+    errorText: { fontSize: 16, color: '#111', marginBottom: 12 },
+    backButtonFallback: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 20 },
+    backButtonText: { color: '#111', fontWeight: '600' },
     
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10, backgroundColor: '#fff' },
-    headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-    roundBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#eee' },
+    scrollContent: { paddingBottom: 140 },
     
-    scrollContent: { paddingBottom: 120 },
-    
-    heroCard: { marginHorizontal: 20, marginTop: 10, height: 260, borderRadius: 24, overflow: 'hidden', backgroundColor: '#f5f5f5', marginBottom: 12 },
+    heroSection: { width: width, height: 320, position: 'relative', backgroundColor: '#f5f5f5' },
     heroImage: { width: '100%', height: '100%' },
+    heroPlaceholder: { justifyContent: 'center', alignItems: 'center' },
+    heroGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 120 },
     
-    dotsRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginBottom: 24 },
-    dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#D1D5DB' },
-    dotActive: { width: 16, backgroundColor: '#111' },
+    headerOverlay: { position: 'absolute', left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, zIndex: 10 },
+    roundBlurBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255, 255, 255, 0.9)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     
-    detailsContainer: { paddingHorizontal: 20 },
-    titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    title: { fontSize: 22, fontWeight: 'bold', color: '#111', flex: 1, marginRight: 10 },
-    heartBtnSmall: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F9FAFB', justifyContent: 'center', alignItems: 'center' },
+    detailsContainer: { paddingHorizontal: 24, paddingTop: 24, backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -32 },
     
-    priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    price: { fontSize: 20, fontWeight: 'bold', color: '#111' },
-    priceUnit: { fontSize: 14, color: '#888', fontWeight: 'normal' },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+    typeBadge: { backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+    typeBadgeText: { color: '#fff', fontSize: 12, fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 0.5 },
+    timeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEF3C7', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, gap: 4 },
+    timeBadgeText: { color: '#D97706', fontSize: 12, fontWeight: '700' },
     
-    // Removed qtySelector styles
+    titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
+    title: { fontSize: 26, fontWeight: '800', color: '#111', flex: 1, lineHeight: 32 },
     
-    metaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24 },
-    metaBox: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    metaText: { fontSize: 13, color: '#666', fontWeight: '500' },
+    priceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 24 },
+    price: { fontSize: 28, fontWeight: '900', color: '#111' },
+    priceUnit: { fontSize: 16, color: '#6B7280', fontWeight: '500', marginLeft: 4 },
     
-    sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#111', marginBottom: 12 },
-    descriptionText: { fontSize: 15, color: '#666', lineHeight: 24, marginBottom: 24 },
+    divider: { height: 1, backgroundColor: '#F3F4F6', marginBottom: 24 },
     
-    bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, flexDirection: 'row', gap: 12, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
-    chatBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F9FAFB', paddingHorizontal: 16, borderRadius: 24, flex: 0.4, borderWidth: 1, borderColor: '#eee' },
-    chatBtnText: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-    mainActionBtn: { flex: 0.6, backgroundColor: '#111', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 16, borderRadius: 24 },
-    mainActionText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+    statsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 32 },
+    statBox: { alignItems: 'center', flex: 1 },
+    statIconWrapper: { width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    statLabel: { fontSize: 12, color: '#6B7280', marginBottom: 4, fontWeight: '500' },
+    statValue: { fontSize: 15, color: '#111', fontWeight: '700' },
+    
+    sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 12 },
+    descriptionText: { fontSize: 15, color: '#4B5563', lineHeight: 24, letterSpacing: 0.2 },
+    
+    bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 10 },
+    actionRow: { flexDirection: 'row', gap: 12 },
+    secondaryBtn: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+    deleteBtn: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center' },
+    primaryBtn: { backgroundColor: '#111', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 56, borderRadius: 16 },
+    primaryBtnFull: { backgroundColor: '#111', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 56, borderRadius: 16, width: '100%' },
+    primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' }
 });
