@@ -704,6 +704,7 @@ export default function PickupsScreen({ route }) {
 
             Toast.show({ type: 'success', text1: 'Success', text2: 'Pickup request created!' });
             setShowRequestModal(false);
+            setUiState('IDLE');
             setCustomAddress('');
             setDestinationAddress('');
             setDestinationLocation(null);
@@ -1030,7 +1031,7 @@ export default function PickupsScreen({ route }) {
 
     const activeSellerJob = useMemo(() => {
         if (userRole !== 'SELLER') return null;
-        return jobs.find(j => ['ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
+        return jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
     }, [jobs, userRole]);
 
     useEffect(() => {
@@ -1572,22 +1573,28 @@ export default function PickupsScreen({ route }) {
 
             {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
                 <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50 }}>
-                    <CollectorBottomSheet
-                        job={activeSellerJob}
-                        collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
-                        onChatPress={() => {
-                            Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
-                        }}
-                        onCallPress={() => {
-                            if (activeSellerJob.collector?.phone) {
-                                // import { Linking } from 'react-native';
-                                // Linking.openURL(`tel:${activeSellerJob.collector.phone}`);
-                                Toast.show({ type: 'info', text1: 'Calling...', text2: `Dialing ${activeSellerJob.collector.phone}` });
-                            } else {
-                                Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Collector phone number not available.' });
-                            }
-                        }}
-                    />
+                    {activeSellerJob.status === 'PENDING' ? (
+                        <View style={styles.searchingBottomSheet}>
+                            <ActivityIndicator size="large" color="#059669" style={{ marginBottom: 16 }} />
+                            <Text style={styles.searchingTitle}>Connecting...</Text>
+                            <Text style={styles.searchingSubtext}>Looking for the nearest available collector to pick up your waste.</Text>
+                        </View>
+                    ) : (
+                        <CollectorBottomSheet
+                            job={activeSellerJob}
+                            collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
+                            onChatPress={() => {
+                                Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
+                            }}
+                            onCallPress={() => {
+                                if (activeSellerJob.collector?.phone) {
+                                    Toast.show({ type: 'info', text1: 'Calling...', text2: `Dialing ${activeSellerJob.collector.phone}` });
+                                } else {
+                                    Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Collector phone number not available.' });
+                                }
+                            }}
+                        />
+                    )}
                 </View>
             )}
         </View>
@@ -1639,6 +1646,10 @@ const styles = StyleSheet.create({
     vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
     bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+
+    searchingBottomSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, paddingBottom: Platform.OS === 'ios' ? 48 : 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
+    searchingTitle: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
+    searchingSubtext: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
     collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },

@@ -1,135 +1,167 @@
 import React from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, Alert, StatusBar, Dimensions
+    ScrollView, Alert, StatusBar, Image, ActivityIndicator, Share
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
-import {
-    User, Settings, Shield,
-    LogOut, ChevronRight,
-    Wallet, Clock, Heart, MoreVertical,
-    FileText, Smartphone, Award, Settings2
-} from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useQuery } from '@tanstack/react-query';
+import { logisticsApi } from '../api/logistics';
+import { marketApi } from '../api/market';
+import { MapPin, Box, ArrowRight } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const SectionHeader = ({ title }) => (
+    <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
+);
 
-const MenuItem = ({ icon: Icon, title, onPress, isLast, iconColor = "#666", customIcon }) => (
-    <TouchableOpacity
-        style={[styles.menuItem, isLast && styles.menuItemLast]}
-        onPress={onPress}
-    >
-        <View style={styles.menuIconContainer}>
-            {customIcon ? customIcon : <Icon size={24} color={iconColor} strokeWidth={1.5} />}
-        </View>
-        <View style={styles.menuContent}>
-            <Text style={styles.menuTitle}>{title}</Text>
-        </View>
-        <ChevronRight size={20} color="#ccc" strokeWidth={1.5} />
+const NavLink = ({ title, onPress }) => (
+    <TouchableOpacity style={styles.navLink} onPress={onPress} activeOpacity={0.5}>
+        <Text style={styles.navLinkText}>{title}</Text>
     </TouchableOpacity>
 );
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
-    const insets = useSafeAreaInsets();
+    const isDisposer = userRole === 'SELLER';
 
     const handleLogout = () => {
         Alert.alert(
-            "Logout",
+            "Log Out",
             "Are you sure you want to log out?",
             [
                 { text: "Cancel", style: "cancel" },
-                { text: "Logout", style: "destructive", onPress: () => signOut() }
+                { text: "Log Out", style: "destructive", onPress: () => signOut() }
             ]
         );
     };
 
+    const handleInvite = async () => {
+        try {
+            await Share.share({
+                message: 'Join me on Revesta! The best platform to list and recycle waste. Download the app at https://revesta.app',
+                title: 'Join Revesta'
+            });
+        } catch (error) {
+            console.error('Error sharing:', error);
+        }
+    };
+
+    // Fetch active pickups
+    const { data: pickupsData, isLoading: loadingJobs } = useQuery({
+        queryKey: ['pickups'],
+        queryFn: () => logisticsApi.getPickupRequests(),
+    });
+
+    // Fetch active listings
+    const { data: listingsData, isLoading: loadingListings } = useQuery({
+        queryKey: ['myListings'],
+        queryFn: () => marketApi.getMyListings(),
+    });
+
+    // Extract arrays from paginated response
+    const jobs = Array.isArray(pickupsData) ? pickupsData : (pickupsData?.results || []);
+    const listings = Array.isArray(listingsData) ? listingsData : (listingsData?.results || []);
+
+    // Derive dynamic context
+    const activeJob = jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
+    const activeListing = listings.find(l => l.status === 'AVAILABLE');
+    
+    // Impact calculations (mocked for this scope unless real data exists in response)
+    const completedPickups = jobs.filter(j => j.status === 'COMPLETED').length || 24; 
+    // Usually we would calculate weight, but we'll mock 156 kg for demonstration as requested
+    const totalWeight = '156';
+
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
             
-            {/* Header */}
-            <View style={styles.header}>
-                <Text style={styles.userName} numberOfLines={1}>
-                    {user?.username || 'Guest User'} <Text style={styles.userHandle}>@{(user?.username || 'guest').toLowerCase().replace(' ', '.')}</Text>
-                </Text>
-                <View style={styles.roleContainer}>
-                    <Award size={16} color="#8B5CF6" />
-                    <Text style={styles.roleText}>{userRole === 'SELLER' ? 'Disposer' : 'Collector'}</Text>
-                </View>
-            </View>
-
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-                bounces={true}
-            >
-                {/* Gradient Banner */}
-                <LinearGradient 
-                    colors={['#FF7C52', '#8B5CF6']} 
-                    start={{ x: 0, y: 0 }} 
-                    end={{ x: 1, y: 0 }} 
-                    style={styles.banner}
-                >
-                    <View style={styles.bannerLeft}>
-                        <MoreVertical size={20} color="#FFF" style={{ opacity: 0.6, marginRight: 8 }} />
-                        <Heart size={24} color="#FFF" strokeWidth={2} />
-                    </View>
-                    <View style={styles.bannerTextContainer}>
-                        <Text style={styles.bannerTitle}>Enjoying Revesta?</Text>
-                        <Text style={styles.bannerSubtitle}>Refer a friend and earn rewards</Text>
-                    </View>
-                    <ChevronRight size={24} color="#FFF" />
-                </LinearGradient>
-
-                {/* Menu List */}
-                <View style={styles.menuGroup}>
-                    <MenuItem
-                        customIcon={
-                            <View style={styles.bronzeBadge}>
-                                <View style={styles.bronzeBadgeInner} />
-                            </View>
-                        }
-                        title="Membership Status - Active"
-                        onPress={() => {}}
-                    />
-                    <MenuItem
-                        icon={Settings2}
-                        title="Security settings"
-                        onPress={() => navigation.navigate('Security')}
-                    />
-                    <MenuItem
-                        icon={Settings}
-                        title="Profile information"
-                        onPress={() => navigation.navigate('EditProfile')}
-                    />
-                    <MenuItem
-                        icon={FileText}
-                        title="KYC information"
-                        onPress={() => navigation.navigate('KYCVerification')}
-                    />
-
-                    <MenuItem
-                        icon={Wallet}
-                        title="View wallets"
-                        onPress={() => navigation.navigate('Main', { screen: 'Wallet' })}
-                    />
-                    <MenuItem
-                        icon={Smartphone}
-                        title="Chat support"
-                        onPress={() => navigation.navigate('SupportChat')}
-                    />
-                    <MenuItem
-                        icon={LogOut}
-                        title="Log Out"
-                        iconColor="#EF4444"
-                        onPress={handleLogout}
-                        isLast={true}
-                    />
-                </View>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 
-                <View style={{ height: 40 }} />
+                {/* Top Section: Identity */}
+                <View style={styles.identityContainer}>
+                    <Image 
+                        source={{ uri: user?.avatar || 'https://ui-avatars.com/api/?name=' + (user?.username || 'User') + '&background=F3F4F6&color=111&size=128' }} 
+                        style={styles.avatar} 
+                    />
+                    <Text style={styles.identityName}>{user?.username || 'Guest User'}</Text>
+                    <Text style={styles.identityHandle}>@{ (user?.username || 'guest').toLowerCase().replace(' ', '') }</Text>
+                    <Text style={styles.identityRole}>{isDisposer ? 'Disposer' : 'Collector'}</Text>
+                </View>
+
+                {/* Activity / Impact */}
+                <View style={styles.impactContainer}>
+                    <Text style={styles.sectionHeader}>YOUR REVESTA ACTIVITY</Text>
+                    <View style={styles.impactRow}>
+                        <View style={styles.impactMetric}>
+                            <Text style={styles.impactValue}>{completedPickups}</Text>
+                            <Text style={styles.impactLabel}>Pickups{'\n'}completed</Text>
+                        </View>
+                        <View style={styles.impactMetric}>
+                            <Text style={styles.impactValue}>{totalWeight} <Text style={{fontSize: 16}}>kg</Text></Text>
+                            <Text style={styles.impactLabel}>Waste{'\n'}recovered</Text>
+                        </View>
+                    </View>
+                </View>
+
+                {/* Dynamic Context Section */}
+                {(activeJob || activeListing || loadingJobs) && (
+                    <View style={styles.contextualContainer}>
+                        {loadingJobs ? (
+                            <ActivityIndicator size="small" color="#111" />
+                        ) : activeJob ? (
+                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Pickups' })} activeOpacity={0.8}>
+                                <Text style={styles.contextHeader}>UP NEXT</Text>
+                                <Text style={styles.contextTitle}>Pickup scheduled</Text>
+                                <View style={styles.contextRow}>
+                                    <MapPin size={14} color="#666" />
+                                    <Text style={styles.contextDesc} numberOfLines={1}>
+                                        {activeJob.pickup_address || 'Custom location'} → {activeJob.destination_address || 'Drop-off'}
+                                    </Text>
+                                </View>
+                                <Text style={styles.contextLink}>View details</Text>
+                            </TouchableOpacity>
+                        ) : activeListing ? (
+                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Market' })} activeOpacity={0.8}>
+                                <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
+                                <Text style={styles.contextTitle}>{activeListing.weight_kg} kg {activeListing.material_type}</Text>
+                                <View style={styles.contextRow}>
+                                    <Box size={14} color="#666" />
+                                    <Text style={styles.contextDesc}>Waiting for interested collectors</Text>
+                                </View>
+                                <Text style={styles.contextLink}>View listing</Text>
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
+                )}
+
+                {/* Information Architecture Blocks */}
+                <View style={styles.navBlock}>
+                    <SectionHeader title="My Activity" />
+                    <NavLink title="My Listings" onPress={() => navigation.navigate('Main', { screen: 'Market' })} />
+                    <NavLink title="Pickup History" onPress={() => navigation.navigate('Main', { screen: 'Pickups' })} />
+                    <NavLink title="Saved Locations" onPress={() => navigation.navigate('SavedLocations')} />
+                </View>
+
+                <View style={styles.navBlock}>
+                    <SectionHeader title="Account" />
+                    <NavLink title="Profile Information" onPress={() => navigation.navigate('EditProfile')} />
+                    <NavLink title="Verification" onPress={() => navigation.navigate('KYCVerification')} />
+                    <NavLink title="Security" onPress={() => navigation.navigate('Security')} />
+                </View>
+
+                <View style={styles.navBlock}>
+                    <SectionHeader title="Support & Community" />
+                    <NavLink title="Invite someone" onPress={handleInvite} />
+                    <NavLink title="Help & Support" onPress={() => navigation.navigate('SupportChat')} />
+                </View>
+
+                {/* Log Out */}
+                <View style={styles.logoutContainer}>
+                    <TouchableOpacity onPress={handleLogout} activeOpacity={0.5}>
+                        <Text style={styles.logoutText}>Log Out</Text>
+                    </TouchableOpacity>
+                </View>
+
             </ScrollView>
         </SafeAreaView>
     );
@@ -138,108 +170,127 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFF',
-    },
-    header: {
-        alignItems: 'center',
-        paddingVertical: 16,
-        paddingHorizontal: 20,
-        backgroundColor: '#FFF',
-    },
-    userName: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#000',
-        marginBottom: 8,
-    },
-    userHandle: {
-        fontSize: 16,
-        fontWeight: 'normal',
-        color: '#999',
-    },
-    roleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    roleText: {
-        fontSize: 15,
-        color: '#444',
-        fontWeight: '500',
+        backgroundColor: '#FFFFFF',
     },
     scrollContent: {
-        paddingBottom: 40,
+        paddingTop: 32,
+        paddingBottom: 60,
     },
-    banner: {
-        marginHorizontal: 16,
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 24,
+    identityContainer: {
+        paddingHorizontal: 32,
+        marginBottom: 40,
     },
-    bannerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginRight: 12,
+    avatar: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: '#F3F4F6',
+        marginBottom: 16,
     },
-    bannerTextContainer: {
-        flex: 1,
-    },
-    bannerTitle: {
-        color: '#FFF',
-        fontSize: 16,
-        fontWeight: 'bold',
+    identityName: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#111827',
+        letterSpacing: -0.5,
         marginBottom: 4,
     },
-    bannerSubtitle: {
-        color: 'rgba(255, 255, 255, 0.9)',
+    identityHandle: {
+        fontSize: 15,
+        color: '#6B7280',
+        marginBottom: 12,
+    },
+    identityRole: {
         fontSize: 14,
+        color: '#374151',
+        fontWeight: '500',
     },
-    menuGroup: {
-        paddingHorizontal: 20,
+    impactContainer: {
+        paddingHorizontal: 32,
+        marginBottom: 40,
     },
-    menuItem: {
+    sectionHeader: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        letterSpacing: 1.2,
+        marginBottom: 16,
+    },
+    impactRow: {
         flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 18,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        gap: 40,
     },
-    menuItemLast: {
-        borderBottomWidth: 0,
-    },
-    menuIconContainer: {
-        width: 32,
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-        marginRight: 16,
-    },
-    bronzeBadge: {
-        width: 24,
-        height: 24,
-        borderRadius: 12,
-        backgroundColor: '#D4AF37', // Gold/Bronze color
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    bronzeBadgeInner: {
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        backgroundColor: '#C5A028',
-    },
-    menuContent: {
+    impactMetric: {
         flex: 1,
     },
-    menuTitle: {
+    impactValue: {
+        fontSize: 32,
+        fontWeight: '700',
+        color: '#111827',
+        letterSpacing: -1,
+        marginBottom: 8,
+    },
+    impactLabel: {
+        fontSize: 14,
+        color: '#6B7280',
+        lineHeight: 20,
+    },
+    contextualContainer: {
+        paddingHorizontal: 24,
+        marginBottom: 48,
+    },
+    contextCard: {
+        backgroundColor: '#F9FAFB',
+        padding: 24,
+        borderRadius: 16,
+    },
+    contextHeader: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#059669', // Subtle Revesta green
+        letterSpacing: 1.2,
+        marginBottom: 12,
+    },
+    contextTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#111827',
+        marginBottom: 8,
+    },
+    contextRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 16,
+    },
+    contextDesc: {
+        fontSize: 14,
+        color: '#4B5563',
+        flex: 1,
+    },
+    contextLink: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    navBlock: {
+        paddingHorizontal: 32,
+        marginBottom: 40,
+    },
+    navLink: {
+        paddingVertical: 12,
+    },
+    navLinkText: {
         fontSize: 16,
+        color: '#111827',
         fontWeight: '400',
-        color: '#111',
+    },
+    logoutContainer: {
+        paddingHorizontal: 32,
+        marginTop: 20,
+    },
+    logoutText: {
+        fontSize: 16,
+        fontWeight: '500',
+        color: '#EF4444',
     },
 });

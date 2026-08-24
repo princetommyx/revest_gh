@@ -28,6 +28,7 @@ import SupportChatScreen from '../screens/SupportChatScreen';
 import PickupHistoryScreen from '../screens/PickupHistoryScreen';
 import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import SavedLocationsScreen from '../screens/SavedLocationsScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import TrackingWidget from '../components/TrackingWidget';
@@ -356,6 +357,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="Help" component={HelpScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="SavedLocations" component={SavedLocationsScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false, presentation: 'modal' }} />
