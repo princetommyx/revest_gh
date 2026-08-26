@@ -97,10 +97,8 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
 const styles = StyleSheet.create({
     container: {
         backgroundColor: '#fff',
-        borderTopLeftRadius: 30,
-        borderTopRightRadius: 30,
+        borderRadius: 24,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,

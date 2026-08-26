@@ -41,7 +41,7 @@ const Tab = createBottomTabNavigator();
 
 const CustomTabBar = ({ state, descriptors, navigation }) => {
     return (
-        <View style={navStyles.tabBarContainer}>
+        <View style={navStyles.floatingWrapper}>
             {state.routes.map((route, index) => {
                 const { options } = descriptors[route.key];
                 const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
@@ -56,31 +56,33 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
                 let IconComp;
                 if (route.name === 'Home') IconComp = House;
-                else if (route.name === 'Pickups') IconComp = MapIcon;
+                else if (route.name === 'Pickups') IconComp = Truck;
                 else if (route.name === 'Marketplace') IconComp = Store;
                 else if (route.name === 'Chat') IconComp = MessageSquare;
                 else if (route.name === 'Wallet') IconComp = Wallet;
 
-                const color = isFocused ? '#111' : '#9CA3AF';
+                const color = isFocused ? '#000000' : '#6B7280';
 
                 return (
                     <TouchableOpacity
                         key={route.key}
                         onPress={onPress}
-                        style={navStyles.tabItem}
+                        style={navStyles.tabButton}
                         activeOpacity={0.8}
                     >
-                        <View style={navStyles.iconWrapper}>
-                            <IconComp size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
-                            {options.tabBarBadge && (
-                                <View style={navStyles.badge}>
-                                    <Text style={navStyles.badgeText}>{options.tabBarBadge}</Text>
-                                </View>
-                            )}
+                        <View style={[navStyles.tabItem, isFocused && navStyles.tabItemActive]}>
+                            <View style={navStyles.iconWrapper}>
+                                <IconComp size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
+                                {options.tabBarBadge && (
+                                    <View style={navStyles.badge}>
+                                        <Text style={navStyles.badgeText}>{options.tabBarBadge}</Text>
+                                    </View>
+                                )}
+                            </View>
+                            <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
+                                {label}
+                            </Text>
                         </View>
-                        <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
-                            {label}
-                        </Text>
                     </TouchableOpacity>
                 );
             })}
@@ -89,50 +91,67 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 };
 
 const navStyles = StyleSheet.create({
-    tabBarContainer: {
-        flexDirection: 'row',
+    floatingWrapper: {
+        position: 'absolute',
+        bottom: Platform.OS === 'ios' ? 24 : 16,
+        left: 20,
+        right: 20,
+        borderRadius: 40,
         backgroundColor: '#FFFFFF',
-        paddingBottom: Platform.OS === 'ios' ? 24 : 12,
-        paddingTop: 12,
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-        justifyContent: 'space-around',
+        flexDirection: 'row',
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+    },
+    tabButton: {
+        flex: 1,
         alignItems: 'center',
     },
     tabItem: {
         alignItems: 'center',
         justifyContent: 'center',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 24,
+    },
+    tabItemActive: {
+        backgroundColor: '#F3F4F6',
     },
     iconWrapper: {
         position: 'relative',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     tabLabel: {
         fontSize: 10,
-        color: '#9CA3AF',
+        color: '#6B7280',
         fontWeight: '500',
+        marginTop: 2,
     },
     tabLabelActive: {
-        color: '#111',
+        color: '#000000',
         fontWeight: '700',
     },
     badge: {
         position: 'absolute',
-        top: -4,
-        right: -8,
-        backgroundColor: '#EF4444',
-        minWidth: 16,
-        height: 16,
-        borderRadius: 8,
+        top: -6,
+        right: -10,
+        backgroundColor: '#FF3B30',
+        minWidth: 18,
+        height: 18,
+        borderRadius: 9,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 4,
-        borderWidth: 1.5,
-        borderColor: '#fff',
     },
     badgeText: {
         color: '#fff',
-        fontSize: 9,
+        fontSize: 10,
         fontWeight: 'bold',
     },
 });

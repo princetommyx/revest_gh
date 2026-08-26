@@ -4,28 +4,22 @@
     "name": "Revesta",
     "slug": "revesta-mobile",
     "scheme": "revesta",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.revesta.mobile"
     },
     "android": {
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.revesta.mobile",
       "googleServicesFile": "./google-services.json",
-      "usesCleartextTraffic": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
@@ -43,6 +37,22 @@
         {
           "photosPermission": "The app accesses your photos to let you upload waste items.",
           "cameraPermission": "The app accesses your camera to let you take photos of waste items."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],

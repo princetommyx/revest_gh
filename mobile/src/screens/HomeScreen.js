@@ -10,7 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
     Package, ShoppingCart, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
-    LayoutGrid, Droplet, Cog, FileText, Wine, Cpu
+    LayoutGrid, Droplet, Cog, FileText, Wine, Cpu, CupSoda, Anvil, Newspaper
 } from 'lucide-react-native';
 import apiClient, { BASE_URL } from '../api/client';
 import { adminApi } from '../api/admin';
@@ -24,9 +24,9 @@ const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid, color: '#111', bg: '#F9FAFB' },
-    { id: 'Plastics', name: 'Plastics', icon: Droplet, color: '#111', bg: '#F9FAFB' },
-    { id: 'Metals', name: 'Metals', icon: Cog, color: '#111', bg: '#F9FAFB' },
-    { id: 'Paper', name: 'Paper', icon: FileText, color: '#111', bg: '#F9FAFB' },
+    { id: 'Plastics', name: 'Plastics', icon: CupSoda, color: '#111', bg: '#F9FAFB' },
+    { id: 'Metals', name: 'Metals', icon: Anvil, color: '#111', bg: '#F9FAFB' },
+    { id: 'Paper', name: 'Paper', icon: Newspaper, color: '#111', bg: '#F9FAFB' },
     { id: 'Glass', name: 'Glass', icon: Wine, color: '#111', bg: '#F9FAFB' },
     { id: 'Electronics', name: 'E-Waste', icon: Cpu, color: '#111', bg: '#F9FAFB' }
 ];

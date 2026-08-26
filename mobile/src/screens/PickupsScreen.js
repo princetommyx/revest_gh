@@ -1763,7 +1763,7 @@ export default function PickupsScreen({ route }) {
             />
 
             {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
-                <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 50 }}>
+                <View style={{ position: 'absolute', bottom: 120, left: 16, right: 16, zIndex: 50 }}>
                     {activeSellerJob.status === 'PENDING' ? (
                         <View style={styles.searchingBottomSheet}>
                             <ActivityIndicator size="large" color="#059669" style={{ marginBottom: 16 }} />
@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     
-    bottomSheetUbride: { position: 'absolute', bottom: 90, left: 16, right: 16, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12 },
+    bottomSheetUbride: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12 },
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
@@ -1916,7 +1916,7 @@ const styles = StyleSheet.create({
     compactMarkerLabel: { backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
-    bottomSheetUbrideVehicles: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 20, paddingBottom: Platform.OS === 'ios' ? 40 : 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
+    bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
     backVehicleBtn: { alignItems: 'center', marginBottom: 20, paddingVertical: 10 },
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
     vehicleCategories: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
@@ -1933,7 +1933,7 @@ const styles = StyleSheet.create({
     bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 
-    searchingBottomSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 32, paddingBottom: Platform.OS === 'ios' ? 48 : 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
+    searchingBottomSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
     searchingTitle: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
     searchingSubtext: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
 
