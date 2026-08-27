@@ -46,6 +46,10 @@ export default function CreateListingScreen({ route, navigation }) {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const [isScanning, setIsScanning] = useState(false);
+    const [scanResult, setScanResult] = useState(null);
+    const [priceRange, setPriceRange] = useState(null); // { min, max } - the editable guardrail around the estimate
+
     // Material display mapping (Backend -> User Friendly)
     const MATERIAL_DISPLAY_MAP = {
         'PURE_WATER_RUBBERS': 'Pure Water Rubbers',
@@ -56,36 +60,46 @@ export default function CreateListingScreen({ route, navigation }) {
         'HDPE': 'HDPE Plastics'
     };
 
-    // AI Pricing Logic (Updated for Track A/B and Fixed Pricing)
+    // Keep weight_kg in sync with whatever numeric prefix the disposer types
+    // into the free-text quantity field (e.g. "50 kg" -> 50), so a real
+    // weight is available for pricing even without the AI photo scan.
     React.useEffect(() => {
-        if (formData.material_type && formData.weight_kg) {
-            // FIXED PRICE CHECK: Skip recalculation for fixed-price high-value items
-            const isFixedPriceItem = [
-                'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
-                'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
-            ].includes(formData.material_type);
-
-            if (isFixedPriceItem) return;
-
-            // Only auto-calculate for general materials if AI didn't already provide a specific estimate
-            if (!scanResult || scanResult.material_type !== formData.material_type) {
-                const rates = {
-                    'PET': 1.5,
-                    'Plastics': 1.2,
-                    'Metals': 4.0,
-                    'Paper': 0.8,
-                    'Glass': 0.5,
-                    'Electronics': 8.0,
-                    'Organic': 1.0,
-                    'Other': 0.5
-                };
-                const rate = rates[formData.material_type] || 1.0;
-                const weight = formData.weight_kg > 0 ? formData.weight_kg : 5;
-                const estimatedValue = (rate * weight).toFixed(2);
-                setFormData(prev => ({ ...prev, price: estimatedValue }));
-            }
+        const parsed = parseFloat(formData.quantity);
+        if (!isNaN(parsed) && parsed !== formData.weight_kg) {
+            setFormData(prev => ({ ...prev, weight_kg: parsed }));
         }
-    }, [formData.material_type, formData.weight_kg]);
+    }, [formData.quantity]);
+
+    // Real, server-computed price estimate (based on actual market rates),
+    // used whenever the disposer hasn't just gotten a fresh AI scan result
+    // for the current material - e.g. no photo, or they've since changed
+    // the material/weight manually.
+    React.useEffect(() => {
+        const isFixedPriceItem = [
+            'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
+            'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
+        ].includes(formData.material_type);
+        if (isFixedPriceItem) return;
+
+        if (!formData.material_type || !formData.weight_kg) return;
+        if (scanResult && scanResult.material_type === formData.material_type) return; // scan already priced this
+
+        const timeoutId = setTimeout(async () => {
+            try {
+                const estimate = await marketApi.estimatePrice({
+                    track_type: formData.track_type,
+                    material_type: formData.material_type,
+                    weight_kg: formData.weight_kg,
+                });
+                setFormData(prev => ({ ...prev, price: estimate.estimated_price.toFixed(2) }));
+                setPriceRange({ min: estimate.min_price, max: estimate.max_price });
+            } catch (e) {
+                console.warn('Failed to estimate price:', e?.message);
+            }
+        }, 400);
+
+        return () => clearTimeout(timeoutId);
+    }, [formData.material_type, formData.weight_kg, formData.track_type, scanResult]);
 
     // ... Get Location on Mount ...
     React.useEffect(() => {
@@ -101,8 +115,51 @@ export default function CreateListingScreen({ route, navigation }) {
         })();
     }, []);
 
-    const [isScanning, setIsScanning] = useState(false);
-    const [scanResult, setScanResult] = useState(null);
+    const CATEGORY_IDS = ['Plastics', 'Metals', 'Paper', 'Glass', 'Electronics', 'Other'];
+    // Maps the AI's precise material vocabulary to the manual picker's coarser
+    // category buttons, purely for highlighting - the precise value is still
+    // what gets saved and priced.
+    const materialToCategory = (materialType) => {
+        const key = (materialType || '').toUpperCase();
+        if (key.includes('WATER') || key.includes('BOTTLE') || key === 'PET' || key === 'HDPE') return 'Plastics';
+        if (key === 'ALUMINUM' || key === 'METALS') return 'Metals';
+        if (CATEGORY_IDS.includes(materialType)) return materialType;
+        return 'Other';
+    };
+
+    const analyzeImage = async (asset) => {
+        setIsScanning(true);
+        try {
+            const data = await marketApi.analyzeWaste(asset.uri);
+            setScanResult(data);
+
+            setFormData(prev => ({
+                ...prev,
+                material_type: data.material_type || prev.material_type,
+                quantity: data.quantity_estimate || prev.quantity,
+                weight_kg: data.suggested_weight_kg ?? prev.weight_kg,
+                track_type: data.track_type || prev.track_type,
+                title: prev.title || data.title_suggestion || prev.title,
+                description: prev.description || data.description || prev.description,
+                price: (data.estimated_earnings ?? data.estimated_cost ?? prev.price)?.toString?.() ?? prev.price,
+            }));
+
+            if (data.min_price != null && data.max_price != null) {
+                setPriceRange({ min: data.min_price, max: data.max_price });
+            }
+
+            Toast.show({
+                type: 'success',
+                text1: data.simulated ? 'Estimated (offline mode)' : 'Analyzed!',
+                text2: `Identified as ${data.material_type}${data.confidence ? ` (${Math.round(data.confidence * 100)}% confident)` : ''}`
+            });
+        } catch (error) {
+            console.warn('Waste analysis failed:', error?.message);
+            Toast.show({ type: 'info', text1: 'Could not auto-analyze', text2: 'No problem - fill in the details manually.' });
+        } finally {
+            setIsScanning(false);
+        }
+    };
 
     const pickImage = async () => {
         try {
@@ -120,6 +177,7 @@ export default function CreateListingScreen({ route, navigation }) {
             if (!result.canceled) {
                 const asset = result.assets[0];
                 setSelectedAsset(asset);
+                analyzeImage(asset);
             }
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Error', text2: 'Error picking image' });
@@ -142,6 +200,17 @@ export default function CreateListingScreen({ route, navigation }) {
         if (!formData.location) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a location' });
             return;
+        }
+        if (formData.track_type === 'B' && priceRange) {
+            const enteredPrice = parseFloat(formData.price);
+            if (isNaN(enteredPrice) || enteredPrice < priceRange.min || enteredPrice > priceRange.max) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Price out of range',
+                    text2: `Must be between ₵${priceRange.min.toFixed(2)} and ₵${priceRange.max.toFixed(2)}`
+                });
+                return;
+            }
         }
         setLoading(true);
         try {
@@ -268,7 +337,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 ].includes(formData.material_type);
 
                                 // Map backend types to UI category for highlighting
-                                const activeType = (formData.material_type.includes('WATER') || formData.material_type.includes('BOTTLE')) ? 'Plastics' : formData.material_type;
+                                const activeType = materialToCategory(formData.material_type);
                                 const isActive = activeType === cat.id;
                                 const IconComp = cat.icon;
 
@@ -365,6 +434,35 @@ export default function CreateListingScreen({ route, navigation }) {
                                 </View>
                             </TouchableOpacity>
                         </View>
+
+                        {formData.track_type === 'B' ? (
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.label}>Asking Price (GHS)</Text>
+                                <View style={styles.inputWrapper}>
+                                    <Text style={styles.currencyPrefix}>₵</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="0.00"
+                                        placeholderTextColor="#9CA3AF"
+                                        keyboardType="decimal-pad"
+                                        value={formData.price?.toString()}
+                                        onChangeText={(val) => handleChange('price', val)}
+                                    />
+                                </View>
+                                {priceRange ? (
+                                    <Text style={styles.priceHint}>
+                                        Estimated from market rates. You can adjust between ₵{priceRange.min.toFixed(2)} and ₵{priceRange.max.toFixed(2)}.
+                                    </Text>
+                                ) : (
+                                    <Text style={styles.priceHint}>Add a photo or pick a material to get a price estimate.</Text>
+                                )}
+                            </View>
+                        ) : (
+                            <View style={styles.freeNotice}>
+                                <Info size={16} color="#6B7280" />
+                                <Text style={styles.freeNoticeText}>Safe Disposal pickups are free for you - the collector handles responsible recycling.</Text>
+                            </View>
+                        )}
 
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Description</Text>
@@ -596,6 +694,33 @@ const styles = StyleSheet.create({
     },
     inputIcon: {
         marginRight: 10,
+    },
+    currencyPrefix: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#6B7280',
+        marginRight: 8,
+    },
+    priceHint: {
+        fontSize: 12,
+        color: '#6B7280',
+        marginTop: 8,
+        lineHeight: 16,
+    },
+    freeNotice: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#F9FAFB',
+        borderRadius: 12,
+        padding: 14,
+        marginBottom: 20,
+        gap: 10,
+    },
+    freeNoticeText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#6B7280',
+        lineHeight: 18,
     },
     input: {
         flex: 1,
