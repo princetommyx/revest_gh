@@ -10,6 +10,7 @@ import { tomtomApi } from '../api/tomtom';
 import { useAuth } from '../context/AuthContext';
 import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
 import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
+import { getOnlinePreference } from '../utils/collectorPresence';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
@@ -583,15 +584,18 @@ export default function PickupsScreen({ route }) {
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
+    // Respects the online/offline toggle on Home - this just keeps the
+    // preference re-affirmed with a fresh position while the preference is on.
     useEffect(() => {
         if (userRole !== 'COLLECTOR') return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
-        const pushPresence = async (online) => {
+        const pushPresence = async (wantsOnline) => {
             const coords = coordsOf(locationRef.current);
             if (!coords?.latitude || !coords?.longitude) return;
+            const isOnline = wantsOnline ? await getOnlinePreference() : false;
             try {
-                await authApi.updateMyLocation({ latitude: coords.latitude, longitude: coords.longitude, is_online: online });
+                await authApi.updateMyLocation({ latitude: coords.latitude, longitude: coords.longitude, is_online: isOnline });
             } catch (e) {
                 console.warn('Failed to update collector presence:', e?.message);
             }
