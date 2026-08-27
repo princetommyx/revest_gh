@@ -7,11 +7,13 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, SlidersHorizontal, ChevronLeft, Heart, ChevronDown
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
+import { marketApi } from '../api/market';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -47,6 +49,22 @@ export default function MarketplaceScreen({ navigation, route }) {
     const [sortBy, setSortBy] = useState('');
     const [showLocationModal, setShowLocationModal] = useState(false);
     const [showSortModal, setShowSortModal] = useState(false);
+    // Optimistic overrides for the like button so taps feel instant instead
+    // of waiting on a refetch; keyed by listing id, cleared on unmount.
+    const [likeOverrides, setLikeOverrides] = useState({});
+
+    const handleToggleLike = async (item) => {
+        const nextLiked = !(likeOverrides[item.id] ?? item.is_liked);
+        setLikeOverrides(prev => ({ ...prev, [item.id]: nextLiked }));
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        try {
+            await marketApi.toggleLike(item.id);
+        } catch (e) {
+            // Revert on failure
+            setLikeOverrides(prev => ({ ...prev, [item.id]: !nextLiked }));
+            console.warn('Failed to toggle like:', e?.message);
+        }
+    };
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -92,7 +110,9 @@ export default function MarketplaceScreen({ navigation, route }) {
         return 0; // Default
     });
 
-    const renderListing = ({ item }) => (
+    const renderListing = ({ item }) => {
+        const liked = likeOverrides[item.id] ?? item.is_liked;
+        return (
         <TouchableOpacity
             style={styles.listingCard}
             onPress={() => navigation.navigate('ListingDetail', { listingId: item.id })}
@@ -111,15 +131,19 @@ export default function MarketplaceScreen({ navigation, route }) {
                         <Package size={30} color="#E0E0E0" />
                     </View>
                 )}
-                
+
                 {/* Floating Tags */}
                 <View style={styles.floatingTag}>
                     <Text style={styles.floatingTagText}>{item.is_free ? 'Free' : 'Available'}</Text>
                 </View>
 
                 {/* Floating Heart Button */}
-                <TouchableOpacity style={styles.floatingHeart}>
-                    <Heart size={16} color="#111" />
+                <TouchableOpacity
+                    style={styles.floatingHeart}
+                    onPress={() => handleToggleLike(item)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                    <Heart size={16} color={liked ? '#EF4444' : '#111'} fill={liked ? '#EF4444' : 'transparent'} />
                 </TouchableOpacity>
             </View>
             <View style={styles.listingDetails}>
@@ -132,7 +156,8 @@ export default function MarketplaceScreen({ navigation, route }) {
                 </View>
             </View>
         </TouchableOpacity>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -143,9 +168,9 @@ export default function MarketplaceScreen({ navigation, route }) {
                     <ChevronLeft size={24} color="#111" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'All Waste' : 'My Waste'}</Text>
-                <TouchableOpacity style={styles.iconBtn}>
-                    <SlidersHorizontal size={20} color="#111" />
-                </TouchableOpacity>
+                {/* Filtering already lives in the category/location/sort pills below -
+                    this spacer just keeps the title visually centered against the back button. */}
+                <View style={styles.iconBtn} />
             </SafeAreaView>
 
             {/* Search Bar */}
@@ -178,7 +203,6 @@ export default function MarketplaceScreen({ navigation, route }) {
                         );
                     })}
                     
-                    {/* Location Dropdown Pill Fake */}
                     <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowLocationModal(true)}>
                         <Text style={styles.catChipText}>{locationFilter ? (locationFilter.length > 8 ? locationFilter.substring(0,8)+'...' : locationFilter) : 'Location'}</Text>
                         <ChevronDown size={14} color="#666" style={{marginLeft: 4}} />

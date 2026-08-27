@@ -97,16 +97,6 @@ export default function HomeScreen({ navigation }) {
         location: locationFilter
     });
 
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = (now - date) / 1000;
-        if (diff < 3600) return 'Just now';
-        if (diff < 86400) return 'Today';
-        if (diff < 172800) return 'Yesterday';
-        return date.toLocaleDateString();
-    };
-
     const handleRefresh = async () => {
         await fetchPromos();
         await refetch();
@@ -323,7 +313,7 @@ export default function HomeScreen({ navigation }) {
                                     onChangeText={setSearch}
                                 />
                             </View>
-                            <TouchableOpacity style={styles.filterBtn}>
+                            <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
                                 <SlidersHorizontal size={20} color="#111" />
                             </TouchableOpacity>
                         </View>
