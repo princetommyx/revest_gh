@@ -23,6 +23,11 @@ export const walletApi = {
         return response.data;
     },
 
+    getTransactions: async () => {
+        const response = await apiClient.get('wallet/transactions/');
+        return response.data;
+    },
+
     initializePayment: async (email, amount) => {
         const response = await apiClient.post('wallet/initialize_payment/', { email, amount });
         return response.data;
