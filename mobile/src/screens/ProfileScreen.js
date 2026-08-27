@@ -8,21 +8,50 @@ import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { logisticsApi } from '../api/logistics';
 import { marketApi } from '../api/market';
-import { MapPin, Box, ArrowRight } from 'lucide-react-native';
+import { BASE_URL } from '../api/client';
+import {
+    MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
+    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut
+} from 'lucide-react-native';
+
+const resolveImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
+    return `${BASE_URL}${cleanPath}`;
+};
+
+const ROLE_LABELS = {
+    SELLER: 'Disposer',
+    COLLECTOR: 'Collector',
+    RECYCLER: 'Recycler',
+};
 
 const SectionHeader = ({ title }) => (
     <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
 );
 
-const NavLink = ({ title, onPress }) => (
-    <TouchableOpacity style={styles.navLink} onPress={onPress} activeOpacity={0.5}>
-        <Text style={styles.navLinkText}>{title}</Text>
+const NavCard = ({ children }) => (
+    <View style={styles.navCard}>{children}</View>
+);
+
+const NavLink = ({ title, icon: Icon, iconColor = '#111', iconBg = '#F3F4F6', onPress, isLast, danger }) => (
+    <TouchableOpacity
+        style={[styles.navLink, !isLast && styles.navLinkDivider]}
+        onPress={onPress}
+        activeOpacity={0.6}
+    >
+        <View style={[styles.navLinkIconBox, { backgroundColor: danger ? '#FEF2F2' : iconBg }]}>
+            <Icon size={18} color={danger ? '#EF4444' : iconColor} />
+        </View>
+        <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
+        {!danger && <ChevronRight size={18} color="#D1D5DB" />}
     </TouchableOpacity>
 );
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
-    const isDisposer = userRole === 'SELLER';
 
     const handleLogout = () => {
         Alert.alert(
@@ -53,7 +82,7 @@ export default function ProfileScreen({ navigation }) {
     });
 
     // Fetch active listings
-    const { data: listingsData, isLoading: loadingListings } = useQuery({
+    const { data: listingsData } = useQuery({
         queryKey: ['myListings'],
         queryFn: () => marketApi.getMyListings(),
     });
@@ -65,39 +94,47 @@ export default function ProfileScreen({ navigation }) {
     // Derive dynamic context
     const activeJob = jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
     const activeListing = listings.find(l => l.status === 'AVAILABLE');
-    
-    // Impact calculations (mocked for this scope unless real data exists in response)
-    const completedPickups = jobs.filter(j => j.status === 'COMPLETED').length || 24; 
-    // Usually we would calculate weight, but we'll mock 156 kg for demonstration as requested
-    const totalWeight = '156';
+
+    // Real activity stats - completed pickups, and total weight recovered
+    // from completed Track B/C (recyclable) jobs specifically.
+    const completedJobs = jobs.filter(j => j.status === 'COMPLETED');
+    const completedPickups = completedJobs.length;
+    const totalWeight = completedJobs.reduce((sum, j) => sum + (parseFloat(j.weight_kg) || 0), 0);
+
+    const avatarUri = resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
             <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-            
+
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                
+
                 {/* Top Section: Identity */}
                 <View style={styles.identityContainer}>
-                    <Image 
-                        source={{ uri: user?.avatar || 'https://ui-avatars.com/api/?name=' + (user?.username || 'User') + '&background=F3F4F6&color=111&size=128' }} 
-                        style={styles.avatar} 
+                    <Image
+                        source={{ uri: avatarUri || 'https://ui-avatars.com/api/?name=' + (user?.username || 'User') + '&background=F3F4F6&color=111&size=128' }}
+                        style={styles.avatar}
                     />
-                    <Text style={styles.identityName}>{user?.username || 'Guest User'}</Text>
-                    <Text style={styles.identityHandle}>@{ (user?.username || 'guest').toLowerCase().replace(' ', '') }</Text>
-                    <Text style={styles.identityRole}>{isDisposer ? 'Disposer' : 'Collector'}</Text>
+                    <View style={styles.identityNameRow}>
+                        <Text style={styles.identityName}>{user?.username || 'Guest User'}</Text>
+                        {user?.is_verified && <BadgeCheck size={18} color="#059669" style={{ marginLeft: 6 }} />}
+                    </View>
+                    <Text style={styles.identityHandle}>@{(user?.username || 'guest').toLowerCase().replace(/\s+/g, '')}</Text>
+                    <View style={styles.roleBadge}>
+                        <Text style={styles.roleBadgeText}>{ROLE_LABELS[userRole] || userRole}</Text>
+                    </View>
                 </View>
 
                 {/* Activity / Impact */}
                 <View style={styles.impactContainer}>
                     <Text style={styles.sectionHeader}>YOUR REVESTA ACTIVITY</Text>
                     <View style={styles.impactRow}>
-                        <View style={styles.impactMetric}>
+                        <View style={styles.impactCard}>
                             <Text style={styles.impactValue}>{completedPickups}</Text>
                             <Text style={styles.impactLabel}>Pickups{'\n'}completed</Text>
                         </View>
-                        <View style={styles.impactMetric}>
-                            <Text style={styles.impactValue}>{totalWeight} <Text style={{fontSize: 16}}>kg</Text></Text>
+                        <View style={styles.impactCard}>
+                            <Text style={styles.impactValue}>{totalWeight.toFixed(0)} <Text style={{ fontSize: 16 }}>kg</Text></Text>
                             <Text style={styles.impactLabel}>Waste{'\n'}recovered</Text>
                         </View>
                     </View>
@@ -121,9 +158,9 @@ export default function ProfileScreen({ navigation }) {
                                 <Text style={styles.contextLink}>View details</Text>
                             </TouchableOpacity>
                         ) : activeListing ? (
-                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Market' })} activeOpacity={0.8}>
+                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} activeOpacity={0.8}>
                                 <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
-                                <Text style={styles.contextTitle}>{activeListing.weight_kg} kg {activeListing.material_type}</Text>
+                                <Text style={styles.contextTitle}>{activeListing.quantity} {activeListing.material_type}</Text>
                                 <View style={styles.contextRow}>
                                     <Box size={14} color="#666" />
                                     <Text style={styles.contextDesc}>Waiting for interested collectors</Text>
@@ -137,29 +174,36 @@ export default function ProfileScreen({ navigation }) {
                 {/* Information Architecture Blocks */}
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
-                    <NavLink title="My Listings" onPress={() => navigation.navigate('Main', { screen: 'Market' })} />
-                    <NavLink title="Pickup History" onPress={() => navigation.navigate('Main', { screen: 'Pickups' })} />
-                    <NavLink title="Saved Locations" onPress={() => navigation.navigate('SavedLocations')} />
+                    <NavCard>
+                        <NavLink title="My Listings" icon={Box} iconColor="#3B82F6" iconBg="#EFF6FF" onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
+                        <NavLink title="Pickup History" icon={Truck} iconColor="#059669" iconBg="#ECFDF5" onPress={() => navigation.navigate('PickupHistory')} />
+                        <NavLink title="Transaction History" icon={Clock} iconColor="#8B5CF6" iconBg="#F5F3FF" onPress={() => navigation.navigate('TransactionHistory')} />
+                        <NavLink title="Saved Locations" icon={Bookmark} iconColor="#F59E0B" iconBg="#FFFBEB" onPress={() => navigation.navigate('SavedLocations')} isLast />
+                    </NavCard>
                 </View>
 
                 <View style={styles.navBlock}>
                     <SectionHeader title="Account" />
-                    <NavLink title="Profile Information" onPress={() => navigation.navigate('EditProfile')} />
-                    <NavLink title="Verification" onPress={() => navigation.navigate('KYCVerification')} />
-                    <NavLink title="Security" onPress={() => navigation.navigate('Security')} />
+                    <NavCard>
+                        <NavLink title="Profile Information" icon={UserCog} iconColor="#3B82F6" iconBg="#EFF6FF" onPress={() => navigation.navigate('EditProfile')} />
+                        <NavLink title="Verification" icon={ShieldCheck} iconColor="#059669" iconBg="#ECFDF5" onPress={() => navigation.navigate('KYCVerification')} />
+                        <NavLink title="Security" icon={ShieldAlert} iconColor="#EF4444" iconBg="#FEF2F2" onPress={() => navigation.navigate('Security')} isLast />
+                    </NavCard>
                 </View>
 
                 <View style={styles.navBlock}>
                     <SectionHeader title="Support & Community" />
-                    <NavLink title="Invite someone" onPress={handleInvite} />
-                    <NavLink title="Help & Support" onPress={() => navigation.navigate('SupportChat')} />
+                    <NavCard>
+                        <NavLink title="Invite someone" icon={Share2} iconColor="#F59E0B" iconBg="#FFFBEB" onPress={handleInvite} />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestion} iconColor="#8B5CF6" iconBg="#F5F3FF" onPress={() => navigation.navigate('SupportChat')} isLast />
+                    </NavCard>
                 </View>
 
                 {/* Log Out */}
-                <View style={styles.logoutContainer}>
-                    <TouchableOpacity onPress={handleLogout} activeOpacity={0.5}>
-                        <Text style={styles.logoutText}>Log Out</Text>
-                    </TouchableOpacity>
+                <View style={styles.navBlock}>
+                    <NavCard>
+                        <NavLink title="Log Out" icon={LogOut} onPress={handleLogout} danger isLast />
+                    </NavCard>
                 </View>
 
             </ScrollView>
@@ -187,22 +231,33 @@ const styles = StyleSheet.create({
         backgroundColor: '#F3F4F6',
         marginBottom: 16,
     },
+    identityNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
     identityName: {
         fontSize: 24,
         fontWeight: '700',
         color: '#111827',
         letterSpacing: -0.5,
-        marginBottom: 4,
     },
     identityHandle: {
         fontSize: 15,
         color: '#6B7280',
+        marginTop: 4,
         marginBottom: 12,
     },
-    identityRole: {
-        fontSize: 14,
+    roleBadge: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#F3F4F6',
+        paddingHorizontal: 12,
+        paddingVertical: 5,
+        borderRadius: 20,
+    },
+    roleBadgeText: {
+        fontSize: 13,
         color: '#374151',
-        fontWeight: '500',
+        fontWeight: '600',
     },
     impactContainer: {
         paddingHorizontal: 32,
@@ -217,22 +272,25 @@ const styles = StyleSheet.create({
     },
     impactRow: {
         flexDirection: 'row',
-        gap: 40,
+        gap: 12,
     },
-    impactMetric: {
+    impactCard: {
         flex: 1,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 18,
+        padding: 18,
     },
     impactValue: {
-        fontSize: 32,
+        fontSize: 28,
         fontWeight: '700',
         color: '#111827',
         letterSpacing: -1,
         marginBottom: 8,
     },
     impactLabel: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#6B7280',
-        lineHeight: 20,
+        lineHeight: 18,
     },
     contextualContainer: {
         paddingHorizontal: 24,
@@ -241,7 +299,7 @@ const styles = StyleSheet.create({
     contextCard: {
         backgroundColor: '#F9FAFB',
         padding: 24,
-        borderRadius: 16,
+        borderRadius: 18,
     },
     contextHeader: {
         fontSize: 11,
@@ -273,24 +331,40 @@ const styles = StyleSheet.create({
         color: '#111827',
     },
     navBlock: {
-        paddingHorizontal: 32,
-        marginBottom: 40,
+        paddingHorizontal: 24,
+        marginBottom: 32,
+    },
+    navCard: {
+        backgroundColor: '#F9FAFB',
+        borderRadius: 18,
+        paddingHorizontal: 8,
+        overflow: 'hidden',
     },
     navLink: {
-        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 14,
+        paddingHorizontal: 8,
+    },
+    navLinkDivider: {
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F1F2',
+    },
+    navLinkIconBox: {
+        width: 34,
+        height: 34,
+        borderRadius: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
     },
     navLinkText: {
-        fontSize: 16,
+        flex: 1,
+        fontSize: 15,
         color: '#111827',
-        fontWeight: '400',
-    },
-    logoutContainer: {
-        paddingHorizontal: 32,
-        marginTop: 20,
-    },
-    logoutText: {
-        fontSize: 16,
         fontWeight: '500',
+    },
+    navLinkTextDanger: {
         color: '#EF4444',
     },
 });

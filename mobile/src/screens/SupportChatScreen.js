@@ -5,7 +5,7 @@ import {
     ActivityIndicator, Image, Dimensions, StatusBar, ScrollView
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Send, Bot, ArrowLeft, User, Video, Phone, Smile, Paperclip, Mic, File, X } from 'lucide-react-native';
+import { Send, Bot, ArrowLeft, User, Paperclip, File, X } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import apiClient from '../api/client';
@@ -289,10 +289,6 @@ export default function SupportChatScreen() {
                         </View>
                     )}
                     <View style={styles.inputWrapper}>
-                        <TouchableOpacity style={styles.inputActionBtn}>
-                            <Smile size={22} color="#999" />
-                        </TouchableOpacity>
-                        
                         <TextInput
                             style={styles.input}
                             placeholder="Message"
@@ -301,14 +297,11 @@ export default function SupportChatScreen() {
                             multiline
                             placeholderTextColor="#999"
                         />
-                        
+
                         {!inputText.trim() && !attachment ? (
                             <View style={styles.rightActionsRow}>
                                 <TouchableOpacity style={styles.inputActionBtn} onPress={pickDocument}>
                                     <Paperclip size={20} color="#999" />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.inputActionBtn}>
-                                    <Mic size={20} color="#999" />
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -342,8 +335,6 @@ const styles = StyleSheet.create({
     statusLabel: { fontSize: 13, color: '#10B981', fontWeight: '500', marginTop: 2 },
     
     headerActions: { flexDirection: 'row', alignItems: 'center' },
-    iconBtn: { padding: 4 },
-    
     contentContainer: { flex: 1, backgroundColor: '#FAFAFA' },
     listContent: { padding: 20, paddingBottom: 20 },
     
