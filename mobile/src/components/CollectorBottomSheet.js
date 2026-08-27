@@ -1,8 +1,19 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, Animated } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, Truck } from 'lucide-react-native';
 
-export default function CollectorBottomSheet({ collector, job, onChatPress, onCallPress }) {
+export default function CollectorBottomSheet({ collector, job, onChatPress, onCallPress, onCancel }) {
+    const entrance = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.spring(entrance, {
+            toValue: 1,
+            friction: 7,
+            tension: 50,
+            useNativeDriver: true,
+        }).start();
+    }, []);
+
     if (!collector || !job) return null;
 
     // Determine current step index based on job status
@@ -16,7 +27,12 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
     const currentStep = getStatusIndex();
 
     return (
-        <View style={styles.container}>
+        <Animated.View style={[styles.container, {
+            opacity: entrance,
+            transform: [{
+                translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [24, 0] })
+            }]
+        }]}>
             <View style={styles.dragHandle} />
             
             {/* Header: Collector Info & Quick Actions */}
@@ -87,10 +103,16 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                      'Pickup Completed'}
                 </Text>
                 {currentStep === 1 && (
-                    <Text style={styles.etaValue}>~15 mins</Text>
+                    <Text style={styles.etaValue}>~{job.duration_min ? Math.round(job.duration_min) : 15} min</Text>
                 )}
             </View>
-        </View>
+
+            {onCancel && currentStep < 2 && (
+                <TouchableOpacity style={styles.cancelLink} onPress={onCancel}>
+                    <Text style={styles.cancelLinkText}>Cancel pickup</Text>
+                </TouchableOpacity>
+            )}
+        </Animated.View>
     );
 }
 
@@ -222,5 +244,15 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#111',
-    }
+    },
+    cancelLink: {
+        alignItems: 'center',
+        marginTop: 16,
+        paddingVertical: 4,
+    },
+    cancelLinkText: {
+        color: '#DC2626',
+        fontSize: 13,
+        fontWeight: '600',
+    },
 });

@@ -1,9 +1,24 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, Truck, Package, Navigation, Activity } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
 
 export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, onNavigate, onArrive, onComplete, onAccept, requestLoading, isCollapsed, onToggleCollapse }) {
+    const pulseAnim = useRef(new Animated.Value(0.5)).current;
+    const isPending = job?.status === 'PENDING';
+
+    useEffect(() => {
+        if (!isPending) return;
+        const loop = Animated.loop(
+            Animated.sequence([
+                Animated.timing(pulseAnim, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(pulseAnim, { toValue: 0.5, duration: 700, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            ])
+        );
+        loop.start();
+        return () => loop.stop();
+    }, [isPending]);
+
     if (!job) return null;
 
     const provider = job.provider;
@@ -29,11 +44,18 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, isPending && styles.containerPending]}>
             <TouchableOpacity onPress={onToggleCollapse} style={{ alignItems: 'center' }}>
                 <View style={styles.dragHandle} />
             </TouchableOpacity>
-            
+
+            {isPending && (
+                <View style={styles.newRequestBadge}>
+                    <Animated.View style={[styles.newRequestDot, { opacity: pulseAnim }]} />
+                    <Text style={styles.newRequestText}>NEW REQUEST</Text>
+                </View>
+            )}
+
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                 {/* Header: Disposer Info & Quick Actions */}
                 <View style={styles.header}>
@@ -186,6 +208,33 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 20,
         maxHeight: '100%',
+    },
+    containerPending: {
+        borderTopWidth: 3,
+        borderTopColor: '#059669',
+    },
+    newRequestBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'center',
+        backgroundColor: '#F0FDF4',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        gap: 6,
+        marginBottom: 16,
+    },
+    newRequestDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: '#059669',
+    },
+    newRequestText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#059669',
+        letterSpacing: 0.6,
     },
     dragHandle: {
         width: 40,

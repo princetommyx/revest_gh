@@ -21,6 +21,7 @@ import {
     User
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
@@ -30,6 +31,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { marketApi } from '../api/market';
 import CollectorBottomSheet from '../components/CollectorBottomSheet';
 import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
+import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
 
@@ -44,8 +46,8 @@ const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
 const VEHICLES = [
-    { id: 'tricycle', label: 'Tricycle', time: '5 min', icon: Truck },
-    { id: 'pickup', label: 'Pickup', time: '12 min', icon: Truck }
+    { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', icon: Truck },
+    { id: 'pickup', label: 'Pickup Truck', capacity: 'Bulk loads', icon: Truck }
 ];
 
 
@@ -469,10 +471,11 @@ export default function PickupsScreen({ route }) {
         }
     }, [pickupData]);
 
-    const startMapSelection = () => {
+    const startMapSelection = (mode = 'PICKUP') => {
+        setSelectionMode(mode);
         setShowRequestModal(false);
         setIsSelectingLocation(true);
-        
+
         // Stop tracking if active
         if (locationSubscription) {
             locationSubscription.remove();
@@ -507,11 +510,13 @@ export default function PickupsScreen({ route }) {
             }
             case 'new_request':
                 if (userRole === 'COLLECTOR') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     Toast.show({ type: 'info', text1: 'New Pickup Nearby', text2: msg.material_type ? `${msg.material_type} pickup available` : 'A new request just came in.' });
                     refetch();
                 }
                 break;
             case 'job_accepted':
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 Toast.show({ type: 'success', text1: 'Collector Accepted!', text2: 'Your collector is on the way.' });
                 refetch();
                 break;
@@ -663,7 +668,10 @@ export default function PickupsScreen({ route }) {
                 setDestinationAddress(address);
             }
 
-            setShowRequestModal(true);
+            // Return to the booking sheet instead of jumping straight into the
+            // request modal - the disposer still needs to set the other
+            // location (pickup or destination) before they can continue.
+            setShowRequestModal(false);
         }
     };
 
@@ -1197,6 +1205,19 @@ export default function PickupsScreen({ route }) {
         return jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
     }, [jobs, userRole]);
 
+    // Fallback "collector found" celebration in case the websocket push was
+    // missed (reconnecting) - fires once per PENDING -> ACCEPTED transition
+    // detected via the polled job list.
+    const prevSellerJobStatus = useRef(null);
+    useEffect(() => {
+        const prevStatus = prevSellerJobStatus.current;
+        const nextStatus = activeSellerJob?.status ?? null;
+        if (prevStatus === 'PENDING' && nextStatus === 'ACCEPTED') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        prevSellerJobStatus.current = nextStatus;
+    }, [activeSellerJob?.status]);
+
     useEffect(() => {
         if (userRole === 'SELLER') {
             const completedUnratedJob = jobs.find(j => j.status === 'COMPLETED' && !j.is_rated);
@@ -1378,9 +1399,23 @@ export default function PickupsScreen({ route }) {
                             )}
                         </TouchableOpacity>
                         
-                        {requestForm.pickup_address && requestForm.destination_address && (
-                            <AnimatedButton style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
-                                <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                        {(useCurrentLocation ? !!location : !!customAddress) && !!destinationAddress && (
+                            <AnimatedButton
+                                style={styles.continueBtnUbride}
+                                haptic
+                                disabled={requestLoading}
+                                onPress={async () => {
+                                    if (!requestForm.delivery_fee) {
+                                        await fetchEstimate();
+                                    }
+                                    setUiState('VEHICLE_SELECT');
+                                }}
+                            >
+                                {requestLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                                )}
                             </AnimatedButton>
                         )}
                     </View>
@@ -1392,24 +1427,62 @@ export default function PickupsScreen({ route }) {
                     <TouchableOpacity style={styles.backVehicleBtn} onPress={() => setUiState('IDLE')}>
                         <View style={styles.dragHandle} />
                     </TouchableOpacity>
-                    <View style={styles.vehicleCategories}>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Economy' && styles.vehicleCatTextActive]}>Economy</Text>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Premium' && styles.vehicleCatTextActive]}>Premium</Text>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Extras' && styles.vehicleCatTextActive]}>Extras</Text>
+
+                    <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
+
+                    {/* Route summary - the price/ETA preview Bolt/Uber always show before you commit */}
+                    <View style={styles.routeSummaryCard}>
+                        <View style={styles.routeSummaryRow}>
+                            <View style={styles.dotIndicatorPickup} />
+                            <Text style={styles.routeSummaryText} numberOfLines={1}>
+                                {customAddress || 'Current Location'}
+                            </Text>
+                        </View>
+                        <View style={styles.routeSummaryConnector} />
+                        <View style={styles.routeSummaryRow}>
+                            <View style={styles.dotIndicatorDest} />
+                            <Text style={styles.routeSummaryText} numberOfLines={1}>
+                                {destinationAddress || 'Destination'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.routeSummaryDivider} />
+
+                        <View style={styles.routeSummaryStatsRow}>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>Distance</Text>
+                                <Text style={styles.routeSummaryStatValue}>
+                                    {requestForm.distance_km ? `${requestForm.distance_km} km` : '—'}
+                                </Text>
+                            </View>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>ETA</Text>
+                                <Text style={styles.routeSummaryStatValue}>
+                                    {requestForm.duration_min ? `${Math.round(requestForm.duration_min)} min` : '—'}
+                                </Text>
+                            </View>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>Est. fee</Text>
+                                <Text style={[styles.routeSummaryStatValue, { color: '#059669' }]}>
+                                    {requestForm.delivery_fee ? `GHS ${parseFloat(requestForm.delivery_fee).toFixed(2)}` : '—'}
+                                </Text>
+                            </View>
+                        </View>
                     </View>
-                    
+
+                    <Text style={styles.loadSizeLabel}>LOAD SIZE</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
                         {VEHICLES.map(v => {
                             const Icon = v.icon;
                             return (
-                                <TouchableOpacity 
-                                    key={v.id} 
+                                <TouchableOpacity
+                                    key={v.id}
                                     style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
                                     onPress={() => setSelectedVehicle(v.id)}
                                 >
                                     <Icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
                                     <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
-                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
+                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.capacity}</Text>
                                     {selectedVehicle === v.id && (
                                         <View style={styles.vehicleCheckBadge}>
                                             <CircleCheck size={12} color="#fff" />
@@ -1420,7 +1493,7 @@ export default function PickupsScreen({ route }) {
                         })}
                     </ScrollView>
 
-                    <AnimatedButton style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
+                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
                         {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideText}>Request Pickup</Text>}
                     </AnimatedButton>
                 </View>
@@ -1858,11 +1931,7 @@ export default function PickupsScreen({ route }) {
             {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
                 <View style={{ position: 'absolute', bottom: 120, left: 16, right: 16, zIndex: 50 }}>
                     {activeSellerJob.status === 'PENDING' ? (
-                        <View style={styles.searchingBottomSheet}>
-                            <ActivityIndicator size="large" color="#059669" style={{ marginBottom: 16 }} />
-                            <Text style={styles.searchingTitle}>Connecting...</Text>
-                            <Text style={styles.searchingSubtext}>Looking for the nearest available collector to pick up your waste.</Text>
-                        </View>
+                        <SearchingCollectorCard onCancel={() => openCancelModal(activeSellerJob.id)} />
                     ) : (
                         <CollectorBottomSheet
                             job={activeSellerJob}
@@ -1877,6 +1946,7 @@ export default function PickupsScreen({ route }) {
                                     Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Collector phone number not available.' });
                                 }
                             }}
+                            onCancel={() => openCancelModal(activeSellerJob.id)}
                         />
                     )}
                 </View>
@@ -2010,11 +2080,19 @@ const styles = StyleSheet.create({
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
     bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
-    backVehicleBtn: { alignItems: 'center', marginBottom: 20, paddingVertical: 10 },
+    backVehicleBtn: { alignItems: 'center', marginBottom: 12, paddingVertical: 10 },
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
-    vehicleCategories: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
-    vehicleCatText: { fontSize: 15, color: '#999', fontWeight: '500' },
-    vehicleCatTextActive: { color: '#111', fontWeight: 'bold' },
+    confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
+    routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
+    routeSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    routeSummaryConnector: { width: 1, height: 14, backgroundColor: '#D1D5DB', marginLeft: 5, marginVertical: 2 },
+    routeSummaryText: { flex: 1, fontSize: 14, color: '#111', fontWeight: '500' },
+    routeSummaryDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
+    routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    routeSummaryStat: { alignItems: 'center', flex: 1 },
+    routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
+    routeSummaryStatValue: { fontSize: 15, color: '#111', fontWeight: '700' },
+    loadSizeLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginBottom: 10 },
     vehicleScroll: { gap: 15, paddingBottom: 20 },
     vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
     vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
@@ -2025,10 +2103,6 @@ const styles = StyleSheet.create({
     vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
     bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
-
-    searchingBottomSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
-    searchingTitle: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
-    searchingSubtext: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
     collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
