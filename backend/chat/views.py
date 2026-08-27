@@ -6,6 +6,8 @@ from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Message, SupportSession
 from .serializers import MessageSerializer, MessageCreateSerializer, SupportSessionSerializer
 from django.contrib.auth import get_user_model
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 
 User = get_user_model()
 
@@ -37,10 +39,25 @@ class MessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         message = serializer.save(sender=self.request.user)
-        
+
         # Send email notification
         from users.email_service import send_message_notification_email
         send_message_notification_email(message.sender, message.receiver, message.content)
+
+        # Real-time push to both participants over the chat websocket -
+        # same room-naming scheme ChatConsumer uses, so either side gets
+        # the message instantly instead of waiting on the next poll.
+        try:
+            channel_layer = get_channel_layer()
+            user_ids = sorted([message.sender_id, message.receiver_id])
+            room_group_name = f"chat_{user_ids[0]}_{user_ids[1]}"
+            payload = MessageSerializer(message, context={'request': self.request}).data
+            async_to_sync(channel_layer.group_send)(
+                room_group_name,
+                {'type': 'chat_message', 'message': payload}
+            )
+        except Exception:
+            pass  # Don't fail message creation if the realtime push fails
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
