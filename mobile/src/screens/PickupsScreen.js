@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView, StatusBar,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
+import { authApi } from '../api/auth';
 import { tomtomApi } from '../api/tomtom';
 import { useAuth } from '../context/AuthContext';
+import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
+import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
@@ -263,6 +266,13 @@ export default function PickupsScreen({ route }) {
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
     const mapRef = useRef(null);
+    const locationRef = useRef(location);
+    useEffect(() => { locationRef.current = location; }, [location]);
+
+    // Live collector positions pushed over the websocket, keyed by pickup id.
+    // Takes priority over the polled `current_lat`/`current_lon` snapshot.
+    const [liveCollectorLocations, setLiveCollectorLocations] = useState({});
+
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
     const [requestForm, setRequestForm] = useState({
@@ -480,82 +490,164 @@ export default function PickupsScreen({ route }) {
         }
     };
 
-    // Refetch polling for Disposer to see live collector updates
+    // Live push/pull wiring for tracking. The websocket delivers instant
+    // status changes and collector positions; polling is kept as a slow
+    // fallback in case the socket is mid-reconnect.
+    const handleSocketMessage = useCallback((msg) => {
+        if (!msg || !msg.type) return;
+
+        switch (msg.type) {
+            case 'collector_location': {
+                if (msg.request_id == null || typeof msg.lat !== 'number' || typeof msg.lon !== 'number') return;
+                setLiveCollectorLocations(prev => ({
+                    ...prev,
+                    [msg.request_id]: { lat: msg.lat, lon: msg.lon, heading: msg.heading, timestamp: msg.timestamp }
+                }));
+                break;
+            }
+            case 'new_request':
+                if (userRole === 'COLLECTOR') {
+                    Toast.show({ type: 'info', text1: 'New Pickup Nearby', text2: msg.material_type ? `${msg.material_type} pickup available` : 'A new request just came in.' });
+                    refetch();
+                }
+                break;
+            case 'job_accepted':
+                Toast.show({ type: 'success', text1: 'Collector Accepted!', text2: 'Your collector is on the way.' });
+                refetch();
+                break;
+            case 'driver_arrived':
+                Toast.show({ type: 'info', text1: 'Collector Arrived', text2: 'Your collector has arrived at the pickup location.' });
+                refetch();
+                break;
+            case 'job_completed':
+            case 'job_cancelled_by_provider':
+            case 'job_cancelled_by_collector':
+                refetch();
+                break;
+            default:
+                break;
+        }
+    }, [userRole, refetch]);
+
+    useLogisticsSocket(handleSocketMessage);
+
+    // Slow fallback poll - covers the rare case of a dropped/reconnecting socket.
     useEffect(() => {
         let interval;
         if (userRole !== 'COLLECTOR') {
-            // Disposer polls every 10 seconds to get updated collector locations
             interval = setInterval(() => {
                 refetch();
-            }, 10000);
+            }, 25000);
         }
         return () => {
             if (interval) clearInterval(interval);
         };
     }, [userRole, refetch]);
 
-    // Disposer camera following
+    // Disposer camera following - prefers the live websocket position over the polled snapshot
     useEffect(() => {
-        if (userRole !== 'COLLECTOR' && navigatingJob && mapRef.current) {
-            // Find the active job from the latest fetched jobs to get new coordinates
-            const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
-            if (activeLiveJob?.current_lat && activeLiveJob?.current_lon) {
-                mapRef.current.animateCamera({
-                    center: { latitude: activeLiveJob.current_lat, longitude: activeLiveJob.current_lon },
-                    pitch: 45,
-                    zoom: 17
-                }, { duration: 1000 });
-            }
-        }
-    }, [jobs, navigatingJob, userRole]);
+        if (userRole === 'COLLECTOR' || !navigatingJob || !mapRef.current) return;
 
-    // Collector camera following & auto-tracking
+        const live = liveCollectorLocations[navigatingJob.id];
+        const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
+        const lat = live?.lat ?? activeLiveJob?.current_lat;
+        const lon = live?.lon ?? activeLiveJob?.current_lon;
+
+        if (lat && lon) {
+            mapRef.current.animateCamera({
+                center: { latitude: lat, longitude: lon },
+                pitch: 45,
+                zoom: 17
+            }, { duration: 1000 });
+        }
+    }, [jobs, navigatingJob, userRole, liveCollectorLocations]);
+
+    // Collector: keep background GPS streaming to the server for as long as
+    // there's an active job, independent of which screen is mounted or
+    // whether the app is foregrounded. Driven by job status, not navigation UI.
     useEffect(() => {
         if (userRole !== 'COLLECTOR') return;
 
-        let activeJobId = null;
-        if (navigatingJob) {
-            activeJobId = navigatingJob.id;
+        const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+        if (activeJob) {
+            startCollectorLocationTracking(activeJob.id);
         } else {
-            const acceptedJob = jobs.find(j => j.status === 'ACCEPTED');
-            if (acceptedJob) activeJobId = acceptedJob.id;
+            stopCollectorLocationTracking();
+        }
+    }, [userRole, jobs]);
+
+    // Collector presence heartbeat: marks the collector online with a
+    // position so the backend can find them when matching new requests.
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR') return;
+
+        const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
+        const pushPresence = async (online) => {
+            const coords = coordsOf(locationRef.current);
+            if (!coords?.latitude || !coords?.longitude) return;
+            try {
+                await authApi.updateMyLocation({ latitude: coords.latitude, longitude: coords.longitude, is_online: online });
+            } catch (e) {
+                console.warn('Failed to update collector presence:', e?.message);
+            }
+        };
+
+        pushPresence(true);
+        const interval = setInterval(() => pushPresence(true), 30000);
+        const appStateSub = AppState.addEventListener('change', (state) => pushPresence(state === 'active'));
+
+        return () => {
+            clearInterval(interval);
+            appStateSub.remove();
+            pushPresence(false);
+        };
+    }, [userRole]);
+
+    // Collector camera following while actively navigating (foreground UX only -
+    // location reporting to the server is handled by the background task above).
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR' || !navigatingJob) {
+            if (locationSubscription) {
+                locationSubscription.remove();
+                setLocationSubscription(null);
+            }
+            return;
         }
 
-        if (activeJobId && !locationSubscription) {
-            let sub = null;
-            const startTracking = async () => {
-                sub = await Location.watchPositionAsync(
-                    {
-                        accuracy: Location.Accuracy.High,
-                        distanceInterval: 10,
-                        timeInterval: 5000,
-                    },
-                    async (loc) => {
-                        setLocation(loc);
-                        if (mapRef.current && navigatingJob) {
-                            mapRef.current.animateCamera({
-                                center: { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
-                                pitch: 45,
-                                heading: loc.coords.heading || 0,
-                                zoom: 18
-                            }, { duration: 1000 });
-                        }
-                        
-                        try {
-                            await logisticsApi.updateLocation(activeJobId, loc.coords.latitude, loc.coords.longitude);
-                        } catch (e) {
-                            console.warn("Failed to update collector location", e);
-                        }
+        let sub = null;
+        let cancelled = false;
+        (async () => {
+            const watcher = await Location.watchPositionAsync(
+                {
+                    accuracy: Location.Accuracy.High,
+                    distanceInterval: 10,
+                    timeInterval: 5000,
+                },
+                (loc) => {
+                    setLocation(loc);
+                    if (mapRef.current) {
+                        mapRef.current.animateCamera({
+                            center: { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
+                            pitch: 45,
+                            heading: loc.coords.heading || 0,
+                            zoom: 18
+                        }, { duration: 1000 });
                     }
-                );
-                setLocationSubscription(sub);
-            };
-            startTracking();
-        } else if (!activeJobId && locationSubscription) {
-            locationSubscription.remove();
-            setLocationSubscription(null);
-        }
-    }, [userRole, jobs, navigatingJob, locationSubscription]);
+                }
+            );
+            if (cancelled) {
+                watcher.remove();
+            } else {
+                sub = watcher;
+                setLocationSubscription(watcher);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+            if (sub) sub.remove();
+        };
+    }, [userRole, navigatingJob]);
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
@@ -983,8 +1075,9 @@ export default function PickupsScreen({ route }) {
         if (isNaN(lat) || isNaN(lon)) return [];
 
         const isNavigatingThis = navigatingJob?.id === job.id;
-        const currentLat = job.current_lat || job.latitude;
-        const currentLon = job.current_lon || job.longitude;
+        const live = liveCollectorLocations[job.id];
+        const currentLat = live?.lat ?? job.current_lat ?? job.latitude;
+        const currentLon = live?.lon ?? job.current_lon ?? job.longitude;
 
         if (isNavigatingThis || job.status === 'PENDING') {
             markers.push(
@@ -1090,7 +1183,7 @@ export default function PickupsScreen({ route }) {
 
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
-    }, [jobs, navigatingJob, routeEta]);
+    }, [jobs, navigatingJob, routeEta, liveCollectorLocations]);
 
     const sortedJobs = useMemo(() => {
         if (userRole !== 'COLLECTOR') return jobs;

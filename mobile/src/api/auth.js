@@ -52,6 +52,11 @@ export const authApi = {
         return response.data;
     },
 
+    updateMyLocation: async ({ latitude, longitude, is_online }) => {
+        const response = await apiClient.patch('users/location/', { latitude, longitude, is_online });
+        return response.data;
+    },
+
     requestPasswordReset: async (identifier) => {
         const response = await apiClient.post('auth/password-reset/', { identifier });
         return response.data;

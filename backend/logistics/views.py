@@ -1,3 +1,4 @@
+import logging
 from django.db import models
 from rest_framework import viewsets, permissions, filters, status, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -22,6 +23,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 @extend_schema(tags=['logistics'])
 @extend_schema_view(
@@ -199,29 +201,6 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         self.notify_provider(pickup_request, 'driver_arrived')
         return Response({'status': 'driver arrived'})
 
-    @extend_schema(summary="Update collector location")
-    @action(detail=True, methods=['patch'])
-    def update_location(self, request, pk=None):
-        pickup_request = self.get_object()
-        
-        # Only the assigned collector can update their location
-        if pickup_request.collector != request.user:
-            return Response({'error': 'Not authorized to update location for this job'}, status=403)
-            
-        lat = request.data.get('latitude')
-        lon = request.data.get('longitude')
-        
-        if lat is None or lon is None:
-            return Response({'error': 'latitude and longitude are required'}, status=400)
-            
-        try:
-            pickup_request.current_lat = float(lat)
-            pickup_request.current_lon = float(lon)
-            pickup_request.save(update_fields=['current_lat', 'current_lon'])
-            return Response({'status': 'location updated'})
-        except (ValueError, TypeError):
-            return Response({'error': 'Invalid coordinates provided'}, status=400)
-
     @extend_schema(summary="Verify weight with scale photo")
     @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def verify_weight(self, request, pk=None):
@@ -352,24 +331,56 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Update live location")
     @action(detail=True, methods=['post'])
     def track(self, request, pk=None):
-        """Update live location during a job"""
+        """
+        Collector pushes their live GPS position for an active job.
+        Persists it and broadcasts a 'collector_location' event to the
+        disposer over the logistics websocket group.
+        """
         pickup_request = self.get_object()
         if pickup_request.collector != request.user:
             return Response({'error': 'Not authorized'}, status=403)
-            
+
+        if pickup_request.status not in ('ACCEPTED', 'ARRIVED'):
+            return Response({'error': 'Job is not active'}, status=400)
+
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
-        
-        if lat and lon:
-            pickup_request.current_lat = lat
-            pickup_request.current_lon = lon
-            pickup_request.save()
-            
-            # Notify provider via websocket
-            self.notify_provider(pickup_request, 'location_update', {'lat': lat, 'lon': lon})
-            return Response({'status': 'location updated'})
-            
-        return Response({'error': 'Invalid coordinates'}, status=400)
+
+        if lat is None or lon is None:
+            return Response({'error': 'latitude and longitude are required'}, status=400)
+
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except (TypeError, ValueError):
+            return Response({'error': 'Invalid coordinates provided'}, status=400)
+
+        def parse_optional_float(key):
+            value = request.data.get(key)
+            if value is None:
+                return None
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return None
+
+        heading = parse_optional_float('heading')
+        speed = parse_optional_float('speed')
+
+        now = timezone.now()
+        pickup_request.current_lat = lat
+        pickup_request.current_lon = lon
+        pickup_request.last_location_at = now
+        pickup_request.save(update_fields=['current_lat', 'current_lon', 'last_location_at'])
+
+        self.notify_provider(pickup_request, 'collector_location', {
+            'lat': lat,
+            'lon': lon,
+            'heading': heading,
+            'speed': speed,
+            'timestamp': now.isoformat(),
+        })
+        return Response({'status': 'location updated'})
 
     def notify_provider(self, pickup_request, status_type, extra_data=None):
         data = {
@@ -479,8 +490,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         else:
             # For Providers or others
             rides = PickupRequest.objects.filter(provider=user, status='COMPLETED').order_by('-created_at')
-        
+
         serializer = self.get_serializer(rides, many=True)
+        return Response(serializer.data)
+
     @extend_schema(summary="Estimate pickup price")
     @action(detail=False, methods=['post'])
     def estimate_price(self, request):

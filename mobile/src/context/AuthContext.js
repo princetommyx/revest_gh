@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authStorage } from '../utils/authStorage';
 import { authApi } from '../api/auth';
+import { stopCollectorLocationTracking } from '../utils/collectorTracking';
 
 const AuthContext = createContext();
 
@@ -112,6 +113,11 @@ export const AuthProvider = ({ children }) => {
             await authApi.logout();
         } catch (e) {
             console.log('Logout error (backend):', e);
+        }
+        try {
+            await stopCollectorLocationTracking();
+        } catch (e) {
+            console.log('Failed to stop location tracking on logout:', e);
         }
         await authStorage.clearSession();
         setUser(null);
