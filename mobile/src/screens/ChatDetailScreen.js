@@ -8,7 +8,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { chatApi } from '../api/chat';
 import { Send, User, ChevronLeft, Ellipsis, Phone, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import Toast from 'react-native-root-toast';
+import { useChatSocket } from '../hooks/useChatSocket';
 
 const { width } = Dimensions.get('window');
 
@@ -23,9 +23,15 @@ export default function ChatDetailScreen({ route, navigation }) {
 
     useEffect(() => {
         fetchMessages();
-        const interval = setInterval(fetchMessages, 5000);
-        return () => clearInterval(interval);
     }, [contactId]);
+
+    const handleIncomingMessage = useCallback((incoming) => {
+        setMessages(prev => prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]);
+    }, []);
+
+    // Live push for the other person's messages; sending still goes
+    // through REST below (fetchMessages() re-syncs our own send).
+    useChatSocket(contactId, handleIncomingMessage);
 
     const fetchMessages = async () => {
         try {
@@ -51,7 +57,7 @@ export default function ChatDetailScreen({ route, navigation }) {
     };
 
     const renderMessage = ({ item }) => {
-        const isMine = item.sender === user?.id;
+        const isMine = (item.sender?.id ?? item.sender) === user?.id;
         return (
             <View style={[styles.messageRow, isMine ? styles.myMessageRow : styles.theirMessageRow]}>
                 <View style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}>

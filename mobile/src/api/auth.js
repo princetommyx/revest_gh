@@ -26,8 +26,8 @@ export const authApi = {
         return response.data;
     },
 
-    googleLogin: async (token) => {
-        const response = await apiClient.post('auth/google/', { token });
+    googleLogin: async (token, role) => {
+        const response = await apiClient.post('auth/google/', role ? { token, role } : { token });
         return response.data;
     },
 
@@ -69,6 +69,11 @@ export const authApi = {
 
     submitFeedback: async (content, category = 'Improvement') => {
         const response = await apiClient.post('users/feedback/', { content, category });
+        return response.data;
+    },
+
+    getKycStatus: async () => {
+        const response = await apiClient.get('kyc/status/');
         return response.data;
     }
 };

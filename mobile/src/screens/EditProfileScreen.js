@@ -9,7 +9,7 @@ import { ArrowLeft, User, Mail, MapPin, Camera, ChevronRight, Phone, Shield } fr
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-toast-message';
 import apiClient, { BASE_URL } from '../api/client';
 
 const { width } = Dimensions.get('window');
@@ -45,7 +45,7 @@ export default function EditProfileScreen({ navigation }) {
     const pickImage = async () => {
         const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (permissionResult.granted === false) {
-            Toast.show("Media permission required", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Permission denied', text2: 'Media access is required to change your photo' });
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -76,10 +76,10 @@ export default function EditProfileScreen({ navigation }) {
             }
             const updatedUser = await authApi.updateProfile(data);
             updateUser(updatedUser);
-            Toast.show("Profile updated!", { backgroundColor: '#111' });
+            Toast.show({ type: 'success', text1: 'Profile updated!' });
             navigation.goBack();
         } catch (error) {
-            Toast.show("Update failed", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Update failed', text2: 'Please try again' });
         } finally {
             setLoading(false);
         }

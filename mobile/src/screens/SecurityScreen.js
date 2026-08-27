@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Lock, ShieldCheck, ShieldAlert, Key } from 'lucide-react-native';
 import { authApi } from '../api/auth';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
 
@@ -24,23 +24,23 @@ export default function SecurityScreen({ navigation }) {
 
     const handleSubmit = async () => {
         if (!formData.old_password || !formData.new_password || !formData.new_password2) {
-            Toast.show("Please fill in all fields", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Missing fields', text2: 'Please fill in all fields' });
             return;
         }
 
         if (formData.new_password !== formData.new_password2) {
-            Toast.show("New passwords do not match", { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Passwords do not match', text2: 'Please re-enter your new password' });
             return;
         }
 
         setLoading(true);
         try {
             await authApi.changePassword(formData);
-            Toast.show("Password updated!", { backgroundColor: '#111' });
+            Toast.show({ type: 'success', text1: 'Password updated!' });
             navigation.goBack();
         } catch (error) {
             const msg = error.response?.data?.new_password?.[0] || error.response?.data?.detail || "Update failed";
-            Toast.show(msg, { backgroundColor: '#E74C3C' });
+            Toast.show({ type: 'error', text1: 'Update failed', text2: msg });
         } finally {
             setLoading(false);
         }

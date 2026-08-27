@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    RefreshControl, ActivityIndicator, ScrollView, Dimensions, StatusBar
+    RefreshControl, ScrollView, Dimensions, StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, MapPin, User, Clock, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { useNavigation } from '@react-navigation/native';
+import PageLoader from '../components/PageLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -120,7 +121,7 @@ export default function PickupHistoryScreen() {
 
                 {isLoading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#111" />
+                        <PageLoader fullScreen={false} label="Loading your history..." />
                     </View>
                 ) : (
                     <FlatList

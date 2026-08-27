@@ -60,6 +60,39 @@ apiClient.interceptors.request.use(
     }
 );
 
+// Because SIMPLE_JWT rotates + blacklists refresh tokens on every use, two
+// requests that 401 at the same moment (very common on cold app start, when
+// several screens fire their first fetch together) must NOT each call the
+// refresh endpoint independently - whichever one loses the race would be
+// refreshing with an already-blacklisted token and wipe out the session that
+// the winner just established. Share a single in-flight refresh promise so
+// every concurrent 401 waits on the same result instead of racing.
+let refreshPromise = null;
+
+async function refreshSession() {
+    if (!refreshPromise) {
+        refreshPromise = (async () => {
+            const refresh = await authStorage.getRefreshToken();
+            if (!refresh) {
+                throw new Error('No refresh token available');
+            }
+
+            const response = await axios.post(`${baseURL}auth/token/refresh/`, { refresh });
+            const newAccess = response.data.access;
+            const newRefresh = response.data.refresh || refresh;
+
+            const role = await authStorage.getUserRole();
+            const user = await authStorage.getUserData();
+            await authStorage.storeSession(newAccess, newRefresh, role, user);
+
+            return newAccess;
+        })().finally(() => {
+            refreshPromise = null;
+        });
+    }
+    return refreshPromise;
+}
+
 // Response Interceptor: Handle Token Refresh & Errors
 apiClient.interceptors.response.use(
     (response) => response,
@@ -72,29 +105,12 @@ apiClient.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refresh = await authStorage.getRefreshToken();
-                if (refresh) {
-                    console.log('[API] Refresh token found, calling refresh endpoint...');
-                    const response = await axios.post(`${baseURL}auth/token/refresh/`, {
-                        refresh,
-                    });
+                const newAccess = await refreshSession();
+                console.log('[API] Token refreshed successfully!');
 
-                    const newAccess = response.data.access;
-                    const newRefresh = response.data.refresh || refresh; // Use new refresh token if provided
-                    console.log('[API] Token refreshed successfully!');
-
-                    // Fetch existing data to re-store securely
-                    const role = await authStorage.getUserRole();
-                    const user = await authStorage.getUserData();
-
-                    await authStorage.storeSession(newAccess, newRefresh, role, user);
-
-                    // Retry original request with new token
-                    originalRequest.headers.Authorization = `Bearer ${newAccess}`;
-                    return apiClient(originalRequest);
-                } else {
-                    console.log('[API] No refresh token available in storage.');
-                }
+                // Retry original request with new token
+                originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+                return apiClient(originalRequest);
             } catch (refreshError) {
                 // Refresh failed, logout user
                 console.error('[API] Token refresh failed:', refreshError.response?.data || refreshError.message);

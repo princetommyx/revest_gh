@@ -36,6 +36,7 @@ import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
 import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
+import PageLoader from '../components/PageLoader';
 
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
@@ -52,6 +53,16 @@ const VEHICLES = [
     { id: 'pickup', label: 'Pickup Truck', capacity: 'Bulk loads', icon: Truck }
 ];
 
+
+const resolveImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
+    return `${BASE_URL}${cleanPath}`;
+};
+
+const contactNameOf = (u) => [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.username || 'User';
 
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth radius in km
@@ -1142,7 +1153,9 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             ) : (
                                 <View style={[styles.markerContainer, { borderColor: '#111' }]}>
-                                    <Truck size={24} color="#111" />
+                                    <View style={{ transform: [{ rotate: `${live?.heading || 0}deg` }] }}>
+                                        <Truck size={24} color="#111" />
+                                    </View>
                                 </View>
                             )}
                         </ActiveMarker>
@@ -1156,7 +1169,7 @@ export default function PickupsScreen({ route }) {
                         destination={{ latitude: lat, longitude: lon }}
                         apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
-                        strokeColor="#3B82F6"
+                        strokeColor="#059669"
                         optimizeWaypoints={true}
                         onError={(errorMessage) => {
                             console.warn("MapViewDirections Error:", errorMessage);
@@ -1261,7 +1274,7 @@ export default function PickupsScreen({ route }) {
     }
 
     if (loading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>;
+        return <PageLoader label="Finding your location..." />;
     }
 
     return (
@@ -1499,11 +1512,16 @@ export default function PickupsScreen({ route }) {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width} decelerationRate="fast" pagingEnabled>
                         {sortedJobs.map(item => (
                             <View key={item.id} style={{ width }}>
-                                <ActiveJobBottomSheet 
-                                    job={item} 
+                                <ActiveJobBottomSheet
+                                    job={item}
                                     onChatPress={() => {
-                                        Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
-                                    }} 
+                                        if (!item.provider?.id) return;
+                                        navigation.navigate('ChatDetail', {
+                                            contactId: item.provider.id,
+                                            contactName: contactNameOf(item.provider),
+                                            contactImage: resolveImageUrl(item.provider.profile_picture_url),
+                                        });
+                                    }}
                                     onCallPress={() => {
                                         if (item.provider?.phone) {
                                             import('react-native').then(({ Linking }) => {
@@ -1929,7 +1947,12 @@ export default function PickupsScreen({ route }) {
                             job={activeSellerJob}
                             collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
                             onChatPress={() => {
-                                Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
+                                if (!activeSellerJob.collector?.id) return;
+                                navigation.navigate('ChatDetail', {
+                                    contactId: activeSellerJob.collector.id,
+                                    contactName: contactNameOf(activeSellerJob.collector),
+                                    contactImage: resolveImageUrl(activeSellerJob.collector.profile_picture_url),
+                                });
                             }}
                             onCallPress={() => {
                                 if (activeSellerJob.collector?.phone) {
@@ -2168,7 +2191,6 @@ const styles = StyleSheet.create({
 
     container: { flex: 1 },
     map: { width: width, height: height },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     header: {
         position: 'absolute',

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal } from 'react-native';
 import { Eye, EyeOff, ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
 
 const { width } = Dimensions.get('window');
 
@@ -17,8 +18,8 @@ export default function LoginScreen() {
     const [phoneNumber, setPhoneNumber] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const CountryCode = '+233';
 
     // Verification State
@@ -27,7 +28,28 @@ export default function LoginScreen() {
     const [verifying, setVerifying] = useState(false);
     const [pendingUser, setPendingUser] = useState(null);
 
-    const { signIn, verifyLogin } = useAuth();
+    const { signIn, verifyLogin, googleSignIn } = useAuth();
+
+    const { promptAsync: promptGoogle } = useGoogleAuth({
+        onToken: async (token) => {
+            setGoogleLoading(true);
+            try {
+                await googleSignIn(token);
+                Toast.show({ type: 'success', text1: 'Welcome back!', text2: 'Signed in with Google.' });
+            } catch (error) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Google Sign-In Failed',
+                    text2: error.response?.data?.error || 'Please try again.'
+                });
+            } finally {
+                setGoogleLoading(false);
+            }
+        },
+        onError: (message) => {
+            Toast.show({ type: 'error', text1: 'Google Sign-In Failed', text2: message });
+        },
+    });
 
     const handleLogin = async () => {
         let usernameToSubmit = '';
@@ -114,6 +136,14 @@ export default function LoginScreen() {
     };
 
     const handleSocialLogin = (provider) => {
+        if (provider === 'Google') {
+            if (!isGoogleAuthSupported) {
+                Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Google sign-in for iOS is being finalized.' });
+                return;
+            }
+            promptGoogle();
+            return;
+        }
         Toast.show({
             type: 'info',
             text1: 'Coming Soon',
@@ -258,17 +288,6 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.optionsRow}>
-                        <View style={styles.rememberMeRow}>
-                            <Switch
-                                value={rememberMe}
-                                onValueChange={setRememberMe}
-                                trackColor={{ false: '#E5E7EB', true: '#000' }}
-                                thumbColor={'#fff'}
-                                ios_backgroundColor="#E5E7EB"
-                                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
-                            />
-                            <Text style={styles.rememberMeText}>Remember me</Text>
-                        </View>
                         <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
                             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
                         </TouchableOpacity>
@@ -302,12 +321,19 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.socialRow}>
-                        <TouchableOpacity 
-                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]} 
+                        <TouchableOpacity
+                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]}
                             onPress={() => handleSocialLogin('Google')}
+                            disabled={googleLoading}
                         >
-                            <Text style={styles.googleG}>G</Text>
-                            <Text style={styles.socialText}>Google</Text>
+                            {googleLoading ? (
+                                <ActivityIndicator color="#111" size="small" />
+                            ) : (
+                                <>
+                                    <Text style={styles.googleG}>G</Text>
+                                    <Text style={styles.socialText}>Google</Text>
+                                </>
+                            )}
                         </TouchableOpacity>
                         
                         {Platform.OS === 'ios' && (
@@ -485,19 +511,10 @@ const styles = StyleSheet.create({
     },
     optionsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-end',
         alignItems: 'center',
         marginBottom: 30,
         paddingHorizontal: 4,
-    },
-    rememberMeRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    rememberMeText: {
-        fontSize: 14,
-        color: '#666',
-        marginLeft: 8,
     },
     forgotPasswordText: {
         color: '#111',

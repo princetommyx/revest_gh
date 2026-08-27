@@ -89,8 +89,8 @@ export const AuthProvider = ({ children }) => {
         return data;
     }, []);
 
-    const googleSignIn = useCallback(async (token) => {
-        const data = await authApi.googleLogin(token);
+    const googleSignIn = useCallback(async (token, role) => {
+        const data = await authApi.googleLogin(token, role);
 
         let userForState = data.user;
         let roleForState = data.user?.role || 'SELLER';

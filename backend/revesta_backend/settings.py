@@ -252,7 +252,8 @@ REST_FRAMEWORK = {
         'anon': '20/minute',  # Limit for unauthenticated users
         'user': '10000/day',   # Increased for polling admin dashboard
         'register': '5/minute', # Strict limit for registration
-        'login': '20/minute',    # Strict limit for login
+        'login': '10/minute',    # Strict limit for login (brute-force protection)
+        'otp': '10/minute',      # OTP send/verify endpoints - resist code guessing
         'wallet': '100/minute',   # Increased for usability
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',

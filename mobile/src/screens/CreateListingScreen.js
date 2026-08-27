@@ -201,16 +201,9 @@ export default function CreateListingScreen({ route, navigation }) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a location' });
             return;
         }
-        if (formData.track_type === 'B' && priceRange) {
-            const enteredPrice = parseFloat(formData.price);
-            if (isNaN(enteredPrice) || enteredPrice < priceRange.min || enteredPrice > priceRange.max) {
-                Toast.show({
-                    type: 'error',
-                    text1: 'Price out of range',
-                    text2: `Must be between ₵${priceRange.min.toFixed(2)} and ₵${priceRange.max.toFixed(2)}`
-                });
-                return;
-            }
+        if (formData.track_type === 'B' && (formData.price === '' || isNaN(parseFloat(formData.price)))) {
+            Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please set an asking price' });
+            return;
         }
         setLoading(true);
         try {
@@ -451,10 +444,10 @@ export default function CreateListingScreen({ route, navigation }) {
                                 </View>
                                 {priceRange ? (
                                     <Text style={styles.priceHint}>
-                                        Estimated from market rates. You can adjust between ₵{priceRange.min.toFixed(2)} and ₵{priceRange.max.toFixed(2)}.
+                                        Suggested from market rates (₵{priceRange.min.toFixed(2)}–₵{priceRange.max.toFixed(2)}) - just a starting point, you and the collector can settle on a final price in chat.
                                     </Text>
                                 ) : (
-                                    <Text style={styles.priceHint}>Add a photo or pick a material to get a price estimate.</Text>
+                                    <Text style={styles.priceHint}>Add a photo or pick a material for a price suggestion, or just set your own.</Text>
                                 )}
                             </View>
                         ) : (

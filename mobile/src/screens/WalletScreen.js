@@ -12,12 +12,10 @@ import { useAuth } from '../context/AuthContext';
 import { SkeletonWalletPage } from '../components/Skeleton';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
-    User, Settings, Plus, ArrowUpRight, ArrowDownToLine, Ellipsis,
-    Search, PieChart, Gift, ArrowLeftRight,
-    CreditCard, ChevronRight, X, Smartphone, Banknote, CircleCheck,
-    ArrowDownLeft, History
+    User, Settings, CreditCard, X, Smartphone, Banknote
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
+import TransactionRow from '../components/TransactionRow';
 
 const { width } = Dimensions.get('window');
 
@@ -115,40 +113,14 @@ export default function WalletScreen() {
         }
     };
 
-    const renderTransaction = ({ item }) => {
-        const isCredit = ['DEPOSIT', 'JOB_EARNING', 'ESCROW_RELEASE', 'SALE_EARNING'].includes(item.transaction_type);
-        const Icon = isCredit ? Plus : ArrowUpRight;
-        const iconColor = '#111';
-        const iconBg = 'rgba(0,0,0,0.03)';
-
-        // Extract time
-        const dateObj = new Date(item.created_at);
-        const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        return (
-            <View style={styles.txnItem}>
-                <View style={[styles.txnIconBox, { backgroundColor: iconBg }]}>
-                    <Icon size={20} color={iconColor} />
-                </View>
-                <View style={styles.txnContent}>
-                    <Text style={styles.txnTitle}>{item.transaction_type.replace(/_/g, ' ').toLowerCase()}</Text>
-                    <Text style={styles.txnDate}>{timeStr}</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={[styles.txnAmount, { color: isCredit ? COLORS.success : COLORS.error }]}>
-                        {isCredit ? '+' : '-'} ₵{parseFloat(item.amount).toFixed(2)}
-                    </Text>
-                </View>
-            </View>
-        );
-    };
-
     if (isLoading) {
         return <SkeletonWalletPage />;
     }
 
     const transactions = wallet?.recent_transactions || [];
     const balance = parseFloat(wallet?.balance || 0);
+    const pendingEarnings = parseFloat(wallet?.pending_earnings || 0);
+    const heldEscrow = parseFloat(wallet?.held_escrow || 0);
 
     return (
         <LinearGradient
@@ -175,8 +147,25 @@ export default function WalletScreen() {
                     
                     {/* Balance Section */}
                     <View style={styles.balanceSection}>
-                        <Text style={styles.balanceLabel}>Outstanding Commission</Text>
+                        <Text style={styles.balanceLabel}>Wallet Balance</Text>
                         <Text style={styles.balanceAmount}>₵{balance.toFixed(2)}</Text>
+
+                        {(pendingEarnings > 0 || heldEscrow > 0) && (
+                            <View style={styles.subBalanceRow}>
+                                {pendingEarnings > 0 && (
+                                    <View style={styles.subBalanceChip}>
+                                        <Text style={styles.subBalanceLabel}>Pending Earnings</Text>
+                                        <Text style={styles.subBalanceValue}>₵{pendingEarnings.toFixed(2)}</Text>
+                                    </View>
+                                )}
+                                {heldEscrow > 0 && (
+                                    <View style={styles.subBalanceChip}>
+                                        <Text style={styles.subBalanceLabel}>In Escrow</Text>
+                                        <Text style={styles.subBalanceValue}>₵{heldEscrow.toFixed(2)}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
                     </View>
 
                     {/* Quick Actions */}
@@ -185,15 +174,15 @@ export default function WalletScreen() {
                             <View style={styles.actionIconWrapper}>
                                 <CreditCard size={24} color="#FFF" />
                             </View>
-                            <Text style={[styles.actionText, { color: '#FFF' }]}>Pay Commission</Text>
+                            <Text style={[styles.actionText, { color: '#FFF' }]}>Top Up</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Feed Content */}
                     <View style={styles.feedSection}>
                         <View style={styles.feedHeader}>
-                            <Text style={styles.sectionTitle}>{user?.role === 'SELLER' ? 'Pickup history' : 'Transactions'}</Text>
-                            <TouchableOpacity style={styles.viewAllBtn}>
+                            <Text style={styles.sectionTitle}>Transactions</Text>
+                            <TouchableOpacity style={styles.viewAllBtn} onPress={() => navigation.navigate('TransactionHistory')}>
                                 <Text style={styles.viewAllText}>View all</Text>
                             </TouchableOpacity>
                         </View>
@@ -202,9 +191,7 @@ export default function WalletScreen() {
                             <Text style={styles.emptyText}>No recent activity</Text>
                         ) : (
                             transactions.map((item, index) => (
-                                <View key={item.id || index}>
-                                    {renderTransaction({ item })}
-                                </View>
+                                <TransactionRow key={item.id || index} item={item} />
                             ))
                         )}
                     </View>
@@ -218,7 +205,7 @@ export default function WalletScreen() {
                         <TouchableOpacity style={{ flex: 1 }} onPress={() => setModalVisible(false)} />
                         <View style={styles.modalContainer}>
                             <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'Pay Commission' : 'Withdraw Funds'}</Text>
+                                <Text style={styles.modalTitle}>{modalType === 'DEPOSIT' ? 'Top Up Wallet' : 'Withdraw Funds'}</Text>
                                 <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeBtn}>
                                     <X size={20} color={COLORS.textLight} />
                                 </TouchableOpacity>
@@ -350,6 +337,29 @@ const styles = StyleSheet.create({
         fontWeight: '800',
         color: '#111',
     },
+    subBalanceRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 16,
+    },
+    subBalanceChip: {
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+        alignItems: 'center',
+    },
+    subBalanceLabel: {
+        fontSize: 11,
+        color: '#666',
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    subBalanceValue: {
+        fontSize: 15,
+        color: '#111',
+        fontWeight: '700',
+    },
     actionsRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -404,49 +414,6 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontWeight: '600',
         color: '#111',
-    },
-    txnItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 16,
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        borderRadius: 20,
-        paddingHorizontal: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.02,
-        shadowRadius: 5,
-        elevation: 1,
-    },
-    txnIconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: 'transparent',
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.05)',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 15,
-    },
-    txnContent: {
-        flex: 1,
-    },
-    txnTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#111',
-        textTransform: 'capitalize',
-        marginBottom: 4,
-    },
-    txnDate: {
-        fontSize: 13,
-        color: '#666',
-    },
-    txnAmount: {
-        fontSize: 15,
-        fontWeight: '600',
     },
     emptyText: {
         textAlign: 'center',

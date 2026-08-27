@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ActivityIndicator, ScrollView, Dimensions, StatusBar, Alert
+    Image, ScrollView, Dimensions, StatusBar, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil } from 'lucide-react-native';
+import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil, MessageCircle } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import { LinearGradient } from 'expo-linear-gradient';
+import PageLoader from '../components/PageLoader';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
 
@@ -92,11 +93,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     };
 
     if (loading) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#10B981" />
-            </View>
-        );
+        return <PageLoader label="Loading listing..." />;
     }
 
     if (!listing) {
@@ -264,31 +261,44 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity
-                        style={styles.primaryBtnFull}
-                        onPress={() => navigation.navigate('Main', {
-                            screen: 'Pickups',
-                            params: {
-                                pickupData: {
-                                    material_type: listing.material_type,
-                                    quantity_estimate: listing.quantity,
-                                    pickup_address: listing.location,
-                                    listing_id: listing.id,
-                                    waste_price: listing.price,
-                                    track_type: listing.track,
-                                    seller_location: {
-                                        latitude: listing.latitude,
-                                        longitude: listing.longitude,
-                                        address: listing.location
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={styles.secondaryBtn}
+                            onPress={() => navigation.navigate('ChatDetail', {
+                                contactId: listing.seller.id,
+                                contactName: [listing.seller.first_name, listing.seller.last_name].filter(Boolean).join(' ') || listing.seller.username,
+                                contactImage: listing.seller.profile_picture_url ? resolveImageUrl(listing.seller.profile_picture_url) : null,
+                            })}
+                        >
+                            <MessageCircle size={20} color="#374151" />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.primaryBtn, { flex: 1 }]}
+                            onPress={() => navigation.navigate('Main', {
+                                screen: 'Pickups',
+                                params: {
+                                    pickupData: {
+                                        material_type: listing.material_type,
+                                        quantity_estimate: listing.quantity,
+                                        pickup_address: listing.location,
+                                        listing_id: listing.id,
+                                        waste_price: listing.price,
+                                        track_type: listing.track,
+                                        seller_location: {
+                                            latitude: listing.latitude,
+                                            longitude: listing.longitude,
+                                            address: listing.location
+                                        }
                                     }
-                                }
-                            },
-                            merge: true
-                        })}
-                    >
-                        <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
-                        <Text style={styles.primaryBtnText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
-                    </TouchableOpacity>
+                                },
+                                merge: true
+                            })}
+                        >
+                            <ShoppingCart size={18} color="#fff" style={{marginRight: 8}} />
+                            <Text style={styles.primaryBtnText}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Accept Job' : 'Request Pickup'}</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
         </View>

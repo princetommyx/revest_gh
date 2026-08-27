@@ -382,6 +382,17 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         })
         return Response({'status': 'location updated'})
 
+    # Push copy for status changes the disposer cares about even when the
+    # app is backgrounded/killed and the websocket isn't connected.
+    # 'collector_location' is deliberately excluded - it fires continuously
+    # during live tracking and would spam the notification tray.
+    PROVIDER_PUSH_COPY = {
+        'job_accepted': ("Collector on the way", "{collector} accepted your {material} pickup and is heading over."),
+        'driver_arrived': ("Your collector has arrived", "{collector} is at the pickup location."),
+        'job_completed': ("Pickup completed", "Your {material} pickup is complete. Thanks for using Revesta!"),
+        'job_cancelled_by_collector': ("Pickup cancelled", "{collector} cancelled your {material} pickup. We're notifying nearby collectors."),
+    }
+
     def notify_provider(self, pickup_request, status_type, extra_data=None):
         data = {
             "type": status_type,
@@ -390,8 +401,25 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         }
         if extra_data:
             data.update(extra_data)
-            
+
         self._notify_user(pickup_request.provider, status_type, pickup_request, data)
+
+        push_copy = self.PROVIDER_PUSH_COPY.get(status_type)
+        if push_copy:
+            from users.notifications import send_push_notification
+
+            title, body_template = push_copy
+            body = body_template.format(
+                collector=pickup_request.collector.username if pickup_request.collector else "Your collector",
+                material=pickup_request.material_type,
+            )
+            send_push_notification(
+                pickup_request.provider,
+                title,
+                body,
+                data={"type": status_type, "request_id": pickup_request.id},
+                urgency='URGENT',
+            )
 
     def _notify_user(self, user, type, request_obj, message_data=None):
         channel_layer = get_channel_layer()
@@ -460,6 +488,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 if dist <= RADIUS:
                     nearby.append(collector)
         
+        from users.notifications import send_push_notification
+
         channel_layer = get_channel_layer()
         for collector in nearby:
             async_to_sync(channel_layer.group_send)(
@@ -476,6 +506,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                         "provider_id": request.provider.id
                     }
                 }
+            )
+            send_push_notification(
+                collector,
+                "New pickup nearby",
+                f"{request.quantity_estimate} of {request.material_type} is available near you.",
+                data={"type": "new_request", "request_id": request.id},
+                urgency='URGENT',
             )
 
     @extend_schema(summary="Get ride history")
