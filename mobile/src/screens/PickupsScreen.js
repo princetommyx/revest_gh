@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
 import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
 import { getOnlinePreference } from '../utils/collectorPresence';
+import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
@@ -28,7 +29,6 @@ import * as Location from 'expo-location';
 import Constants from 'expo-constants';
 import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { marketApi } from '../api/market';
 import CollectorBottomSheet from '../components/CollectorBottomSheet';
 import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
@@ -256,6 +256,8 @@ export default function PickupsScreen({ route }) {
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
+    // Check for a recent-location chip tapped on Home
+    const prefillLocation = route?.params?.prefillLocation;
 
     const [location, setLocation] = useState(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -292,7 +294,7 @@ export default function PickupsScreen({ route }) {
     });
     const [useCurrentLocation, setUseCurrentLocation] = useState(true);
     const [customAddress, setCustomAddress] = useState('');
-    const [recentLocations, setRecentLocations] = useState([]);
+    const { recentLocations, addRecentLocation } = useRecentPickupLocations();
     
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
@@ -340,11 +342,6 @@ export default function PickupsScreen({ route }) {
     const [mapRegion, setMapRegion] = useState(null);
     const [locationSubscription, setLocationSubscription] = useState(null);
 
-    // Load recent locations on mount
-    useEffect(() => {
-        loadRecentLocations();
-    }, []);
-
     // Reverse Geocode Function
     const reverseGeocode = async (lat, lon) => {
         try {
@@ -358,31 +355,6 @@ export default function PickupsScreen({ route }) {
             console.log('Reverse geocode error:', error);
         }
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-    };
-
-    const loadRecentLocations = async () => {
-        try {
-            const saved = await AsyncStorage.getItem('recent_pickup_locations');
-            if (saved) {
-                setRecentLocations(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.log('Error loading recent locations:', e);
-        }
-    };
-
-    const saveRecentLocation = async (address) => {
-        try {
-            const updated = [
-                { address, timestamp: Date.now() },
-                ...recentLocations.filter(loc => loc.address !== address)
-            ].slice(0, 5);
-
-            await AsyncStorage.setItem('recent_pickup_locations', JSON.stringify(updated));
-            setRecentLocations(updated);
-        } catch (e) {
-            console.log('Error saving recent location:', e);
-        }
     };
 
     const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location);
@@ -471,6 +443,27 @@ export default function PickupsScreen({ route }) {
             }, 500);
         }
     }, [pickupData]);
+
+    // Land on the booking sheet with pickup already filled in when arriving
+    // via a recent-location chip - only the destination is left to pick.
+    useEffect(() => {
+        if (prefillLocation?.address) {
+            setCustomAddress(prefillLocation.address);
+            setUseCurrentLocation(false);
+
+            if (prefillLocation.latitude && prefillLocation.longitude) {
+                setLocation({ latitude: prefillLocation.latitude, longitude: prefillLocation.longitude });
+                setMapRegion({
+                    latitude: prefillLocation.latitude,
+                    longitude: prefillLocation.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                });
+            }
+
+            navigation.setParams({ prefillLocation: null });
+        }
+    }, [prefillLocation]);
 
     const startMapSelection = (mode = 'PICKUP') => {
         setSelectionMode(mode);
@@ -794,7 +787,11 @@ export default function PickupsScreen({ route }) {
 
             if (customAddress.trim()) {
                 requestData.pickup_address = customAddress.trim();
-                saveRecentLocation(customAddress.trim());
+                addRecentLocation({
+                    address: customAddress.trim(),
+                    latitude: location?.latitude,
+                    longitude: location?.longitude,
+                });
             }
 
             let finalData = requestData;
@@ -887,18 +884,11 @@ export default function PickupsScreen({ route }) {
 
     const handleSelectSearchedLocation = (place) => {
         setCustomAddress(place.name);
-        setRequestForm(prev => ({
-            ...prev,
-            pickup_lat: place.lat,
-            pickup_lon: place.lon,
-        }));
-        
-        // Save to recents (simplified)
-        setRecentLocations(prev => {
-            const filtered = prev.filter(l => l.name !== place.name);
-            return [place, ...filtered].slice(0, 5);
-        });
-        
+        setLocation({ latitude: place.lat, longitude: place.lon });
+        setUseCurrentLocation(false);
+
+        addRecentLocation({ address: place.name, latitude: place.lat, longitude: place.lon });
+
         setSearchQuery('');
         setShowSearchModal(false);
         
@@ -1711,19 +1701,16 @@ export default function PickupsScreen({ route }) {
                                 <>
                                     <Text style={styles.searchSectionTitle}>RECENT</Text>
                                     {recentLocations.map((item, index) => (
-                                        <TouchableOpacity 
-                                            key={`recent-${index}`} 
+                                        <TouchableOpacity
+                                            key={`recent-${index}`}
                                             style={styles.searchResultItem}
-                                            onPress={() => handleSelectSearchedLocation(item)}
+                                            onPress={() => handleSelectSearchedLocation({ name: item.address, lat: item.latitude, lon: item.longitude })}
                                         >
                                             <View style={styles.searchResultIcon}>
                                                 <Clock size={20} color="#6B7280" />
                                             </View>
                                             <View style={styles.searchResultText}>
-                                                <Text style={styles.searchResultName}>{item.name}</Text>
-                                                <Text style={styles.searchResultAddress} numberOfLines={1}>
-                                                    {[item.address, item.city, item.region].filter(Boolean).join(', ')}
-                                                </Text>
+                                                <Text style={styles.searchResultName} numberOfLines={1}>{item.address}</Text>
                                             </View>
                                         </TouchableOpacity>
                                     ))}

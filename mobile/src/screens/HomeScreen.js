@@ -21,6 +21,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import AnimatedButton from '../components/AnimatedButton';
 import ActivePickupBanner from '../components/ActivePickupBanner';
 import OnlineToggleCard from '../components/OnlineToggleCard';
+import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 
 const { width } = Dimensions.get('window');
 
@@ -90,6 +91,7 @@ export default function HomeScreen({ navigation }) {
     const myActiveJob = isCollectorRole
         ? pickupJobs.find(j => j.collector === user?.id && ['ACCEPTED', 'ARRIVED'].includes(j.status))
         : pickupJobs.find(j => ['PENDING', 'ACCEPTED', 'ARRIVED'].includes(j.status));
+    const { recentLocations } = useRecentPickupLocations();
     const [locationFilter, setLocationFilter] = useState('');
     const { data: listings = [], isLoading: loading, refetch } = useListings({
         search: debouncedSearch,
@@ -302,6 +304,27 @@ export default function HomeScreen({ navigation }) {
                             </AnimatedButton>
                         )}
 
+                        {!myActiveJob && !isCollectorRole && recentLocations.length > 0 && (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.recentChipsRow}
+                            >
+                                {recentLocations.slice(0, 2).map((loc, index) => (
+                                    <TouchableOpacity
+                                        key={`${loc.address}-${index}`}
+                                        style={styles.recentChip}
+                                        onPress={() => navigation.navigate('Pickups', {
+                                            prefillLocation: { address: loc.address, latitude: loc.latitude, longitude: loc.longitude }
+                                        })}
+                                    >
+                                        <MapPin size={13} color="#6B7280" />
+                                        <Text style={styles.recentChipText} numberOfLines={1}>{loc.address}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+
                         <View style={styles.searchRow}>
                             <View style={styles.searchBar}>
                                 <Search size={20} color="#999" />
@@ -386,6 +409,21 @@ const styles = StyleSheet.create({
     },
     requestPickupTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
     requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+
+    recentChipsRow: { gap: 8, paddingBottom: 16 },
+    recentChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        maxWidth: 220,
+    },
+    recentChipText: { fontSize: 12, color: '#374151', fontWeight: '500' },
 
     searchRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
     searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: '#F3F4F6' },
