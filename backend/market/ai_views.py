@@ -114,15 +114,24 @@ class AnalyzeWasteView(APIView):
             data = json.loads(json_str)
             
             # Enrich with Estimated Financials
-            from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings
+            from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings, price_guardrail
             if data.get('track_type') == 'A':
                 bag_size = data.get('suggested_bag_size', 'MEDIUM')
                 category = data.get('material_type', 'General')
-                data['estimated_cost'] = float(calculate_track_a_fee(category=category, bag_size=bag_size))
+                estimated = calculate_track_a_fee(category=category, bag_size=bag_size)
+                data['estimated_cost'] = float(estimated)
             elif data.get('track_type') == 'B':
                 weight = data.get('suggested_weight_kg', 0)
                 material = data.get('material_type', 'PET')
-                data['estimated_earnings'] = float(calculate_track_b_earnings(material, weight))
+                estimated = calculate_track_b_earnings(material, weight)
+                data['estimated_earnings'] = float(estimated)
+            else:
+                estimated = None
+
+            if estimated is not None:
+                min_price, max_price = price_guardrail(estimated)
+                data['min_price'] = float(min_price)
+                data['max_price'] = float(max_price)
 
             return Response(data)
 
@@ -135,23 +144,27 @@ class AnalyzeWasteView(APIView):
         """Returns a simulated successful response if AI unavailable"""
         import random
         import time
-        from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings
-        
+        from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings, price_guardrail
+
         time.sleep(1.5)
-        
+
         tracks = ['A', 'B']
         track = random.choice(tracks)
-        
+
         if track == 'A':
             bag_size = random.choice(['SMALL', 'MEDIUM', 'LARGE'])
             category = 'General'
+            estimated = calculate_track_a_fee(category=category, bag_size=bag_size)
+            min_price, max_price = price_guardrail(estimated)
             return Response({
                 "track_type": "A",
                 "material_type": category,
                 "quantity_estimate": f"1 {bag_size.title()} Bag",
                 "suggested_bag_size": bag_size,
                 "suggested_weight_kg": None,
-                "estimated_cost": float(calculate_track_a_fee(category=category, bag_size=bag_size)),
+                "estimated_cost": float(estimated),
+                "min_price": float(min_price),
+                "max_price": float(max_price),
                 "title_suggestion": "General Waste Pickup",
                 "description": "Simulation: Household trash identified.",
                 "confidence": 0.85,
@@ -160,13 +173,17 @@ class AnalyzeWasteView(APIView):
         else:
             material = random.choice(['PET', 'Aluminum', 'Electronics'])
             weight = random.uniform(5.0, 25.0)
+            estimated = calculate_track_b_earnings(material.upper(), weight)
+            min_price, max_price = price_guardrail(estimated)
             return Response({
                 "track_type": "B",
                 "material_type": material,
                 "quantity_estimate": f"{weight:.1f}kg of {material}",
                 "suggested_bag_size": None,
                 "suggested_weight_kg": round(weight, 1),
-                "estimated_earnings": float(calculate_track_b_earnings(material.upper(), weight)),
+                "estimated_earnings": float(estimated),
+                "min_price": float(min_price),
+                "max_price": float(max_price),
                 "title_suggestion": f"{material} Recycling",
                 "description": f"Simulation: {material} recyclables detected.",
                 "confidence": 0.92,

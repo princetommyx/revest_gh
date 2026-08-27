@@ -13,13 +13,15 @@ class ListingListSerializer(serializers.ModelSerializer):
     seller = PublicUserSerializer(read_only=True)
     seller_name = serializers.ReadOnlyField(source='seller.username')
     distance_km = serializers.SerializerMethodField()
-    
+    is_liked = serializers.SerializerMethodField()
+    total_likes = serializers.SerializerMethodField()
+
     class Meta:
         model = Listing
         fields = (
             'id', 'title', 'material_type', 'quantity', 'price', 'is_free',
             'location', 'image', 'created_at', 'seller', 'seller_name', 'track',
-            'distance_km'
+            'distance_km', 'is_liked', 'total_likes'
         )
         read_only_fields = ('seller', 'created_at')
 
@@ -27,10 +29,10 @@ class ListingListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.query_params:
             return None
-            
+
         lat = request.query_params.get('lat')
         lon = request.query_params.get('lon')
-        
+
         if lat and lon:
             try:
                 from logistics.utils import haversine
@@ -40,6 +42,15 @@ class ListingListSerializer(serializers.ModelSerializer):
                 pass
         return None
 
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.liked_by.filter(id=request.user.id).exists()
+
+    def get_total_likes(self, obj):
+        return obj.liked_by.count()
+
 
 class ListingDetailSerializer(serializers.ModelSerializer):
     """
@@ -48,22 +59,33 @@ class ListingDetailSerializer(serializers.ModelSerializer):
     seller = PublicUserSerializer(read_only=True)
     seller_name = serializers.ReadOnlyField(source='seller.username')
     seller_phone = serializers.SerializerMethodField()
-    
+    is_liked = serializers.SerializerMethodField()
+    total_likes = serializers.SerializerMethodField()
+
     class Meta:
         model = Listing
         fields = (
-            'id', 'title', 'material_type', 'description', 'quantity', 
+            'id', 'title', 'material_type', 'description', 'quantity',
             'price', 'is_free', 'location', 'latitude', 'longitude', 'image', 'created_at',
-            'seller', 'seller_name', 'seller_phone', 'track'
+            'seller', 'seller_name', 'seller_phone', 'track', 'is_liked', 'total_likes'
         )
         read_only_fields = ('seller', 'created_at')
-    
+
     def get_seller_phone(self, obj):
         """Only show phone if user is authenticated"""
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return obj.seller.phone_number
         return None
+
+    def get_is_liked(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return obj.liked_by.filter(id=request.user.id).exists()
+
+    def get_total_likes(self, obj):
+        return obj.liked_by.count()
 
 
 class ListingCreateSerializer(serializers.ModelSerializer):

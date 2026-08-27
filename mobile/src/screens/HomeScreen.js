@@ -19,6 +19,9 @@ import { usePickups } from '../hooks/usePickups';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedButton from '../components/AnimatedButton';
+import ActivePickupBanner from '../components/ActivePickupBanner';
+import OnlineToggleCard from '../components/OnlineToggleCard';
+import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 
 const { width } = Dimensions.get('window');
 
@@ -83,22 +86,18 @@ export default function HomeScreen({ navigation }) {
     }, [fetchPromos]);
 
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
+
+    const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+    const myActiveJob = isCollectorRole
+        ? pickupJobs.find(j => j.collector === user?.id && ['ACCEPTED', 'ARRIVED'].includes(j.status))
+        : pickupJobs.find(j => ['PENDING', 'ACCEPTED', 'ARRIVED'].includes(j.status));
+    const { recentLocations } = useRecentPickupLocations();
     const [locationFilter, setLocationFilter] = useState('');
     const { data: listings = [], isLoading: loading, refetch } = useListings({
         search: debouncedSearch,
         material_type: filter,
         location: locationFilter
     });
-
-    const formatTime = (dateString) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = (now - date) / 1000;
-        if (diff < 3600) return 'Just now';
-        if (diff < 86400) return 'Today';
-        if (diff < 172800) return 'Yesterday';
-        return date.toLocaleDateString();
-    };
 
     const handleRefresh = async () => {
         await fetchPromos();
@@ -279,7 +278,53 @@ export default function HomeScreen({ navigation }) {
                                 <View style={styles.bellBadge} />
                             </TouchableOpacity>
                         </View>
-                        
+
+                        {myActiveJob ? (
+                            <ActivePickupBanner
+                                job={myActiveJob}
+                                role={userRole}
+                                onPress={() => navigation.navigate('Pickups')}
+                            />
+                        ) : isCollectorRole ? (
+                            <OnlineToggleCard location={location} />
+                        ) : (
+                            <AnimatedButton
+                                style={styles.requestPickupCard}
+                                haptic
+                                onPress={() => navigation.navigate('Pickups')}
+                            >
+                                <View style={styles.requestPickupIconBox}>
+                                    <Truck size={22} color="#fff" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.requestPickupTitle}>Request a Pickup</Text>
+                                    <Text style={styles.requestPickupSubtitle}>Got waste to clear? Get a collector in minutes.</Text>
+                                </View>
+                                <ArrowRight size={20} color="#fff" />
+                            </AnimatedButton>
+                        )}
+
+                        {!myActiveJob && !isCollectorRole && recentLocations.length > 0 && (
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.recentChipsRow}
+                            >
+                                {recentLocations.slice(0, 2).map((loc, index) => (
+                                    <TouchableOpacity
+                                        key={`${loc.address}-${index}`}
+                                        style={styles.recentChip}
+                                        onPress={() => navigation.navigate('Pickups', {
+                                            prefillLocation: { address: loc.address, latitude: loc.latitude, longitude: loc.longitude }
+                                        })}
+                                    >
+                                        <MapPin size={13} color="#6B7280" />
+                                        <Text style={styles.recentChipText} numberOfLines={1}>{loc.address}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
+
                         <View style={styles.searchRow}>
                             <View style={styles.searchBar}>
                                 <Search size={20} color="#999" />
@@ -291,7 +336,7 @@ export default function HomeScreen({ navigation }) {
                                     onChangeText={setSearch}
                                 />
                             </View>
-                            <TouchableOpacity style={styles.filterBtn}>
+                            <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
                                 <SlidersHorizontal size={20} color="#111" />
                             </TouchableOpacity>
                         </View>
@@ -345,6 +390,41 @@ const styles = StyleSheet.create({
     bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6' },
     bellBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
     
+    requestPickupCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#111',
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 16,
+    },
+    requestPickupIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    requestPickupTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
+    requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+
+    recentChipsRow: { gap: 8, paddingBottom: 16 },
+    recentChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        gap: 6,
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
+        maxWidth: 220,
+    },
+    recentChipText: { fontSize: 12, color: '#374151', fontWeight: '500' },
+
     searchRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
     searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 24, paddingHorizontal: 16, height: 48, borderWidth: 1, borderColor: '#F3F4F6' },
     searchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#111', padding: 0, letterSpacing: 0, height: '100%' },

@@ -37,24 +37,48 @@ def calculate_track_b_earnings(material_type, weight_kg):
     """
     Calculate estimated earnings for high-value recyclables.
     """
-    if material_type.upper() in ['PURE_WATER_RUBBERS', 'PLASTIC_BOTTLES']:
+    material_key = (material_type or '').upper()
+
+    if material_key in ['PURE_WATER_RUBBERS', 'PLASTIC_BOTTLES']:
         return Decimal('30.00')
-    if material_type.upper() in ['PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES_BALE']:
+    if material_key in ['PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES_BALE']:
         return Decimal('60.00')
 
     try:
-        market_price = MaterialMarketPrice.objects.get(material_type=material_type).price_per_kg
+        market_price = MaterialMarketPrice.objects.get(material_type=material_key).price_per_kg
     except MaterialMarketPrice.DoesNotExist:
-        # Fallback rates if not in DB
+        # Fallback rates if not in DB - covers both the AI's precise
+        # vocabulary and the mobile app's coarser manual-picker categories.
         fallback_rates = {
             'PET': Decimal('0.50'),
+            'HDPE': Decimal('0.60'),
             'ALUMINUM': Decimal('2.00'),
             'METALS': Decimal('1.50'),
             'PAPER': Decimal('0.20'),
+            'ELECTRONICS': Decimal('8.00'),
+            'MIXED': Decimal('0.30'),
+            'ORGANIC': Decimal('0.10'),
+            # Coarse categories from the manual (no-photo) picker
+            'PLASTICS': Decimal('1.20'),
+            'GLASS': Decimal('0.50'),
+            'OTHER': Decimal('0.50'),
         }
-        market_price = fallback_rates.get(material_type, Decimal('0.10'))
-    
-    return (Decimal(str(weight_kg)) * market_price).quantize(Decimal('0.01'))
+        market_price = fallback_rates.get(material_key, Decimal('0.10'))
+
+    weight = Decimal(str(weight_kg)) if weight_kg else Decimal('0')
+    return (weight * market_price).quantize(Decimal('0.01'))
+
+def price_guardrail(estimated_price, spread=Decimal('0.20')):
+    """
+    Min/max a disposer can adjust an estimated price to before posting.
+    Kept server-side so the allowed spread is a single tunable, not
+    duplicated logic on the client.
+    """
+    estimated_price = Decimal(str(estimated_price))
+    delta = (estimated_price * spread).quantize(Decimal('0.01'))
+    min_price = max(Decimal('0.00'), estimated_price - delta)
+    max_price = estimated_price + delta
+    return min_price.quantize(Decimal('0.01')), max_price.quantize(Decimal('0.01'))
 
 def calculate_fare_estimate(distance_km, duration_min):
     """

@@ -68,5 +68,12 @@ export const marketApi = {
     toggleLike: async (id) => {
         const response = await apiClient.post(`market/listings/${id}/toggle_like/`);
         return response.data; // { liked: bool, total_likes: int }
+    },
+
+    estimatePrice: async ({ track_type, material_type, weight_kg, bag_size }) => {
+        const response = await apiClient.post('market/listings/estimate_price/', {
+            track_type, material_type, weight_kg, bag_size
+        });
+        return response.data; // { estimated_price, min_price, max_price, currency }
     }
 };

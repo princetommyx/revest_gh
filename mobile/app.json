@@ -10,7 +10,12 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.revesta.mobile"
+      "bundleIdentifier": "com.revesta.mobile",
+      "infoPlist": {
+        "UIBackgroundModes": ["location"],
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Revesta shares your location with the disposer so they can track your pickup live, including while the app is in the background during an active job.",
+        "NSLocationWhenInUseUsageDescription": "Revesta uses your location to find nearby pickups and show your position on the map."
+      }
     },
     "android": {
       "versionCode": 6,
@@ -26,7 +31,10 @@
         }
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
@@ -37,6 +45,14 @@
         {
           "photosPermission": "The app accesses your photos to let you upload waste items.",
           "cameraPermission": "The app accesses your camera to let you take photos of waste items."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Revesta shares your location with the disposer so they can track your pickup live, including while the app is in the background during an active job.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

@@ -156,6 +156,36 @@ const navStyles = StyleSheet.create({
     },
 });
 
+const styles = StyleSheet.create({
+    pingRing: {
+        position: 'absolute',
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: 'rgba(5, 150, 105, 0.12)',
+    },
+    progressTrack: {
+        width: 120,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#E9EEEC',
+        overflow: 'hidden',
+        marginBottom: 16,
+    },
+    progressThumb: {
+        width: 44,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: BRAND_GREEN,
+    },
+    splashStatusText: {
+        fontSize: 13,
+        color: '#6B7280',
+        fontWeight: '500',
+        letterSpacing: 0.4,
+    },
+});
+
 
 function MainTabs() {
     const { userRole } = useAuth();
@@ -197,23 +227,28 @@ function MainTabs() {
     );
 }
 
+const BRAND_GREEN = '#059669';
+
 const CustomSplashScreen = ({ isAppReady, onFinish }) => {
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    const truckAnim = useRef(new Animated.Value(0)).current;
-    const dot1 = useRef(new Animated.Value(0.2)).current;
-    const dot2 = useRef(new Animated.Value(0.2)).current;
-    const dot3 = useRef(new Animated.Value(0.2)).current;
+    const breatheAnim = useRef(new Animated.Value(1)).current;
+    const ring1Scale = useRef(new Animated.Value(0.6)).current;
+    const ring1Opacity = useRef(new Animated.Value(0.4)).current;
+    const ring2Scale = useRef(new Animated.Value(0.6)).current;
+    const ring2Opacity = useRef(new Animated.Value(0.4)).current;
+    const barSweep = useRef(new Animated.Value(0)).current;
     const exitOpacity = useRef(new Animated.Value(1)).current;
+    const exitScale = useRef(new Animated.Value(1)).current;
 
     const [statusText, setStatusText] = useState('Preparing your experience...');
 
     useEffect(() => {
-        // Entrance animation
+        // Entrance
         Animated.parallel([
             Animated.timing(opacityAnim, {
                 toValue: 1,
-                duration: 800,
+                duration: 700,
                 easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
             }),
@@ -225,99 +260,96 @@ const CustomSplashScreen = ({ isAppReady, onFinish }) => {
             })
         ]).start();
 
-        // Subtle logistics truck route animation
+        // Logo breathing loop - subtle, alive, not distracting
         Animated.loop(
-            Animated.timing(truckAnim, {
-                toValue: 1,
-                duration: 2000,
-                easing: Easing.linear,
-                useNativeDriver: true,
-            })
+            Animated.sequence([
+                Animated.timing(breatheAnim, { toValue: 1.045, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(breatheAnim, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+            ])
         ).start();
 
-        // 3-dot loading indicator
-        const animateDots = () => {
-            Animated.sequence([
-                Animated.timing(dot1, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot2, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot3, { toValue: 1, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot1, { toValue: 0.2, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot2, { toValue: 0.2, duration: 300, useNativeDriver: true }),
-                Animated.timing(dot3, { toValue: 0.2, duration: 300, useNativeDriver: true }),
-            ]).start(({ finished }) => {
-                if (finished && !isAppReady) {
-                    animateDots();
-                }
-            });
+        // Radar-ping halo behind the logo, two rings staggered for a richer pulse
+        const startPing = (scaleV, opacityV, delay) => {
+            Animated.loop(
+                Animated.sequence([
+                    Animated.delay(delay),
+                    Animated.parallel([
+                        Animated.timing(scaleV, { toValue: 1.7, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                        Animated.timing(opacityV, { toValue: 0, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
+                    ]),
+                ])
+            ).start();
         };
-        animateDots();
+        startPing(ring1Scale, ring1Opacity, 0);
+        startPing(ring2Scale, ring2Opacity, 1100);
+
+        // Indeterminate progress sweep
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(barSweep, { toValue: 1, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+                Animated.timing(barSweep, { toValue: 0, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+            ])
+        ).start();
     }, []);
 
     // Dynamic messaging
     useEffect(() => {
         if (isAppReady) {
-            setStatusText('Almost there...');
+            setStatusText('Almost there');
             return;
         }
-        const t1 = setTimeout(() => setStatusText('Connecting you to Revesta...'), 1000);
-        const t2 = setTimeout(() => setStatusText('Getting things ready...'), 2500);
+        const t1 = setTimeout(() => setStatusText('Connecting you to Revesta'), 1000);
+        const t2 = setTimeout(() => setStatusText('Getting things ready'), 2500);
         return () => { clearTimeout(t1); clearTimeout(t2); };
     }, [isAppReady]);
 
-    // Smooth exit transition
+    // Smooth exit transition - fade + gentle zoom past the camera
     useEffect(() => {
         if (isAppReady) {
             // Wait slightly so the animation doesn't cut off immediately if load is instant
             setTimeout(() => {
-                Animated.timing(exitOpacity, {
-                    toValue: 0,
-                    duration: 400,
-                    easing: Easing.inOut(Easing.ease),
-                    useNativeDriver: true
-                }).start(() => {
+                Animated.parallel([
+                    Animated.timing(exitOpacity, {
+                        toValue: 0,
+                        duration: 420,
+                        easing: Easing.in(Easing.cubic),
+                        useNativeDriver: true
+                    }),
+                    Animated.timing(exitScale, {
+                        toValue: 1.06,
+                        duration: 420,
+                        easing: Easing.in(Easing.cubic),
+                        useNativeDriver: true
+                    }),
+                ]).start(() => {
                     onFinish();
                 });
-            }, 800);
+            }, 600);
         }
     }, [isAppReady]);
 
-    const truckTranslateX = truckAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [-100, 100]
-    });
-    
-    // Truck opacity fades in and out at edges
-    const truckOpacity = truckAnim.interpolate({
-        inputRange: [0, 0.2, 0.8, 1],
-        outputRange: [0, 1, 1, 0]
-    });
+    const barTranslateX = barSweep.interpolate({ inputRange: [0, 1], outputRange: [0, 76] });
 
     return (
-        <Animated.View style={{ flex: 1, opacity: exitOpacity }}>
-            <LinearGradient colors={['#FAFAFA', '#F3F4F6', '#E5E7EB']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <Animated.View style={{ opacity: opacityAnim, transform: [{ scale: scaleAnim }], alignItems: 'center' }}>
-                    <Image source={require('../../assets/icon.png')} style={{ width: 140, height: 140, marginBottom: 20 }} resizeMode="contain" />
-                </Animated.View>
-                
-                {/* Logistics Route Indicator */}
-                <View style={{ width: 140, height: 30, alignItems: 'center', justifyContent: 'center', marginBottom: 40, position: 'relative' }}>
-                    {/* Subtle Route Line */}
-                    <View style={{ width: '100%', height: 2, backgroundColor: 'rgba(17, 17, 17, 0.05)', position: 'absolute', bottom: 4, borderRadius: 1 }} />
-                    {/* Moving Truck */}
-                    <Animated.View style={{ transform: [{ translateX: truckTranslateX }], opacity: truckOpacity }}>
-                        <Truck size={16} color="#059669" />
+        <Animated.View style={{ flex: 1, opacity: exitOpacity, transform: [{ scale: exitScale }] }}>
+            <LinearGradient colors={['#FFFFFF', '#F4FBF8']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ width: 220, height: 220, justifyContent: 'center', alignItems: 'center', marginBottom: 36 }}>
+                    <Animated.View style={[styles.pingRing, { opacity: ring1Opacity, transform: [{ scale: ring1Scale }] }]} />
+                    <Animated.View style={[styles.pingRing, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
+                    <Animated.View style={{
+                        opacity: opacityAnim,
+                        transform: [{ scale: Animated.multiply(scaleAnim, breatheAnim) }],
+                    }}>
+                        <Image source={require('../../assets/icon.png')} style={{ width: 112, height: 112 }} resizeMode="contain" />
                     </Animated.View>
                 </View>
 
-                {/* Dynamic Message & Dots */}
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ fontSize: 13, color: '#6B7280', fontWeight: '500', marginRight: 8, letterSpacing: 0.5 }}>{statusText}</Text>
-                    <View style={{ flexDirection: 'row', gap: 3 }}>
-                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot1 }} />
-                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot2 }} />
-                        <Animated.View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#059669', opacity: dot3 }} />
-                    </View>
+                {/* Indeterminate progress bar */}
+                <View style={styles.progressTrack}>
+                    <Animated.View style={[styles.progressThumb, { transform: [{ translateX: barTranslateX }] }]} />
                 </View>
+
+                <Text style={styles.splashStatusText}>{statusText}</Text>
             </LinearGradient>
         </Animated.View>
     );

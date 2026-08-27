@@ -2,11 +2,17 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView, StatusBar,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
-import { tomtomApi } from '../api/tomtom';
+import { authApi } from '../api/auth';
+import { placesApi } from '../api/places';
+import { GOOGLE_MAPS_API_KEY } from '../constants/googleMaps';
 import { useAuth } from '../context/AuthContext';
+import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
+import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
+import { getOnlinePreference } from '../utils/collectorPresence';
+import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
@@ -18,15 +24,16 @@ import {
     User
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
 import { Image } from 'react-native';
 import Toast from 'react-native-toast-message';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { marketApi } from '../api/market';
 import CollectorBottomSheet from '../components/CollectorBottomSheet';
 import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
+import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
 
@@ -41,8 +48,8 @@ const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
 const VEHICLES = [
-    { id: 'tricycle', label: 'Tricycle', time: '5 min', icon: Truck },
-    { id: 'pickup', label: 'Pickup', time: '12 min', icon: Truck }
+    { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', icon: Truck },
+    { id: 'pickup', label: 'Pickup Truck', capacity: 'Bulk loads', icon: Truck }
 ];
 
 
@@ -250,6 +257,8 @@ export default function PickupsScreen({ route }) {
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
+    // Check for a recent-location chip tapped on Home
+    const prefillLocation = route?.params?.prefillLocation;
 
     const [location, setLocation] = useState(null);
     const [isCollapsed, setIsCollapsed] = useState(false);
@@ -263,6 +272,13 @@ export default function PickupsScreen({ route }) {
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
     const mapRef = useRef(null);
+    const locationRef = useRef(location);
+    useEffect(() => { locationRef.current = location; }, [location]);
+
+    // Live collector positions pushed over the websocket, keyed by pickup id.
+    // Takes priority over the polled `current_lat`/`current_lon` snapshot.
+    const [liveCollectorLocations, setLiveCollectorLocations] = useState({});
+
     const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
     const [requestForm, setRequestForm] = useState({
@@ -279,7 +295,7 @@ export default function PickupsScreen({ route }) {
     });
     const [useCurrentLocation, setUseCurrentLocation] = useState(true);
     const [customAddress, setCustomAddress] = useState('');
-    const [recentLocations, setRecentLocations] = useState([]);
+    const { recentLocations, addRecentLocation } = useRecentPickupLocations();
     
     // Search State
     const [searchQuery, setSearchQuery] = useState('');
@@ -327,11 +343,6 @@ export default function PickupsScreen({ route }) {
     const [mapRegion, setMapRegion] = useState(null);
     const [locationSubscription, setLocationSubscription] = useState(null);
 
-    // Load recent locations on mount
-    useEffect(() => {
-        loadRecentLocations();
-    }, []);
-
     // Reverse Geocode Function
     const reverseGeocode = async (lat, lon) => {
         try {
@@ -345,31 +356,6 @@ export default function PickupsScreen({ route }) {
             console.log('Reverse geocode error:', error);
         }
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-    };
-
-    const loadRecentLocations = async () => {
-        try {
-            const saved = await AsyncStorage.getItem('recent_pickup_locations');
-            if (saved) {
-                setRecentLocations(JSON.parse(saved));
-            }
-        } catch (e) {
-            console.log('Error loading recent locations:', e);
-        }
-    };
-
-    const saveRecentLocation = async (address) => {
-        try {
-            const updated = [
-                { address, timestamp: Date.now() },
-                ...recentLocations.filter(loc => loc.address !== address)
-            ].slice(0, 5);
-
-            await AsyncStorage.setItem('recent_pickup_locations', JSON.stringify(updated));
-            setRecentLocations(updated);
-        } catch (e) {
-            console.log('Error saving recent location:', e);
-        }
     };
 
     const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location);
@@ -459,10 +445,32 @@ export default function PickupsScreen({ route }) {
         }
     }, [pickupData]);
 
-    const startMapSelection = () => {
+    // Land on the booking sheet with pickup already filled in when arriving
+    // via a recent-location chip - only the destination is left to pick.
+    useEffect(() => {
+        if (prefillLocation?.address) {
+            setCustomAddress(prefillLocation.address);
+            setUseCurrentLocation(false);
+
+            if (prefillLocation.latitude && prefillLocation.longitude) {
+                setLocation({ latitude: prefillLocation.latitude, longitude: prefillLocation.longitude });
+                setMapRegion({
+                    latitude: prefillLocation.latitude,
+                    longitude: prefillLocation.longitude,
+                    latitudeDelta: 0.005,
+                    longitudeDelta: 0.005,
+                });
+            }
+
+            navigation.setParams({ prefillLocation: null });
+        }
+    }, [prefillLocation]);
+
+    const startMapSelection = (mode = 'PICKUP') => {
+        setSelectionMode(mode);
         setShowRequestModal(false);
         setIsSelectingLocation(true);
-        
+
         // Stop tracking if active
         if (locationSubscription) {
             locationSubscription.remove();
@@ -480,82 +488,169 @@ export default function PickupsScreen({ route }) {
         }
     };
 
-    // Refetch polling for Disposer to see live collector updates
+    // Live push/pull wiring for tracking. The websocket delivers instant
+    // status changes and collector positions; polling is kept as a slow
+    // fallback in case the socket is mid-reconnect.
+    const handleSocketMessage = useCallback((msg) => {
+        if (!msg || !msg.type) return;
+
+        switch (msg.type) {
+            case 'collector_location': {
+                if (msg.request_id == null || typeof msg.lat !== 'number' || typeof msg.lon !== 'number') return;
+                setLiveCollectorLocations(prev => ({
+                    ...prev,
+                    [msg.request_id]: { lat: msg.lat, lon: msg.lon, heading: msg.heading, timestamp: msg.timestamp }
+                }));
+                break;
+            }
+            case 'new_request':
+                if (userRole === 'COLLECTOR') {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+                    Toast.show({ type: 'info', text1: 'New Pickup Nearby', text2: msg.material_type ? `${msg.material_type} pickup available` : 'A new request just came in.' });
+                    refetch();
+                }
+                break;
+            case 'job_accepted':
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Toast.show({ type: 'success', text1: 'Collector Accepted!', text2: 'Your collector is on the way.' });
+                refetch();
+                break;
+            case 'driver_arrived':
+                Toast.show({ type: 'info', text1: 'Collector Arrived', text2: 'Your collector has arrived at the pickup location.' });
+                refetch();
+                break;
+            case 'job_completed':
+            case 'job_cancelled_by_provider':
+            case 'job_cancelled_by_collector':
+                refetch();
+                break;
+            default:
+                break;
+        }
+    }, [userRole, refetch]);
+
+    useLogisticsSocket(handleSocketMessage);
+
+    // Slow fallback poll - covers the rare case of a dropped/reconnecting socket.
     useEffect(() => {
         let interval;
         if (userRole !== 'COLLECTOR') {
-            // Disposer polls every 10 seconds to get updated collector locations
             interval = setInterval(() => {
                 refetch();
-            }, 10000);
+            }, 25000);
         }
         return () => {
             if (interval) clearInterval(interval);
         };
     }, [userRole, refetch]);
 
-    // Disposer camera following
+    // Disposer camera following - prefers the live websocket position over the polled snapshot
     useEffect(() => {
-        if (userRole !== 'COLLECTOR' && navigatingJob && mapRef.current) {
-            // Find the active job from the latest fetched jobs to get new coordinates
-            const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
-            if (activeLiveJob?.current_lat && activeLiveJob?.current_lon) {
-                mapRef.current.animateCamera({
-                    center: { latitude: activeLiveJob.current_lat, longitude: activeLiveJob.current_lon },
-                    pitch: 45,
-                    zoom: 17
-                }, { duration: 1000 });
-            }
-        }
-    }, [jobs, navigatingJob, userRole]);
+        if (userRole === 'COLLECTOR' || !navigatingJob || !mapRef.current) return;
 
-    // Collector camera following & auto-tracking
+        const live = liveCollectorLocations[navigatingJob.id];
+        const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
+        const lat = live?.lat ?? activeLiveJob?.current_lat;
+        const lon = live?.lon ?? activeLiveJob?.current_lon;
+
+        if (lat && lon) {
+            mapRef.current.animateCamera({
+                center: { latitude: lat, longitude: lon },
+                pitch: 45,
+                zoom: 17
+            }, { duration: 1000 });
+        }
+    }, [jobs, navigatingJob, userRole, liveCollectorLocations]);
+
+    // Collector: keep background GPS streaming to the server for as long as
+    // there's an active job, independent of which screen is mounted or
+    // whether the app is foregrounded. Driven by job status, not navigation UI.
     useEffect(() => {
         if (userRole !== 'COLLECTOR') return;
 
-        let activeJobId = null;
-        if (navigatingJob) {
-            activeJobId = navigatingJob.id;
+        const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+        if (activeJob) {
+            startCollectorLocationTracking(activeJob.id);
         } else {
-            const acceptedJob = jobs.find(j => j.status === 'ACCEPTED');
-            if (acceptedJob) activeJobId = acceptedJob.id;
+            stopCollectorLocationTracking();
+        }
+    }, [userRole, jobs]);
+
+    // Collector presence heartbeat: marks the collector online with a
+    // position so the backend can find them when matching new requests.
+    // Respects the online/offline toggle on Home - this just keeps the
+    // preference re-affirmed with a fresh position while the preference is on.
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR') return;
+
+        const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
+        const pushPresence = async (wantsOnline) => {
+            const coords = coordsOf(locationRef.current);
+            if (!coords?.latitude || !coords?.longitude) return;
+            const isOnline = wantsOnline ? await getOnlinePreference() : false;
+            try {
+                await authApi.updateMyLocation({ latitude: coords.latitude, longitude: coords.longitude, is_online: isOnline });
+            } catch (e) {
+                console.warn('Failed to update collector presence:', e?.message);
+            }
+        };
+
+        pushPresence(true);
+        const interval = setInterval(() => pushPresence(true), 30000);
+        const appStateSub = AppState.addEventListener('change', (state) => pushPresence(state === 'active'));
+
+        return () => {
+            clearInterval(interval);
+            appStateSub.remove();
+            pushPresence(false);
+        };
+    }, [userRole]);
+
+    // Collector camera following while actively navigating (foreground UX only -
+    // location reporting to the server is handled by the background task above).
+    useEffect(() => {
+        if (userRole !== 'COLLECTOR' || !navigatingJob) {
+            if (locationSubscription) {
+                locationSubscription.remove();
+                setLocationSubscription(null);
+            }
+            return;
         }
 
-        if (activeJobId && !locationSubscription) {
-            let sub = null;
-            const startTracking = async () => {
-                sub = await Location.watchPositionAsync(
-                    {
-                        accuracy: Location.Accuracy.High,
-                        distanceInterval: 10,
-                        timeInterval: 5000,
-                    },
-                    async (loc) => {
-                        setLocation(loc);
-                        if (mapRef.current && navigatingJob) {
-                            mapRef.current.animateCamera({
-                                center: { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
-                                pitch: 45,
-                                heading: loc.coords.heading || 0,
-                                zoom: 18
-                            }, { duration: 1000 });
-                        }
-                        
-                        try {
-                            await logisticsApi.updateLocation(activeJobId, loc.coords.latitude, loc.coords.longitude);
-                        } catch (e) {
-                            console.warn("Failed to update collector location", e);
-                        }
+        let sub = null;
+        let cancelled = false;
+        (async () => {
+            const watcher = await Location.watchPositionAsync(
+                {
+                    accuracy: Location.Accuracy.High,
+                    distanceInterval: 10,
+                    timeInterval: 5000,
+                },
+                (loc) => {
+                    setLocation(loc);
+                    if (mapRef.current) {
+                        mapRef.current.animateCamera({
+                            center: { latitude: loc.coords.latitude, longitude: loc.coords.longitude },
+                            pitch: 45,
+                            heading: loc.coords.heading || 0,
+                            zoom: 18
+                        }, { duration: 1000 });
                     }
-                );
-                setLocationSubscription(sub);
-            };
-            startTracking();
-        } else if (!activeJobId && locationSubscription) {
-            locationSubscription.remove();
-            setLocationSubscription(null);
-        }
-    }, [userRole, jobs, navigatingJob, locationSubscription]);
+                }
+            );
+            if (cancelled) {
+                watcher.remove();
+            } else {
+                sub = watcher;
+                setLocationSubscription(watcher);
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+            if (sub) sub.remove();
+        };
+    }, [userRole, navigatingJob]);
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
@@ -571,7 +666,10 @@ export default function PickupsScreen({ route }) {
                 setDestinationAddress(address);
             }
 
-            setShowRequestModal(true);
+            // Return to the booking sheet instead of jumping straight into the
+            // request modal - the disposer still needs to set the other
+            // location (pickup or destination) before they can continue.
+            setShowRequestModal(false);
         }
     };
 
@@ -690,7 +788,11 @@ export default function PickupsScreen({ route }) {
 
             if (customAddress.trim()) {
                 requestData.pickup_address = customAddress.trim();
-                saveRecentLocation(customAddress.trim());
+                addRecentLocation({
+                    address: customAddress.trim(),
+                    latitude: location?.latitude,
+                    longitude: location?.longitude,
+                });
             }
 
             let finalData = requestData;
@@ -758,7 +860,7 @@ export default function PickupsScreen({ route }) {
             
             setIsSearchingLocation(true);
             try {
-                const results = await tomtomApi.searchPlaces(
+                const results = await placesApi.searchPlaces(
                     searchQuery, 
                     location?.latitude, 
                     location?.longitude
@@ -783,18 +885,11 @@ export default function PickupsScreen({ route }) {
 
     const handleSelectSearchedLocation = (place) => {
         setCustomAddress(place.name);
-        setRequestForm(prev => ({
-            ...prev,
-            pickup_lat: place.lat,
-            pickup_lon: place.lon,
-        }));
-        
-        // Save to recents (simplified)
-        setRecentLocations(prev => {
-            const filtered = prev.filter(l => l.name !== place.name);
-            return [place, ...filtered].slice(0, 5);
-        });
-        
+        setLocation({ latitude: place.lat, longitude: place.lon });
+        setUseCurrentLocation(false);
+
+        addRecentLocation({ address: place.name, latitude: place.lat, longitude: place.lon });
+
         setSearchQuery('');
         setShowSearchModal(false);
         
@@ -983,8 +1078,9 @@ export default function PickupsScreen({ route }) {
         if (isNaN(lat) || isNaN(lon)) return [];
 
         const isNavigatingThis = navigatingJob?.id === job.id;
-        const currentLat = job.current_lat || job.latitude;
-        const currentLon = job.current_lon || job.longitude;
+        const live = liveCollectorLocations[job.id];
+        const currentLat = live?.lat ?? job.current_lat ?? job.latitude;
+        const currentLon = live?.lon ?? job.current_lon ?? job.longitude;
 
         if (isNavigatingThis || job.status === 'PENDING') {
             markers.push(
@@ -1058,7 +1154,7 @@ export default function PickupsScreen({ route }) {
                         key={`route-${job.id}`}
                         origin={{ latitude: currentL, longitude: currentLo }}
                         destination={{ latitude: lat, longitude: lon }}
-                        apikey="AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
+                        apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
                         strokeColor="#3B82F6"
                         optimizeWaypoints={true}
@@ -1090,7 +1186,7 @@ export default function PickupsScreen({ route }) {
 
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
-    }, [jobs, navigatingJob, routeEta]);
+    }, [jobs, navigatingJob, routeEta, liveCollectorLocations]);
 
     const sortedJobs = useMemo(() => {
         if (userRole !== 'COLLECTOR') return jobs;
@@ -1103,6 +1199,19 @@ export default function PickupsScreen({ route }) {
         if (userRole !== 'SELLER') return null;
         return jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
     }, [jobs, userRole]);
+
+    // Fallback "collector found" celebration in case the websocket push was
+    // missed (reconnecting) - fires once per PENDING -> ACCEPTED transition
+    // detected via the polled job list.
+    const prevSellerJobStatus = useRef(null);
+    useEffect(() => {
+        const prevStatus = prevSellerJobStatus.current;
+        const nextStatus = activeSellerJob?.status ?? null;
+        if (prevStatus === 'PENDING' && nextStatus === 'ACCEPTED') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        }
+        prevSellerJobStatus.current = nextStatus;
+    }, [activeSellerJob?.status]);
 
     useEffect(() => {
         if (userRole === 'SELLER') {
@@ -1285,9 +1394,23 @@ export default function PickupsScreen({ route }) {
                             )}
                         </TouchableOpacity>
                         
-                        {requestForm.pickup_address && requestForm.destination_address && (
-                            <AnimatedButton style={styles.continueBtnUbride} onPress={() => setUiState('VEHICLE_SELECT')}>
-                                <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                        {(useCurrentLocation ? !!location : !!customAddress) && !!destinationAddress && (
+                            <AnimatedButton
+                                style={styles.continueBtnUbride}
+                                haptic
+                                disabled={requestLoading}
+                                onPress={async () => {
+                                    if (!requestForm.delivery_fee) {
+                                        await fetchEstimate();
+                                    }
+                                    setUiState('VEHICLE_SELECT');
+                                }}
+                            >
+                                {requestLoading ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                                )}
                             </AnimatedButton>
                         )}
                     </View>
@@ -1299,24 +1422,62 @@ export default function PickupsScreen({ route }) {
                     <TouchableOpacity style={styles.backVehicleBtn} onPress={() => setUiState('IDLE')}>
                         <View style={styles.dragHandle} />
                     </TouchableOpacity>
-                    <View style={styles.vehicleCategories}>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Economy' && styles.vehicleCatTextActive]}>Economy</Text>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Premium' && styles.vehicleCatTextActive]}>Premium</Text>
-                        <Text style={[styles.vehicleCatText, selectedVehicle === 'Extras' && styles.vehicleCatTextActive]}>Extras</Text>
+
+                    <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
+
+                    {/* Route summary - the price/ETA preview Bolt/Uber always show before you commit */}
+                    <View style={styles.routeSummaryCard}>
+                        <View style={styles.routeSummaryRow}>
+                            <View style={styles.dotIndicatorPickup} />
+                            <Text style={styles.routeSummaryText} numberOfLines={1}>
+                                {customAddress || 'Current Location'}
+                            </Text>
+                        </View>
+                        <View style={styles.routeSummaryConnector} />
+                        <View style={styles.routeSummaryRow}>
+                            <View style={styles.dotIndicatorDest} />
+                            <Text style={styles.routeSummaryText} numberOfLines={1}>
+                                {destinationAddress || 'Destination'}
+                            </Text>
+                        </View>
+
+                        <View style={styles.routeSummaryDivider} />
+
+                        <View style={styles.routeSummaryStatsRow}>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>Distance</Text>
+                                <Text style={styles.routeSummaryStatValue}>
+                                    {requestForm.distance_km ? `${requestForm.distance_km} km` : '—'}
+                                </Text>
+                            </View>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>ETA</Text>
+                                <Text style={styles.routeSummaryStatValue}>
+                                    {requestForm.duration_min ? `${Math.round(requestForm.duration_min)} min` : '—'}
+                                </Text>
+                            </View>
+                            <View style={styles.routeSummaryStat}>
+                                <Text style={styles.routeSummaryStatLabel}>Est. fee</Text>
+                                <Text style={[styles.routeSummaryStatValue, { color: '#059669' }]}>
+                                    {requestForm.delivery_fee ? `GHS ${parseFloat(requestForm.delivery_fee).toFixed(2)}` : '—'}
+                                </Text>
+                            </View>
+                        </View>
                     </View>
-                    
+
+                    <Text style={styles.loadSizeLabel}>LOAD SIZE</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
                         {VEHICLES.map(v => {
                             const Icon = v.icon;
                             return (
-                                <TouchableOpacity 
-                                    key={v.id} 
+                                <TouchableOpacity
+                                    key={v.id}
                                     style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
                                     onPress={() => setSelectedVehicle(v.id)}
                                 >
                                     <Icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
                                     <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
-                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.time}</Text>
+                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.capacity}</Text>
                                     {selectedVehicle === v.id && (
                                         <View style={styles.vehicleCheckBadge}>
                                             <CircleCheck size={12} color="#fff" />
@@ -1327,7 +1488,7 @@ export default function PickupsScreen({ route }) {
                         })}
                     </ScrollView>
 
-                    <AnimatedButton style={styles.bookRideBtn} onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
+                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
                         {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideText}>Request Pickup</Text>}
                     </AnimatedButton>
                 </View>
@@ -1541,19 +1702,16 @@ export default function PickupsScreen({ route }) {
                                 <>
                                     <Text style={styles.searchSectionTitle}>RECENT</Text>
                                     {recentLocations.map((item, index) => (
-                                        <TouchableOpacity 
-                                            key={`recent-${index}`} 
+                                        <TouchableOpacity
+                                            key={`recent-${index}`}
                                             style={styles.searchResultItem}
-                                            onPress={() => handleSelectSearchedLocation(item)}
+                                            onPress={() => handleSelectSearchedLocation({ name: item.address, lat: item.latitude, lon: item.longitude })}
                                         >
                                             <View style={styles.searchResultIcon}>
                                                 <Clock size={20} color="#6B7280" />
                                             </View>
                                             <View style={styles.searchResultText}>
-                                                <Text style={styles.searchResultName}>{item.name}</Text>
-                                                <Text style={styles.searchResultAddress} numberOfLines={1}>
-                                                    {[item.address, item.city, item.region].filter(Boolean).join(', ')}
-                                                </Text>
+                                                <Text style={styles.searchResultName} numberOfLines={1}>{item.address}</Text>
                                             </View>
                                         </TouchableOpacity>
                                     ))}
@@ -1765,11 +1923,7 @@ export default function PickupsScreen({ route }) {
             {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
                 <View style={{ position: 'absolute', bottom: 120, left: 16, right: 16, zIndex: 50 }}>
                     {activeSellerJob.status === 'PENDING' ? (
-                        <View style={styles.searchingBottomSheet}>
-                            <ActivityIndicator size="large" color="#059669" style={{ marginBottom: 16 }} />
-                            <Text style={styles.searchingTitle}>Connecting...</Text>
-                            <Text style={styles.searchingSubtext}>Looking for the nearest available collector to pick up your waste.</Text>
-                        </View>
+                        <SearchingCollectorCard onCancel={() => openCancelModal(activeSellerJob.id)} />
                     ) : (
                         <CollectorBottomSheet
                             job={activeSellerJob}
@@ -1784,6 +1938,7 @@ export default function PickupsScreen({ route }) {
                                     Toast.show({ type: 'error', text1: 'No Phone Number', text2: 'Collector phone number not available.' });
                                 }
                             }}
+                            onCancel={() => openCancelModal(activeSellerJob.id)}
                         />
                     )}
                 </View>
@@ -1917,11 +2072,19 @@ const styles = StyleSheet.create({
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
     bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
-    backVehicleBtn: { alignItems: 'center', marginBottom: 20, paddingVertical: 10 },
+    backVehicleBtn: { alignItems: 'center', marginBottom: 12, paddingVertical: 10 },
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
-    vehicleCategories: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 20 },
-    vehicleCatText: { fontSize: 15, color: '#999', fontWeight: '500' },
-    vehicleCatTextActive: { color: '#111', fontWeight: 'bold' },
+    confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
+    routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
+    routeSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    routeSummaryConnector: { width: 1, height: 14, backgroundColor: '#D1D5DB', marginLeft: 5, marginVertical: 2 },
+    routeSummaryText: { flex: 1, fontSize: 14, color: '#111', fontWeight: '500' },
+    routeSummaryDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
+    routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+    routeSummaryStat: { alignItems: 'center', flex: 1 },
+    routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
+    routeSummaryStatValue: { fontSize: 15, color: '#111', fontWeight: '700' },
+    loadSizeLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginBottom: 10 },
     vehicleScroll: { gap: 15, paddingBottom: 20 },
     vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
     vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
@@ -1932,10 +2095,6 @@ const styles = StyleSheet.create({
     vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
     bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
-
-    searchingBottomSheet: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 32, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 20 },
-    searchingTitle: { fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 8 },
-    searchingSubtext: { fontSize: 14, color: '#6B7280', textAlign: 'center', lineHeight: 20 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
     collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },

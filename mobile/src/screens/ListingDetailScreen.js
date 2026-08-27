@@ -4,12 +4,15 @@ import {
     Image, ActivityIndicator, ScrollView, Dimensions, StatusBar, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock, ShoppingCart, Info, Star, Heart, Weight, MapPin, Trash, Pencil } from 'lucide-react-native';
+import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil } from 'lucide-react-native';
+import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import { LinearGradient } from 'expo-linear-gradient';
+import { formatRelativeTime } from '../utils/dateFormat';
+import { haversineDistanceKm } from '../utils/geo';
 
 const { width } = Dimensions.get('window');
 
@@ -19,10 +22,28 @@ export default function ListingDetailScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const [listing, setListing] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [myLocation, setMyLocation] = useState(null);
 
     useEffect(() => {
         fetchListing();
     }, [listingId]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const { status } = await Location.getForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                const loc = await Location.getCurrentPositionAsync({});
+                setMyLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+            } catch (e) {
+                // Distance stat just won't render - not worth prompting for permission here.
+            }
+        })();
+    }, []);
+
+    const distanceKm = (myLocation && listing?.latitude && listing?.longitude)
+        ? haversineDistanceKm(myLocation.latitude, myLocation.longitude, listing.latitude, listing.longitude)
+        : null;
 
     const fetchListing = async () => {
         try {
@@ -126,7 +147,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
                         <View style={styles.timeBadge}>
                             <Clock size={12} color="#F59E0B" />
-                            <Text style={styles.timeBadgeText}>12 min</Text>
+                            <Text style={styles.timeBadgeText}>{formatRelativeTime(listing.created_at)}</Text>
                         </View>
                     </View>
 
@@ -148,9 +169,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                                 <Weight size={18} color="#4F46E5" />
                             </View>
                             <Text style={styles.statLabel}>Est. Weight</Text>
-                            <Text style={styles.statValue}>{listing.quantity || '10kg'}</Text>
+                            <Text style={styles.statValue}>{listing.quantity || '—'}</Text>
                         </View>
-                        
+
                         {user?.id === listing?.seller?.id ? (
                             <>
                                 <View style={styles.statBox}>
@@ -158,25 +179,25 @@ export default function ListingDetailScreen({ route, navigation }) {
                                         <Clock size={18} color="#D97706" />
                                     </View>
                                     <Text style={styles.statLabel}>Posted</Text>
-                                    <Text style={styles.statValue}>Just now</Text>
+                                    <Text style={styles.statValue}>{formatRelativeTime(listing.created_at)}</Text>
                                 </View>
 
                                 <View style={styles.statBox}>
                                     <View style={[styles.statIconWrapper, { backgroundColor: '#ECFDF5' }]}>
                                         <Info size={18} color="#059669" />
                                     </View>
-                                    <Text style={styles.statLabel}>Status</Text>
-                                    <Text style={styles.statValue}>Active</Text>
+                                    <Text style={styles.statLabel}>Likes</Text>
+                                    <Text style={styles.statValue}>{listing.total_likes ?? 0}</Text>
                                 </View>
                             </>
                         ) : (
                             <>
                                 <View style={styles.statBox}>
                                     <View style={[styles.statIconWrapper, { backgroundColor: '#FEF3C7' }]}>
-                                        <Star size={18} color="#D97706" fill="#D97706" />
+                                        <BadgeCheck size={18} color="#D97706" fill={listing.seller?.is_verified ? '#D97706' : 'transparent'} />
                                     </View>
-                                    <Text style={styles.statLabel}>Rating</Text>
-                                    <Text style={styles.statValue}>4.5</Text>
+                                    <Text style={styles.statLabel}>Seller</Text>
+                                    <Text style={styles.statValue}>{listing.seller?.is_verified ? 'Verified' : 'Unverified'}</Text>
                                 </View>
 
                                 <View style={styles.statBox}>
@@ -184,7 +205,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                                         <MapPin size={18} color="#059669" />
                                     </View>
                                     <Text style={styles.statLabel}>Distance</Text>
-                                    <Text style={styles.statValue}>2.4 km</Text>
+                                    <Text style={styles.statValue}>{distanceKm != null ? `${distanceKm.toFixed(1)} km` : '—'}</Text>
                                 </View>
                             </>
                         )}
@@ -192,7 +213,7 @@ export default function ListingDetailScreen({ route, navigation }) {
 
                     <Text style={styles.sectionTitle}>Description</Text>
                     <Text style={styles.descriptionText}>
-                        {listing.description || 'Verified waste ready for pickup. Ensure you have the appropriate vehicle for collection. Please arrive on time and contact the seller if you need directions.'}
+                        {listing.description || 'No description provided by the seller.'}
                     </Text>
 
                 </View>

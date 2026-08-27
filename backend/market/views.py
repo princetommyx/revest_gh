@@ -190,6 +190,37 @@ class ListingViewSet(viewsets.ModelViewSet):
             'total_likes': listing.liked_by.count()
         })
 
+    @extend_schema(
+        summary="Estimate a listing's price",
+        description="Server-computed price estimate (and an adjustable min/max range) for a material and weight, based on real market rates - used when the disposer hasn't gone through the AI photo scan.",
+    )
+    @action(detail=False, methods=['post'], permission_classes=[permissions.IsAuthenticated])
+    def estimate_price(self, request):
+        from decimal import Decimal, InvalidOperation
+        from logistics.pricing import calculate_track_a_fee, calculate_track_b_earnings, price_guardrail
+
+        track_type = request.data.get('track_type', 'B')
+        material_type = request.data.get('material_type') or 'Other'
+
+        try:
+            if track_type == 'A':
+                bag_size = request.data.get('bag_size', 'MEDIUM')
+                estimated = calculate_track_a_fee(category=material_type, bag_size=bag_size)
+            else:
+                weight_kg = Decimal(str(request.data.get('weight_kg') or 0))
+                estimated = calculate_track_b_earnings(material_type, weight_kg)
+        except (InvalidOperation, TypeError, ValueError):
+            return Response({'error': 'Invalid weight_kg'}, status=status.HTTP_400_BAD_REQUEST)
+
+        min_price, max_price = price_guardrail(estimated)
+
+        return Response({
+            'estimated_price': float(estimated),
+            'min_price': float(min_price),
+            'max_price': float(max_price),
+            'currency': 'GHS',
+        })
+
 
 class IsOwnerOrAdmin(permissions.BasePermission):
     """

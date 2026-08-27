@@ -52,6 +52,7 @@ class PickupRequest(models.Model):
     # For live tracking (simplified)
     current_lat = models.FloatField(null=True, blank=True)
     current_lon = models.FloatField(null=True, blank=True)
+    last_location_at = models.DateTimeField(null=True, blank=True)
 
     # Destination Fields (Recycling Company)
     destination_latitude = models.FloatField(null=True, blank=True)

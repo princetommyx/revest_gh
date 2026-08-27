@@ -51,6 +51,10 @@ class User(AbstractUser):
     # Notifications
     expo_push_token = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 
+    # Activity tracking - powers daily re-engagement notifications
+    last_active_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    last_reengagement_sent_at = models.DateTimeField(null=True, blank=True)
+
     # Security & Device Binding
     last_device_id = models.CharField(max_length=255, blank=True, null=True)
     mfa_enabled = models.BooleanField(default=False)
