@@ -70,5 +70,10 @@ export const authApi = {
     submitFeedback: async (content, category = 'Improvement') => {
         const response = await apiClient.post('users/feedback/', { content, category });
         return response.data;
+    },
+
+    getKycStatus: async () => {
+        const response = await apiClient.get('kyc/status/');
+        return response.data;
     }
 };

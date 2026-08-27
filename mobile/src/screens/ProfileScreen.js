@@ -8,10 +8,12 @@ import { useAuth } from '../context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { logisticsApi } from '../api/logistics';
 import { marketApi } from '../api/market';
+import { authApi } from '../api/auth';
 import { BASE_URL } from '../api/client';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
-    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut
+    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
+    Recycle
 } from 'lucide-react-native';
 
 const resolveImageUrl = (path) => {
@@ -36,7 +38,7 @@ const NavCard = ({ children }) => (
     <View style={styles.navCard}>{children}</View>
 );
 
-const NavLink = ({ title, icon: Icon, iconColor = '#111', iconBg = '#F3F4F6', onPress, isLast, danger }) => (
+const NavLink = ({ title, subtitle, subtitleColor = '#9CA3AF', icon: Icon, iconColor = '#111', iconBg = '#F3F4F6', onPress, isLast, danger }) => (
     <TouchableOpacity
         style={[styles.navLink, !isLast && styles.navLinkDivider]}
         onPress={onPress}
@@ -45,7 +47,10 @@ const NavLink = ({ title, icon: Icon, iconColor = '#111', iconBg = '#F3F4F6', on
         <View style={[styles.navLinkIconBox, { backgroundColor: danger ? '#FEF2F2' : iconBg }]}>
             <Icon size={18} color={danger ? '#EF4444' : iconColor} />
         </View>
-        <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
+        <View style={{ flex: 1 }}>
+            <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
+            {!!subtitle && <Text style={[styles.navLinkSubtitle, { color: subtitleColor }]}>{subtitle}</Text>}
+        </View>
         {!danger && <ChevronRight size={18} color="#D1D5DB" />}
     </TouchableOpacity>
 );
@@ -87,6 +92,15 @@ export default function ProfileScreen({ navigation }) {
         queryFn: () => marketApi.getMyListings(),
     });
 
+    // Fetch KYC status (used for the verification status subtitle + completion nudge)
+    const { data: kycData } = useQuery({
+        queryKey: ['kycStatus'],
+        queryFn: () => authApi.getKycStatus(),
+        staleTime: 60000,
+    });
+    const kycStatus = kycData?.status || 'UNVERIFIED';
+    const kycLabel = kycStatus === 'VERIFIED' ? 'Verified' : kycStatus === 'PENDING' ? 'Pending review' : kycStatus === 'REJECTED' ? 'Resubmission needed' : 'Not verified';
+
     // Extract arrays from paginated response
     const jobs = Array.isArray(pickupsData) ? pickupsData : (pickupsData?.results || []);
     const listings = Array.isArray(listingsData) ? listingsData : (listingsData?.results || []);
@@ -102,6 +116,17 @@ export default function ProfileScreen({ navigation }) {
     const totalWeight = completedJobs.reduce((sum, j) => sum + (parseFloat(j.weight_kg) || 0), 0);
 
     const avatarUri = resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
+
+    // Profile completion nudge - only counts fields that genuinely exist on the User model
+    const completionChecks = [
+        !!(user?.profile_picture_url || user?.profile_picture),
+        !!user?.phone_number,
+        !!user?.city,
+        kycStatus === 'VERIFIED',
+    ];
+    const completionDone = completionChecks.filter(Boolean).length;
+    const completionTotal = completionChecks.length;
+    const profileComplete = completionDone === completionTotal;
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
@@ -124,6 +149,22 @@ export default function ProfileScreen({ navigation }) {
                         <Text style={styles.roleBadgeText}>{ROLE_LABELS[userRole] || userRole}</Text>
                     </View>
                 </View>
+
+                {/* Profile completion nudge */}
+                {!profileComplete && (
+                    <View style={styles.completionContainer}>
+                        <TouchableOpacity style={styles.completionCard} onPress={() => navigation.navigate('EditProfile')} activeOpacity={0.85}>
+                            <View style={styles.completionRing}>
+                                <Text style={styles.completionRingText}>{completionDone}/{completionTotal}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.completionTitle}>Complete your profile</Text>
+                                <Text style={styles.completionDesc}>Add a photo, phone number, city and get verified to build trust with the other side.</Text>
+                            </View>
+                            <ChevronRight size={18} color="#9CA3AF" />
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* Activity / Impact */}
                 <View style={styles.impactContainer}>
@@ -182,11 +223,35 @@ export default function ProfileScreen({ navigation }) {
                     </NavCard>
                 </View>
 
+                {/* Become a Collector cross-sell (Disposers only) */}
+                {userRole === 'SELLER' && (
+                    <View style={styles.navBlock}>
+                        <TouchableOpacity style={styles.earnCard} onPress={() => navigation.navigate('SupportChat')} activeOpacity={0.85}>
+                            <View style={styles.earnIconBox}>
+                                <Recycle size={22} color="#111" />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.earnTitle}>Earn as a Collector</Text>
+                                <Text style={styles.earnDesc}>Pick up listed waste and get paid. Chat with our team to get set up.</Text>
+                            </View>
+                            <ChevronRight size={18} color="#6B7280" />
+                        </TouchableOpacity>
+                    </View>
+                )}
+
                 <View style={styles.navBlock}>
                     <SectionHeader title="Account" />
                     <NavCard>
                         <NavLink title="Profile Information" icon={UserCog} iconColor="#3B82F6" iconBg="#EFF6FF" onPress={() => navigation.navigate('EditProfile')} />
-                        <NavLink title="Verification" icon={ShieldCheck} iconColor="#059669" iconBg="#ECFDF5" onPress={() => navigation.navigate('KYCVerification')} />
+                        <NavLink
+                            title="Verification"
+                            subtitle={kycLabel}
+                            subtitleColor={kycStatus === 'VERIFIED' ? '#059669' : kycStatus === 'REJECTED' ? '#EF4444' : '#9CA3AF'}
+                            icon={ShieldCheck}
+                            iconColor="#059669"
+                            iconBg="#ECFDF5"
+                            onPress={() => navigation.navigate('KYCVerification')}
+                        />
                         <NavLink title="Security" icon={ShieldAlert} iconColor="#EF4444" iconBg="#FEF2F2" onPress={() => navigation.navigate('Security')} isLast />
                     </NavCard>
                 </View>
@@ -359,12 +424,79 @@ const styles = StyleSheet.create({
         marginRight: 14,
     },
     navLinkText: {
-        flex: 1,
         fontSize: 15,
         color: '#111827',
         fontWeight: '500',
     },
+    navLinkSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
     navLinkTextDanger: {
         color: '#EF4444',
+    },
+    completionContainer: {
+        paddingHorizontal: 24,
+        marginBottom: 24,
+    },
+    completionCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#ECFDF5',
+        borderRadius: 18,
+        padding: 16,
+        gap: 14,
+    },
+    completionRing: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        borderWidth: 2.5,
+        borderColor: '#059669',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    completionRingText: {
+        fontSize: 11,
+        fontWeight: '700',
+        color: '#059669',
+    },
+    completionTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 3,
+    },
+    completionDesc: {
+        fontSize: 12,
+        color: '#4B5563',
+        lineHeight: 17,
+    },
+    earnCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#111827',
+        borderRadius: 18,
+        padding: 18,
+        gap: 14,
+    },
+    earnIconBox: {
+        width: 42,
+        height: 42,
+        borderRadius: 21,
+        backgroundColor: '#FBBF24',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    earnTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        marginBottom: 3,
+    },
+    earnDesc: {
+        fontSize: 12,
+        color: '#D1D5DB',
+        lineHeight: 17,
     },
 });
