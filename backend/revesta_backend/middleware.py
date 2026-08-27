@@ -1,7 +1,9 @@
 import logging
+from datetime import timedelta
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
+from django.utils import timezone
 from rest_framework_simplejwt.tokens import AccessToken
 from django.contrib.auth import get_user_model
 from urllib.parse import parse_qs
@@ -39,6 +41,31 @@ class JwtAuthMiddleware(BaseMiddleware):
             scope['user'] = AnonymousUser()
             
         return await super().__call__(scope, receive, send)
+
+class ActivityTrackingMiddleware:
+    """
+    Records when an authenticated user was last seen, independent of login
+    (JWT access tokens live for an hour and refresh silently, so Django's
+    built-in last_login barely moves). Powers daily re-engagement targeting.
+    Writes at most once every 5 minutes per user to avoid a DB write on
+    every single request.
+    """
+    STALE_AFTER = timedelta(minutes=5)
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        user = getattr(request, 'user', None)
+        if user is not None and getattr(user, 'is_authenticated', False):
+            now = timezone.now()
+            if not user.last_active_at or now - user.last_active_at > self.STALE_AFTER:
+                type(user).objects.filter(pk=user.pk).update(last_active_at=now)
+
+        return response
+
 
 class RequestLoggingMiddleware:
     def __init__(self, get_response):

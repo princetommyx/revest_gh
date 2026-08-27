@@ -18,3 +18,26 @@ services:
         sync: false
       - key: REDIS_URL
         sync: false
+
+  # Daily re-engagement push notifications for inactive users.
+  # NOTE: Render Cron Jobs are not on the free tier - pick a plan this
+  # will actually run on. DATABASE_URL must be set to the SAME database
+  # as revesta-backend above (not a new one), via the Render dashboard.
+  - type: cron
+    name: revesta-daily-reengagement
+    runtime: python
+    rootDir: backend
+    plan: starter
+    region: frankfurt
+    schedule: "0 18 * * *" # 18:00 UTC daily (Ghana is UTC+0, no DST)
+    buildCommand: bash build.sh
+    startCommand: python manage.py send_daily_reengagement_notifications
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.5
+      - key: DEBUG
+        value: 'False'
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
