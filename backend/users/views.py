@@ -61,6 +61,11 @@ class RegisterView(generics.CreateAPIView):
     parser_classes = (MultiPartParser, FormParser, JSONParser)
     throttle_scope = "register"
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['validate_only'] = self.request.query_params.get('validate_only') == 'true'
+        return context
+
     def perform_create(self, serializer):
         # Save the new user
         user = serializer.save()
@@ -378,6 +383,7 @@ class PasswordResetRequestView(views.APIView):
 
 class PasswordResetConfirmView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = "otp"
 
     def post(self, request):
         identifier = request.data.get("identifier")
@@ -437,6 +443,18 @@ class PasswordResetConfirmView(views.APIView):
         if not reset_otp or not reset_otp.is_valid():
             return Response(
                 {"error": "Invalid or expired verification code"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Enforce the same password strength rules used at registration
+        from django.contrib.auth.password_validation import validate_password
+        from django.core.exceptions import ValidationError as DjangoValidationError
+
+        try:
+            validate_password(new_password, user=user)
+        except DjangoValidationError as e:
+            return Response(
+                {"error": " ".join(e.messages)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -513,6 +531,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+    throttle_scope = "login"
 
     def post(self, request, *args, **kwargs):
         # First, validate credentials normally
@@ -635,6 +654,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class VerifyLoginOTPView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = "otp"
 
     def post(self, request):
         user_id = request.data.get("user_id")
@@ -938,6 +958,7 @@ class DeviceTokenView(views.APIView):
 
 class SendOTPView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = "otp"
 
     def post(self, request):
         phone_number = request.data.get("phone_number")
@@ -947,8 +968,10 @@ class SendOTPView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Normalize phone number (remove spaces, etc.)
-        phone_number = "".join(phone_number.split())
+        # Normalize phone number (same convention used for registration/login lookups)
+        from .phone_utils import normalize_gh_phone
+
+        phone_number = normalize_gh_phone("".join(phone_number.split()))
 
         # Internal OTP Generation (More reliable than Managed Verification for
         # many accounts)
@@ -958,7 +981,7 @@ class SendOTPView(views.APIView):
         # Save or update verification in our DB
         PhoneVerification.objects.update_or_create(
             phone_number=phone_number,
-            defaults={"otp": otp_code, "expires_at": expires_at},
+            defaults={"otp": otp_code, "expires_at": expires_at, "is_verified": False},
         )
 
         # CRITICAL: Print to console for testing
@@ -1068,6 +1091,7 @@ class AdminSendPushView(views.APIView):
 
 class VerifyOTPView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = "otp"
 
     def post(self, request):
         phone_number = request.data.get("phone_number")
@@ -1079,11 +1103,13 @@ class VerifyOTPView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Normalize
-        phone_number = "".join(phone_number.split())
+        # Normalize (same convention used for registration/login lookups)
+        from .phone_utils import normalize_gh_phone
 
-        # Test Bypass for local testing if needed
-        if otp_code == "123456":
+        phone_number = normalize_gh_phone("".join(phone_number.split()))
+
+        # Test Bypass for local testing only - never active in production
+        if settings.DEBUG and otp_code == "123456":
             return Response(
                 {
                     "status": "success",
@@ -1103,7 +1129,9 @@ class VerifyOTPView(views.APIView):
                 )
 
             if verification.otp == otp_code:
-                # Mark as verified (optional: update user model if linked)
+                # Mark as verified so registration can confirm this number was proven
+                verification.is_verified = True
+                verification.save(update_fields=["is_verified"])
                 return Response(
                     {
                         "status": "success",

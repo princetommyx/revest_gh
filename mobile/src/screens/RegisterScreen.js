@@ -8,14 +8,16 @@ import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
 import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
+import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
 
 const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
     const navigation = useNavigation();
-    const { signUp } = useAuth();
+    const { signUp, googleSignIn } = useAuth();
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
     // Form State
@@ -42,6 +44,27 @@ export default function RegisterScreen() {
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [verifying, setVerifying] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    const { promptAsync: promptGoogle } = useGoogleAuth({
+        onToken: async (token) => {
+            setGoogleLoading(true);
+            try {
+                await googleSignIn(token, formData.role || undefined);
+                Toast.show({ type: 'success', text1: 'Welcome!', text2: 'Your account is ready.' });
+            } catch (error) {
+                Toast.show({
+                    type: 'error',
+                    text1: 'Google Sign-In Failed',
+                    text2: error.response?.data?.error || 'Please try again.'
+                });
+            } finally {
+                setGoogleLoading(false);
+            }
+        },
+        onError: (message) => {
+            Toast.show({ type: 'error', text1: 'Google Sign-In Failed', text2: message });
+        },
+    });
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -280,6 +303,14 @@ export default function RegisterScreen() {
     };
 
     const handleSocialLogin = (provider) => {
+        if (provider === 'Google') {
+            if (!isGoogleAuthSupported) {
+                Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Google sign-in for iOS is being finalized.' });
+                return;
+            }
+            promptGoogle();
+            return;
+        }
         Toast.show({
             type: 'info',
             text1: 'Coming Soon',
@@ -664,14 +695,21 @@ export default function RegisterScreen() {
                     </View>
 
                     <View style={styles.socialRow}>
-                        <TouchableOpacity 
-                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]} 
+                        <TouchableOpacity
+                            style={[styles.socialButton, Platform.OS !== 'ios' && { flex: 1 }]}
                             onPress={() => handleSocialLogin('Google')}
+                            disabled={googleLoading}
                         >
-                            <Text style={styles.googleG}>G</Text>
-                            <Text style={styles.socialText}>Google</Text>
+                            {googleLoading ? (
+                                <ActivityIndicator color="#111" size="small" />
+                            ) : (
+                                <>
+                                    <Text style={styles.googleG}>G</Text>
+                                    <Text style={styles.socialText}>Google</Text>
+                                </>
+                            )}
                         </TouchableOpacity>
-                        
+
                         {Platform.OS === 'ios' && (
                             <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLogin('Apple')}>
                                 <Text style={styles.appleIcon}></Text>
@@ -702,7 +740,7 @@ export default function RegisterScreen() {
                             style={styles.modalDoneBtn}
                             onPress={() => setShowSuccessModal(false)}
                         >
-                            <Text style={styles.modalDoneBtnText}>Browse House</Text>
+                            <Text style={styles.modalDoneBtnText}>Get Started</Text>
                         </TouchableOpacity>
                     </View>
                 </View>

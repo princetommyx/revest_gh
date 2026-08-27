@@ -99,10 +99,17 @@ class PhoneVerification(models.Model):
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    is_verified = models.BooleanField(default=False)
 
     def is_valid(self):
         from django.utils import timezone
         return self.otp and self.expires_at > timezone.now()
+
+    def is_recently_verified(self):
+        """Whether this number was successfully verified within the registration window."""
+        from django.utils import timezone
+        from datetime import timedelta
+        return self.is_verified and self.created_at > timezone.now() - timedelta(minutes=30)
 
     def __str__(self):
         return f"Verification for {self.phone_number}"

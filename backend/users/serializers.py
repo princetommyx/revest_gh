@@ -4,6 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 from drf_spectacular.utils import extend_schema_field
 import uuid
 
+from .phone_utils import normalize_gh_phone
+
 User = get_user_model()
 
 
@@ -80,19 +82,27 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_phone_number(self, value):
         if not value:
             return value
-        
-        # Normalize for check (Remove spaces, handles 0... and +233...)
-        clean = value.lstrip('+').replace(' ', '')
-        if clean.startswith('0'):
-            normalized = '233' + clean[1:]
-        elif len(clean) == 9:
-            normalized = '233' + clean
-        else:
-            normalized = clean
-            
+
+        normalized = normalize_gh_phone(value)
+
         if User.objects.filter(phone_number=normalized).exists():
             raise serializers.ValidationError("A user with this phone number already exists.")
-        return normalized # Return the normalized version to save it correctly
+
+        # Only enforce OTP verification on the real submission, not the
+        # pre-flight validate_only check (which runs before the OTP step).
+        if not self.context.get('validate_only'):
+            from .models import PhoneVerification
+
+            verification = PhoneVerification.objects.filter(
+                phone_number=normalized
+            ).order_by('-created_at').first()
+
+            if not verification or not verification.is_recently_verified():
+                raise serializers.ValidationError(
+                    "Please verify your phone number with the code we sent before completing registration."
+                )
+
+        return normalized  # Return the normalized version to save it correctly
     
     def create(self, validated_data):
         validated_data.pop('password2')

@@ -26,8 +26,8 @@ export const authApi = {
         return response.data;
     },
 
-    googleLogin: async (token) => {
-        const response = await apiClient.post('auth/google/', { token });
+    googleLogin: async (token, role) => {
+        const response = await apiClient.post('auth/google/', role ? { token, role } : { token });
         return response.data;
     },
 
