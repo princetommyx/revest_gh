@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { walletApi } from '../api/wallet';
-import Toast from 'react-native-root-toast';
 
 /**
  * Base wallet hook - handles fetching, depositing, and withdrawing

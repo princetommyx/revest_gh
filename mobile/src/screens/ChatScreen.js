@@ -7,7 +7,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { chatApi } from '../api/chat';
 import { MessageSquare, User, Bot, Bell, CircleAlert, Check, Search, Mic, Ellipsis } from 'lucide-react-native';
-import Toast from 'react-native-root-toast';
+import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import { notificationsApi } from '../api/notifications';
 import { useNotifications } from '../context/NotificationContext';
@@ -36,7 +36,7 @@ export default function ChatScreen({ route }) {
             setFilteredConversations(data);
         } catch (error) {
             console.error("Conversations Load Error:", error);
-            Toast.show("Failed to load conversations", { backgroundColor: '#111' });
+            Toast.show({ type: 'error', text1: 'Failed to load conversations' });
         }
     };
 
@@ -100,7 +100,7 @@ export default function ChatScreen({ route }) {
         try {
             await markAllRead();
             setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            Toast.show("All marked as read", { backgroundColor: '#111' });
+            Toast.show({ type: 'success', text1: 'All marked as read' });
         } catch (e) { console.log(e); }
     };
 

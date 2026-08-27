@@ -8,7 +8,6 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { chatApi } from '../api/chat';
 import { Send, User, ChevronLeft, Ellipsis, Phone, MessageSquare } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
-import Toast from 'react-native-root-toast';
 import { useChatSocket } from '../hooks/useChatSocket';
 
 const { width } = Dimensions.get('window');

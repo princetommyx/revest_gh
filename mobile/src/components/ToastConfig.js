@@ -1,108 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { Check, Info, TriangleAlert, X, Bell } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import Toast from 'react-native-toast-message';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
+import { Check, X, TriangleAlert, Info, Bell } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
 
-const CustomToast = ({ title, text2, iconBg, IconComponent, accentColor }) => (
-    <View style={styles.toastWrapper}>
-        <BlurView 
-            intensity={90} 
-            tint="light" 
-            style={[styles.toastContainer, { borderLeftColor: accentColor }]}
+const VARIANTS = {
+    success: { Icon: Check, color: '#34D399' },
+    error: { Icon: X, color: '#F87171' },
+    warning: { Icon: TriangleAlert, color: '#FBBF24' },
+    info: { Icon: Info, color: '#60A5FA' },
+    notification: { Icon: Bell, color: '#34D399' },
+};
+
+const CustomToast = ({ type = 'info', title, text2 }) => {
+    const { Icon, color } = VARIANTS[type] || VARIANTS.info;
+    const entrance = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.spring(entrance, {
+            toValue: 1,
+            friction: 8,
+            tension: 60,
+            useNativeDriver: true,
+        }).start();
+    }, []);
+
+    return (
+        <Animated.View
+            style={[
+                styles.wrapper,
+                {
+                    opacity: entrance,
+                    transform: [
+                        { translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [-16, 0] }) },
+                        { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1] }) },
+                    ],
+                },
+            ]}
         >
-            <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-                <IconComponent size={20} color={accentColor} strokeWidth={2.5} />
+            <View style={styles.card}>
+                <View style={[styles.iconDot, { backgroundColor: color }]}>
+                    <Icon size={14} color="#111" strokeWidth={3} />
+                </View>
+                <View style={styles.textWrap}>
+                    {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
+                    {text2 ? <Text style={styles.subtext} numberOfLines={2}>{text2}</Text> : null}
+                </View>
             </View>
-            <View style={styles.textWrap}>
-                {title ? <Text style={styles.titleText}>{title}</Text> : null}
-                {text2 ? <Text style={styles.subText}>{text2}</Text> : null}
-            </View>
-        </BlurView>
-    </View>
-);
+        </Animated.View>
+    );
+};
 
 export const toastConfig = {
-    success: (props) => (
-        <CustomToast 
-            title={props.text1} text2={props.text2}
-            iconBg="rgba(16, 185, 129, 0.15)" IconComponent={Check} accentColor="#10B981"
-        />
-    ),
-    info: (props) => (
-        <CustomToast 
-            title={props.text1} text2={props.text2}
-            iconBg="rgba(59, 130, 246, 0.15)" IconComponent={Info} accentColor="#3B82F6"
-        />
-    ),
-    warning: (props) => (
-        <CustomToast 
-            title={props.text1} text2={props.text2}
-            iconBg="rgba(245, 158, 11, 0.15)" IconComponent={TriangleAlert} accentColor="#F59E0B"
-        />
-    ),
-    error: (props) => (
-        <CustomToast 
-            title={props.text1} text2={props.text2}
-            iconBg="rgba(239, 68, 68, 0.15)" IconComponent={X} accentColor="#EF4444"
-        />
-    ),
-    notification: (props) => (
-        <CustomToast 
-            title={props.text1} text2={props.text2}
-            iconBg="rgba(139, 92, 246, 0.15)" IconComponent={Bell} accentColor="#8B5CF6"
-        />
-    )
+    success: (props) => <CustomToast type="success" title={props.text1} text2={props.text2} />,
+    error: (props) => <CustomToast type="error" title={props.text1} text2={props.text2} />,
+    warning: (props) => <CustomToast type="warning" title={props.text1} text2={props.text2} />,
+    info: (props) => <CustomToast type="info" title={props.text1} text2={props.text2} />,
+    notification: (props) => <CustomToast type="notification" title={props.text1} text2={props.text2} />,
 };
 
 const styles = StyleSheet.create({
-    toastWrapper: {
+    wrapper: {
         width: width * 0.92,
         marginTop: 10,
-        // Premium shadow for depth
+    },
+    card: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        backgroundColor: '#111',
+        borderRadius: 16,
+        paddingVertical: 14,
+        paddingHorizontal: 16,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.25,
         shadowRadius: 16,
-        elevation: 6,
+        elevation: 8,
     },
-    toastContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 20,
-        overflow: 'hidden',
-        borderLeftWidth: 6,
-        // Fallback solid color in case blur isn't supported immediately
-        backgroundColor: 'rgba(255, 255, 255, 0.75)',
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.4)',
-    },
-    iconBox: {
-        width: 44,
-        height: 44,
-        borderRadius: 16, 
+    iconDot: {
+        width: 26,
+        height: 26,
+        borderRadius: 13,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 14,
+        marginRight: 12,
+        marginTop: 1,
     },
     textWrap: {
         flex: 1,
-        justifyContent: 'center',
     },
-    titleText: {
-        fontSize: 16,
-        color: '#0F172A',
-        fontWeight: '800',
-        marginBottom: 2,
-        letterSpacing: 0.2,
-    },
-    subText: {
+    title: {
         fontSize: 14,
-        color: '#475569',
-        fontWeight: '500',
-        lineHeight: 20,
-    }
+        fontWeight: '700',
+        color: '#fff',
+        marginBottom: 2,
+    },
+    subtext: {
+        fontSize: 13,
+        color: 'rgba(255,255,255,0.7)',
+        lineHeight: 18,
+    },
 });
