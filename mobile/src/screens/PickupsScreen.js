@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
 import { authApi } from '../api/auth';
-import { tomtomApi } from '../api/tomtom';
+import { placesApi } from '../api/places';
+import { GOOGLE_MAPS_API_KEY } from '../constants/googleMaps';
 import { useAuth } from '../context/AuthContext';
 import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
 import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
@@ -859,7 +860,7 @@ export default function PickupsScreen({ route }) {
             
             setIsSearchingLocation(true);
             try {
-                const results = await tomtomApi.searchPlaces(
+                const results = await placesApi.searchPlaces(
                     searchQuery, 
                     location?.latitude, 
                     location?.longitude
@@ -1153,7 +1154,7 @@ export default function PickupsScreen({ route }) {
                         key={`route-${job.id}`}
                         origin={{ latitude: currentL, longitude: currentLo }}
                         destination={{ latitude: lat, longitude: lon }}
-                        apikey="AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
+                        apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
                         strokeColor="#3B82F6"
                         optimizeWaypoints={true}
