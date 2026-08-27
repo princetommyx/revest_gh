@@ -53,6 +53,16 @@ const VEHICLES = [
 ];
 
 
+const resolveImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
+    return `${BASE_URL}${cleanPath}`;
+};
+
+const contactNameOf = (u) => [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.username || 'User';
+
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Earth radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -1499,11 +1509,16 @@ export default function PickupsScreen({ route }) {
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width} decelerationRate="fast" pagingEnabled>
                         {sortedJobs.map(item => (
                             <View key={item.id} style={{ width }}>
-                                <ActiveJobBottomSheet 
-                                    job={item} 
+                                <ActiveJobBottomSheet
+                                    job={item}
                                     onChatPress={() => {
-                                        Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
-                                    }} 
+                                        if (!item.provider?.id) return;
+                                        navigation.navigate('ChatDetail', {
+                                            contactId: item.provider.id,
+                                            contactName: contactNameOf(item.provider),
+                                            contactImage: resolveImageUrl(item.provider.profile_picture_url),
+                                        });
+                                    }}
                                     onCallPress={() => {
                                         if (item.provider?.phone) {
                                             import('react-native').then(({ Linking }) => {
@@ -1929,7 +1944,12 @@ export default function PickupsScreen({ route }) {
                             job={activeSellerJob}
                             collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
                             onChatPress={() => {
-                                Toast.show({ type: 'info', text1: 'Coming Soon', text2: 'Chat will be available shortly.' });
+                                if (!activeSellerJob.collector?.id) return;
+                                navigation.navigate('ChatDetail', {
+                                    contactId: activeSellerJob.collector.id,
+                                    contactName: contactNameOf(activeSellerJob.collector),
+                                    contactImage: resolveImageUrl(activeSellerJob.collector.profile_picture_url),
+                                });
                             }}
                             onCallPress={() => {
                                 if (activeSellerJob.collector?.phone) {

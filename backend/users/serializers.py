@@ -11,10 +11,23 @@ class PublicUserSerializer(serializers.ModelSerializer):
     """
     Minimal user data for public consumption (listings, chats, etc.)
     """
+    profile_picture_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ('id', 'username', 'role', 'city', 'is_verified', 'is_online', 'is_staff', 'is_support')
+        fields = (
+            'id', 'username', 'first_name', 'last_name', 'role', 'city',
+            'is_verified', 'is_online', 'is_staff', 'is_support', 'profile_picture_url'
+        )
         read_only_fields = fields
+
+    def get_profile_picture_url(self, obj):
+        if obj.profile_picture:
+            try:
+                return obj.profile_picture.url
+            except Exception:
+                return None
+        return obj.profile_picture_url or None
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
