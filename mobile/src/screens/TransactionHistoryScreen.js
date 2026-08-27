@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, StatusBar, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Receipt } from 'lucide-react-native';
 import { walletApi } from '../api/wallet';
 import TransactionRow from '../components/TransactionRow';
+import PageLoader from '../components/PageLoader';
 
 export default function TransactionHistoryScreen({ navigation }) {
     const [transactions, setTransactions] = useState([]);
@@ -39,7 +40,7 @@ export default function TransactionHistoryScreen({ navigation }) {
             </SafeAreaView>
 
             {loading ? (
-                <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>
+                <PageLoader label="Loading transactions..." />
             ) : (
                 <FlatList
                     data={transactions}

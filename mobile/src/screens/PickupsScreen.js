@@ -36,6 +36,7 @@ import ActiveJobBottomSheet from '../components/ActiveJobBottomSheet';
 import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
+import PageLoader from '../components/PageLoader';
 
 import MapView, { Marker, Polyline } from 'react-native-maps';
 
@@ -1152,7 +1153,9 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             ) : (
                                 <View style={[styles.markerContainer, { borderColor: '#111' }]}>
-                                    <Truck size={24} color="#111" />
+                                    <View style={{ transform: [{ rotate: `${live?.heading || 0}deg` }] }}>
+                                        <Truck size={24} color="#111" />
+                                    </View>
                                 </View>
                             )}
                         </ActiveMarker>
@@ -1166,7 +1169,7 @@ export default function PickupsScreen({ route }) {
                         destination={{ latitude: lat, longitude: lon }}
                         apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
-                        strokeColor="#3B82F6"
+                        strokeColor="#059669"
                         optimizeWaypoints={true}
                         onError={(errorMessage) => {
                             console.warn("MapViewDirections Error:", errorMessage);
@@ -1271,7 +1274,7 @@ export default function PickupsScreen({ route }) {
     }
 
     if (loading) {
-        return <View style={styles.center}><ActivityIndicator size="large" color="#111" /></View>;
+        return <PageLoader label="Finding your location..." />;
     }
 
     return (
@@ -2188,7 +2191,6 @@ const styles = StyleSheet.create({
 
     container: { flex: 1 },
     map: { width: width, height: height },
-    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
     header: {
         position: 'absolute',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ActivityIndicator, ScrollView, Dimensions, StatusBar, Alert
+    Image, ScrollView, Dimensions, StatusBar, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil, MessageCircle } from 'lucide-react-native';
@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import { LinearGradient } from 'expo-linear-gradient';
+import PageLoader from '../components/PageLoader';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
 
@@ -92,11 +93,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     };
 
     if (loading) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#10B981" />
-            </View>
-        );
+        return <PageLoader label="Loading listing..." />;
     }
 
     if (!listing) {

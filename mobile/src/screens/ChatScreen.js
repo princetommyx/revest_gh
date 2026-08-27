@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList,
-    TouchableOpacity, ActivityIndicator, Image, TextInput, Dimensions, StatusBar, ScrollView
+    TouchableOpacity, Image, TextInput, Dimensions, StatusBar, ScrollView
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -12,6 +12,7 @@ import { BASE_URL } from '../api/client';
 import { notificationsApi } from '../api/notifications';
 import { useNotifications } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
+import PageLoader from '../components/PageLoader';
 
 const { width } = Dimensions.get('window');
 
@@ -268,7 +269,7 @@ export default function ChatScreen({ route }) {
 
                 {loading ? (
                     <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#111" />
+                        <PageLoader fullScreen={false} label="Loading conversations..." />
                     </View>
                 ) : (
                     <FlatList
