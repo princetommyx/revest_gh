@@ -201,9 +201,11 @@ const navStyles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 6,
-        paddingHorizontal: 10,
+        // Was 10 — with five tabs that left barely enough room for a
+        // seven-character label before it started truncating.
+        paddingHorizontal: 4,
         borderRadius: 20,
-        minWidth: 56,
+        alignSelf: 'stretch',
     },
     activePill: {
         ...StyleSheet.absoluteFillObject,
@@ -300,7 +302,15 @@ function MainTabs() {
                 <Tab.Screen name="Home" component={HomeScreen} />
 
                 {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
-                    <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
+                    <Tab.Screen
+                        name="Marketplace"
+                        component={MarketplaceScreen}
+                        // Without this the label falls back to the route name.
+                        // "Marketplace" is far wider than a fifth of the bar, so
+                        // it wrapped onto two lines and collided with the tab
+                        // above it. Route name stays "Marketplace" for navigation.
+                        options={{ tabBarLabel: 'Market' }}
+                    />
                 )}
 
                 <Tab.Screen
