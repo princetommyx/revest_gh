@@ -172,14 +172,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
         return normalized
 
+    # IdentityVerification's related_name is 'identity_verification'; these
+    # read 'kyc_submission', which no model defines - so hasattr() was always
+    # False and every user's profile reported UNVERIFIED with no rejection
+    # reason, however verified they actually were. Every other consumer
+    # (kyc_views, wallet.services, logistics.views) uses the correct name.
     def get_kyc_status(self, obj):
-        if hasattr(obj, 'kyc_submission'):
-            return obj.kyc_submission.status
-        return 'UNSUBMITTED'
-        
+        if hasattr(obj, 'identity_verification'):
+            return obj.identity_verification.status
+        return 'UNVERIFIED'
+
     def get_kyc_rejection_reason(self, obj):
-        if hasattr(obj, 'kyc_submission') and obj.kyc_submission.status == 'REJECTED':
-            return obj.kyc_submission.rejection_reason
+        if hasattr(obj, 'identity_verification') and obj.identity_verification.status == 'REJECTED':
+            return obj.identity_verification.rejection_reason
         return None
     
     def to_representation(self, instance):

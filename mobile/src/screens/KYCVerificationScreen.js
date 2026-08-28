@@ -1,16 +1,58 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Camera, CreditCard, User, Upload, CircleCheck } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import apiClient from '../api/client';
+import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const STATUS_BANNER = {
+    PENDING: {
+        title: 'Verification under review',
+        body: "We've received your documents and are reviewing them. You don't need to submit again unless we ask you to.",
+        bg: '#FFFBEB',
+        color: '#B45309',
+    },
+    VERIFIED: {
+        title: "You're verified",
+        body: 'Your identity has been confirmed. Nothing further is needed.',
+        bg: '#ECFDF5',
+        color: '#059669',
+    },
+    REJECTED: {
+        title: 'Resubmission needed',
+        body: 'We couldn’t verify your last submission. Please upload clear photos and try again.',
+        bg: '#FEF2F2',
+        color: '#DC2626',
+    },
+};
 
 export default function KYCVerificationScreen() {
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
+    const [kycStatus, setKycStatus] = useState(null);
+    const [rejectionReason, setRejectionReason] = useState(null);
+    const [statusLoading, setStatusLoading] = useState(true);
+
+    // The screen used to open on a blank upload form regardless of whether a
+    // submission was already pending, verified, or rejected - and never showed
+    // the rejection reason the backend returns.
+    useEffect(() => {
+        (async () => {
+            try {
+                const data = await authApi.getKycStatus();
+                setKycStatus(data?.status || 'UNVERIFIED');
+                setRejectionReason(data?.rejection_reason || null);
+            } catch (e) {
+                setKycStatus('UNVERIFIED');
+            } finally {
+                setStatusLoading(false);
+            }
+        })();
+    }, []);
 
     const [idFront, setIdFront] = useState(null);
     const [idBack, setIdBack] = useState(null);
@@ -144,6 +186,18 @@ export default function KYCVerificationScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                {!statusLoading && STATUS_BANNER[kycStatus] && (
+                    <View style={[styles.statusBanner, { backgroundColor: STATUS_BANNER[kycStatus].bg }]}>
+                        <Text style={[styles.statusTitle, { color: STATUS_BANNER[kycStatus].color }]}>
+                            {STATUS_BANNER[kycStatus].title}
+                        </Text>
+                        <Text style={styles.statusBody}>{STATUS_BANNER[kycStatus].body}</Text>
+                        {kycStatus === 'REJECTED' && !!rejectionReason && (
+                            <Text style={styles.statusReason}>Reason: {rejectionReason}</Text>
+                        )}
+                    </View>
+                )}
+
                 <View style={styles.infoAlert}>
                     <Text style={styles.infoTitle}>Why do we need this?</Text>
                     <Text style={styles.infoText}>As a Collector or Recycler, we need to verify your identity to ensure trust and safety across the ReVesta network.</Text>
@@ -248,6 +302,27 @@ const styles = StyleSheet.create({
     content: {
         padding: 20,
         paddingBottom: 50,
+    },
+    statusBanner: {
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 16,
+    },
+    statusTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        marginBottom: 6,
+    },
+    statusBody: {
+        fontSize: 13,
+        color: '#4B5563',
+        lineHeight: 19,
+    },
+    statusReason: {
+        fontSize: 13,
+        color: '#111827',
+        fontWeight: '600',
+        marginTop: 8,
     },
     infoAlert: {
         backgroundColor: '#E0F2FE',
