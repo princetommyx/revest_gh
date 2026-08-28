@@ -46,8 +46,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'COLLECTOR':
-            # Collectors see:
+        # RECYCLER picks up jobs from this same board exactly like COLLECTOR
+        # does elsewhere in the app (accept/track/complete have no role
+        # restriction) - this used to check only 'COLLECTOR', so a recycler
+        # fell through to the provider-only branch below and saw an empty
+        # board instead of nearby pending jobs or their own accepted ones.
+        if user.role in ('COLLECTOR', 'RECYCLER'):
+            # Collectors/recyclers see:
             # 1. Nearby PENDING jobs
             # 2. Their own active jobs (ACCEPTED, ARRIVED)
             
@@ -478,8 +483,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
     def notify_nearby_collectors(self, request):
         # Radius in km
-        RADIUS = 10 
-        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        RADIUS = 10
+        # Excluded RECYCLER here (and nowhere else in the accept/track flow),
+        # so a recycler was never pushed a 'new_request' event or push
+        # notification for a job they were otherwise fully able to accept.
+        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
         
         nearby = []
         for collector in online_collectors:
@@ -566,8 +574,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         except ValueError:
              return Response({'error': 'Invalid coordinates'}, status=400)
 
-        # 1. Find nearest online collector
-        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        # 1. Find nearest online collector (recyclers pick up Track A jobs too)
+        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
         nearest_collector = None
         min_dist = float('inf')
         

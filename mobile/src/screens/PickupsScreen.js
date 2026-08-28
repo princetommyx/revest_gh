@@ -14,7 +14,7 @@ import { startCollectorLocationTracking, stopCollectorLocationTracking } from '.
 import { getOnlinePreference } from '../utils/collectorPresence';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
@@ -382,7 +382,7 @@ export default function PickupsScreen({ route }) {
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     };
 
-    const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location);
+    const loading = jobsLoading && (!isCollectorRole || !!location);
 
     useEffect(() => {
         (async () => {
@@ -558,18 +558,30 @@ export default function PickupsScreen({ route }) {
 
     useLogisticsSocket(handleSocketMessage);
 
-    // Slow fallback poll - covers the rare case of a dropped/reconnecting socket.
+    // Slow fallback poll - covers a dropped/reconnecting socket, or a missed
+    // push notification. This used to be gated to non-collectors and to rely
+    // on `refetch` for its dependency array; `refetch` from usePickups was a
+    // brand new function every render, so this interval was cleared and
+    // recreated on nearly every render and in practice almost never survived
+    // long enough to fire. usePickups now returns a stable `refetch`, and
+    // this runs for every role - collectors/recyclers previously had no
+    // fallback at all and depended entirely on the 'new_request' push
+    // arriving while this screen happened to be mounted.
     useEffect(() => {
-        let interval;
-        if (userRole !== 'COLLECTOR') {
-            interval = setInterval(() => {
-                refetch();
-            }, 25000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [userRole, refetch]);
+        const interval = setInterval(() => {
+            refetch();
+        }, 25000);
+        return () => clearInterval(interval);
+    }, [refetch]);
+
+    // Catch up immediately when this tab regains focus, rather than waiting
+    // on the next poll tick or a push that may have been missed while the
+    // screen was in the background.
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
 
     // Disposer camera following - prefers the live websocket position over the polled snapshot
     useEffect(() => {
@@ -589,11 +601,14 @@ export default function PickupsScreen({ route }) {
         }
     }, [jobs, navigatingJob, userRole, liveCollectorLocations]);
 
-    // Collector: keep background GPS streaming to the server for as long as
-    // there's an active job, independent of which screen is mounted or
-    // whether the app is foregrounded. Driven by job status, not navigation UI.
+    // Collector/recycler: keep background GPS streaming to the server for as
+    // long as there's an active job, independent of which screen is mounted
+    // or whether the app is foregrounded. Driven by job status, not
+    // navigation UI. Was gated to 'COLLECTOR' only, so a recycler's accepted
+    // job never started background tracking at all - the disposer would see
+    // no live position for the entire job.
     useEffect(() => {
-        if (userRole !== 'COLLECTOR') return;
+        if (!isCollectorRole) return;
 
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         if (activeJob) {
@@ -601,14 +616,17 @@ export default function PickupsScreen({ route }) {
         } else {
             stopCollectorLocationTracking();
         }
-    }, [userRole, jobs]);
+    }, [isCollectorRole, jobs]);
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
     // Respects the online/offline toggle on Home - this just keeps the
     // preference re-affirmed with a fresh position while the preference is on.
+    // Was gated to 'COLLECTOR' only, so a RECYCLER's location/online status
+    // never reached the backend at all - they'd never be found "nearby" for
+    // a new request no matter how the matching query itself was scoped.
     useEffect(() => {
-        if (userRole !== 'COLLECTOR') return;
+        if (!isCollectorRole) return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
         const pushPresence = async (wantsOnline) => {
@@ -631,12 +649,13 @@ export default function PickupsScreen({ route }) {
             appStateSub.remove();
             pushPresence(false);
         };
-    }, [userRole]);
+    }, [isCollectorRole]);
 
-    // Collector camera following while actively navigating (foreground UX only -
-    // location reporting to the server is handled by the background task above).
+    // Collector/recycler camera following while actively navigating (foreground
+    // UX only - location reporting to the server is handled by the background
+    // task above).
     useEffect(() => {
-        if (userRole !== 'COLLECTOR' || !navigatingJob) {
+        if (!isCollectorRole || !navigatingJob) {
             if (locationSubscription) {
                 locationSubscription.remove();
                 setLocationSubscription(null);
@@ -677,7 +696,7 @@ export default function PickupsScreen({ route }) {
             cancelled = true;
             if (sub) sub.remove();
         };
-    }, [userRole, navigatingJob]);
+    }, [isCollectorRole, navigatingJob]);
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
