@@ -268,6 +268,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                                 contactId: listing.seller.id,
                                 contactName: [listing.seller.first_name, listing.seller.last_name].filter(Boolean).join(' ') || listing.seller.username,
                                 contactImage: listing.seller.profile_picture_url ? resolveImageUrl(listing.seller.profile_picture_url) : null,
+                                contactIsOnline: listing.seller.is_online,
                             })}
                         >
                             <MessageCircle size={20} color="#374151" />

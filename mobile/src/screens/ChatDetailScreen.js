@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { chatApi } from '../api/chat';
-import { Send, User, ChevronLeft, Ellipsis, Phone, MessageSquare } from 'lucide-react-native';
+import { Send, User, ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useChatSocket } from '../hooks/useChatSocket';
 
@@ -14,7 +14,7 @@ const { width } = Dimensions.get('window');
 
 export default function ChatDetailScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
-    const { contactId, contactName, contactImage } = route.params;
+    const { contactId, contactName, contactImage, contactIsOnline } = route.params;
     const { user } = useAuth();
     const [messages, setMessages] = useState([]);
     const [newMessage, setNewMessage] = useState('');
@@ -92,22 +92,23 @@ export default function ChatDetailScreen({ route, navigation }) {
                                     <User size={18} color="#9CA3AF" />
                                 </View>
                             )}
-                            <View style={styles.onlineDot} />
+                            {/* Presence was hardcoded here - a green dot and
+                                "Active now" showed for everyone, always. Now
+                                driven by the contact's real is_online, and
+                                omitted entirely when we weren't told. */}
+                            {contactIsOnline && <View style={styles.onlineDot} />}
                         </View>
                         <View style={styles.headerText}>
                             <Text style={styles.contactName} numberOfLines={1}>{contactName}</Text>
-                            <Text style={styles.statusText}>Active now</Text>
+                            {contactIsOnline !== undefined && (
+                                <Text style={styles.statusText}>
+                                    {contactIsOnline ? 'Active now' : 'Offline'}
+                                </Text>
+                            )}
                         </View>
                     </View>
 
-                    <View style={styles.headerActions}>
-                        <TouchableOpacity style={styles.headerIconBtn}>
-                            <Phone size={20} color="#111" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.headerIconBtn}>
-                            <Ellipsis size={20} color="#666" />
-                        </TouchableOpacity>
-                    </View>
+                    <View style={styles.headerActions} />
                 </View>
             </SafeAreaView>
 
@@ -227,12 +228,6 @@ const styles = StyleSheet.create({
     headerActions: {
         flexDirection: 'row',
         gap: 5,
-    },
-    headerIconBtn: {
-        width: 40,
-        height: 40,
-        justifyContent: 'center',
-        alignItems: 'center',
     },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     messageList: { padding: 20, paddingBottom: 30 },

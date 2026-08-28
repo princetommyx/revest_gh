@@ -1520,6 +1520,7 @@ export default function PickupsScreen({ route }) {
                                             contactId: item.provider.id,
                                             contactName: contactNameOf(item.provider),
                                             contactImage: resolveImageUrl(item.provider.profile_picture_url),
+                                            contactIsOnline: item.provider.is_online,
                                         });
                                     }}
                                     onCallPress={() => {
@@ -1952,6 +1953,7 @@ export default function PickupsScreen({ route }) {
                                     contactId: activeSellerJob.collector.id,
                                     contactName: contactNameOf(activeSellerJob.collector),
                                     contactImage: resolveImageUrl(activeSellerJob.collector.profile_picture_url),
+                                    contactIsOnline: activeSellerJob.collector.is_online,
                                 });
                             }}
                             onCallPress={() => {
