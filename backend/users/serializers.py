@@ -152,6 +152,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'auth_provider', 'google_id'
         )
         
+    def validate_phone_number(self, value):
+        """
+        Registration normalizes and de-duplicates phone numbers, but profile
+        edits did neither - so a user could save an unnormalized number here
+        (breaking phone login, which looks up the normalized form) or take a
+        number already registered to someone else.
+        """
+        if not value:
+            return value
+
+        normalized = normalize_gh_phone(value)
+
+        qs = User.objects.filter(phone_number=normalized)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("A user with this phone number already exists.")
+
+        return normalized
+
     def get_kyc_status(self, obj):
         if hasattr(obj, 'kyc_submission'):
             return obj.kyc_submission.status

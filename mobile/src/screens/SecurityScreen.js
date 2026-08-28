@@ -1,14 +1,39 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ActivityIndicator, Image, Dimensions, StatusBar, ScrollView
+    TextInput, ActivityIndicator, Dimensions, StatusBar, ScrollView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Lock, ShieldCheck, ShieldAlert, Key } from 'lucide-react-native';
+import { ArrowLeft, Lock, ShieldCheck, ShieldAlert, Key, Eye, EyeOff } from 'lucide-react-native';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-toast-message';
 
 const { width } = Dimensions.get('window');
+
+const PasswordField = ({ label, icon: Icon, value, onChangeText, placeholder }) => {
+    const [visible, setVisible] = useState(false);
+    return (
+        <View style={styles.inputBox}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={styles.fieldRow}>
+                <Icon size={18} color="#9CA3AF" />
+                <TextInput
+                    style={styles.fieldInput}
+                    value={value}
+                    onChangeText={onChangeText}
+                    placeholder={placeholder}
+                    secureTextEntry={!visible}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholderTextColor="#9CA3AF"
+                />
+                <TouchableOpacity onPress={() => setVisible(v => !v)} style={styles.eyeBtn}>
+                    {visible ? <EyeOff size={18} color="#9CA3AF" /> : <Eye size={18} color="#9CA3AF" />}
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+};
 
 export default function SecurityScreen({ navigation }) {
     const [loading, setLoading] = useState(false);
@@ -77,50 +102,27 @@ export default function SecurityScreen({ navigation }) {
                     </View>
 
                     <View style={styles.formSection}>
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>Current Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Lock size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.old_password}
-                                    onChangeText={(val) => handleChange('old_password', val)}
-                                    placeholder="Enter current password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>New Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Key size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.new_password}
-                                    onChangeText={(val) => handleChange('new_password', val)}
-                                    placeholder="Enter new password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>Confirm New Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Key size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.new_password2}
-                                    onChangeText={(val) => handleChange('new_password2', val)}
-                                    placeholder="Re-type new password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
+                        <PasswordField
+                            label="Current Password"
+                            icon={Lock}
+                            value={formData.old_password}
+                            onChangeText={(val) => handleChange('old_password', val)}
+                            placeholder="Enter current password"
+                        />
+                        <PasswordField
+                            label="New Password"
+                            icon={Key}
+                            value={formData.new_password}
+                            onChangeText={(val) => handleChange('new_password', val)}
+                            placeholder="Enter new password"
+                        />
+                        <PasswordField
+                            label="Confirm New Password"
+                            icon={Key}
+                            value={formData.new_password2}
+                            onChangeText={(val) => handleChange('new_password2', val)}
+                            placeholder="Re-type new password"
+                        />
                     </View>
 
                     <TouchableOpacity style={styles.updateBtn} onPress={handleSubmit} disabled={loading}>
@@ -129,7 +131,7 @@ export default function SecurityScreen({ navigation }) {
 
                     <View style={styles.protectionNote}>
                         <ShieldAlert size={16} color="#999" />
-                        <Text style={styles.protectionText}>Passwords must be at least 8 characters long and contain both letters and numbers.</Text>
+                        <Text style={styles.protectionText}>Use at least 8 characters. Your password can't be all numbers, a commonly used password, or too similar to your name or email.</Text>
                     </View>
 
                 </ScrollView>
@@ -161,6 +163,7 @@ const styles = StyleSheet.create({
     label: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginLeft: 4 },
     fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 15, height: 56 },
     fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    eyeBtn: { padding: 4 },
     updateBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     updateBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     protectionNote: { flexDirection: 'row', gap: 10, marginTop: 25, paddingHorizontal: 15 },

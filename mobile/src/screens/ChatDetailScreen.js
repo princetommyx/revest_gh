@@ -89,7 +89,7 @@ export default function ChatDetailScreen({ route, navigation }) {
                                 <Image source={{ uri: contactImage }} style={styles.avatarImg} />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <User size={18} color="#9BAA9B" />
+                                    <User size={18} color="#9CA3AF" />
                                 </View>
                             )}
                             <View style={styles.onlineDot} />
