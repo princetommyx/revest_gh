@@ -89,7 +89,12 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                      'Pickup Completed'}
                 </Text>
                 {currentStep === 1 && (
-                    <Text style={styles.etaValue}>~{job.duration_min ? Math.round(job.duration_min) : 15} min</Text>
+                    // Distance from the collector's last live position, not
+                    // duration_min - the disposer's own fetch has no lat/lon
+                    // to compute that against, so it's always null here.
+                    <Text style={styles.etaValue}>
+                        {job.collector_eta_min != null ? `~${job.collector_eta_min} min` : '—'}
+                    </Text>
                 )}
             </View>
 

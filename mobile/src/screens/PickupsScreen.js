@@ -837,6 +837,11 @@ export default function PickupsScreen({ route }) {
                 estimated_price: requestForm.delivery_fee || '0.00',
                 waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
                 delivery_fee: requestForm.delivery_fee || '0.00',
+                // Was computed by fetchEstimate() and shown on the route
+                // summary card, but never actually sent - the trip's
+                // distance/duration were silently dropped on every request.
+                distance_km: requestForm.distance_km || null,
+                duration_min: requestForm.duration_min || null,
                 latitude: location.latitude,
                 longitude: location.longitude,
                 destination_address: destinationAddress,

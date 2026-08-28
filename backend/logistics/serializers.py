@@ -17,15 +17,17 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     listing_image = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
+    duration_min = serializers.SerializerMethodField()
+    collector_eta_min = serializers.SerializerMethodField()
 
     class Meta:
         model = PickupRequest
         fields = (
             'id', 'material_type', 'track_type', 'track_type_display',
-            'bag_size', 'weight_kg', 'quantity_estimate', 
+            'bag_size', 'weight_kg', 'quantity_estimate',
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
-            'distance_km',
+            'distance_km', 'duration_min', 'collector_eta_min',
             'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
@@ -51,6 +53,53 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             except (ValueError, TypeError):
                 pass
         return None
+
+    def get_duration_min(self, obj):
+        """
+        ETA from the requesting user's position to this job's pickup point.
+
+        The model also has a `duration_min` field, but that's the full
+        pickup->destination trip length estimated once at booking time - the
+        mobile app never actually sends it on create, so it's always null,
+        and even if populated it isn't "time until the collector gets here"
+        anyway. This computes that instead, the same way distance_km does,
+        using the same average-speed assumption as estimate_price().
+        """
+        request = self.context.get('request')
+        if not request or not request.query_params:
+            return None
+
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lon')
+
+        if lat and lon:
+            try:
+                from .utils import haversine
+                dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
+                avg_speed_kmh = 40.0
+                return round((dist / avg_speed_kmh) * 60)
+            except (ValueError, TypeError, ZeroDivisionError):
+                pass
+        return None
+
+    def get_collector_eta_min(self, obj):
+        """
+        ETA from the assigned collector's last known live position to this
+        job's pickup point - what the disposer's tracking card actually
+        needs. Unlike distance_km/duration_min above, this can't come from
+        query params: the disposer's own fetch never sends lat/lon (only a
+        collector-role fetch does), so it has to be computed from fields
+        already on the object itself.
+        """
+        if obj.current_lat is None or obj.current_lon is None or not obj.latitude or not obj.longitude:
+            return None
+        try:
+            from .utils import haversine
+            dist = haversine(float(obj.current_lat), float(obj.current_lon), float(obj.latitude), float(obj.longitude))
+            avg_speed_kmh = 40.0
+            return round((dist / avg_speed_kmh) * 60)
+        except (ValueError, TypeError, ZeroDivisionError):
+            return None
 
     def get_listing_image(self, obj):
         image_to_use = None

@@ -89,14 +89,18 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                     </View>
                 </View>
 
-                {/* Delivery Time Info */}
+                {/* Delivery Time Info - was defaulting to a fabricated "15 min" /
+                    "2.5 km" whenever the real estimate was missing (which was
+                    always, since duration_min was never actually returned by
+                    the list endpoint), so it just always showed the same fake
+                    numbers. Show an honest placeholder instead. */}
                 <View style={styles.timeRow}>
                     <View style={styles.timeInfo}>
-                        <Clock size={16} color="#3B82F6" />
+                        <Clock size={16} color="#059669" />
                         <Text style={styles.timeLabel}>Your pickup ETA</Text>
-                        <Text style={styles.timeValue}>~{job.duration_min || 15} min</Text>
+                        <Text style={styles.timeValue}>{job.duration_min != null ? `~${Math.round(job.duration_min)} min` : '—'}</Text>
                     </View>
-                    <Text style={styles.timeEst}>{(job.distance_km || 2.5)} km</Text>
+                    <Text style={styles.timeEst}>{job.distance_km != null ? `${job.distance_km} km` : '—'}</Text>
                 </View>
 
                 {/* Progress Roadmap - the real milestones this job has reached,
