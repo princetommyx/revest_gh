@@ -288,6 +288,11 @@ export default function PickupsScreen({ route }) {
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
     const mapRef = useRef(null);
+    // `location` doubles as the chosen pickup point and is overwritten when the
+    // disposer picks a spot on the map or from search, so keep the last real
+    // device fix separately - otherwise "use my current location" has nothing
+    // to go back to.
+    const deviceLocationRef = useRef(null);
     const locationRef = useRef(location);
     useEffect(() => { locationRef.current = location; }, [location]);
 
@@ -295,8 +300,11 @@ export default function PickupsScreen({ route }) {
     // Takes priority over the polled `current_lat`/`current_lon` snapshot.
     const [liveCollectorLocations, setLiveCollectorLocations] = useState({});
 
-    const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
+    // Only opened for the pre-filled listing flow now (see the pickupData
+    // effect below) - direct booking submits from the vehicle-select sheet
+    // instead of popping a second confirm step that re-asks what was just set.
+    const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestForm, setRequestForm] = useState({
         material_type: pickupData?.material_type || 'Plastics',
         quantity_estimate: pickupData?.quantity_estimate || '1-2 Bags',
@@ -382,6 +390,7 @@ export default function PickupsScreen({ route }) {
             if (status === 'granted') {
                 setHasLocationPermission(true);
                 let loc = await Location.getCurrentPositionAsync({});
+                deviceLocationRef.current = loc.coords;
                 setLocation(loc.coords);
                 setMapRegion({
                     latitude: loc.coords.latitude,
@@ -400,6 +409,7 @@ export default function PickupsScreen({ route }) {
         if (status === 'granted') {
             setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
+            deviceLocationRef.current = loc.coords;
             setLocation(loc.coords);
             setMapRegion({
                 latitude: loc.coords.latitude,
@@ -485,6 +495,7 @@ export default function PickupsScreen({ route }) {
     const startMapSelection = (mode = 'PICKUP') => {
         setSelectionMode(mode);
         setShowRequestModal(false);
+        setShowSearchModal(false);
         setIsSelectingLocation(true);
 
         // Stop tracking if active
@@ -785,12 +796,28 @@ export default function PickupsScreen({ route }) {
 
         setRequestLoading(true);
         try {
+            const isListingFlow = !!requestForm.listing_id;
+            // The backend trusts these prices as sent (create serializer accepts
+            // waste_price/delivery_fee directly), but this screen was hardcoding
+            // all three to '0.00' regardless of what fetchEstimate()/the listing
+            // computed - so every request silently locked zero escrow no matter
+            // what fee the disposer was shown. track_type and payment_method were
+            // omitted too, so every request landed as Track A / CASH on the
+            // backend, skipping the digital escrow lock entirely.
+            // Track A (direct booking, no listing) has no material value - only
+            // the distance-based delivery_fee was ever shown to the user, so
+            // waste_price stays 0 there; the listing flow's waste_price is the
+            // seller's real listing price.
             const requestData = {
                 material_type: requestForm.material_type || 'General Waste',
-                quantity_estimate: requestForm.quantity_estimate || 'Standard',
-                estimated_price: '0.00',
-                waste_price: '0.00',
-                delivery_fee: '0.00',
+                quantity_estimate: isListingFlow
+                    ? (requestForm.quantity_estimate || 'Standard')
+                    : (`${VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Standard'} Load`),
+                track_type: requestForm.track_type,
+                payment_method: requestForm.payment_method,
+                estimated_price: requestForm.delivery_fee || '0.00',
+                waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
+                delivery_fee: requestForm.delivery_fee || '0.00',
                 latitude: location.latitude,
                 longitude: location.longitude,
                 destination_address: destinationAddress,
@@ -900,15 +927,23 @@ export default function PickupsScreen({ route }) {
     }, [searchQuery, location]);
 
     const handleSelectSearchedLocation = (place) => {
-        setCustomAddress(place.name);
-        setLocation({ latitude: place.lat, longitude: place.lon });
-        setUseCurrentLocation(false);
+        // Was hardcoded to always write into the pickup fields, which was
+        // harmless only because nothing opened this modal for a destination
+        // pick. Route by selectionMode so it can serve both.
+        if (selectionMode === 'DESTINATION') {
+            setDestinationAddress(place.name);
+            setDestinationLocation({ latitude: place.lat, longitude: place.lon });
+        } else {
+            setCustomAddress(place.name);
+            setLocation({ latitude: place.lat, longitude: place.lon });
+            setUseCurrentLocation(false);
+        }
 
         addRecentLocation({ address: place.name, latitude: place.lat, longitude: place.lon });
 
         setSearchQuery('');
         setShowSearchModal(false);
-        
+
         // Optional: center map on new location
         if (mapRef.current) {
             mapRef.current.animateCamera({
@@ -1409,7 +1444,7 @@ export default function PickupsScreen({ route }) {
                     </View>
                     <View style={styles.locationInputBox}>
                         <Text style={styles.locationInputLabel}>PICKUP LOCATION</Text>
-                        <TouchableOpacity style={styles.locationInputRow} onPress={() => startMapSelection('PICKUP')}>
+                        <TouchableOpacity style={styles.locationInputRow} onPress={() => { setSelectionMode('PICKUP'); setShowSearchModal(true); }}>
                             <View style={styles.locationInputIconBox}>
                                 <View style={styles.dotIndicatorPickup} />
                             </View>
@@ -1425,7 +1460,7 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dividerLine} />
 
                         <Text style={[styles.locationInputLabel, { marginTop: 4 }]}>DESTINATION</Text>
-                        <TouchableOpacity style={styles.destinationInputRow} onPress={() => startMapSelection('DESTINATION')}>
+                        <TouchableOpacity style={styles.destinationInputRow} onPress={() => { setSelectionMode('DESTINATION'); setShowSearchModal(true); }}>
                             <View style={styles.locationInputIconBox}>
                                 <View style={styles.dotIndicatorDest} />
                             </View>
@@ -1538,8 +1573,13 @@ export default function PickupsScreen({ route }) {
                         })}
                     </ScrollView>
 
-                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
-                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideText}>Request Pickup</Text>}
+                    {/* The route summary card above already shows pickup, destination,
+                        distance, ETA and fee - that IS the confirmation. A second modal
+                        used to reopen here and ask "Current or Custom pickup location?"
+                        from scratch, contradicting the location just set on the previous
+                        sheet. Submit directly instead. */}
+                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
+                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request Pickup</Text>}
                     </AnimatedButton>
                 </View>
             )}
@@ -1583,7 +1623,14 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-            {/* Request Pickup Modal */}
+            {/* Confirm Listing Pickup Modal - only path left into this modal is the
+                pickupData effect (arriving from a marketplace listing). Everything
+                here is fixed by the listing: the pickup point is the seller's
+                address, not the requester's GPS, so there's no "Current/Custom"
+                choice to make - showing one, defaulting to "Current", was actively
+                misleading (it labelled the seller's pinned address as "your current
+                GPS coordinates"), and letting someone switch it to a searched
+                address would detach the request from where the material actually is. */}
             <Modal
                 visible={showRequestModal && !showSearchModal}
                 transparent={true}
@@ -1596,7 +1643,7 @@ export default function PickupsScreen({ route }) {
                 >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Request Pickup</Text>
+                            <Text style={styles.modalTitle}>Confirm Request</Text>
                             <TouchableOpacity onPress={() => setShowRequestModal(false)}>
                                 <X size={24} color="#666" />
                             </TouchableOpacity>
@@ -1604,51 +1651,44 @@ export default function PickupsScreen({ route }) {
 
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
 
-                            <Text style={styles.label}>Pickup Location</Text>
-                            <View style={styles.locationToggleRow}>
-                                <TouchableOpacity
-                                    style={[styles.locationToggleBtn, useCurrentLocation && styles.locationToggleBtnActive]}
-                                    onPress={() => setUseCurrentLocation(true)}
-                                >
-                                    <Navigation size={16} color={useCurrentLocation ? "#fff" : "#666"} />
-                                    <Text style={[styles.locationToggleText, useCurrentLocation && styles.locationToggleTextActive]}>Current</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.locationToggleBtn, !useCurrentLocation && styles.locationToggleBtnActive]}
-                                    onPress={() => setUseCurrentLocation(false)}
-                                >
-                                    <MapPin size={16} color={!useCurrentLocation ? "#fff" : "#666"} />
-                                    <Text style={[styles.locationToggleText, !useCurrentLocation && styles.locationToggleTextActive]}>Custom</Text>
-                                </TouchableOpacity>
-                            </View>
+                            <View style={styles.summaryCard}>
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryIconBox}>
+                                        <Package size={16} color="#111" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.summaryLabel}>Material</Text>
+                                        <Text style={styles.summaryValue}>
+                                            {requestForm.material_type} · {requestForm.quantity_estimate}
+                                        </Text>
+                                    </View>
+                                </View>
 
-                            {useCurrentLocation ? (
-                                <View style={styles.currentLocationBox}>
-                                    <Navigation size={16} color="#111" />
-                                    <Text style={{ flex: 1, color: '#111', fontSize: 13, fontWeight: '500' }}>
-                                        Using your current GPS coordinates to ensure faster pickup.
+                                <View style={styles.summaryDivider} />
+
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryIconBox}>
+                                        <MapPin size={16} color="#111" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.summaryLabel}>Pickup Location</Text>
+                                        <Text style={styles.summaryValue} numberOfLines={2}>
+                                            {customAddress || 'Seller location'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.summaryDivider} />
+
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>
+                                        {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
+                                    </Text>
+                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? '#111' : '#059669' }]}>
+                                        ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
                                     </Text>
                                 </View>
-                            ) : (
-                                <View style={{ position: 'relative' }}>
-                                    <TouchableOpacity 
-                                        style={[styles.addressInput, { justifyContent: 'center' }]}
-                                        onPress={() => setShowSearchModal(true)}
-                                    >
-                                        <Text style={{ color: customAddress ? '#111' : '#9CA3AF' }}>
-                                            {customAddress || "Enter landmark or street address"}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.mapSelectBtn}
-                                        onPress={startMapSelection}
-                                    >
-                                        <MapPin size={14} color="#111" />
-                                        <Text style={styles.mapSelectText}>Map</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
+                            </View>
 
                             <AnimatedButton
                                 style={styles.modalConfirmBtn}
@@ -1677,7 +1717,9 @@ export default function PickupsScreen({ route }) {
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
                             <X size={24} color="#111" />
                         </TouchableOpacity>
-                        <Text style={styles.searchTitle}>Choose Location</Text>
+                        <Text style={styles.searchTitle}>
+                            {selectionMode === 'DESTINATION' ? 'Choose Destination' : 'Choose Pickup Location'}
+                        </Text>
                         <View style={{ width: 40 }} />
                     </View>
 
@@ -1699,6 +1741,20 @@ export default function PickupsScreen({ route }) {
                             </TouchableOpacity>
                         )}
                     </View>
+
+                    {/* Always-available fallback to the full-screen map pin picker,
+                        for an address search can't find. */}
+                    <TouchableOpacity
+                        style={styles.searchResultItem}
+                        onPress={() => startMapSelection(selectionMode)}
+                    >
+                        <View style={[styles.searchResultIcon, { backgroundColor: '#F3F4F6' }]}>
+                            <MapPin size={20} color="#111" />
+                        </View>
+                        <View style={styles.searchResultText}>
+                            <Text style={styles.searchResultName}>Pin on map</Text>
+                        </View>
+                    </TouchableOpacity>
 
                     {/* Search Results */}
                     {isSearchingLocation ? (
@@ -1734,12 +1790,20 @@ export default function PickupsScreen({ route }) {
                         )
                     ) : (
                         <ScrollView style={styles.searchResultsContainer} keyboardShouldPersistTaps="handled">
-                            {location && (
+                            {selectionMode === 'PICKUP' && deviceLocationRef.current && (
                                 <>
                                     <Text style={styles.searchSectionTitle}>NEARBY</Text>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.searchResultItem}
                                         onPress={() => {
+                                            // `location` gets overwritten by whatever pickup point
+                                            // was last chosen (map pin or search result), so
+                                            // "use current location" has to restore the real GPS
+                                            // fix explicitly - toggling the flag alone left `location`
+                                            // pointed at the stale custom address while the UI
+                                            // claimed "Current Location".
+                                            setLocation(deviceLocationRef.current);
+                                            setCustomAddress('');
                                             setUseCurrentLocation(true);
                                             setShowSearchModal(false);
                                         }}
@@ -2603,14 +2667,6 @@ const styles = StyleSheet.create({
     },
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
     modalBody: {},
-    label: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#374151',
-        marginBottom: 10,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
     pickerContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -2632,63 +2688,25 @@ const styles = StyleSheet.create({
     pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
 
-    locationToggleRow: {
-        flexDirection: 'row',
-        gap: 12,
-        marginBottom: 15,
-    },
-    locationToggleBtn: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+    summaryCard: {
         backgroundColor: '#F9FAFB',
-    },
-    locationToggleBtnActive: {
-        backgroundColor: '#111',
-        borderColor: '#111',
-    },
-    locationToggleText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-    locationToggleTextActive: { color: '#fff' },
-
-    addressInput: {
-        backgroundColor: '#F9FAFB',
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
-        padding: 15,
-        fontSize: 14,
-        color: '#1A1A1A',
+        borderColor: '#F3F4F6',
+        padding: 16,
         marginBottom: 20,
+        gap: 14,
     },
-    mapSelectBtn: {
-        position: 'absolute',
-        right: 12,
-        top: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
+    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    summaryIconBox: {
+        width: 32, height: 32, borderRadius: 10,
+        backgroundColor: '#fff',
+        justifyContent: 'center', alignItems: 'center',
     },
-    mapSelectText: { fontSize: 12, color: '#111', fontWeight: 'bold' },
-
-    currentLocationBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        backgroundColor: '#F3F4F6',
-        padding: 15,
-        borderRadius: 12,
-        marginBottom: 20,
-    },
+    summaryLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600', marginBottom: 2 },
+    summaryValue: { fontSize: 14, color: '#111827', fontWeight: '600' },
+    summaryPrice: { fontSize: 20, fontWeight: '800' },
+    summaryDivider: { height: 1, backgroundColor: '#F0F0F0' },
 
     estimateContainer: {
         marginBottom: 20,
