@@ -25,6 +25,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
             'distance_km',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector', 'collector_name',
             'estimated_price', 'actual_price', 'payment_method',
@@ -82,6 +83,7 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
             'bag_size', 'weight_kg', 'quantity_estimate', 
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
             'created_at', 'provider', 'collector',
             'estimated_price', 'actual_price', 'payment_method',
@@ -112,6 +114,7 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
             'quantity_estimate', 'latitude', 'longitude', 'estimated_price',
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address'
         )
     

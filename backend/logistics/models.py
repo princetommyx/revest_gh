@@ -58,6 +58,12 @@ class PickupRequest(models.Model):
     destination_latitude = models.FloatField(null=True, blank=True)
     destination_longitude = models.FloatField(null=True, blank=True)
     destination_address = models.CharField(max_length=255, null=True, blank=True)
+    # Human-readable pickup point. The mobile app has always POSTed this on
+    # create, but there was no field to receive it, so DRF dropped it and every
+    # screen that displayed it fell back to "Unknown Location" - including the
+    # collector's own navigation bar, which left them with coordinates but no
+    # idea of the address they were driving to.
+    pickup_address = models.CharField(max_length=255, null=True, blank=True)
 
     # Pricing Fields
     estimated_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)

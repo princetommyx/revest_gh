@@ -266,6 +266,11 @@ export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
 
+    // Recyclers run pickups exactly like collectors do, but most of this screen
+    // only ever checked for COLLECTOR - which left recyclers with the disposer's
+    // map behaviour and a reversed route label on their own job.
+    const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
     // Check for a recent-location chip tapped on Home
@@ -515,7 +520,7 @@ export default function PickupsScreen({ route }) {
                 break;
             }
             case 'new_request':
-                if (userRole === 'COLLECTOR') {
+                if (isCollectorRole) {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     Toast.show({ type: 'info', text1: 'New Pickup Nearby', text2: msg.material_type ? `${msg.material_type} pickup available` : 'A new request just came in.' });
                     refetch();
@@ -557,7 +562,7 @@ export default function PickupsScreen({ route }) {
 
     // Disposer camera following - prefers the live websocket position over the polled snapshot
     useEffect(() => {
-        if (userRole === 'COLLECTOR' || !navigatingJob || !mapRef.current) return;
+        if (isCollectorRole || !navigatingJob || !mapRef.current) return;
 
         const live = liveCollectorLocations[navigatingJob.id];
         const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
@@ -1090,8 +1095,30 @@ export default function PickupsScreen({ route }) {
 
         const isNavigatingThis = navigatingJob?.id === job.id;
         const live = liveCollectorLocations[job.id];
-        const currentLat = live?.lat ?? job.current_lat ?? job.latitude;
-        const currentLon = live?.lon ?? job.current_lon ?? job.longitude;
+
+        // Where the route should start from.
+        //
+        // This used to be `live?.lat ?? job.current_lat ?? job.latitude`, and
+        // that last fallback is the *pickup* coordinate - i.e. the route's own
+        // destination. Before the collector had broadcast a position (or if
+        // job.current_lat was simply null) origin and destination were the same
+        // point, so Directions returned a zero-length route and no line was
+        // ever drawn. That's why collectors couldn't follow the map.
+        //
+        // A collector already knows where they are without a server round-trip,
+        // so use the device's own fix for them. Disposers can only rely on what
+        // the collector has broadcast - and if that isn't known yet, we draw no
+        // route rather than a degenerate one.
+        const myLat = location?.coords?.latitude ?? location?.latitude;
+        const myLon = location?.coords?.longitude ?? location?.longitude;
+
+        const originLat = isCollectorRole ? myLat : (live?.lat ?? job.current_lat);
+        const originLon = isCollectorRole ? myLon : (live?.lon ?? job.current_lon);
+
+        // Kept separate: the truck marker shown to the disposer still tracks the
+        // collector's broadcast position, not the viewer's own.
+        const collectorLat = live?.lat ?? job.current_lat;
+        const collectorLon = live?.lon ?? job.current_lon;
 
         if (isNavigatingThis || job.status === 'PENDING') {
             markers.push(
@@ -1132,15 +1159,16 @@ export default function PickupsScreen({ route }) {
         }
 
         if (job.status === 'ACCEPTED' || job.status === 'ARRIVED') {
-            const currentL = parseFloat(currentLat);
-            const currentLo = parseFloat(currentLon);
-            
-            if (!isNaN(currentL) && !isNaN(currentLo)) {
-                if (userRole === 'SELLER') {
-                    markers.push(
+            const cLat = parseFloat(collectorLat);
+            const cLon = parseFloat(collectorLon);
+
+            // Show the collector's truck to the disposer, only once we actually
+            // know where they are.
+            if (!isCollectorRole && !isNaN(cLat) && !isNaN(cLon)) {
+                markers.push(
                         <ActiveMarker
                             key={`collector-${job.id}`}
-                            coordinate={{ latitude: currentL, longitude: currentLo }}
+                            coordinate={{ latitude: cLat, longitude: cLon }}
                             title="Collector"
                             description={job.collector_name || "En route"}
                         >
@@ -1159,13 +1187,19 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             )}
                         </ActiveMarker>
-                    );
-                }
+                );
+            }
 
+            const oLat = parseFloat(originLat);
+            const oLon = parseFloat(originLon);
+            // No origin means we genuinely don't know where the collector is;
+            // drawing a route from the destination to itself is what produced
+            // the blank map.
+            if (!isNaN(oLat) && !isNaN(oLon)) {
                 routes.push(
                     <MapViewDirections
                         key={`route-${job.id}`}
-                        origin={{ latitude: currentL, longitude: currentLo }}
+                        origin={{ latitude: oLat, longitude: oLon }}
                         destination={{ latitude: lat, longitude: lon }}
                         apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
@@ -1197,12 +1231,15 @@ export default function PickupsScreen({ route }) {
         return [...markers, ...routes];
     };
 
+    // `location` matters now that a collector's route starts from their own
+    // device fix - without it the route would be computed once and never
+    // follow them as they drive.
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
-    }, [jobs, navigatingJob, routeEta, liveCollectorLocations]);
+    }, [jobs, navigatingJob, routeEta, liveCollectorLocations, location, isCollectorRole]);
 
     const sortedJobs = useMemo(() => {
-        if (userRole !== 'COLLECTOR') return jobs;
+        if (!isCollectorRole) return jobs;
         const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         const pendingJobs = jobs.filter(j => j.status === 'PENDING');
         return [...activeJobs, ...pendingJobs];
@@ -1290,7 +1327,7 @@ export default function PickupsScreen({ route }) {
                 } : null}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
-                followsUserLocation={!!navigatingJob && userRole === 'COLLECTOR'}
+                followsUserLocation={!!navigatingJob && isCollectorRole}
                 userInterfaceStyle="dark"
                 customMapStyle={darkMapStyle}
             >
@@ -1351,11 +1388,11 @@ export default function PickupsScreen({ route }) {
                             }}
                         >
                             <Text style={styles.navAddressText} numberOfLines={1}>
-                                {userRole === 'COLLECTOR' ? 'My Location' : 'Collector'}
+                                {isCollectorRole ? 'My Location' : 'Collector'}
                             </Text>
                             <ArrowRight size={16} color="#666" style={{ marginHorizontal: 8 }} />
                             <Text style={styles.navAddressText} numberOfLines={1}>
-                                {userRole === 'COLLECTOR' ? navigatingJob.pickup_address : 'My Location'}
+                                {isCollectorRole ? (navigatingJob.pickup_address || 'Pickup point') : 'My Location'}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navAddBtn}>
@@ -1507,7 +1544,7 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && sortedJobs.length > 0 && (
+            {!isSelectingLocation && isCollectorRole && sortedJobs.length > 0 && (
                 <View style={[styles.collectorBottomSheetUbride, { bottom: 0 }]}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width} decelerationRate="fast" pagingEnabled>
                         {sortedJobs.map(item => (
