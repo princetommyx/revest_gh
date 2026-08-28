@@ -189,24 +189,12 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
-    def update(self, request, *args, **kwargs):
-        with open("profile_debug.log", "a") as f:
-            f.write(f"\n--- Update at {timezone.now()} ---\n")
-            f.write(f"User: {request.user.username}\n")
-            f.write(f"Content-Type: {request.content_type}\n")
-            f.write(f"Data: {request.data}\n")
-            f.write(f"Files: {request.FILES}\n")
-            if "profile_picture" in request.FILES:
-                file = request.FILES["profile_picture"]
-                f.write(f"Profile Picture: {file.name}, size: {file.size}\n")
-
-        print(
-            f"DEBUG: UserProfileView update called by {request.user.username}"
-        )
-        # print(f"DEBUG: Content-Type: {request.content_type}")
-        # print(f"DEBUG: request.data keys: {list(request.data.keys())}")
-        # print(f"DEBUG: request.FILES keys: {list(request.FILES.keys())}")
-        return super().update(request, *args, **kwargs)
+    # An update() override used to append every request to a plaintext
+    # profile_debug.log next to the code, dumping request.data verbatim - so
+    # each profile edit wrote that user's real name, phone number and city to
+    # an unrotated file on the server, forever. Removed rather than tidied:
+    # the framework's own logging is the place for this, and none of it should
+    # include personal data.
 
 
 @extend_schema(
