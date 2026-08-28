@@ -24,6 +24,7 @@ import AnimatedButton from '../components/AnimatedButton';
 import ActivePickupBanner from '../components/ActivePickupBanner';
 import OnlineToggleCard from '../components/OnlineToggleCard';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
+import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 
 const { width } = Dimensions.get('window');
 
@@ -272,7 +273,18 @@ export default function HomeScreen({ navigation }) {
             >
                 <View style={styles.gridImageContainer}>
                     {imageUri ? (
-                        <Image source={{ uri: imageUri }} style={styles.gridImage} contentFit="cover" />
+                        <Image
+                            source={{ uri: imageUri }}
+                            style={styles.gridImage}
+                            contentFit="cover"
+                            // Marketplace already cached to disk; Home did not, so the
+                            // same remote photos were refetched on every visit.
+                            cachePolicy="memory-disk"
+                            // Fade up from a neutral tone instead of flashing blank
+                            // while the image comes down a slow connection.
+                            placeholder={MATERIAL_PLACEHOLDER}
+                            transition={IMAGE_TRANSITION_MS}
+                        />
                     ) : (
                         <View style={[styles.gridImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
                             <Package size={30} color="#ccc" />
