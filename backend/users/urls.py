@@ -4,7 +4,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
     UpdateLocationView, ChangePasswordView,
-    PasswordResetRequestView, PasswordResetConfirmView, CustomTokenObtainPairView, 
+    PasswordResetRequestView, PasswordResetVerifyView, PasswordResetConfirmView,
+    CustomTokenObtainPairView,
     VerifyLoginOTPView, SubmitFeedbackView,
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
@@ -21,6 +22,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('google/', GoogleLoginView.as_view(), name='google_login'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('password-reset/verify/', PasswordResetVerifyView.as_view(), name='password_reset_verify'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('phone/send-otp/', SendOTPView.as_view(), name='send_otp'),
     path('phone/verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),

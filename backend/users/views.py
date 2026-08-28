@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .permissions import IsOwnerOrAdmin
+from .phone_utils import normalize_gh_phone
 from .models import Notification, PhoneVerification
 from .serializers import (
     UserSerializer,
@@ -253,6 +254,38 @@ class ChangePasswordView(views.APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+def find_user_by_identifier(identifier):
+    """
+    Resolve an email-or-phone identifier to a user, tolerating the several
+    ways a Ghanaian number can be typed (0..., 233..., +233...).
+
+    Shared by the password-reset request/verify/confirm views, which each
+    used to carry their own copy of this block.
+    """
+    if not identifier:
+        return None, identifier
+
+    identifier = "".join(identifier.split())
+
+    # Only normalize when the identifier actually looks like a phone number,
+    # so an email address is left untouched.
+    normalized_phone = identifier
+    if identifier.lstrip("+").isdigit():
+        normalized_phone = normalize_gh_phone(identifier)
+
+    user = (
+        User.objects.filter(
+            models.Q(email=identifier)
+            | models.Q(phone_number=identifier)
+            | models.Q(phone_number=normalized_phone)
+            | models.Q(phone_number__icontains=identifier.lstrip("+"))
+        )
+        .order_by("-date_joined")
+        .first()
+    )
+    return user, identifier
+
+
 class PasswordResetRequestView(views.APIView):
     permission_classes = (permissions.AllowAny,)
     throttle_scope = "anon"
@@ -265,32 +298,7 @@ class PasswordResetRequestView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Normalize identifier
-        identifier = "".join(identifier.split())
-
-        # Phone Normalization (handle 0 prefix for Ghana)
-        normalized_phone = identifier
-        if identifier.lstrip("+").isdigit():
-            clean = identifier.lstrip("+")
-            if clean.startswith("0"):
-                normalized_phone = "233" + clean[1:]
-            elif len(clean) == 9:
-                normalized_phone = "233" + clean
-            else:
-                normalized_phone = clean
-
-        # Try to find user by email or phone (original text, normalized phone,
-        # or partial match)
-        user = (
-            User.objects.filter(
-                models.Q(email=identifier)
-                | models.Q(phone_number=identifier)
-                | models.Q(phone_number=normalized_phone)
-                | models.Q(phone_number__icontains=identifier.lstrip("+"))
-            )
-            .order_by("-date_joined")
-            .first()
-        )
+        user, identifier = find_user_by_identifier(identifier)
 
         if user:
             # Generate OTP
@@ -381,6 +389,48 @@ class PasswordResetRequestView(views.APIView):
         )
 
 
+class PasswordResetVerifyView(views.APIView):
+    """
+    Check a reset code without consuming it.
+
+    The mobile reset flow is a three-step wizard, but step 2 ("enter OTP")
+    had nothing to call - it only checked the code was six digits long and
+    moved on, so a wrong code wasn't reported until after the user had
+    already typed a new password twice. This lets step 2 tell the truth.
+    """
+
+    permission_classes = (permissions.AllowAny,)
+    throttle_scope = "otp"
+
+    def post(self, request):
+        identifier = request.data.get("identifier")
+        otp = request.data.get("otp")
+
+        if not identifier or not otp:
+            return Response(
+                {"error": "Identifier and code are required"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user, _ = find_user_by_identifier(identifier)
+
+        # Deliberately identical response for "no such user" and "bad code",
+        # so this endpoint can't be used to probe which accounts exist.
+        if user:
+            from .models import PasswordResetOTP
+
+            reset_otp = PasswordResetOTP.objects.filter(
+                user=user, otp=otp
+            ).first()
+            if reset_otp and reset_otp.is_valid():
+                return Response({"status": "success"})
+
+        return Response(
+            {"error": "Invalid or expired verification code"},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class PasswordResetConfirmView(views.APIView):
     permission_classes = (permissions.AllowAny,)
     throttle_scope = "otp"
@@ -403,31 +453,7 @@ class PasswordResetConfirmView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Normalize identifier
-        identifier = "".join(identifier.split())
-
-        # Phone Normalization (handle 0 prefix for Ghana)
-        normalized_phone = identifier
-        if identifier.lstrip("+").isdigit():
-            clean = identifier.lstrip("+")
-            if clean.startswith("0"):
-                normalized_phone = "233" + clean[1:]
-            elif len(clean) == 9:
-                normalized_phone = "233" + clean
-            else:
-                normalized_phone = clean
-
-        # Find user
-        user = (
-            User.objects.filter(
-                models.Q(email=identifier)
-                | models.Q(phone_number=identifier)
-                | models.Q(phone_number=normalized_phone)
-                | models.Q(phone_number__icontains=identifier.lstrip("+"))
-            )
-            .order_by("-date_joined")
-            .first()
-        )
+        user, identifier = find_user_by_identifier(identifier)
 
         if not user:
             return Response(

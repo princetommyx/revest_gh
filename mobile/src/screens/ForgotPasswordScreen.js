@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
-import { ArrowLeft, Eye, EyeOff, CircleCheck, Flag } from 'lucide-react-native';
+import { ArrowLeft, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
@@ -21,6 +21,12 @@ export default function ForgotPasswordScreen() {
     const [loading, setLoading] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    const formattedIdentifier = () => (
+        resetMethod === 'phone'
+            ? (identifier.startsWith('+') ? identifier : `+233${identifier.replace(/^0+/, '')}`)
+            : identifier
+    );
+
     const handleRequestOTP = async () => {
         if (!identifier) {
             Toast.show({ type: 'error', text1: 'Validation Error', text2: `Please enter your ${resetMethod}` });
@@ -28,13 +34,7 @@ export default function ForgotPasswordScreen() {
         }
         setLoading(true);
         try {
-            let formattedIdentifier = identifier;
-            if (resetMethod === 'phone') {
-                formattedIdentifier = identifier.startsWith('+') 
-                    ? identifier 
-                    : `+233${identifier.replace(/^0+/, '')}`;
-            }
-            await authApi.requestPasswordReset(formattedIdentifier);
+            await authApi.requestPasswordReset(formattedIdentifier());
             setStep(2);
         } catch (error) {
             Toast.show({
@@ -47,18 +47,34 @@ export default function ForgotPasswordScreen() {
         }
     };
 
-    const handleVerifyOTP = () => {
+    const handleVerifyOTP = async () => {
         if (!verificationCode || verificationCode.length < 6) {
             Toast.show({ type: 'error', text1: 'Invalid Code', text2: 'Please enter the 6-digit code' });
             return;
         }
-        // Proceed to new password step
-        setStep(3);
+
+        // Check the code now rather than letting the user type a whole new
+        // password before finding out it was wrong.
+        setLoading(true);
+        try {
+            await authApi.verifyPasswordResetOtp(formattedIdentifier(), verificationCode);
+            setStep(3);
+        } catch (error) {
+            Toast.show({
+                type: 'error',
+                text1: 'Invalid Code',
+                text2: error.response?.data?.error || 'That code is incorrect or has expired.'
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleResetPassword = async () => {
-        if (!newPassword || newPassword.length < 6) {
-            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Password must be at least 6 characters' });
+        // Must match the server's MinimumLengthValidator (8), otherwise a
+        // 6-or-7 character password passes here and is rejected on submit.
+        if (!newPassword || newPassword.length < 8) {
+            Toast.show({ type: 'error', text1: 'Validation Error', text2: 'Password must be at least 8 characters' });
             return;
         }
         if (newPassword !== confirmPassword) {
@@ -68,25 +84,23 @@ export default function ForgotPasswordScreen() {
 
         setLoading(true);
         try {
-            let formattedIdentifier = identifier;
-            if (resetMethod === 'phone') {
-                formattedIdentifier = identifier.startsWith('+') 
-                    ? identifier 
-                    : `+233${identifier.replace(/^0+/, '')}`;
-            }
             await authApi.confirmPasswordReset({
-                identifier: formattedIdentifier,
+                identifier: formattedIdentifier(),
                 otp: verificationCode,
                 new_password: newPassword,
                 confirm_password: confirmPassword
             });
             setShowSuccessModal(true);
         } catch (error) {
-            Toast.show({
-                type: 'error',
-                text1: 'Reset Failed',
-                text2: error.response?.data?.error || 'Invalid or expired code.'
-            });
+            const message = error.response?.data?.error || 'Something went wrong. Please try again.';
+            Toast.show({ type: 'error', text1: 'Reset Failed', text2: message });
+
+            // If the code lapsed while they were typing, send them back to the
+            // step that can actually fix it instead of stranding them here.
+            if (/code/i.test(message)) {
+                setVerificationCode('');
+                setStep(2);
+            }
         } finally {
             setLoading(false);
         }
@@ -215,11 +229,11 @@ export default function ForgotPasswordScreen() {
                 <View style={styles.spacer} />
 
                 <TouchableOpacity
-                    style={[styles.mainBtn, !isFilled && styles.btnDisabled]}
+                    style={[styles.mainBtn, (!isFilled || loading) && styles.btnDisabled]}
                     onPress={handleVerifyOTP}
-                    disabled={!isFilled}
+                    disabled={!isFilled || loading}
                 >
-                    <Text style={styles.btnText}>Continue</Text>
+                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Continue</Text>}
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleRequestOTP} style={styles.resendBtn} disabled={loading}>
