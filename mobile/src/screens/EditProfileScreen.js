@@ -67,9 +67,15 @@ export default function EditProfileScreen({ navigation }) {
         try {
             const data = new FormData();
             Object.keys(formData).forEach(key => {
-                if (formData[key] !== null && formData[key] !== undefined) {
-                    data.append(key, formData[key].toString());
-                }
+                const value = formData[key];
+                if (value === null || value === undefined) return;
+                const text = value.toString().trim();
+                // Never send a blank. The form is seeded from the cached user,
+                // and if any field hasn't loaded yet an empty string would
+                // overwrite a good value on the server - someone changing only
+                // their photo could lose their name, phone and city.
+                if (text === '') return;
+                data.append(key, text);
             });
             if (image) {
                 const uri = image;
