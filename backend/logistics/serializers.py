@@ -12,6 +12,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     """
     provider = PublicUserSerializer(read_only=True)
     collector_name = serializers.CharField(source='collector.username', read_only=True)
+    provider_name = serializers.CharField(source='provider.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     listing_image = serializers.SerializerMethodField()
@@ -27,7 +28,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             'distance_km',
             'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
-            'created_at', 'provider', 'collector', 'collector_name',
+            'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'is_verified'
@@ -71,7 +72,9 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
     Full serializer for detailed pickup views with tracking data
     """
     provider = PublicUserSerializer(read_only=True)
-    collector =PublicUserSerializer(read_only=True)
+    collector = PublicUserSerializer(read_only=True)
+    collector_name = serializers.CharField(source='collector.username', read_only=True)
+    provider_name = serializers.CharField(source='provider.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     listing_image = serializers.SerializerMethodField()
@@ -85,7 +88,7 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
             'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
-            'created_at', 'provider', 'collector',
+            'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'distance_km', 'duration_min',

@@ -519,14 +519,30 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def history(self, request):
         """
-        Return completed rides for the current user.
+        Every pickup belonging to the current user, newest first.
+
+        Scoped by which side of the job they were on: collectors and recyclers
+        by the jobs assigned to them, everyone else by the jobs they raised.
+        Accepts an optional ?status= to back the filter chips in the app.
+
+        Note this deliberately does not reuse get_queryset(): that one is built
+        for the live job board, so for a collector it returns their active jobs
+        plus any nearby PENDING request from the last two hours and never any
+        COMPLETED one. Reading history from it showed collectors other people's
+        open requests and none of their own finished work.
         """
         user = request.user
-        if user.role == 'COLLECTOR':
-            rides = PickupRequest.objects.filter(collector=user, status='COMPLETED').order_by('-created_at')
+
+        if user.role in ('COLLECTOR', 'RECYCLER'):
+            rides = PickupRequest.objects.filter(collector=user)
         else:
-            # For Providers or others
-            rides = PickupRequest.objects.filter(provider=user, status='COMPLETED').order_by('-created_at')
+            rides = PickupRequest.objects.filter(provider=user)
+
+        status_filter = request.query_params.get('status')
+        if status_filter and status_filter.upper() != 'ALL':
+            rides = rides.filter(status=status_filter.upper())
+
+        rides = rides.select_related('provider', 'collector').order_by('-created_at')
 
         serializer = self.get_serializer(rides, many=True)
         return Response(serializer.data)
