@@ -16,6 +16,7 @@ import {
 } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import TransactionRow from '../components/TransactionRow';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -319,7 +320,8 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     scrollContent: {
-        paddingBottom: 40,
+        // At 40 the last transaction sat behind the floating tab bar.
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
     balanceSection: {
         alignItems: 'center',
