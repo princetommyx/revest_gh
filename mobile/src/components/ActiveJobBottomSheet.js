@@ -1,7 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing } from 'react-native';
-import { Phone, MessageCircle, MapPin, CheckCircle, Clock, Truck, Package, Navigation, Activity } from 'lucide-react-native';
+import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
+import PickupProgressRoadmap from './PickupProgressRoadmap';
+
+// The final node always renders as a checkmark once reached (handled by
+// PickupProgressRoadmap itself), so this icon is only a fallback.
+const ROADMAP_STEPS = [
+    { key: 'requested', label: 'Requested', icon: Clock },
+    { key: 'assigned', label: 'Accepted', icon: UserCheck },
+    { key: 'arrived', label: 'Arrived', icon: MapPin },
+    { key: 'completed', label: 'Completed', icon: CheckCircle },
+];
 
 export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, onNavigate, onArrive, onComplete, onAccept, requestLoading, isCollapsed, onToggleCollapse }) {
     const pulseAnim = useRef(new Animated.Value(0.5)).current;
@@ -89,39 +99,14 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                     <Text style={styles.timeEst}>{(job.distance_km || 2.5)} km</Text>
                 </View>
 
-                {/* Timeline Progress */}
-                <View style={styles.timelineContainer}>
-                    <View style={styles.timelineLine}>
-                        <View style={[styles.timelineProgress, { width: `${(currentStep / 3) * 100}%` }]} />
-                    </View>
-                    <View style={styles.timelineSteps}>
-                        <View style={styles.step}>
-                            <View style={[styles.stepIcon, currentStep >= 0 && styles.stepIconActive]}>
-                                <Clock size={16} color={currentStep >= 0 ? "#fff" : "#999"} />
-                            </View>
-                        </View>
-                        <View style={styles.step}>
-                            <View style={[styles.stepIcon, currentStep >= 1 && styles.stepIconActive]}>
-                                <Truck size={16} color={currentStep >= 1 ? "#fff" : "#999"} />
-                            </View>
-                        </View>
-                        <View style={styles.step}>
-                            <View style={[styles.stepIcon, currentStep >= 2 && styles.stepIconActive]}>
-                                <MapPin size={16} color={currentStep >= 2 ? "#fff" : "#999"} />
-                            </View>
-                        </View>
-                        <View style={styles.step}>
-                            <View style={[styles.stepIcon, currentStep >= 3 && styles.stepIconActive]}>
-                                <CheckCircle size={16} color={currentStep >= 3 ? "#fff" : "#999"} />
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.timelineLabels}>
-                        <Text style={[styles.stepLabel, currentStep >= 0 && styles.stepLabelActive]}>Placed</Text>
-                        <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>En Route</Text>
-                        <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>Arrived</Text>
-                        <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>Done</Text>
-                    </View>
+                {/* Progress Roadmap - the real milestones this job has reached,
+                    in place of a live map position that isn't reliable. */}
+                <View style={{ marginBottom: 8 }}>
+                    <PickupProgressRoadmap
+                        steps={ROADMAP_STEPS}
+                        currentIndex={currentStep}
+                        isComplete={job.status === 'COMPLETED'}
+                    />
                 </View>
 
                 {!isCollapsed && (
@@ -304,57 +289,6 @@ const styles = StyleSheet.create({
     timeEst: {
         fontSize: 13,
         color: '#6B7280',
-    },
-    timelineContainer: {
-        marginBottom: 24,
-    },
-    timelineLine: {
-        position: 'absolute',
-        top: 15,
-        left: 20,
-        right: 20,
-        height: 2,
-        backgroundColor: '#F3F4F6',
-        zIndex: 0,
-    },
-    timelineProgress: {
-        height: '100%',
-        backgroundColor: '#3B82F6',
-    },
-    timelineSteps: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        zIndex: 1,
-    },
-    step: {
-        width: 32,
-        alignItems: 'center',
-    },
-    stepIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#EBF5FF',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stepIconActive: {
-        backgroundColor: '#3B82F6',
-    },
-    timelineLabels: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 8,
-    },
-    stepLabel: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        width: 50,
-        textAlign: 'center',
-    },
-    stepLabelActive: {
-        color: '#111',
-        fontWeight: '600',
     },
     divider: {
         height: 1,
