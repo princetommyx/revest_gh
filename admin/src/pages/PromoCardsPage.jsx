@@ -14,6 +14,15 @@ const roleOptions = [
     { value: 'RECYCLER', label: 'Recyclers' },
 ];
 
+// Must match PROMO_SCREENS in mobile/src/screens/HomeScreen.js. Anything not
+// on this list is rejected by the app, so it's a dropdown rather than free
+// text - operators were previously told "Chat" and "Help" were valid when
+// the app didn't accept either.
+const PROMO_SCREENS = [
+    'Home', 'Marketplace', 'Pickups', 'Chat', 'Wallet', 'Profile',
+    'Help', 'TopUp', 'CreateListing', 'SupportChat', 'SavedLocations',
+];
+
 export default function PromoCardsPage() {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
@@ -145,10 +154,15 @@ export default function PromoCardsPage() {
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: type === 'checkbox' ? checked : value
-        }));
+        setFormData(prev => {
+            const next = { ...prev, [name]: type === 'checkbox' ? checked : value };
+            // A screen name is not a valid URL and vice versa, so don't carry
+            // the old target across a change of action type.
+            if (name === 'action_type' && value !== prev.action_type) {
+                next.action_value = '';
+            }
+            return next;
+        });
     };
 
     const handleFileChange = (e) => {
@@ -433,17 +447,34 @@ export default function PromoCardsPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Target Value</label>
-                                        <input
-                                            type="text"
-                                            name="action_value"
-                                            value={formData.action_value}
-                                            onChange={handleInputChange}
-                                            placeholder="e.g., Wallet, Pickups"
-                                            className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white outline-none"
-                                            required
-                                        />
+                                        {formData.action_type === 'NAVIGATE' ? (
+                                            <select
+                                                name="action_value"
+                                                value={formData.action_value}
+                                                onChange={handleInputChange}
+                                                className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white outline-none"
+                                                required
+                                            >
+                                                <option value="">Select a screen…</option>
+                                                {PROMO_SCREENS.map(s => (
+                                                    <option key={s} value={s}>{s}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <input
+                                                type="url"
+                                                name="action_value"
+                                                value={formData.action_value}
+                                                onChange={handleInputChange}
+                                                placeholder="https://example.com"
+                                                className="w-full px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white outline-none"
+                                                required
+                                            />
+                                        )}
                                         <p className="text-[10px] text-gray-400 mt-1 italic">
-                                            Valid: Home, Marketplace, Pickups, Chat, Wallet, Profile, Help, TopUp
+                                            {formData.action_type === 'NAVIGATE'
+                                                ? 'Only these screens exist in the mobile app.'
+                                                : 'Opens in the device browser. Include https://'}
                                         </p>
                                     </div>
                                 </div>

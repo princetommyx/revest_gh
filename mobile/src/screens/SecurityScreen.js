@@ -1,14 +1,37 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ActivityIndicator, Image, Dimensions, StatusBar, ScrollView
+    TextInput, ActivityIndicator, StatusBar, ScrollView
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Lock, ShieldCheck, ShieldAlert, Key } from 'lucide-react-native';
+import { Lock, ShieldCheck, ShieldAlert, Key, Eye, EyeOff } from 'lucide-react-native';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-toast-message';
+import ScreenHeader from '../components/ScreenHeader';
 
-const { width } = Dimensions.get('window');
+const PasswordField = ({ label, icon: Icon, value, onChangeText, placeholder }) => {
+    const [visible, setVisible] = useState(false);
+    return (
+        <View style={styles.inputBox}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={styles.fieldRow}>
+                <Icon size={18} color="#9CA3AF" />
+                <TextInput
+                    style={styles.fieldInput}
+                    value={value}
+                    onChangeText={onChangeText}
+                    placeholder={placeholder}
+                    secureTextEntry={!visible}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    placeholderTextColor="#9CA3AF"
+                />
+                <TouchableOpacity onPress={() => setVisible(v => !v)} style={styles.eyeBtn}>
+                    {visible ? <EyeOff size={18} color="#9CA3AF" /> : <Eye size={18} color="#9CA3AF" />}
+                </TouchableOpacity>
+            </View>
+        </View>
+    );
+};
 
 export default function SecurityScreen({ navigation }) {
     const [loading, setLoading] = useState(false);
@@ -48,23 +71,10 @@ export default function SecurityScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Account Security</Text>
-                        <View style={{ width: 40 }} />
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader title="Account Security" onBack={() => navigation.goBack()} />
 
-            {/* Content Overlap */}
             <View style={styles.contentWrap}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
@@ -77,50 +87,27 @@ export default function SecurityScreen({ navigation }) {
                     </View>
 
                     <View style={styles.formSection}>
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>Current Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Lock size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.old_password}
-                                    onChangeText={(val) => handleChange('old_password', val)}
-                                    placeholder="Enter current password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>New Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Key size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.new_password}
-                                    onChangeText={(val) => handleChange('new_password', val)}
-                                    placeholder="Enter new password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
-
-                        <View style={styles.inputBox}>
-                            <Text style={styles.label}>Confirm New Password</Text>
-                            <View style={styles.fieldRow}>
-                                <Key size={18} color="#9BAA9B" />
-                                <TextInput
-                                    style={styles.fieldInput}
-                                    value={formData.new_password2}
-                                    onChangeText={(val) => handleChange('new_password2', val)}
-                                    placeholder="Re-type new password"
-                                    secureTextEntry
-                                    placeholderTextColor="#9BAA9B"
-                                />
-                            </View>
-                        </View>
+                        <PasswordField
+                            label="Current Password"
+                            icon={Lock}
+                            value={formData.old_password}
+                            onChangeText={(val) => handleChange('old_password', val)}
+                            placeholder="Enter current password"
+                        />
+                        <PasswordField
+                            label="New Password"
+                            icon={Key}
+                            value={formData.new_password}
+                            onChangeText={(val) => handleChange('new_password', val)}
+                            placeholder="Enter new password"
+                        />
+                        <PasswordField
+                            label="Confirm New Password"
+                            icon={Key}
+                            value={formData.new_password2}
+                            onChangeText={(val) => handleChange('new_password2', val)}
+                            placeholder="Re-type new password"
+                        />
                     </View>
 
                     <TouchableOpacity style={styles.updateBtn} onPress={handleSubmit} disabled={loading}>
@@ -129,7 +116,7 @@ export default function SecurityScreen({ navigation }) {
 
                     <View style={styles.protectionNote}>
                         <ShieldAlert size={16} color="#999" />
-                        <Text style={styles.protectionText}>Passwords must be at least 8 characters long and contain both letters and numbers.</Text>
+                        <Text style={styles.protectionText}>Use at least 8 characters. Your password can't be all numbers, a commonly used password, or too similar to your name or email.</Text>
                     </View>
 
                 </ScrollView>
@@ -139,18 +126,8 @@ export default function SecurityScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
-    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#222', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
-    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    contentWrap: { flex: 1, backgroundColor: '#fff' },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     heroSection: { alignItems: 'center', marginBottom: 40, marginTop: 10 },
     shieldWrap: { width: 90, height: 90, borderRadius: 30, backgroundColor: '#FAFAFA', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
@@ -161,6 +138,7 @@ const styles = StyleSheet.create({
     label: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginLeft: 4 },
     fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 15, height: 56 },
     fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    eyeBtn: { padding: 4 },
     updateBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     updateBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
     protectionNote: { flexDirection: 'row', gap: 10, marginTop: 25, paddingHorizontal: 15 },

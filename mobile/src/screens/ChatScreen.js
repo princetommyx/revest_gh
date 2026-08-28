@@ -30,6 +30,8 @@ export default function ChatScreen({ route }) {
     const [activeTab, setActiveTab] = useState('All');
     const [refreshing, setRefreshing] = useState(false);
 
+    const onlineContacts = conversations.filter(c => c.contact_is_online);
+
     const fetchConversations = async () => {
         try {
             const data = await chatApi.getConversations();
@@ -113,7 +115,8 @@ export default function ChatScreen({ route }) {
                 style={styles.onlineUserBox}
                 onPress={() => navigation.navigate('ChatDetail', {
                     contactId: item.contact_id,
-                    contactName: item.contact_username
+                    contactName: item.contact_username,
+                    contactIsOnline: item.contact_is_online,
                 })}
             >
                 <View style={styles.onlineAvatarWrap}>
@@ -124,7 +127,7 @@ export default function ChatScreen({ route }) {
                             <User size={20} color="#999" />
                         </View>
                     )}
-                    <View style={styles.onlineDot} />
+                    {item.contact_is_online && <View style={styles.onlineDot} />}
                 </View>
                 <Text style={styles.onlineName} numberOfLines={1}>{item.contact_username.split(' ')[0]}</Text>
             </TouchableOpacity>
@@ -246,16 +249,17 @@ export default function ChatScreen({ route }) {
                     ))}
                 </View>
 
-                {/* Online Users (Horizontal Scroll) */}
-                {activeTab === 'All' && conversations.length > 0 && (
+                {/* Online Users (Horizontal Scroll) - genuinely online contacts
+                    only. This used to render the 8 most recent conversations
+                    and give every one of them a green "online" dot. */}
+                {activeTab === 'All' && onlineContacts.length > 0 && (
                     <View style={styles.onlineUsersSection}>
-                        <ScrollView 
-                            horizontal 
-                            showsHorizontalScrollIndicator={false} 
+                        <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
                             contentContainerStyle={styles.onlineScrollContent}
                         >
-                            {/* Recent contacts as online users */}
-                            {conversations.slice(0, 8).map(renderOnlineUser)}
+                            {onlineContacts.slice(0, 8).map(renderOnlineUser)}
                         </ScrollView>
                     </View>
                 )}

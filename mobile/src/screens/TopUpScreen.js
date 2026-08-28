@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ActivityIndicator, Modal, SafeAreaView,
-    KeyboardAvoidingView, Platform, ScrollView, Dimensions, StatusBar
+    Platform, ScrollView, StatusBar
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { useAuth } from '../context/AuthContext';
 import { walletApi } from '../api/wallet';
 import { useWallet, useVerifyPayment } from '../hooks/useWallet';
-import { X, ChevronLeft, Wallet, CircleCheck, ShieldCheck, CreditCard, Landmark } from 'lucide-react-native';
+import { X, Wallet, ShieldCheck, CreditCard, Landmark } from 'lucide-react-native';
+import Toast from 'react-native-toast-message';
+import ScreenHeader from '../components/ScreenHeader';
 
-const { width } = Dimensions.get('window');
 const QUICK_AMOUNTS = [10, 20, 50, 100, 200, 500];
 
 export default function TopUpScreen({ navigation }) {
@@ -29,13 +30,12 @@ export default function TopUpScreen({ navigation }) {
 
     const handleStartPayment = async () => {
         if (!amount || isNaN(amount) || Number(amount) < 1) {
-            alert('Please enter a valid amount (min 1 GHS).');
+            Toast.show({ type: 'error', text1: 'Invalid amount', text2: 'Enter an amount of at least ₵1.' });
             return;
         }
 
         setLoading(true);
         try {
-            console.log('Initializing payment...', { email: user.email, amount });
             const initResponse = await walletApi.initializePayment(user.email, amount);
             if (initResponse && initResponse.authorization_url) {
                 setReference(initResponse.reference);
@@ -45,7 +45,11 @@ export default function TopUpScreen({ navigation }) {
             }
         } catch (error) {
             console.error(error);
-            alert('Error: ' + (error.response?.data?.error || error.message));
+            Toast.show({
+                type: 'error',
+                text1: 'Could not start payment',
+                text2: error.response?.data?.error || error.message,
+            });
         } finally {
             setLoading(false);
         }
@@ -66,16 +70,19 @@ export default function TopUpScreen({ navigation }) {
             onSuccess: (data) => {
                 setLoading(false);
                 if (data.wallet) {
-                    alert('Success! Wallet credited.');
-                    navigation.goBack();
+                    Toast.show({ type: 'success', text1: 'Wallet topped up', text2: 'Your balance has been updated.' });
                 } else {
-                    alert('Payment is processing. Check balance shortly.');
-                    navigation.goBack();
+                    Toast.show({ type: 'info', text1: 'Payment processing', text2: 'Your balance will update shortly.' });
                 }
+                navigation.goBack();
             },
-            onError: (err) => {
+            onError: () => {
                 setLoading(false);
-                alert('Verification failed. Check balance later.');
+                Toast.show({
+                    type: 'error',
+                    text1: 'Could not confirm payment',
+                    text2: 'If you were charged, your balance will update shortly.',
+                });
                 navigation.goBack();
             }
         });
@@ -86,25 +93,10 @@ export default function TopUpScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ChevronLeft size={28} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Add Funds</Text>
-                        <TouchableOpacity style={styles.historyBtn}>
-                            <ShieldCheck size={22} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader title="Add Funds" onBack={() => navigation.goBack()} />
 
-            {/* Content Overlap */}
             <View style={styles.contentOverlap}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
@@ -132,7 +124,7 @@ export default function TopUpScreen({ navigation }) {
                             <TextInput
                                 style={styles.amountInput}
                                 placeholder="0.00"
-                                placeholderTextColor="#9BAA9B"
+                                placeholderTextColor="#9CA3AF"
                                 keyboardType="numeric"
                                 value={amount}
                                 onChangeText={setAmount}
@@ -181,7 +173,9 @@ export default function TopUpScreen({ navigation }) {
                             <ActivityIndicator color="#fff" />
                         ) : (
                             <Text style={styles.payBtnText}>
-                                {amount ? `Deposit ₵${parseFloat(amount).toFixed(2)}` : 'Initiate Deposit'}
+                                {amount && !isNaN(parseFloat(amount))
+                                    ? `Deposit ₵${parseFloat(amount).toFixed(2)}`
+                                    : 'Initiate Deposit'}
                             </Text>
                         )}
                     </TouchableOpacity>
@@ -217,19 +211,8 @@ export default function TopUpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
-    headerBackground: { height: 180, backgroundColor: '#111', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#222', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-    historyBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
-    contentOverlap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    contentOverlap: { flex: 1, backgroundColor: '#fff' },
     scrollContent: { padding: 25, paddingBottom: 120 },
     balanceCard: {
         backgroundColor: '#F9FAFB', borderRadius: 24, padding: 25, alignItems: 'center',
@@ -272,6 +255,5 @@ const styles = StyleSheet.create({
     secureLabel: { fontSize: 11, color: '#999', fontWeight: '500' },
     modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
     modalTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
-    centeredStatus: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     centered: { position: 'absolute', top: '50%', left: '50%', marginTop: -15, marginLeft: -15 },
 });

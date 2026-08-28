@@ -62,6 +62,11 @@ export const authApi = {
         return response.data;
     },
 
+    verifyPasswordResetOtp: async (identifier, otp) => {
+        const response = await apiClient.post('auth/password-reset/verify/', { identifier, otp });
+        return response.data;
+    },
+
     confirmPasswordReset: async (data) => {
         const response = await apiClient.post('auth/password-reset/confirm/', data);
         return response.data;
@@ -73,7 +78,9 @@ export const authApi = {
     },
 
     getKycStatus: async () => {
-        const response = await apiClient.get('kyc/status/');
+        // users/urls.py is mounted under /api/v1/auth/ and /api/v1/users/,
+        // so the KYC routes live below one of those - not at /api/v1/kyc/.
+        const response = await apiClient.get('auth/kyc/status/');
         return response.data;
     }
 };

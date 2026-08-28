@@ -2,17 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ActivityIndicator, ScrollView,
-    Image, Alert, Dimensions, StatusBar
+    Image, StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, User, Mail, MapPin, Camera, ChevronRight, Phone, Shield } from 'lucide-react-native';
+import { User, Mail, MapPin, Camera, Phone, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-toast-message';
-import apiClient, { BASE_URL } from '../api/client';
-
-const { width } = Dimensions.get('window');
+import { BASE_URL } from '../api/client';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function EditProfileScreen({ navigation }) {
     const { user, updateUser } = useAuth();
@@ -36,10 +34,14 @@ export default function EditProfileScreen({ navigation }) {
         }
     }, [user]);
 
+    // Must match ProfileScreen's resolver - this one omitted the /media prefix,
+    // so a stored relative path rendered as a broken image here but fine there.
     const resolveImageUrl = (path) => {
         if (!path) return null;
         if (path.startsWith('http')) return path;
-        return `${BASE_URL}${path.startsWith('/') ? '' : '/'}${path}`;
+        let cleanPath = path.startsWith('/') ? path : `/${path}`;
+        if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
+        return `${BASE_URL}${cleanPath}`;
     };
 
     const pickImage = async () => {
@@ -49,7 +51,10 @@ export default function EditProfileScreen({ navigation }) {
             return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaType.Images,
+            // `ImagePicker.MediaType` is a TypeScript type, not a runtime value -
+            // reading `.Images` off it threw "Cannot read property 'Images' of
+            // undefined" and crashed the screen. The array form is the current API.
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.8,
@@ -79,7 +84,19 @@ export default function EditProfileScreen({ navigation }) {
             Toast.show({ type: 'success', text1: 'Profile updated!' });
             navigation.goBack();
         } catch (error) {
-            Toast.show({ type: 'error', text1: 'Update failed', text2: 'Please try again' });
+            // Surface the real reason (e.g. "phone number already in use") instead
+            // of a blanket retry message the user can't act on.
+            const data = error.response?.data;
+            const detail =
+                data?.detail ||
+                (data && typeof data === 'object'
+                    ? Object.values(data).flat()[0]
+                    : null);
+            Toast.show({
+                type: 'error',
+                text1: 'Update failed',
+                text2: typeof detail === 'string' ? detail : 'Please try again',
+            });
         } finally {
             setLoading(false);
         }
@@ -87,25 +104,20 @@ export default function EditProfileScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Edit Profile</Text>
-                        <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
-                            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnTextTop}>Save</Text>}
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader
+                title="Edit Profile"
+                onBack={() => navigation.goBack()}
+                right={
+                    <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
+                        {loading
+                            ? <ActivityIndicator size="small" color="#111827" />
+                            : <Text style={styles.saveBtnTextTop}>Save</Text>}
+                    </TouchableOpacity>
+                }
+            />
 
-            {/* Content Overlap */}
             <View style={styles.contentWrap}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
@@ -114,8 +126,11 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.avatarWrapper}>
                             {image ? (
                                 <Image source={{ uri: image }} style={styles.avatar} />
-                            ) : user?.profile_picture_url ? (
-                                <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.avatar} />
+                            ) : (user?.profile_picture_url || user?.profile_picture) ? (
+                                <Image
+                                    source={{ uri: resolveImageUrl(user.profile_picture_url || user.profile_picture) }}
+                                    style={styles.avatar}
+                                />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
                                     <User size={48} color="#111" />
@@ -133,13 +148,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>First Name</Text>
                             <View style={styles.fieldRow}>
-                                <User size={18} color="#9BAA9B" />
+                                <User size={18} color="#9CA3AF" />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.first_name}
                                     onChangeText={(t) => setFormData(p => ({ ...p, first_name: t }))}
                                     placeholder="e.g. John"
-                                    placeholderTextColor="#9BAA9B"
+                                    placeholderTextColor="#9CA3AF"
                                 />
                             </View>
                         </View>
@@ -147,13 +162,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>Last Name</Text>
                             <View style={styles.fieldRow}>
-                                <User size={18} color="#9BAA9B" />
+                                <User size={18} color="#9CA3AF" />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.last_name}
                                     onChangeText={(t) => setFormData(p => ({ ...p, last_name: t }))}
                                     placeholder="e.g. Doe"
-                                    placeholderTextColor="#9BAA9B"
+                                    placeholderTextColor="#9CA3AF"
                                 />
                             </View>
                         </View>
@@ -161,14 +176,14 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>Mobile Number</Text>
                             <View style={styles.fieldRow}>
-                                <Phone size={18} color="#9BAA9B" />
+                                <Phone size={18} color="#9CA3AF" />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.phone_number}
                                     onChangeText={(t) => setFormData(p => ({ ...p, phone_number: t }))}
                                     placeholder="+233..."
                                     keyboardType="phone-pad"
-                                    placeholderTextColor="#9BAA9B"
+                                    placeholderTextColor="#9CA3AF"
                                 />
                             </View>
                         </View>
@@ -176,13 +191,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>City/Location</Text>
                             <View style={styles.fieldRow}>
-                                <MapPin size={18} color="#9BAA9B" />
+                                <MapPin size={18} color="#9CA3AF" />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.city}
                                     onChangeText={(t) => setFormData(p => ({ ...p, city: t }))}
                                     placeholder="Enter your city"
-                                    placeholderTextColor="#9BAA9B"
+                                    placeholderTextColor="#9CA3AF"
                                 />
                             </View>
                         </View>
@@ -212,20 +227,10 @@ export default function EditProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
-    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#222', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
-    saveBtnTop: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)' },
-    saveBtnTextTop: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    saveBtnTop: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6' },
+    saveBtnTextTop: { color: '#111827', fontWeight: '700', fontSize: 14 },
+    contentWrap: { flex: 1, backgroundColor: '#fff' },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     avatarSection: { alignItems: 'center', marginBottom: 35 },
     avatarWrapper: { position: 'relative' },
