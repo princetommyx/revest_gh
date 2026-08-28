@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TouchableOpacity,
-    RefreshControl, ScrollView, Dimensions, StatusBar
+    RefreshControl, ScrollView, StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, MapPin, User, Clock, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
+import { MapPin, User, Clock, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
 import { useNavigation } from '@react-navigation/native';
 import PageLoader from '../components/PageLoader';
-
-const { width } = Dimensions.get('window');
+import ScreenHeader from '../components/ScreenHeader';
 
 const STATUS_CONFIG = {
     PENDING: { color: '#F59E0B', label: 'Pending', bg: '#FFFBEB' },
@@ -85,23 +83,10 @@ export default function PickupHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Pickup History</Text>
-                        <View style={{ width: 40 }} />
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader title="Pickup History" onBack={() => navigation.goBack()} />
 
-            {/* Overlapping Filter & List Container */}
             <View style={styles.contentContainer}>
                 <View style={styles.filterSection}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
@@ -148,54 +133,12 @@ export default function PickupHistoryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA',
-    },
-    headerBackground: {
-        height: 180,
-        backgroundColor: '#111',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    curvedShape: {
-        position: 'absolute',
-        bottom: -80,
-        left: -width * 0.25,
-        width: width * 1.5,
-        height: width * 1.5,
-        borderRadius: width * 0.75,
-        backgroundColor: '#222',
-        opacity: 0.3,
-    },
-    headerContent: {
-        paddingHorizontal: 25,
-        paddingTop: 10,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginTop: 10,
-    },
-    backBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#fff',
+        backgroundColor: '#FFFFFF',
     },
     contentContainer: {
         flex: 1,
-        marginTop: -30,
         backgroundColor: '#fff',
-        borderTopLeftRadius: 35,
-        borderTopRightRadius: 35,
-        paddingTop: 25,
+        paddingTop: 20,
     },
     filterSection: {
         marginBottom: 15,

@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, Linking, Dimensions, StatusBar, Animated
+    ScrollView, Linking, StatusBar, Animated
 } from 'react-native';
 import Constants from 'expo-constants';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Mail, MessageSquare, ChevronDown, Phone, Globe, ExternalLink } from 'lucide-react-native';
+import { Mail, MessageSquare, ChevronDown, Phone, Globe, ExternalLink } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
-
-const { width } = Dimensions.get('window');
+import ScreenHeader from '../components/ScreenHeader';
 
 const SUPPORT_EMAIL = 'support@revesta.com';
 const SUPPORT_PHONE = '+233201234567';
@@ -104,23 +102,10 @@ export default function HelpScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Help Center</Text>
-                        <View style={{ width: 40 }} />
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader title="Help Center" onBack={() => navigation.goBack()} />
 
-            {/* Content Overlap */}
             <View style={styles.contentWrap}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
@@ -178,18 +163,8 @@ export default function HelpScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
-    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#222', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    contentWrap: { flex: 1, backgroundColor: '#fff' },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 20, marginTop: 10 },
     contactContainer: { flexDirection: 'row', gap: 15, marginBottom: 20 },

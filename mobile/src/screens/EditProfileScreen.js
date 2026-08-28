@@ -2,17 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     TextInput, ActivityIndicator, ScrollView,
-    Image, Dimensions, StatusBar
+    Image, StatusBar
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, User, Mail, MapPin, Camera, Phone, Shield } from 'lucide-react-native';
+import { User, Mail, MapPin, Camera, Phone, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../api/auth';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
-
-const { width } = Dimensions.get('window');
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function EditProfileScreen({ navigation }) {
     const { user, updateUser } = useAuth();
@@ -106,25 +104,20 @@ export default function EditProfileScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#111" />
+            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-            {/* Organic Curved Header */}
-            <View style={styles.headerBackground}>
-                <View style={styles.curvedShape} />
-                <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContent}>
-                    <View style={styles.headerRow}>
-                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                            <ArrowLeft size={24} color="#fff" />
-                        </TouchableOpacity>
-                        <Text style={styles.headerTitle}>Edit Profile</Text>
-                        <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
-                            {loading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.saveBtnTextTop}>Save</Text>}
-                        </TouchableOpacity>
-                    </View>
-                </SafeAreaView>
-            </View>
+            <ScreenHeader
+                title="Edit Profile"
+                onBack={() => navigation.goBack()}
+                right={
+                    <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
+                        {loading
+                            ? <ActivityIndicator size="small" color="#111827" />
+                            : <Text style={styles.saveBtnTextTop}>Save</Text>}
+                    </TouchableOpacity>
+                }
+            />
 
-            {/* Content Overlap */}
             <View style={styles.contentWrap}>
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
 
@@ -234,20 +227,10 @@ export default function EditProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
-    headerBackground: { height: 160, backgroundColor: '#111', overflow: 'hidden' },
-    curvedShape: {
-        position: 'absolute', bottom: -80, left: -width * 0.25,
-        width: width * 1.5, height: width * 1.5, borderRadius: width * 0.75,
-        backgroundColor: '#222', opacity: 0.3
-    },
-    headerContent: { paddingHorizontal: 25, paddingTop: 10 },
-    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
-    backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#fff', flex: 1, textAlign: 'center' },
-    saveBtnTop: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)' },
-    saveBtnTextTop: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-    contentWrap: { flex: 1, marginTop: -35, backgroundColor: '#fff', borderTopLeftRadius: 35, borderTopRightRadius: 35 },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+    saveBtnTop: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6' },
+    saveBtnTextTop: { color: '#111827', fontWeight: '700', fontSize: 14 },
+    contentWrap: { flex: 1, backgroundColor: '#fff' },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     avatarSection: { alignItems: 'center', marginBottom: 35 },
     avatarWrapper: { position: 'relative' },
