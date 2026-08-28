@@ -2,10 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
-    TextInput, ScrollView, RefreshControl, Dimensions, StatusBar
+    TextInput, ScrollView, RefreshControl, Dimensions, StatusBar, Linking
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
@@ -71,19 +73,26 @@ export default function HomeScreen({ navigation }) {
     }, []);
 
     const [promos, setPromos] = useState([]);
+    const [promoIndex, setPromoIndex] = useState(0);
 
     const fetchPromos = useCallback(async () => {
         try {
             const data = await adminApi.getPromoCards(userRole);
-            setPromos(data);
+            setPromos(Array.isArray(data) ? data : (data?.results || []));
         } catch (e) {
             console.error('Failed to load promos', e);
         }
     }, [userRole]);
 
-    useEffect(() => {
-        fetchPromos();
-    }, [fetchPromos]);
+    // Refetch whenever Home comes back into focus, not just on mount. Promo
+    // cards are edited in the admin dashboard and are expected to appear
+    // without a restart; previously a running app kept showing the set it
+    // loaded at launch until the user happened to pull-to-refresh.
+    useFocusEffect(
+        useCallback(() => {
+            fetchPromos();
+        }, [fetchPromos])
+    );
 
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
 
@@ -121,6 +130,44 @@ export default function HomeScreen({ navigation }) {
         return `${BASE_URL}${cleanPath}`;
     };
 
+    // Kept in sync with the destinations listed in the admin dashboard's promo
+    // form (admin/src/pages/PromoCardsPage.jsx). The two lists had drifted:
+    // the admin told operators "Chat" and "Help" were valid, but neither was
+    // accepted here, so those promos silently sent users to Marketplace.
+    const PROMO_SCREENS = [
+        'Home', 'Marketplace', 'Pickups', 'Chat', 'Wallet', 'Profile',
+        'Help', 'TopUp', 'CreateListing', 'SupportChat', 'SavedLocations',
+    ];
+
+    const handlePromoAction = async (promo) => {
+        const value = promo.action_value;
+        if (!value) return;
+
+        // 'URL' is offered in the admin dashboard's Action Type dropdown but
+        // was never handled here, so those promos had a dead button.
+        if (promo.action_type === 'URL') {
+            try {
+                await Linking.openURL(value);
+            } catch (e) {
+                Toast.show({ type: 'error', text1: 'Could not open link' });
+            }
+            return;
+        }
+
+        if (PROMO_SCREENS.includes(value)) {
+            navigation.navigate(value);
+        } else {
+            // Sending people somewhere unrelated hides the misconfiguration;
+            // say nothing happened instead of silently going to Marketplace.
+            console.warn(`Promo "${promo.title}" points at unknown screen "${value}"`);
+            Toast.show({
+                type: 'info',
+                text1: 'Not available',
+                text2: "This offer isn't available in your app version yet.",
+            });
+        }
+    };
+
     const renderPromoBanners = () => {
         if (!promos || promos.length === 0) {
             return (
@@ -143,12 +190,17 @@ export default function HomeScreen({ navigation }) {
 
         return (
             <View>
-                <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false} 
-                    snapToInterval={width - 40 + 16} 
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    snapToInterval={width - 40 + 16}
                     snapToAlignment="start"
-                    decelerationRate="fast" 
+                    decelerationRate="fast"
+                    scrollEventThrottle={16}
+                    onScroll={(e) => {
+                        const page = Math.round(e.nativeEvent.contentOffset.x / (width - 40 + 16));
+                        if (page !== promoIndex) setPromoIndex(page);
+                    }}
                 >
                     {promos.map((promo, idx) => (
                         <View key={promo.id || idx} style={[styles.heroBanner, { backgroundColor: promo.badge_color || '#10B981', width: width - 40, marginRight: idx === promos.length - 1 ? 0 : 16 }]}>
@@ -160,17 +212,7 @@ export default function HomeScreen({ navigation }) {
                                 ) : null}
                                 <Text style={styles.heroTitle}>{promo.title}</Text>
                                 <Text style={styles.heroSubtitle}>{promo.subtitle}</Text>
-                                <AnimatedButton style={styles.heroBtn} onPress={() => {
-                                    if (promo.action_type === 'NAVIGATE' && promo.action_value) {
-                                        const validScreens = ['Home', 'Marketplace', 'Pickups', 'Wallet', 'Profile', 'CreateListing', 'TopUp', 'SupportChat'];
-                                        if (validScreens.includes(promo.action_value)) {
-                                            navigation.navigate(promo.action_value);
-                                        } else {
-                                            // Fallback for dummy backend data
-                                            navigation.navigate('Marketplace');
-                                        }
-                                    }
-                                }}>
+                                <AnimatedButton style={styles.heroBtn} onPress={() => handlePromoAction(promo)}>
                                     <Text style={[styles.heroBtnText, { color: promo.badge_color || '#111' }]}>Start Now</Text>
                                 </AnimatedButton>
                             </View>
@@ -185,7 +227,7 @@ export default function HomeScreen({ navigation }) {
                 {promos.length > 1 && (
                     <View style={styles.dotsRow}>
                         {promos.map((_, i) => (
-                            <View key={i} style={[styles.dot, i === 0 && styles.dotActive]} />
+                            <View key={i} style={[styles.dot, i === promoIndex && styles.dotActive]} />
                         ))}
                     </View>
                 )}

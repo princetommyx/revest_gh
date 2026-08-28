@@ -3,30 +3,26 @@
 from django.db import migrations
 
 
-def create_admin(apps, schema_editor):
-    from django.contrib.auth import get_user_model
-    User = get_user_model()
-    username = 'admin_test'
-    email = 'admin_test@example.com'
-    password = 'AdminPassword123'
-    
-    if not User.objects.filter(username=username).exists():
-        user = User.objects.create_superuser(
-            username=username,
-            email=email,
-            password=password
-        )
-        user.role = 'ADMIN'
-        user.save()
-        print(f"Admin user '{username}' created with password '{password}'")
-    else:
-        user = User.objects.get(username=username)
-        user.set_password(password)
-        user.is_staff = True
-        user.is_superuser = True
-        user.role = 'ADMIN'
-        user.save()
-        print(f"Admin user '{username}' updated with password '{password}'")
+# This migration used to create a superuser 'admin_test' with a hardcoded
+# password on every environment that ran migrations, and to reset that
+# password back to the known value on each subsequent run. It has been
+# neutralised for two reasons:
+#
+# 1. It could not run at all on a fresh database. It called get_user_model(),
+#    which returns the *current* User model rather than the historical one for
+#    this point in history, so the INSERT referenced columns that don't exist
+#    until migration 0016 (last_active_at). `manage.py migrate` on a new
+#    database failed with "table users_user has no column named
+#    last_active_at", breaking new deployments, fresh dev setups and CI.
+#
+# 2. Even where it did run, seeding a known-password superuser into every
+#    environment - production included - is a standing credential risk.
+#
+# The migration node is kept (rather than deleted) so databases that already
+# recorded it stay consistent. Environments that ran the old version still
+# have the 'admin_test' account; it should be removed or have its password
+# rotated manually. Create real admins with `manage.py createsuperuser`.
+
 
 class Migration(migrations.Migration):
 
@@ -35,5 +31,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_admin),
+        migrations.RunPython(migrations.RunPython.noop, migrations.RunPython.noop),
     ]
