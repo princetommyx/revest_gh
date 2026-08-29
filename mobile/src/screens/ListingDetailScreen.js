@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    Image, ScrollView, Dimensions, StatusBar, Alert
+    Image, ScrollView, Dimensions, StatusBar, Alert, FlatList
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, Weight, MapPin, Trash, Pencil, MessageCircle, Package } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     const { user, userRole } = useAuth();
     const insets = useSafeAreaInsets();
     const [listing, setListing] = useState(null);
+    const [similarListings, setSimilarListings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [myLocation, setMyLocation] = useState(null);
 
@@ -50,6 +51,13 @@ export default function ListingDetailScreen({ route, navigation }) {
         try {
             const data = await marketApi.getListing(listingId);
             setListing(data);
+            
+            try {
+                const similarData = await marketApi.getListings({ material_type: data.material_type });
+                const similar = similarData.results?.filter(l => l.id !== listingId).slice(0, 5) || [];
+                setSimilarListings(similar);
+            } catch(e) {}
+            
         } catch (error) {
             console.error("Fetch Listing Error:", error);
             Toast.show({ type: 'error', text1: 'Failed to load listing' });
@@ -210,6 +218,56 @@ export default function ListingDetailScreen({ route, navigation }) {
                         {listing.description || 'No description provided by the seller.'}
                     </Text>
 
+                    {similarListings.length > 0 && (
+                        <View style={styles.similarSection}>
+                            <View style={styles.similarHeader}>
+                                <Text style={styles.similarSectionTitle}>Similar listings</Text>
+                                <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })}>
+                                    <Text style={styles.seeAllText}>See all</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <FlatList
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                data={similarListings}
+                                keyExtractor={item => item.id.toString()}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.similarCard}
+                                        onPress={() => navigation.push('ListingDetail', { listingId: item.id })}
+                                        activeOpacity={0.9}
+                                    >
+                                        <View style={styles.imageBox}>
+                                            {item.image ? (
+                                                <Image
+                                                    source={{ uri: resolveImageUrl(item.image) }}
+                                                    style={styles.similarImage}
+                                                    resizeMode="cover"
+                                                />
+                                            ) : (
+                                                <View style={styles.placeholderImg}>
+                                                    <Package size={24} color="#E0E0E0" />
+                                                </View>
+                                            )}
+                                            <TouchableOpacity style={styles.floatingHeart}>
+                                                <Heart size={14} color={item.is_liked ? '#EF4444' : '#111'} fill={item.is_liked ? '#EF4444' : 'transparent'} />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <View style={styles.similarDetails}>
+                                            <Text style={styles.similarTitle} numberOfLines={1}>{item.title}</Text>
+                                            <Text style={styles.similarPrice}>₵ {item.price}</Text>
+                                            <View style={styles.similarLocRow}>
+                                                <MapPin size={12} color="#059669" />
+                                                <Text style={styles.similarLoc} numberOfLines={1}>{item.location}</Text>
+                                            </View>
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
+                                contentContainerStyle={{ paddingBottom: 20 }}
+                            />
+                        </View>
+                    )}
+
                 </View>
             </ScrollView>
 
@@ -345,6 +403,22 @@ const styles = StyleSheet.create({
     
     sectionTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 12 },
     descriptionText: { fontSize: 15, color: '#4B5563', lineHeight: 24, letterSpacing: 0.2 },
+    
+    similarSection: { marginTop: 32, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 24 },
+    similarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    similarSectionTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
+    seeAllText: { fontSize: 14, color: '#059669', fontWeight: '600' },
+    similarCard: { width: 160, marginRight: 16, backgroundColor: '#F9FAFB', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#F3F4F6' },
+    imageBox: { width: '100%', height: 110, backgroundColor: '#F3F4F6', position: 'relative' },
+    similarImage: { width: '100%', height: '100%' },
+    placeholderImg: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    floatingHeart: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+    similarDetails: { padding: 12 },
+    similarTitle: { fontSize: 13, fontWeight: '700', color: '#111', marginBottom: 4 },
+    similarPrice: { fontSize: 14, fontWeight: '800', color: '#111', marginBottom: 6 },
+    similarLocRow: { flexDirection: 'row', alignItems: 'center' },
+    similarLoc: { fontSize: 11, color: '#6B7280', marginLeft: 4, flex: 1 },
+    
     
     bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 10 },
     actionRow: { flexDirection: 'row', gap: 12 },
