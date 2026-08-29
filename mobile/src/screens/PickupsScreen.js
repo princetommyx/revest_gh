@@ -1509,68 +1509,67 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && userRole === 'SELLER' && uiState === 'VEHICLE_SELECT' && (
-                <View style={styles.bottomSheetUbrideVehicles}>
-                    <TouchableOpacity style={styles.backVehicleBtn} onPress={() => setUiState('IDLE')}>
-                        <View style={styles.dragHandle} />
-                    </TouchableOpacity>
-
-                    <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
-
-                    {/* The pickup pin + ETA bubble are on the map itself now (see
-                        the marker above), Bolt-style. No fee shown here - the
-                        platform doesn't quote or collect a price for a direct
-                        booking; the disposer picks a vehicle size and pays the
-                        collector directly. */}
-                    <View style={styles.routeSummaryCard}>
-                        <View style={styles.routeSummaryStatsRow}>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>Distance</Text>
-                                <Text style={styles.routeSummaryStatValue}>
-                                    {requestForm.distance_km ? `${requestForm.distance_km} km` : '—'}
-                                </Text>
-                            </View>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>ETA</Text>
-                                <Text style={styles.routeSummaryStatValue}>
-                                    {requestForm.duration_min ? `${Math.round(requestForm.duration_min)} min` : '—'}
-                                </Text>
-                            </View>
-                        </View>
+                <>
+                    <View style={styles.floatingTopBar}>
+                        <TouchableOpacity style={styles.floatingBackBtn} onPress={() => setUiState('IDLE')}>
+                            <ArrowLeft size={22} color="#111" />
+                        </TouchableOpacity>
                     </View>
-                    <Text style={styles.paymentNote}>Payment is arranged directly with your collector.</Text>
 
-                    <Text style={styles.loadSizeLabel}>LOAD SIZE</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
-                        {VEHICLES.map(v => {
-                            const Icon = v.icon;
-                            return (
-                                <TouchableOpacity
-                                    key={v.id}
-                                    style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
-                                    onPress={() => setSelectedVehicle(v.id)}
-                                >
-                                    <Icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
-                                    <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
-                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.capacity}</Text>
-                                    {selectedVehicle === v.id && (
-                                        <View style={styles.vehicleCheckBadge}>
-                                            <CircleCheck size={12} color="#fff" />
+                    <View style={styles.bottomSheetUbrideVehicles}>
+                        <View style={styles.dragHandleContainer}>
+                            <View style={styles.dragHandle} />
+                        </View>
+
+                        <Text style={styles.chooseVehicleTitle}>Choose vehicle</Text>
+                        <Text style={styles.chooseVehicleSubtitle}>Select the vehicle that fits your waste</Text>
+
+                        {/* Real vehicle photos would replace these icon boxes once we
+                            have proper product-style shots (flat ground, isolated) -
+                            stock photography didn't have a clean match and would have
+                            looked worse than a plain icon, the same call made for the
+                            Home service tiles earlier. */}
+                        <View style={styles.vehicleRowGroup}>
+                            {VEHICLES.map(v => {
+                                const Icon = v.icon;
+                                const active = selectedVehicle === v.id;
+                                return (
+                                    <TouchableOpacity
+                                        key={v.id}
+                                        style={[styles.vehicleRow, active && styles.vehicleRowActive]}
+                                        onPress={() => setSelectedVehicle(v.id)}
+                                    >
+                                        <View style={[styles.radioOuter, active && styles.radioOuterActive]}>
+                                            {active && <View style={styles.radioInner} />}
                                         </View>
-                                    )}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </ScrollView>
+                                        <View style={[styles.vehicleArtBox, active && styles.vehicleArtBoxActive]}>
+                                            <Icon size={30} color={active ? '#059669' : '#6B7280'} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.vehicleRowName}>{v.label}</Text>
+                                            <Text style={styles.vehicleRowCapacity}>{v.capacity}</Text>
+                                        </View>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
 
-                    {/* The route summary card above already shows pickup, destination,
-                        distance, ETA and fee - that IS the confirmation. A second modal
-                        used to reopen here and ask "Current or Custom pickup location?"
-                        from scratch, contradicting the location just set on the previous
-                        sheet. Submit directly instead. */}
-                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
-                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request Pickup</Text>}
-                    </AnimatedButton>
-                </View>
+                        {/* The platform doesn't quote or collect a price for a direct
+                            booking - the disposer picks a vehicle size and pays the
+                            collector directly. Distance/ETA are still shown live on
+                            the map's pickup bubble above. */}
+                        <Text style={styles.paymentNote}>Payment is arranged directly with your collector.</Text>
+
+                        <View style={styles.readyNoticeBox}>
+                            <Info size={16} color="#6B7280" />
+                            <Text style={styles.readyNoticeText}>Make sure your waste is ready for pickup</Text>
+                        </View>
+
+                        <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
+                            {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request pickup</Text>}
+                        </AnimatedButton>
+                    </View>
+                </>
             )}
 
             {!isSelectingLocation && isCollectorRole && sortedJobs.length > 0 && (
@@ -2194,25 +2193,31 @@ const styles = StyleSheet.create({
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
     bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
-    backVehicleBtn: { alignItems: 'center', marginBottom: 12, paddingVertical: 10 },
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
-    confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
-    routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
-    routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    routeSummaryStat: { alignItems: 'center', flex: 1 },
-    routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
-    routeSummaryStatValue: { fontSize: 15, color: '#111', fontWeight: '700' },
-    loadSizeLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginBottom: 10 },
-    paymentNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginBottom: 16, marginTop: -6 },
-    vehicleScroll: { gap: 15, paddingBottom: 20 },
-    vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
-    vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
-    vehicleName: { fontSize: 14, fontWeight: 'bold', color: '#666' },
-    vehicleNameActive: { color: '#111' },
-    vehicleTime: { fontSize: 11, color: '#999', marginTop: 4 },
-    vehicleTimeActive: { color: '#34D399' },
-    vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
-    bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
+    chooseVehicleTitle: { fontSize: 22, fontWeight: '800', color: '#111', marginBottom: 4 },
+    chooseVehicleSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 18 },
+    vehicleRowGroup: { gap: 12, marginBottom: 16 },
+    vehicleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        borderWidth: 1.5,
+        borderColor: '#F3F4F6',
+        borderRadius: 16,
+        padding: 14,
+    },
+    vehicleRowActive: { borderColor: '#059669', backgroundColor: '#F7FEFB' },
+    radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
+    radioOuterActive: { borderColor: '#059669' },
+    radioInner: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#059669' },
+    vehicleArtBox: { width: 60, height: 60, borderRadius: 14, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
+    vehicleArtBoxActive: { backgroundColor: '#ECFDF5' },
+    vehicleRowName: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 2 },
+    vehicleRowCapacity: { fontSize: 13, color: '#9CA3AF' },
+    paymentNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginBottom: 12 },
+    readyNoticeBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, marginBottom: 16 },
+    readyNoticeText: { fontSize: 13, color: '#4B5563', flex: 1 },
+    bookRideBtn: { backgroundColor: '#111', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
