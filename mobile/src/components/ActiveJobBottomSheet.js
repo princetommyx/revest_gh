@@ -188,22 +188,32 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                             {job.material_type}{job.weight_kg ? ` · ${job.weight_kg}kg` : ''} · {job.quantity_estimate}
                         </Text>
 
-                        {/* Payment Summary */}
-                        <View style={styles.paymentSummary}>
-                            <Text style={styles.paymentTitle}>Payment Summary</Text>
-                            <View style={styles.paymentRow}>
-                                <Text style={styles.paymentLabel}>Price</Text>
-                                <Text style={styles.paymentValue}>{formatCurrency(price)}</Text>
+                        {/* Track A is a direct booking - the platform doesn't quote
+                            or collect a fee for it, so a Price/Fee/Total breakdown
+                            here would just show a misleading GHS 0.00 all the way
+                            down. Say what's actually true instead. */}
+                        {job.track_type === 'A' ? (
+                            <View style={styles.paymentSummary}>
+                                <Text style={styles.paymentTitle}>Payment</Text>
+                                <Text style={styles.cashNote}>Arranged directly with the disposer - no in-app charge for this job.</Text>
                             </View>
-                            <View style={styles.paymentRow}>
-                                <Text style={styles.paymentLabel}>Pickup fee</Text>
-                                <Text style={styles.paymentValue}>{formatCurrency(shipping)}</Text>
+                        ) : (
+                            <View style={styles.paymentSummary}>
+                                <Text style={styles.paymentTitle}>Payment Summary</Text>
+                                <View style={styles.paymentRow}>
+                                    <Text style={styles.paymentLabel}>Price</Text>
+                                    <Text style={styles.paymentValue}>{formatCurrency(price)}</Text>
+                                </View>
+                                <View style={styles.paymentRow}>
+                                    <Text style={styles.paymentLabel}>Pickup fee</Text>
+                                    <Text style={styles.paymentValue}>{formatCurrency(shipping)}</Text>
+                                </View>
+                                <View style={[styles.paymentRow, styles.paymentTotalRow]}>
+                                    <Text style={styles.paymentTotalLabel}>Total payment</Text>
+                                    <Text style={styles.paymentTotalValue}>{formatCurrency(total)}</Text>
+                                </View>
                             </View>
-                            <View style={[styles.paymentRow, styles.paymentTotalRow]}>
-                                <Text style={styles.paymentTotalLabel}>Total payment</Text>
-                                <Text style={styles.paymentTotalValue}>{formatCurrency(total)}</Text>
-                            </View>
-                        </View>
+                        )}
                     </>
                 )}
 
@@ -456,6 +466,11 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#111',
         marginBottom: 16,
+    },
+    cashNote: {
+        fontSize: 13,
+        color: '#6B7280',
+        lineHeight: 19,
     },
     paymentRow: {
         flexDirection: 'row',

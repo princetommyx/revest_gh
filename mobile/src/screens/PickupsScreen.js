@@ -810,27 +810,22 @@ export default function PickupsScreen({ route }) {
             // the job, the same way map-pin selection already does.
             const resolvedPickupAddress = customAddress.trim()
                 || await reverseGeocode(location.latitude, location.longitude);
-            // The backend trusts these prices as sent (create serializer accepts
-            // waste_price/delivery_fee directly), but this screen was hardcoding
-            // all three to '0.00' regardless of what fetchEstimate()/the listing
-            // computed - so every request silently locked zero escrow no matter
-            // what fee the disposer was shown. track_type and payment_method were
-            // omitted too, so every request landed as Track A / CASH on the
-            // backend, skipping the digital escrow lock entirely.
-            // Track A (direct booking, no listing) has no material value - only
-            // the distance-based delivery_fee was ever shown to the user, so
-            // waste_price stays 0 there; the listing flow's waste_price is the
-            // seller's real listing price.
+            // Track A (direct booking, no listing): the platform doesn't quote or
+            // collect a fee for this - the disposer just picks a vehicle size for
+            // their waste, and pays the collector directly once the job's done.
+            // So it's CASH with no price, on purpose. The listing flow (Track B/C)
+            // is a real marketplace transaction against a seller's actual listing
+            // price, and keeps its existing digital pricing/escrow behavior.
             const requestData = {
                 material_type: requestForm.material_type || 'General Waste',
                 quantity_estimate: isListingFlow
                     ? (requestForm.quantity_estimate || 'Standard')
                     : (`${VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Standard'} Load`),
                 track_type: requestForm.track_type,
-                payment_method: requestForm.payment_method,
-                estimated_price: requestForm.delivery_fee || '0.00',
+                payment_method: isListingFlow ? requestForm.payment_method : 'CASH',
+                estimated_price: isListingFlow ? (requestForm.delivery_fee || '0.00') : '0.00',
                 waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
-                delivery_fee: requestForm.delivery_fee || '0.00',
+                delivery_fee: isListingFlow ? (requestForm.delivery_fee || '0.00') : '0.00',
                 // Was computed by fetchEstimate() and shown on the route
                 // summary card, but never actually sent - the trip's
                 // distance/duration were silently dropped on every request.
@@ -1522,8 +1517,10 @@ export default function PickupsScreen({ route }) {
                     <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
 
                     {/* The pickup pin + ETA bubble are on the map itself now (see
-                        the marker above), Bolt-style, so this card is just the
-                        price/ETA preview rather than repeating the address too. */}
+                        the marker above), Bolt-style. No fee shown here - the
+                        platform doesn't quote or collect a price for a direct
+                        booking; the disposer picks a vehicle size and pays the
+                        collector directly. */}
                     <View style={styles.routeSummaryCard}>
                         <View style={styles.routeSummaryStatsRow}>
                             <View style={styles.routeSummaryStat}>
@@ -1538,14 +1535,9 @@ export default function PickupsScreen({ route }) {
                                     {requestForm.duration_min ? `${Math.round(requestForm.duration_min)} min` : '—'}
                                 </Text>
                             </View>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>Est. fee</Text>
-                                <Text style={[styles.routeSummaryStatValue, { color: '#059669' }]}>
-                                    {requestForm.delivery_fee ? `GHS ${parseFloat(requestForm.delivery_fee).toFixed(2)}` : '—'}
-                                </Text>
-                            </View>
                         </View>
                     </View>
+                    <Text style={styles.paymentNote}>Payment is arranged directly with your collector.</Text>
 
                     <Text style={styles.loadSizeLabel}>LOAD SIZE</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
@@ -2211,6 +2203,7 @@ const styles = StyleSheet.create({
     routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
     routeSummaryStatValue: { fontSize: 15, color: '#111', fontWeight: '700' },
     loadSizeLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginBottom: 10 },
+    paymentNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginBottom: 16, marginTop: -6 },
     vehicleScroll: { gap: 15, paddingBottom: 20 },
     vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
     vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
