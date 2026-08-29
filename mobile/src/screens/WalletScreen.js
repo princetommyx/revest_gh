@@ -67,7 +67,7 @@ export default function WalletScreen() {
 
                 {/* Balance Links */}
                 <View style={styles.linksContainer}>
-                    <TouchableOpacity style={styles.linkRow}>
+                    <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('WhatIsRevestaBalance')}>
                         <View style={styles.linkLeft}>
                             <HelpCircle size={20} color="#666" style={styles.linkIcon} />
                             <Text style={styles.linkText}>What is Revesta balance?</Text>

@@ -30,6 +30,7 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import KYCVerificationScreen from '../screens/KYCVerificationScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import SavedLocationsScreen from '../screens/SavedLocationsScreen';
+import WhatIsRevestaBalanceScreen from '../screens/WhatIsRevestaBalanceScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import TrackingWidget from '../components/TrackingWidget';
@@ -529,6 +530,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false, presentation: 'modal' }} />
+                        <Stack.Screen name="WhatIsRevestaBalance" component={WhatIsRevestaBalanceScreen} options={{ headerShown: false, presentation: 'modal' }} />
                     </>
                 )}
             </Stack.Navigator>
