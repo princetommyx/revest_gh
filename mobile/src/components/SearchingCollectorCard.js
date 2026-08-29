@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Image } from 'react-native';
 import { Truck } from 'lucide-react-native';
+
+const VEHICLE_IMAGES = {
+    tricycle: require('../../assets/tricycle.jpg'),
+    pickup: require('../../assets/pickup.jpg'),
+};
 
 const STATUS_MESSAGES = [
     'Looking for nearby collectors...',
@@ -11,7 +16,7 @@ const STATUS_MESSAGES = [
 
 const BRAND_GREEN = '#059669';
 
-export default function SearchingCollectorCard({ onCancel }) {
+export default function SearchingCollectorCard({ onCancel, vehicleType }) {
     const ring1Scale = useRef(new Animated.Value(0.6)).current;
     const ring1Opacity = useRef(new Animated.Value(0.35)).current;
     const ring2Scale = useRef(new Animated.Value(0.6)).current;
@@ -62,7 +67,14 @@ export default function SearchingCollectorCard({ onCancel }) {
                 <Animated.View style={[styles.ring, { opacity: ring1Opacity, transform: [{ scale: ring1Scale }] }]} />
                 <Animated.View style={[styles.ring, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
                 <Animated.View style={[styles.iconCircle, { transform: [{ scale: breatheAnim }] }]}>
-                    <Truck size={22} color="#fff" />
+                    {vehicleType && VEHICLE_IMAGES[vehicleType.toLowerCase()] ? (
+                        <Image 
+                            source={VEHICLE_IMAGES[vehicleType.toLowerCase()]} 
+                            style={styles.vehicleImage} 
+                        />
+                    ) : (
+                        <Truck size={22} color="#fff" />
+                    )}
                 </Animated.View>
             </View>
 
@@ -114,6 +126,12 @@ const styles = StyleSheet.create({
         backgroundColor: BRAND_GREEN,
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
+    },
+    vehicleImage: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
     },
     title: {
         fontSize: 18,

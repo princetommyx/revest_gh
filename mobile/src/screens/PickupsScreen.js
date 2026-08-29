@@ -2068,7 +2068,10 @@ export default function PickupsScreen({ route }) {
             {activeSellerJob && uiState === 'IDLE' && !isSelectingLocation && (
                 <View style={{ position: 'absolute', bottom: 120, left: 16, right: 16, zIndex: 50 }}>
                     {activeSellerJob.status === 'PENDING' ? (
-                        <SearchingCollectorCard onCancel={() => openCancelModal(activeSellerJob.id)} />
+                        <SearchingCollectorCard 
+                            onCancel={() => openCancelModal(activeSellerJob.id)} 
+                            vehicleType={activeSellerJob.vehicle_type}
+                        />
                     ) : (
                         <CollectorBottomSheet
                             job={activeSellerJob}
