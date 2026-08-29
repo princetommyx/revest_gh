@@ -260,6 +260,181 @@ export default function HomeScreen({ navigation }) {
         );
     };
 
+    const renderCollectorCategory = (item) => {
+        if (!item.id) return null; // Skip 'All'
+        const IconComp = item.icon;
+        return (
+            <TouchableOpacity key={item.id} style={styles.collCatCard} onPress={() => navigation.navigate('Pickups', { category: item.id })}>
+                <View style={styles.collCatIconBox}>
+                    <IconComp size={24} color="#111" />
+                </View>
+                <Text style={styles.collCatText}>{item.name}</Text>
+            </TouchableOpacity>
+        );
+    };
+
+    const renderCollectorCard = (item, isRecommended = false) => {
+        const imageUri = item.image ? resolveImageUrl(item.image) : null;
+        const title = item.title;
+        const price = item.price;
+        const qty = item.quantity || '1 Bunch';
+        const loc = item.location?.address || 'Unknown';
+        const isFree = item.is_free;
+        const navTarget = 'ListingDetail';
+        const navParams = { listingId: item.id };
+        const materialObj = CATEGORIES.find(c => c.id.toLowerCase() === item.material_type?.toLowerCase()) || CATEGORIES[1];
+        const MaterialIcon = materialObj.icon;
+
+        return (
+            <TouchableOpacity key={item.id} style={styles.collCard} onPress={() => navigation.navigate(navTarget, navParams)} activeOpacity={0.9}>
+                <View style={styles.collCardImageBox}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.collCardImage} contentFit="cover" placeholder={MATERIAL_PLACEHOLDER} transition={IMAGE_TRANSITION_MS} />
+                    ) : (
+                        <View style={[styles.collCardImage, { backgroundColor: '#f0f0f0', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Package size={30} color="#ccc" />
+                        </View>
+                    )}
+                    <View style={styles.collCardHeart}>
+                        <Heart size={16} color="#111" />
+                    </View>
+                </View>
+                {!isRecommended && (
+                    <View style={styles.collCardDistanceBadge}>
+                        <Text style={styles.collCardDistanceText}>2.4 km away</Text>
+                    </View>
+                )}
+                <Text style={styles.collCardTitle} numberOfLines={1}>{title}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                    <MaterialIcon size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.collCardSubtitle}>{materialObj.name}</Text>
+                    <Text style={styles.collCardSubtitle}> • {qty}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <MapPin size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.collCardSubtitle} numberOfLines={1}>{loc}</Text>
+                </View>
+                <Text style={styles.collCardPrice}>{isFree ? 'Free' : `GH₵ ${Number(price).toFixed(2)}`}</Text>
+                
+                {!isRecommended && (
+                    <TouchableOpacity style={styles.collCardBtn} onPress={() => navigation.navigate(navTarget, navParams)}>
+                        <Text style={styles.collCardBtnText}>View pickup</Text>
+                    </TouchableOpacity>
+                )}
+            </TouchableOpacity>
+        );
+    };
+
+    const renderCollectorHome = () => {
+        // Just arbitrarily slicing for demo purposes, since we don't have separate endpoints yet
+        const nearYouList = dataList.slice(0, 5);
+        const recommendedList = dataList.slice(5, 10);
+
+        return (
+            <View style={styles.container}>
+                <StatusBar barStyle="dark-content" backgroundColor="#F8F9FA" />
+                <ScrollView 
+                    contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 20 }}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={<RefreshControl refreshing={loading || pickupsLoading} onRefresh={handleRefresh} />}
+                >
+                    <SafeAreaView edges={['top']} style={styles.header}>
+                        <View style={styles.headerTop}>
+                            <TouchableOpacity style={styles.locationDropdown} onPress={() => navigation.navigate('Profile')}>
+                                {user?.profile_picture ? (
+                                    <Image source={{ uri: resolveImageUrl(user.profile_picture) }} style={styles.headerAvatar} />
+                                ) : (
+                                    <View style={styles.headerAvatarPlaceholder}><User size={20} color="#111" /></View>
+                                )}
+                                <MapPin size={16} color="#111" style={{marginLeft: 4}} />
+                                <Text style={styles.locationTextHeader}>{user?.city || 'Accra, Ghana'}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Chat', { tab: 'Notifications' })}>
+                                <Bell size={20} color="#111" />
+                                <View style={styles.bellBadge} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {myActiveJob ? (
+                            <ActivePickupBanner job={myActiveJob} role={userRole} onPress={() => navigation.navigate('Pickups')} />
+                        ) : (
+                            <OnlineToggleCard location={location} />
+                        )}
+
+                        <View style={styles.searchRow}>
+                            <View style={styles.searchBar}>
+                                <Search size={20} color="#999" />
+                                <TextInput
+                                    style={styles.searchInput}
+                                    placeholder="Search waste materials..."
+                                    placeholderTextColor="#999"
+                                    value={search}
+                                    onChangeText={setSearch}
+                                />
+                            </View>
+                            <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
+                                <SlidersHorizontal size={20} color="#111" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Category</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                        </View>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, overflow: 'visible' }}>
+                            {CATEGORIES.map(renderCollectorCategory)}
+                        </ScrollView>
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Pickup requests near you</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('Pickups')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                        </View>
+                        {loading || pickupsLoading ? (
+                            <View style={{ flexDirection: 'row' }}>
+                                {[1, 2].map(i => <SkeletonCard key={i} />)}
+                            </View>
+                        ) : nearYouList.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, overflow: 'visible' }}>
+                                {nearYouList.map(item => renderCollectorCard(item, false))}
+                            </ScrollView>
+                        ) : (
+                            <Text style={{ color: '#999', marginBottom: 24 }}>No items found near you.</Text>
+                        )}
+
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Recommended for you</Text>
+                        </View>
+                        {loading || pickupsLoading ? (
+                            <View style={{ flexDirection: 'row' }}>
+                                {[1, 2].map(i => <SkeletonCard key={i} />)}
+                            </View>
+                        ) : recommendedList.length > 0 ? (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10, overflow: 'visible' }}>
+                                {recommendedList.map(item => renderCollectorCard(item, true))}
+                            </ScrollView>
+                        ) : (
+                            <Text style={{ color: '#999', marginBottom: 10 }}>No recommendations found.</Text>
+                        )}
+
+                        <View style={styles.collBanner}>
+                            <View style={{ flex: 1, marginRight: 16 }}>
+                                <Text style={styles.collBannerTitle}>Let's keep Accra clean</Text>
+                                <TouchableOpacity style={styles.collBannerBtn}>
+                                    <Text style={styles.collBannerBtnText}>Learn more →</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <Image 
+                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
+                                style={{ width: 80, height: 80, borderRadius: 40 }} 
+                                contentFit="cover"
+                            />
+                        </View>
+                    </SafeAreaView>
+                </ScrollView>
+            </View>
+        );
+    };
+
     const renderGridCard = ({ item }) => {
         const imageUri = item.image ? resolveImageUrl(item.image) : null;
         const title = item.title;
@@ -305,6 +480,10 @@ export default function HomeScreen({ navigation }) {
             </AnimatedButton>
         );
     };
+
+    if (isCollectorRole) {
+        return renderCollectorHome();
+    }
 
     return (
         <View style={styles.container}>
@@ -537,5 +716,26 @@ const styles = StyleSheet.create({
     gridSubtitle: { fontSize: 12, color: '#888' },
     gridAddBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
     
-    floatingFab: { position: 'absolute', bottom: 110, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 }
+    floatingFab: { position: 'absolute', bottom: 110, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8 },
+    
+    // Collector specific styles
+    collCatCard: { backgroundColor: '#F3F4F6', borderRadius: 16, padding: 12, alignItems: 'center', width: 80, marginRight: 12 },
+    collCatIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    collCatText: { fontSize: 12, fontWeight: '600', color: '#111' },
+    collCard: { width: 260, backgroundColor: '#fff', borderRadius: 20, padding: 12, marginRight: 16, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
+    collCardImageBox: { width: '100%', height: 140, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
+    collCardImage: { width: '100%', height: '100%' },
+    collCardHeart: { position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.9)', justifyContent: 'center', alignItems: 'center' },
+    collCardTitle: { fontSize: 16, fontWeight: 'bold', color: '#111', marginBottom: 6 },
+    collCardSubtitle: { fontSize: 13, color: '#666' },
+    collCardDistanceBadge: { alignSelf: 'flex-start', backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, marginBottom: 8 },
+    collCardDistanceText: { fontSize: 12, fontWeight: '600', color: '#111' },
+    collCardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+    collCardPrice: { fontSize: 16, fontWeight: '800', color: '#10B981' },
+    collCardBtn: { backgroundColor: '#111', borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
+    collCardBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+    collBanner: { backgroundColor: '#E8F5E9', borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 30 },
+    collBannerTitle: { fontSize: 18, fontWeight: '800', color: '#10B981', marginBottom: 8 },
+    collBannerBtn: { backgroundColor: '#10B981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, alignSelf: 'flex-start' },
+    collBannerBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 13 }
 });

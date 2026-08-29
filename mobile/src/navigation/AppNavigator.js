@@ -4,25 +4,10 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, MessageSquare, Wallet, CarFront, User } from 'lucide-react-native';
+import { House, MessageSquare, Wallet, CarFront, User, Search } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-
-const MarketIcon = ({ size, color }) => {
-    const isFocused = color === '#111111';
-    return (
-        <Image 
-            source={require('../../assets/market-icon.jpg')} 
-            style={{ 
-                width: size + 4, 
-                height: size + 4, 
-                opacity: isFocused ? 1 : 0.5 
-            }} 
-            resizeMode="contain" 
-        />
-    );
-};
 
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -61,7 +46,7 @@ const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
     Home: House,
     Pickups: CarFront,
-    Marketplace: MarketIcon,
+    Discover: Search,
     Chat: MessageSquare,
     Wallet: Wallet,
     // Fallback for the avatar tab when the user hasn't set a photo.
@@ -113,7 +98,7 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
                             style={[navStyles.avatar, isFocused && navStyles.avatarActive]}
                         />
                     ) : IconComp ? (
-                        <IconComp size={22} color={color} strokeWidth={isFocused ? 2.6 : 2} />
+                        <IconComp size={22} color={color} strokeWidth={isFocused ? 2.6 : 2} fill={isFocused && IconComp === House ? color : 'transparent'} />
                     ) : null}
 
                     {!!badge && (
@@ -318,13 +303,9 @@ function MainTabs() {
 
                 {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
                     <Tab.Screen
-                        name="Marketplace"
+                        name="Discover"
                         component={MarketplaceScreen}
-                        // Without this the label falls back to the route name.
-                        // "Marketplace" is far wider than a fifth of the bar, so
-                        // it wrapped onto two lines and collided with the tab
-                        // above it. Route name stays "Marketplace" for navigation.
-                        options={{ tabBarLabel: 'Market' }}
+                        options={{ tabBarLabel: 'Discover' }}
                     />
                 )}
 
