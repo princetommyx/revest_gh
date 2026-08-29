@@ -1479,42 +1479,42 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dragHandle} />
                     </View>
                     <View style={styles.locationInputBox}>
-                        <Text style={styles.locationInputLabel}>PICKUP LOCATION</Text>
-                        <TouchableOpacity style={styles.locationInputRow} onPress={() => { setSelectionMode('PICKUP'); setShowSearchModal(true); }}>
-                            <View style={styles.locationInputIconBox}>
-                                <View style={styles.dotIndicatorPickup} />
+                        {/* Bolt/Yango-style route picker: one connected line running
+                            through both stops instead of two separate labeled form
+                            fields - the dot color and position on the line say
+                            "pickup" or "destination" on their own. */}
+                        <View style={styles.routeInputWrap}>
+                            <View style={styles.routeIconCol}>
+                                <View style={styles.routeDotPickupLg} />
+                                <View style={styles.routeConnectorLine} />
+                                <View style={styles.routeDotDestLg} />
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.locationInputText} numberOfLines={1}>
-                                    {customAddress || 'Current Location'}
-                                </Text>
-                                <Text style={styles.locationInputSubtext}>Current pickup location</Text>
-                            </View>
-                            <ChevronRight size={20} color="#9CA3AF" />
-                        </TouchableOpacity>
+                            <View style={styles.routeTextCol}>
+                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('PICKUP'); setShowSearchModal(true); }}>
+                                    <Text style={styles.routeFieldText} numberOfLines={1}>
+                                        {customAddress || 'Current Location'}
+                                    </Text>
+                                    <ChevronRight size={18} color="#C7CBD1" />
+                                </TouchableOpacity>
 
-                        <View style={styles.dividerLine} />
+                                <View style={styles.routeFieldDivider} />
 
-                        <Text style={[styles.locationInputLabel, { marginTop: 4 }]}>DESTINATION</Text>
-                        <TouchableOpacity style={styles.destinationInputRow} onPress={() => { setSelectionMode('DESTINATION'); setShowSearchModal(true); }}>
-                            <View style={styles.locationInputIconBox}>
-                                <View style={styles.dotIndicatorDest} />
+                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('DESTINATION'); setShowSearchModal(true); }}>
+                                    <Text
+                                        style={[styles.routeFieldText, !destinationAddress && styles.routeFieldPlaceholder]}
+                                        numberOfLines={1}
+                                    >
+                                        {destinationAddress || 'Where should your waste be taken?'}
+                                    </Text>
+                                    {destinationAddress ? (
+                                        <X size={18} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
+                                    ) : (
+                                        <ChevronRight size={18} color="#C7CBD1" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.destinationInputText} numberOfLines={1}>
-                                    {destinationAddress || 'Choose destination'}
-                                </Text>
-                                <Text style={styles.destinationInputSubtext}>
-                                    {destinationAddress ? 'Waste dropoff location' : 'Where should your waste be taken?'}
-                                </Text>
-                            </View>
-                            {destinationAddress ? (
-                                <X size={20} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
-                            ) : (
-                                <ChevronRight size={20} color="#9CA3AF" />
-                            )}
-                        </TouchableOpacity>
-                        
+                        </View>
+
                         {(useCurrentLocation ? !!location : !!customAddress) && !!destinationAddress && (
                             <AnimatedButton
                                 style={styles.continueBtnUbride}
@@ -2219,18 +2219,23 @@ const styles = StyleSheet.create({
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    locationInputLabel: { fontSize: 11, fontWeight: '700', color: '#6B7280', marginBottom: 8, letterSpacing: 0.5 },
-    locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-    locationInputIconBox: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    dotIndicatorPickup: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111' },
-    dotIndicatorDest: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669' },
-    locationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
-    locationInputSubtext: { fontSize: 13, color: '#6B7280' },
-    dividerLine: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12, marginLeft: 36 },
-    destinationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, backgroundColor: '#F9FAFB', paddingHorizontal: 16, borderRadius: 12 },
-    destinationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
-    destinationInputSubtext: { fontSize: 13, color: '#6B7280' },
-    continueBtnUbride: { marginTop: 24, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+    // Pickup = green (matches the brand + the "you are here" dot everywhere
+    // else in the app), destination = black square, connected by a single
+    // line - the classic Bolt/Uber "this is your trip" visual instead of two
+    // separately labeled form fields.
+    dotIndicatorPickup: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    dotIndicatorDest: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
+    routeInputWrap: { flexDirection: 'row' },
+    routeIconCol: { width: 20, alignItems: 'center', paddingVertical: 6 },
+    routeDotPickupLg: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    routeDotDestLg: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
+    routeConnectorLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4, borderRadius: 1 },
+    routeTextCol: { flex: 1, marginLeft: 12 },
+    routeFieldRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 8 },
+    routeFieldText: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111' },
+    routeFieldPlaceholder: { color: '#9CA3AF', fontWeight: '500' },
+    routeFieldDivider: { height: 1, backgroundColor: '#F3F4F6' },
+    continueBtnUbride: { marginTop: 20, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
     continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
