@@ -7,7 +7,6 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-import {
     Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
