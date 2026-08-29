@@ -112,24 +112,24 @@ export default function ChatDetailScreen({ route, navigation }) {
                 </View>
             </SafeAreaView>
 
-            {loading ? (
-                <View style={styles.center}><ActivityIndicator size="small" color="#111" /></View>
-            ) : (
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={renderMessage}
-                    keyExtractor={item => item.id.toString()}
-                    contentContainerStyle={styles.messageList}
-                    onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
-                    showsVerticalScrollIndicator={false}
-                />
-            )}
-
             <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                style={{ flex: 1 }}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
+                {loading ? (
+                    <View style={styles.center}><ActivityIndicator size="small" color="#111" /></View>
+                ) : (
+                    <FlatList
+                        ref={flatListRef}
+                        data={messages}
+                        renderItem={renderMessage}
+                        keyExtractor={item => item.id.toString()}
+                        contentContainerStyle={styles.messageList}
+                        onContentSizeChange={() => flatListRef.current?.scrollToEnd()}
+                        showsVerticalScrollIndicator={false}
+                    />
+                )}
+
                 <View style={[styles.inputContainer, { paddingBottom: Platform.OS === 'ios' ? insets.bottom : 20 }]}>
                     <View style={styles.inputWrapper}>
                         <TextInput
