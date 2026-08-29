@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, Plus, MapPin, Truck,
+    Search, Plus, MapPin, ArrowRight, Truck,
     Package, ShoppingCart, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
     LayoutGrid, Droplet, Cog, FileText, Wine, Cpu, CupSoda, Anvil, Newspaper
 } from 'lucide-react-native';
@@ -25,7 +25,6 @@ import ActivePickupBanner from '../components/ActivePickupBanner';
 import OnlineToggleCard from '../components/OnlineToggleCard';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
-import ServiceTiles from '../components/ServiceTiles';
 
 const { width } = Dimensions.get('window');
 
@@ -338,21 +337,30 @@ export default function HomeScreen({ navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {myActiveJob && (
+                        {myActiveJob ? (
                             <ActivePickupBanner
                                 job={myActiveJob}
                                 role={userRole}
                                 onPress={() => navigation.navigate('Pickups')}
                             />
+                        ) : isCollectorRole ? (
+                            <OnlineToggleCard location={location} />
+                        ) : (
+                            <AnimatedButton
+                                style={styles.requestPickupCard}
+                                haptic
+                                onPress={() => navigation.navigate('Pickups')}
+                            >
+                                <View style={styles.requestPickupIconBox}>
+                                    <Truck size={22} color="#fff" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.requestPickupTitle}>Request a Pickup</Text>
+                                    <Text style={styles.requestPickupSubtitle}>Got waste to clear? Get a collector in minutes.</Text>
+                                </View>
+                                <ArrowRight size={20} color="#fff" />
+                            </AnimatedButton>
                         )}
-
-                        {isCollectorRole && !myActiveJob && <OnlineToggleCard location={location} />}
-
-                        {/* The first decision is which service you want, so it
-                            leads the screen. Selling recyclables (Track B) was
-                            previously only reachable by finding your way into
-                            Create Listing. */}
-                        {!myActiveJob && <ServiceTiles userRole={userRole} navigation={navigation} />}
 
                         {!myActiveJob && !isCollectorRole && recentLocations.length > 0 && (
                             <ScrollView
@@ -439,7 +447,26 @@ const styles = StyleSheet.create({
     
     bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6' },
     bellBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-    
+
+    requestPickupCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#111',
+        borderRadius: 20,
+        padding: 16,
+        marginBottom: 16,
+    },
+    requestPickupIconBox: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 14,
+    },
+    requestPickupTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
+    requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
 
     recentChipsRow: { gap: 8, paddingBottom: 16 },
     recentChip: {
