@@ -24,6 +24,7 @@ import {
     User, LocateFixed
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
@@ -1494,6 +1495,9 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dragHandle} />
                     </View>
                     <View style={styles.locationInputBox}>
+                        <Text style={styles.sheetTitle}>Request a pickup</Text>
+                        <Text style={styles.sheetSubtitle}>We'll match you with a nearby collector</Text>
+
                         {/* Just the pickup point - there's no destination for the
                             disposer to set here. Where the waste physically ends up
                             (landfill, transfer station, recycling facility) is the
@@ -1502,16 +1506,21 @@ export default function PickupsScreen({ route }) {
                             asking the disposer for it was a Bolt/Uber pattern that
                             didn't actually fit a "come collect my waste" service. */}
                         <TouchableOpacity style={styles.pickupFieldRow} onPress={() => { setShowSearchModal(true); }}>
-                            <View style={styles.routeDotPickupLg} />
-                            <Text style={styles.routeFieldText} numberOfLines={1}>
-                                {customAddress || 'Current Location'}
-                            </Text>
+                            <View style={styles.pickupIconBox}>
+                                <MapPin size={18} color="#059669" />
+                            </View>
+                            <View style={styles.pickupFieldTextCol}>
+                                <Text style={styles.pickupFieldLabel}>Pickup from</Text>
+                                <Text style={styles.pickupFieldValue} numberOfLines={1}>
+                                    {customAddress || 'Current Location'}
+                                </Text>
+                            </View>
                             <ChevronRight size={18} color="#C7CBD1" />
                         </TouchableOpacity>
 
                         {(useCurrentLocation ? !!location : !!customAddress) && (
                             <AnimatedButton
-                                style={styles.continueBtnUbride}
+                                style={styles.continueBtnWrap}
                                 haptic
                                 disabled={requestLoading}
                                 onPress={async () => {
@@ -1521,11 +1530,23 @@ export default function PickupsScreen({ route }) {
                                     setUiState('VEHICLE_SELECT');
                                 }}
                             >
-                                {requestLoading ? (
-                                    <ActivityIndicator color="#fff" />
-                                ) : (
-                                    <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
-                                )}
+                                <LinearGradient
+                                    colors={['#1F2937', '#0B0B0B']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 1 }}
+                                    style={styles.continueBtnUbride}
+                                >
+                                    {requestLoading ? (
+                                        <ActivityIndicator color="#fff" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
+                                            <View style={styles.continueBtnIconBubble}>
+                                                <ArrowRight size={16} color="#111" />
+                                            </View>
+                                        </>
+                                    )}
+                                </LinearGradient>
                             </AnimatedButton>
                         )}
                     </View>
@@ -2211,21 +2232,38 @@ const styles = StyleSheet.create({
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    // Green pickup dot, matching the "you are here" pin used on the map and
-    // the tracking cards elsewhere in the app.
-    routeDotPickupLg: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    sheetTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 2 },
+    sheetSubtitle: { fontSize: 13, color: '#8B93A1', marginBottom: 16 },
     pickupFieldRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
         backgroundColor: '#F9FAFB',
-        borderRadius: 14,
-        paddingHorizontal: 14,
-        paddingVertical: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#EFF1F4',
+        paddingHorizontal: 12,
+        paddingVertical: 12,
     },
-    routeFieldText: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111' },
-    continueBtnUbride: { marginTop: 16, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
-    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    // Tinted icon box, matching the card-with-tinted-icon pattern used across
+    // the rest of the app (nav rows, job cards) instead of a bare dot.
+    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
+    pickupFieldTextCol: { flex: 1 },
+    pickupFieldLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
+    pickupFieldValue: { fontSize: 15, fontWeight: '700', color: '#111' },
+    continueBtnWrap: {
+        marginTop: 16,
+        borderRadius: 16,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        elevation: 6,
+    },
+    continueBtnUbride: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
+    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+    continueBtnIconBubble: { position: 'absolute', right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
     destinationPinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
