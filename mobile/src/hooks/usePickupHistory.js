@@ -19,21 +19,12 @@ export const usePickupHistory = (status = null) => {
         else setIsLoading(true);
 
         try {
-            const params = {};
-
-            // Filter by user role
-            if (userRole === 'SELLER') {
-                params.requester = user.id;
-            } else if (userRole === 'COLLECTOR') {
-                params.collector = user.id;
-            }
-
-            // Filter by status if provided
-            if (status && status !== 'ALL') {
-                params.status = status;
-            }
-
-            const response = await logisticsApi.getPickupRequests(params);
+            // Was reading the live job-board list endpoint with `requester` /
+            // `collector` params that its filterset doesn't declare, so they
+            // were silently ignored - which meant collectors saw other
+            // people's nearby PENDING requests as their history and never
+            // their own completed jobs. /history/ scopes by role server-side.
+            const response = await logisticsApi.getPickupHistory(status);
             setData(Array.isArray(response) ? response : (response.results || []));
             setIsError(false); // Reset error on successful fetch
         } catch (error) {

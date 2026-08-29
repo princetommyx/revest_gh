@@ -16,6 +16,12 @@ export const logisticsApi = {
         return response.data;
     },
 
+    getPickupHistory: async (status) => {
+        const params = status && status !== 'ALL' ? { status } : {};
+        const response = await apiClient.get('logistics/pickups/history/', { params });
+        return response.data;
+    },
+
     getPickupDetails: async (id) => {
         const response = await apiClient.get(`logistics/pickups/${id}/`);
         return response.data;

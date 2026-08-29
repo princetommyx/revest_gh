@@ -14,6 +14,7 @@ import { marketApi } from '../api/market';
 import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 import * as Haptics from 'expo-haptics';
+import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 
 const { width } = Dimensions.get('window');
 
@@ -125,6 +126,8 @@ export default function MarketplaceScreen({ navigation, route }) {
                         style={styles.image}
                         contentFit="cover"
                         cachePolicy="memory-disk"
+                        placeholder={MATERIAL_PLACEHOLDER}
+                        transition={IMAGE_TRANSITION_MS}
                     />
                 ) : (
                     <View style={styles.placeholderImg}>

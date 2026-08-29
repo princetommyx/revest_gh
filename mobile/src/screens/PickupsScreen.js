@@ -14,7 +14,7 @@ import { startCollectorLocationTracking, stopCollectorLocationTracking } from '.
 import { getOnlinePreference } from '../utils/collectorPresence';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
@@ -266,6 +266,11 @@ export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
 
+    // Recyclers run pickups exactly like collectors do, but most of this screen
+    // only ever checked for COLLECTOR - which left recyclers with the disposer's
+    // map behaviour and a reversed route label on their own job.
+    const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
     // Check for a recent-location chip tapped on Home
@@ -283,6 +288,11 @@ export default function PickupsScreen({ route }) {
     const { data: jobs = [], isLoading: jobsLoading, error: apiError, isError, refetch } = usePickups(location);
 
     const mapRef = useRef(null);
+    // `location` doubles as the chosen pickup point and is overwritten when the
+    // disposer picks a spot on the map or from search, so keep the last real
+    // device fix separately - otherwise "use my current location" has nothing
+    // to go back to.
+    const deviceLocationRef = useRef(null);
     const locationRef = useRef(location);
     useEffect(() => { locationRef.current = location; }, [location]);
 
@@ -290,8 +300,11 @@ export default function PickupsScreen({ route }) {
     // Takes priority over the polled `current_lat`/`current_lon` snapshot.
     const [liveCollectorLocations, setLiveCollectorLocations] = useState({});
 
-    const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestLoading, setRequestLoading] = useState(false);
+    // Only opened for the pre-filled listing flow now (see the pickupData
+    // effect below) - direct booking submits from the vehicle-select sheet
+    // instead of popping a second confirm step that re-asks what was just set.
+    const [showRequestModal, setShowRequestModal] = useState(false);
     const [requestForm, setRequestForm] = useState({
         material_type: pickupData?.material_type || 'Plastics',
         quantity_estimate: pickupData?.quantity_estimate || '1-2 Bags',
@@ -369,7 +382,7 @@ export default function PickupsScreen({ route }) {
         return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     };
 
-    const loading = jobsLoading && (userRole !== 'COLLECTOR' || !!location);
+    const loading = jobsLoading && (!isCollectorRole || !!location);
 
     useEffect(() => {
         (async () => {
@@ -377,6 +390,7 @@ export default function PickupsScreen({ route }) {
             if (status === 'granted') {
                 setHasLocationPermission(true);
                 let loc = await Location.getCurrentPositionAsync({});
+                deviceLocationRef.current = loc.coords;
                 setLocation(loc.coords);
                 setMapRegion({
                     latitude: loc.coords.latitude,
@@ -395,6 +409,7 @@ export default function PickupsScreen({ route }) {
         if (status === 'granted') {
             setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
+            deviceLocationRef.current = loc.coords;
             setLocation(loc.coords);
             setMapRegion({
                 latitude: loc.coords.latitude,
@@ -480,6 +495,7 @@ export default function PickupsScreen({ route }) {
     const startMapSelection = (mode = 'PICKUP') => {
         setSelectionMode(mode);
         setShowRequestModal(false);
+        setShowSearchModal(false);
         setIsSelectingLocation(true);
 
         // Stop tracking if active
@@ -515,7 +531,7 @@ export default function PickupsScreen({ route }) {
                 break;
             }
             case 'new_request':
-                if (userRole === 'COLLECTOR') {
+                if (isCollectorRole) {
                     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                     Toast.show({ type: 'info', text1: 'New Pickup Nearby', text2: msg.material_type ? `${msg.material_type} pickup available` : 'A new request just came in.' });
                     refetch();
@@ -542,22 +558,34 @@ export default function PickupsScreen({ route }) {
 
     useLogisticsSocket(handleSocketMessage);
 
-    // Slow fallback poll - covers the rare case of a dropped/reconnecting socket.
+    // Slow fallback poll - covers a dropped/reconnecting socket, or a missed
+    // push notification. This used to be gated to non-collectors and to rely
+    // on `refetch` for its dependency array; `refetch` from usePickups was a
+    // brand new function every render, so this interval was cleared and
+    // recreated on nearly every render and in practice almost never survived
+    // long enough to fire. usePickups now returns a stable `refetch`, and
+    // this runs for every role - collectors/recyclers previously had no
+    // fallback at all and depended entirely on the 'new_request' push
+    // arriving while this screen happened to be mounted.
     useEffect(() => {
-        let interval;
-        if (userRole !== 'COLLECTOR') {
-            interval = setInterval(() => {
-                refetch();
-            }, 25000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [userRole, refetch]);
+        const interval = setInterval(() => {
+            refetch();
+        }, 25000);
+        return () => clearInterval(interval);
+    }, [refetch]);
+
+    // Catch up immediately when this tab regains focus, rather than waiting
+    // on the next poll tick or a push that may have been missed while the
+    // screen was in the background.
+    useFocusEffect(
+        useCallback(() => {
+            refetch();
+        }, [refetch])
+    );
 
     // Disposer camera following - prefers the live websocket position over the polled snapshot
     useEffect(() => {
-        if (userRole === 'COLLECTOR' || !navigatingJob || !mapRef.current) return;
+        if (isCollectorRole || !navigatingJob || !mapRef.current) return;
 
         const live = liveCollectorLocations[navigatingJob.id];
         const activeLiveJob = jobs.find(j => j.id === navigatingJob.id);
@@ -573,11 +601,14 @@ export default function PickupsScreen({ route }) {
         }
     }, [jobs, navigatingJob, userRole, liveCollectorLocations]);
 
-    // Collector: keep background GPS streaming to the server for as long as
-    // there's an active job, independent of which screen is mounted or
-    // whether the app is foregrounded. Driven by job status, not navigation UI.
+    // Collector/recycler: keep background GPS streaming to the server for as
+    // long as there's an active job, independent of which screen is mounted
+    // or whether the app is foregrounded. Driven by job status, not
+    // navigation UI. Was gated to 'COLLECTOR' only, so a recycler's accepted
+    // job never started background tracking at all - the disposer would see
+    // no live position for the entire job.
     useEffect(() => {
-        if (userRole !== 'COLLECTOR') return;
+        if (!isCollectorRole) return;
 
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         if (activeJob) {
@@ -585,14 +616,17 @@ export default function PickupsScreen({ route }) {
         } else {
             stopCollectorLocationTracking();
         }
-    }, [userRole, jobs]);
+    }, [isCollectorRole, jobs]);
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
     // Respects the online/offline toggle on Home - this just keeps the
     // preference re-affirmed with a fresh position while the preference is on.
+    // Was gated to 'COLLECTOR' only, so a RECYCLER's location/online status
+    // never reached the backend at all - they'd never be found "nearby" for
+    // a new request no matter how the matching query itself was scoped.
     useEffect(() => {
-        if (userRole !== 'COLLECTOR') return;
+        if (!isCollectorRole) return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
         const pushPresence = async (wantsOnline) => {
@@ -615,12 +649,13 @@ export default function PickupsScreen({ route }) {
             appStateSub.remove();
             pushPresence(false);
         };
-    }, [userRole]);
+    }, [isCollectorRole]);
 
-    // Collector camera following while actively navigating (foreground UX only -
-    // location reporting to the server is handled by the background task above).
+    // Collector/recycler camera following while actively navigating (foreground
+    // UX only - location reporting to the server is handled by the background
+    // task above).
     useEffect(() => {
-        if (userRole !== 'COLLECTOR' || !navigatingJob) {
+        if (!isCollectorRole || !navigatingJob) {
             if (locationSubscription) {
                 locationSubscription.remove();
                 setLocationSubscription(null);
@@ -661,7 +696,7 @@ export default function PickupsScreen({ route }) {
             cancelled = true;
             if (sub) sub.remove();
         };
-    }, [userRole, navigatingJob]);
+    }, [isCollectorRole, navigatingJob]);
 
     const confirmMapSelection = async () => {
         setIsSelectingLocation(false);
@@ -780,14 +815,45 @@ export default function PickupsScreen({ route }) {
 
         setRequestLoading(true);
         try {
+            const isListingFlow = !!requestForm.listing_id;
+
+            // Booking with "Current Location" (no typed/picked address) never
+            // set pickup_address at all, so every such job showed up as
+            // "Disposer • Unknown Location" on the collector's card - not a
+            // display bug, the address genuinely was never captured. Resolve
+            // it from the GPS fix now so there's always a real address on
+            // the job, the same way map-pin selection already does.
+            const resolvedPickupAddress = customAddress.trim()
+                || await reverseGeocode(location.latitude, location.longitude);
+            // The backend trusts these prices as sent (create serializer accepts
+            // waste_price/delivery_fee directly), but this screen was hardcoding
+            // all three to '0.00' regardless of what fetchEstimate()/the listing
+            // computed - so every request silently locked zero escrow no matter
+            // what fee the disposer was shown. track_type and payment_method were
+            // omitted too, so every request landed as Track A / CASH on the
+            // backend, skipping the digital escrow lock entirely.
+            // Track A (direct booking, no listing) has no material value - only
+            // the distance-based delivery_fee was ever shown to the user, so
+            // waste_price stays 0 there; the listing flow's waste_price is the
+            // seller's real listing price.
             const requestData = {
                 material_type: requestForm.material_type || 'General Waste',
-                quantity_estimate: requestForm.quantity_estimate || 'Standard',
-                estimated_price: '0.00',
-                waste_price: '0.00',
-                delivery_fee: '0.00',
+                quantity_estimate: isListingFlow
+                    ? (requestForm.quantity_estimate || 'Standard')
+                    : (`${VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Standard'} Load`),
+                track_type: requestForm.track_type,
+                payment_method: requestForm.payment_method,
+                estimated_price: requestForm.delivery_fee || '0.00',
+                waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
+                delivery_fee: requestForm.delivery_fee || '0.00',
+                // Was computed by fetchEstimate() and shown on the route
+                // summary card, but never actually sent - the trip's
+                // distance/duration were silently dropped on every request.
+                distance_km: requestForm.distance_km || null,
+                duration_min: requestForm.duration_min || null,
                 latitude: location.latitude,
                 longitude: location.longitude,
+                pickup_address: resolvedPickupAddress || null,
                 destination_address: destinationAddress,
                 destination_latitude: destinationLocation?.latitude,
                 destination_longitude: destinationLocation?.longitude
@@ -797,8 +863,10 @@ export default function PickupsScreen({ route }) {
                 requestData.listing = parseInt(requestForm.listing_id);
             }
 
+            // Only a manually chosen address belongs in "recent locations" -
+            // a GPS reverse-geocode isn't something the disposer picked and
+            // would just be noise in that list.
             if (customAddress.trim()) {
-                requestData.pickup_address = customAddress.trim();
                 addRecentLocation({
                     address: customAddress.trim(),
                     latitude: location?.latitude,
@@ -895,15 +963,23 @@ export default function PickupsScreen({ route }) {
     }, [searchQuery, location]);
 
     const handleSelectSearchedLocation = (place) => {
-        setCustomAddress(place.name);
-        setLocation({ latitude: place.lat, longitude: place.lon });
-        setUseCurrentLocation(false);
+        // Was hardcoded to always write into the pickup fields, which was
+        // harmless only because nothing opened this modal for a destination
+        // pick. Route by selectionMode so it can serve both.
+        if (selectionMode === 'DESTINATION') {
+            setDestinationAddress(place.name);
+            setDestinationLocation({ latitude: place.lat, longitude: place.lon });
+        } else {
+            setCustomAddress(place.name);
+            setLocation({ latitude: place.lat, longitude: place.lon });
+            setUseCurrentLocation(false);
+        }
 
         addRecentLocation({ address: place.name, latitude: place.lat, longitude: place.lon });
 
         setSearchQuery('');
         setShowSearchModal(false);
-        
+
         // Optional: center map on new location
         if (mapRef.current) {
             mapRef.current.animateCamera({
@@ -1090,8 +1166,30 @@ export default function PickupsScreen({ route }) {
 
         const isNavigatingThis = navigatingJob?.id === job.id;
         const live = liveCollectorLocations[job.id];
-        const currentLat = live?.lat ?? job.current_lat ?? job.latitude;
-        const currentLon = live?.lon ?? job.current_lon ?? job.longitude;
+
+        // Where the route should start from.
+        //
+        // This used to be `live?.lat ?? job.current_lat ?? job.latitude`, and
+        // that last fallback is the *pickup* coordinate - i.e. the route's own
+        // destination. Before the collector had broadcast a position (or if
+        // job.current_lat was simply null) origin and destination were the same
+        // point, so Directions returned a zero-length route and no line was
+        // ever drawn. That's why collectors couldn't follow the map.
+        //
+        // A collector already knows where they are without a server round-trip,
+        // so use the device's own fix for them. Disposers can only rely on what
+        // the collector has broadcast - and if that isn't known yet, we draw no
+        // route rather than a degenerate one.
+        const myLat = location?.coords?.latitude ?? location?.latitude;
+        const myLon = location?.coords?.longitude ?? location?.longitude;
+
+        const originLat = isCollectorRole ? myLat : (live?.lat ?? job.current_lat);
+        const originLon = isCollectorRole ? myLon : (live?.lon ?? job.current_lon);
+
+        // Kept separate: the truck marker shown to the disposer still tracks the
+        // collector's broadcast position, not the viewer's own.
+        const collectorLat = live?.lat ?? job.current_lat;
+        const collectorLon = live?.lon ?? job.current_lon;
 
         if (isNavigatingThis || job.status === 'PENDING') {
             markers.push(
@@ -1132,15 +1230,16 @@ export default function PickupsScreen({ route }) {
         }
 
         if (job.status === 'ACCEPTED' || job.status === 'ARRIVED') {
-            const currentL = parseFloat(currentLat);
-            const currentLo = parseFloat(currentLon);
-            
-            if (!isNaN(currentL) && !isNaN(currentLo)) {
-                if (userRole === 'SELLER') {
-                    markers.push(
+            const cLat = parseFloat(collectorLat);
+            const cLon = parseFloat(collectorLon);
+
+            // Show the collector's truck to the disposer, only once we actually
+            // know where they are.
+            if (!isCollectorRole && !isNaN(cLat) && !isNaN(cLon)) {
+                markers.push(
                         <ActiveMarker
                             key={`collector-${job.id}`}
-                            coordinate={{ latitude: currentL, longitude: currentLo }}
+                            coordinate={{ latitude: cLat, longitude: cLon }}
                             title="Collector"
                             description={job.collector_name || "En route"}
                         >
@@ -1159,13 +1258,19 @@ export default function PickupsScreen({ route }) {
                                 </View>
                             )}
                         </ActiveMarker>
-                    );
-                }
+                );
+            }
 
+            const oLat = parseFloat(originLat);
+            const oLon = parseFloat(originLon);
+            // No origin means we genuinely don't know where the collector is;
+            // drawing a route from the destination to itself is what produced
+            // the blank map.
+            if (!isNaN(oLat) && !isNaN(oLon)) {
                 routes.push(
                     <MapViewDirections
                         key={`route-${job.id}`}
-                        origin={{ latitude: currentL, longitude: currentLo }}
+                        origin={{ latitude: oLat, longitude: oLon }}
                         destination={{ latitude: lat, longitude: lon }}
                         apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
@@ -1197,12 +1302,15 @@ export default function PickupsScreen({ route }) {
         return [...markers, ...routes];
     };
 
+    // `location` matters now that a collector's route starts from their own
+    // device fix - without it the route would be computed once and never
+    // follow them as they drive.
     const memoizedMarkers = useMemo(() => {
         return jobs.flatMap(renderJobMarker);
-    }, [jobs, navigatingJob, routeEta, liveCollectorLocations]);
+    }, [jobs, navigatingJob, routeEta, liveCollectorLocations, location, isCollectorRole]);
 
     const sortedJobs = useMemo(() => {
-        if (userRole !== 'COLLECTOR') return jobs;
+        if (!isCollectorRole) return jobs;
         const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         const pendingJobs = jobs.filter(j => j.status === 'PENDING');
         return [...activeJobs, ...pendingJobs];
@@ -1290,7 +1398,7 @@ export default function PickupsScreen({ route }) {
                 } : null}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
-                followsUserLocation={!!navigatingJob && userRole === 'COLLECTOR'}
+                followsUserLocation={!!navigatingJob && isCollectorRole}
                 userInterfaceStyle="dark"
                 customMapStyle={darkMapStyle}
             >
@@ -1351,11 +1459,11 @@ export default function PickupsScreen({ route }) {
                             }}
                         >
                             <Text style={styles.navAddressText} numberOfLines={1}>
-                                {userRole === 'COLLECTOR' ? 'My Location' : 'Collector'}
+                                {isCollectorRole ? 'My Location' : 'Collector'}
                             </Text>
                             <ArrowRight size={16} color="#666" style={{ marginHorizontal: 8 }} />
                             <Text style={styles.navAddressText} numberOfLines={1}>
-                                {userRole === 'COLLECTOR' ? navigatingJob.pickup_address : 'My Location'}
+                                {isCollectorRole ? (navigatingJob.pickup_address || 'Pickup point') : 'My Location'}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navAddBtn}>
@@ -1371,42 +1479,42 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dragHandle} />
                     </View>
                     <View style={styles.locationInputBox}>
-                        <Text style={styles.locationInputLabel}>PICKUP LOCATION</Text>
-                        <TouchableOpacity style={styles.locationInputRow} onPress={() => startMapSelection('PICKUP')}>
-                            <View style={styles.locationInputIconBox}>
-                                <View style={styles.dotIndicatorPickup} />
+                        {/* Bolt/Yango-style route picker: one connected line running
+                            through both stops instead of two separate labeled form
+                            fields - the dot color and position on the line say
+                            "pickup" or "destination" on their own. */}
+                        <View style={styles.routeInputWrap}>
+                            <View style={styles.routeIconCol}>
+                                <View style={styles.routeDotPickupLg} />
+                                <View style={styles.routeConnectorLine} />
+                                <View style={styles.routeDotDestLg} />
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.locationInputText} numberOfLines={1}>
-                                    {customAddress || 'Current Location'}
-                                </Text>
-                                <Text style={styles.locationInputSubtext}>Current pickup location</Text>
-                            </View>
-                            <ChevronRight size={20} color="#9CA3AF" />
-                        </TouchableOpacity>
+                            <View style={styles.routeTextCol}>
+                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('PICKUP'); setShowSearchModal(true); }}>
+                                    <Text style={styles.routeFieldText} numberOfLines={1}>
+                                        {customAddress || 'Current Location'}
+                                    </Text>
+                                    <ChevronRight size={18} color="#C7CBD1" />
+                                </TouchableOpacity>
 
-                        <View style={styles.dividerLine} />
+                                <View style={styles.routeFieldDivider} />
 
-                        <Text style={[styles.locationInputLabel, { marginTop: 4 }]}>DESTINATION</Text>
-                        <TouchableOpacity style={styles.destinationInputRow} onPress={() => startMapSelection('DESTINATION')}>
-                            <View style={styles.locationInputIconBox}>
-                                <View style={styles.dotIndicatorDest} />
+                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('DESTINATION'); setShowSearchModal(true); }}>
+                                    <Text
+                                        style={[styles.routeFieldText, !destinationAddress && styles.routeFieldPlaceholder]}
+                                        numberOfLines={1}
+                                    >
+                                        {destinationAddress || 'Where should your waste be taken?'}
+                                    </Text>
+                                    {destinationAddress ? (
+                                        <X size={18} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
+                                    ) : (
+                                        <ChevronRight size={18} color="#C7CBD1" />
+                                    )}
+                                </TouchableOpacity>
                             </View>
-                            <View style={{ flex: 1 }}>
-                                <Text style={styles.destinationInputText} numberOfLines={1}>
-                                    {destinationAddress || 'Choose destination'}
-                                </Text>
-                                <Text style={styles.destinationInputSubtext}>
-                                    {destinationAddress ? 'Waste dropoff location' : 'Where should your waste be taken?'}
-                                </Text>
-                            </View>
-                            {destinationAddress ? (
-                                <X size={20} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
-                            ) : (
-                                <ChevronRight size={20} color="#9CA3AF" />
-                            )}
-                        </TouchableOpacity>
-                        
+                        </View>
+
                         {(useCurrentLocation ? !!location : !!customAddress) && !!destinationAddress && (
                             <AnimatedButton
                                 style={styles.continueBtnUbride}
@@ -1501,13 +1609,18 @@ export default function PickupsScreen({ route }) {
                         })}
                     </ScrollView>
 
-                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={() => setShowRequestModal(true)} disabled={requestLoading}>
-                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideText}>Request Pickup</Text>}
+                    {/* The route summary card above already shows pickup, destination,
+                        distance, ETA and fee - that IS the confirmation. A second modal
+                        used to reopen here and ask "Current or Custom pickup location?"
+                        from scratch, contradicting the location just set on the previous
+                        sheet. Submit directly instead. */}
+                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
+                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request Pickup</Text>}
                     </AnimatedButton>
                 </View>
             )}
 
-            {!isSelectingLocation && (userRole === 'COLLECTOR' || userRole === 'RECYCLER') && sortedJobs.length > 0 && (
+            {!isSelectingLocation && isCollectorRole && sortedJobs.length > 0 && (
                 <View style={[styles.collectorBottomSheetUbride, { bottom: 0 }]}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={width} decelerationRate="fast" pagingEnabled>
                         {sortedJobs.map(item => (
@@ -1546,7 +1659,14 @@ export default function PickupsScreen({ route }) {
                 </View>
             )}
 
-            {/* Request Pickup Modal */}
+            {/* Confirm Listing Pickup Modal - only path left into this modal is the
+                pickupData effect (arriving from a marketplace listing). Everything
+                here is fixed by the listing: the pickup point is the seller's
+                address, not the requester's GPS, so there's no "Current/Custom"
+                choice to make - showing one, defaulting to "Current", was actively
+                misleading (it labelled the seller's pinned address as "your current
+                GPS coordinates"), and letting someone switch it to a searched
+                address would detach the request from where the material actually is. */}
             <Modal
                 visible={showRequestModal && !showSearchModal}
                 transparent={true}
@@ -1559,7 +1679,7 @@ export default function PickupsScreen({ route }) {
                 >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Request Pickup</Text>
+                            <Text style={styles.modalTitle}>Confirm Request</Text>
                             <TouchableOpacity onPress={() => setShowRequestModal(false)}>
                                 <X size={24} color="#666" />
                             </TouchableOpacity>
@@ -1567,51 +1687,44 @@ export default function PickupsScreen({ route }) {
 
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
 
-                            <Text style={styles.label}>Pickup Location</Text>
-                            <View style={styles.locationToggleRow}>
-                                <TouchableOpacity
-                                    style={[styles.locationToggleBtn, useCurrentLocation && styles.locationToggleBtnActive]}
-                                    onPress={() => setUseCurrentLocation(true)}
-                                >
-                                    <Navigation size={16} color={useCurrentLocation ? "#fff" : "#666"} />
-                                    <Text style={[styles.locationToggleText, useCurrentLocation && styles.locationToggleTextActive]}>Current</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.locationToggleBtn, !useCurrentLocation && styles.locationToggleBtnActive]}
-                                    onPress={() => setUseCurrentLocation(false)}
-                                >
-                                    <MapPin size={16} color={!useCurrentLocation ? "#fff" : "#666"} />
-                                    <Text style={[styles.locationToggleText, !useCurrentLocation && styles.locationToggleTextActive]}>Custom</Text>
-                                </TouchableOpacity>
-                            </View>
+                            <View style={styles.summaryCard}>
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryIconBox}>
+                                        <Package size={16} color="#111" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.summaryLabel}>Material</Text>
+                                        <Text style={styles.summaryValue}>
+                                            {requestForm.material_type} · {requestForm.quantity_estimate}
+                                        </Text>
+                                    </View>
+                                </View>
 
-                            {useCurrentLocation ? (
-                                <View style={styles.currentLocationBox}>
-                                    <Navigation size={16} color="#111" />
-                                    <Text style={{ flex: 1, color: '#111', fontSize: 13, fontWeight: '500' }}>
-                                        Using your current GPS coordinates to ensure faster pickup.
+                                <View style={styles.summaryDivider} />
+
+                                <View style={styles.summaryRow}>
+                                    <View style={styles.summaryIconBox}>
+                                        <MapPin size={16} color="#111" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.summaryLabel}>Pickup Location</Text>
+                                        <Text style={styles.summaryValue} numberOfLines={2}>
+                                            {customAddress || 'Seller location'}
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.summaryDivider} />
+
+                                <View style={styles.summaryRow}>
+                                    <Text style={styles.summaryLabel}>
+                                        {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
+                                    </Text>
+                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? '#111' : '#059669' }]}>
+                                        ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
                                     </Text>
                                 </View>
-                            ) : (
-                                <View style={{ position: 'relative' }}>
-                                    <TouchableOpacity 
-                                        style={[styles.addressInput, { justifyContent: 'center' }]}
-                                        onPress={() => setShowSearchModal(true)}
-                                    >
-                                        <Text style={{ color: customAddress ? '#111' : '#9CA3AF' }}>
-                                            {customAddress || "Enter landmark or street address"}
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.mapSelectBtn}
-                                        onPress={startMapSelection}
-                                    >
-                                        <MapPin size={14} color="#111" />
-                                        <Text style={styles.mapSelectText}>Map</Text>
-                                    </TouchableOpacity>
-                                </View>
-                            )}
-
+                            </View>
 
                             <AnimatedButton
                                 style={styles.modalConfirmBtn}
@@ -1640,7 +1753,9 @@ export default function PickupsScreen({ route }) {
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
                             <X size={24} color="#111" />
                         </TouchableOpacity>
-                        <Text style={styles.searchTitle}>Choose Location</Text>
+                        <Text style={styles.searchTitle}>
+                            {selectionMode === 'DESTINATION' ? 'Choose Destination' : 'Choose Pickup Location'}
+                        </Text>
                         <View style={{ width: 40 }} />
                     </View>
 
@@ -1662,6 +1777,20 @@ export default function PickupsScreen({ route }) {
                             </TouchableOpacity>
                         )}
                     </View>
+
+                    {/* Always-available fallback to the full-screen map pin picker,
+                        for an address search can't find. */}
+                    <TouchableOpacity
+                        style={styles.searchResultItem}
+                        onPress={() => startMapSelection(selectionMode)}
+                    >
+                        <View style={[styles.searchResultIcon, { backgroundColor: '#F3F4F6' }]}>
+                            <MapPin size={20} color="#111" />
+                        </View>
+                        <View style={styles.searchResultText}>
+                            <Text style={styles.searchResultName}>Pin on map</Text>
+                        </View>
+                    </TouchableOpacity>
 
                     {/* Search Results */}
                     {isSearchingLocation ? (
@@ -1697,12 +1826,20 @@ export default function PickupsScreen({ route }) {
                         )
                     ) : (
                         <ScrollView style={styles.searchResultsContainer} keyboardShouldPersistTaps="handled">
-                            {location && (
+                            {selectionMode === 'PICKUP' && deviceLocationRef.current && (
                                 <>
                                     <Text style={styles.searchSectionTitle}>NEARBY</Text>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={styles.searchResultItem}
                                         onPress={() => {
+                                            // `location` gets overwritten by whatever pickup point
+                                            // was last chosen (map pin or search result), so
+                                            // "use current location" has to restore the real GPS
+                                            // fix explicitly - toggling the flag alone left `location`
+                                            // pointed at the stale custom address while the UI
+                                            // claimed "Current Location".
+                                            setLocation(deviceLocationRef.current);
+                                            setCustomAddress('');
                                             setUseCurrentLocation(true);
                                             setShowSearchModal(false);
                                         }}
@@ -1946,7 +2083,12 @@ export default function PickupsScreen({ route }) {
                     ) : (
                         <CollectorBottomSheet
                             job={activeSellerJob}
-                            collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
+                            // The list endpoint now actually serializes collector
+                            // as a real user object (was a bare id, silently
+                            // breaking this whole card and the Chat/Call buttons
+                            // below) - a fake "Driver / Truck" filler object is
+                            // no longer needed once collector is genuinely assigned.
+                            collector={activeSellerJob.collector}
                             onChatPress={() => {
                                 if (!activeSellerJob.collector?.id) return;
                                 navigation.navigate('ChatDetail', {
@@ -2077,18 +2219,23 @@ const styles = StyleSheet.create({
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    locationInputLabel: { fontSize: 11, fontWeight: '700', color: '#6B7280', marginBottom: 8, letterSpacing: 0.5 },
-    locationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8 },
-    locationInputIconBox: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    dotIndicatorPickup: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111' },
-    dotIndicatorDest: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#059669' },
-    locationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
-    locationInputSubtext: { fontSize: 13, color: '#6B7280' },
-    dividerLine: { height: 1, backgroundColor: '#F3F4F6', marginVertical: 12, marginLeft: 36 },
-    destinationInputRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, backgroundColor: '#F9FAFB', paddingHorizontal: 16, borderRadius: 12 },
-    destinationInputText: { fontSize: 16, color: '#111', fontWeight: '600', marginBottom: 2 },
-    destinationInputSubtext: { fontSize: 13, color: '#6B7280' },
-    continueBtnUbride: { marginTop: 24, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+    // Pickup = green (matches the brand + the "you are here" dot everywhere
+    // else in the app), destination = black square, connected by a single
+    // line - the classic Bolt/Uber "this is your trip" visual instead of two
+    // separately labeled form fields.
+    dotIndicatorPickup: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    dotIndicatorDest: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
+    routeInputWrap: { flexDirection: 'row' },
+    routeIconCol: { width: 20, alignItems: 'center', paddingVertical: 6 },
+    routeDotPickupLg: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    routeDotDestLg: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
+    routeConnectorLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4, borderRadius: 1 },
+    routeTextCol: { flex: 1, marginLeft: 12 },
+    routeFieldRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 8 },
+    routeFieldText: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111' },
+    routeFieldPlaceholder: { color: '#9CA3AF', fontWeight: '500' },
+    routeFieldDivider: { height: 1, backgroundColor: '#F3F4F6' },
+    continueBtnUbride: { marginTop: 20, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
     continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
@@ -2566,14 +2713,6 @@ const styles = StyleSheet.create({
     },
     modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
     modalBody: {},
-    label: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#374151',
-        marginBottom: 10,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-    },
     pickerContainer: {
         flexDirection: 'row',
         flexWrap: 'wrap',
@@ -2595,63 +2734,25 @@ const styles = StyleSheet.create({
     pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
 
-    locationToggleRow: {
-        flexDirection: 'row',
-        gap: 12,
-        marginBottom: 15,
-    },
-    locationToggleBtn: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+    summaryCard: {
         backgroundColor: '#F9FAFB',
-    },
-    locationToggleBtnActive: {
-        backgroundColor: '#111',
-        borderColor: '#111',
-    },
-    locationToggleText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-    locationToggleTextActive: { color: '#fff' },
-
-    addressInput: {
-        backgroundColor: '#F9FAFB',
+        borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
-        padding: 15,
-        fontSize: 14,
-        color: '#1A1A1A',
+        borderColor: '#F3F4F6',
+        padding: 16,
         marginBottom: 20,
+        gap: 14,
     },
-    mapSelectBtn: {
-        position: 'absolute',
-        right: 12,
-        top: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-        backgroundColor: '#F3F4F6',
-        paddingHorizontal: 10,
-        paddingVertical: 6,
-        borderRadius: 8,
+    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    summaryIconBox: {
+        width: 32, height: 32, borderRadius: 10,
+        backgroundColor: '#fff',
+        justifyContent: 'center', alignItems: 'center',
     },
-    mapSelectText: { fontSize: 12, color: '#111', fontWeight: 'bold' },
-
-    currentLocationBox: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        backgroundColor: '#F3F4F6',
-        padding: 15,
-        borderRadius: 12,
-        marginBottom: 20,
-    },
+    summaryLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600', marginBottom: 2 },
+    summaryValue: { fontSize: 14, color: '#111827', fontWeight: '600' },
+    summaryPrice: { fontSize: 20, fontWeight: '800' },
+    summaryDivider: { height: 1, backgroundColor: '#F0F0F0' },
 
     estimateContainer: {
         marginBottom: 20,

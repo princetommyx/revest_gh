@@ -1,6 +1,29 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, Animated } from 'react-native';
-import { Phone, MessageCircle, MapPin, CheckCircle, Clock, Truck } from 'lucide-react-native';
+import { Phone, MessageCircle, Clock, UserCheck, MapPin, CheckCircle, User } from 'lucide-react-native';
+import PickupProgressRoadmap from './PickupProgressRoadmap';
+import { BASE_URL } from '../api/client';
+
+const BRAND_GREEN = '#059669';
+
+// The final node always renders as a checkmark once reached (handled by
+// PickupProgressRoadmap itself), so this icon is only a fallback.
+const ROADMAP_STEPS = [
+    { key: 'requested', label: 'Requested', icon: Clock },
+    { key: 'assigned', label: 'Assigned', icon: UserCheck },
+    { key: 'arrived', label: 'Arrived', icon: MapPin },
+    { key: 'completed', label: 'Completed', icon: CheckCircle },
+];
+
+const resolveImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    let cleanPath = path.startsWith('/') ? path : `/${path}`;
+    if (!cleanPath.startsWith('/media/')) cleanPath = `/media${cleanPath}`;
+    return `${BASE_URL}${cleanPath}`;
+};
+
+const jobRef = (id) => `#PU-${String(id).padStart(4, '0')}`;
 
 export default function CollectorBottomSheet({ collector, job, onChatPress, onCallPress, onCancel }) {
     const entrance = useRef(new Animated.Value(0)).current;
@@ -25,6 +48,8 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
     };
 
     const currentStep = getStatusIndex();
+    const avatarUrl = resolveImageUrl(collector.profile_picture_url);
+    const collectorName = [collector.first_name, collector.last_name].filter(Boolean).join(' ') || collector.username || 'Collector';
 
     return (
         <Animated.View style={[styles.container, {
@@ -34,18 +59,21 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
             }]
         }]}>
             <View style={styles.dragHandle} />
-            
+
             {/* Header: Collector Info & Quick Actions */}
             <View style={styles.header}>
-                <Image
-                    source={{ uri: collector.avatar || 'https://via.placeholder.com/150' }}
-                    style={styles.avatar}
-                />
+                {avatarUrl ? (
+                    <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+                ) : (
+                    <View style={styles.avatarPlaceholder}>
+                        <User size={24} color="#9CA3AF" />
+                    </View>
+                )}
                 <View style={styles.collectorInfo}>
-                    <Text style={styles.name}>{collector.first_name} {collector.last_name}</Text>
-                    <Text style={styles.vehicleInfo}>
-                        {collector.vehicle_type || 'Truck'} • {collector.license_plate || 'No Plate'}
-                    </Text>
+                    <Text style={styles.name} numberOfLines={1}>{collectorName}</Text>
+                    <View style={styles.rolePill}>
+                        <Text style={styles.rolePillText}>{collector.role === 'RECYCLER' ? 'RECYCLER' : 'COLLECTOR'}</Text>
+                    </View>
                 </View>
                 <View style={styles.actions}>
                     <TouchableOpacity style={styles.actionBtn} onPress={onChatPress}>
@@ -57,41 +85,19 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                 </View>
             </View>
 
+            <Text style={styles.metaRow}>{jobRef(job.id)} · {job.material_type}</Text>
+
             <View style={styles.divider} />
 
-            {/* Timeline Progress */}
-            <View style={styles.timelineContainer}>
-                <View style={styles.timelineLine}>
-                    <View style={[styles.timelineProgress, { width: `${(currentStep / 3) * 100}%` }]} />
-                </View>
-                <View style={styles.timelineSteps}>
-                    <View style={styles.step}>
-                        <View style={[styles.stepIcon, currentStep >= 0 && styles.stepIconActive]}>
-                            <Clock size={16} color={currentStep >= 0 ? "#fff" : "#999"} />
-                        </View>
-                    </View>
-                    <View style={styles.step}>
-                        <View style={[styles.stepIcon, currentStep >= 1 && styles.stepIconActive]}>
-                            <Truck size={16} color={currentStep >= 1 ? "#fff" : "#999"} />
-                        </View>
-                    </View>
-                    <View style={styles.step}>
-                        <View style={[styles.stepIcon, currentStep >= 2 && styles.stepIconActive]}>
-                            <MapPin size={16} color={currentStep >= 2 ? "#fff" : "#999"} />
-                        </View>
-                    </View>
-                    <View style={styles.step}>
-                        <View style={[styles.stepIcon, currentStep >= 3 && styles.stepIconActive]}>
-                            <CheckCircle size={16} color={currentStep >= 3 ? "#fff" : "#999"} />
-                        </View>
-                    </View>
-                </View>
-                <View style={styles.timelineLabels}>
-                    <Text style={[styles.stepLabel, currentStep >= 0 && styles.stepLabelActive]}>Placed</Text>
-                    <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>En Route</Text>
-                    <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>Arrived</Text>
-                    <Text style={[styles.stepLabel, currentStep >= 3 && styles.stepLabelActive]}>Done</Text>
-                </View>
+            {/* Progress Roadmap - since we can't reliably show the collector's
+                live position on a map, this shows the real milestones the
+                job has actually reached instead. */}
+            <View style={{ marginBottom: 24 }}>
+                <PickupProgressRoadmap
+                    steps={ROADMAP_STEPS}
+                    currentIndex={currentStep}
+                    isComplete={job.status === 'COMPLETED'}
+                />
             </View>
 
             {/* ETA / Status Info */}
@@ -103,7 +109,12 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                      'Pickup Completed'}
                 </Text>
                 {currentStep === 1 && (
-                    <Text style={styles.etaValue}>~{job.duration_min ? Math.round(job.duration_min) : 15} min</Text>
+                    // Distance from the collector's last live position, not
+                    // duration_min - the disposer's own fetch has no lat/lon
+                    // to compute that against, so it's always null here.
+                    <Text style={styles.etaValue}>
+                        {job.collector_eta_min != null ? `~${job.collector_eta_min} min` : '—'}
+                    </Text>
                 )}
             </View>
 
@@ -140,28 +151,45 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     avatar: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 26,
         backgroundColor: '#F3F4F6',
+    },
+    avatarPlaceholder: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     collectorInfo: {
         flex: 1,
-        marginLeft: 16,
+        marginLeft: 14,
+        gap: 5,
     },
     name: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 17,
+        fontWeight: '700',
         color: '#111',
-        marginBottom: 4,
     },
-    vehicleInfo: {
-        fontSize: 13,
-        color: '#6B7280',
+    rolePill: {
+        alignSelf: 'flex-start',
+        backgroundColor: '#ECFDF5',
+        borderRadius: 6,
+        paddingHorizontal: 7,
+        paddingVertical: 3,
+    },
+    rolePillText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: BRAND_GREEN,
+        letterSpacing: 0.5,
     },
     actions: {
         flexDirection: 'row',
-        gap: 12,
+        gap: 10,
     },
     actionBtn: {
         width: 40,
@@ -171,61 +199,16 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    metaRow: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        fontWeight: '500',
+        marginTop: 14,
+    },
     divider: {
         height: 1,
         backgroundColor: '#F3F4F6',
         marginVertical: 20,
-    },
-    timelineContainer: {
-        marginBottom: 24,
-    },
-    timelineLine: {
-        position: 'absolute',
-        top: 15,
-        left: 20,
-        right: 20,
-        height: 2,
-        backgroundColor: '#F3F4F6',
-        zIndex: 0,
-    },
-    timelineProgress: {
-        height: '100%',
-        backgroundColor: '#111',
-    },
-    timelineSteps: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        zIndex: 1,
-    },
-    step: {
-        width: 32,
-        alignItems: 'center',
-    },
-    stepIcon: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#F3F4F6',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    stepIconActive: {
-        backgroundColor: '#111',
-    },
-    timelineLabels: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 8,
-    },
-    stepLabel: {
-        fontSize: 12,
-        color: '#9CA3AF',
-        width: 50,
-        textAlign: 'center',
-    },
-    stepLabelActive: {
-        color: '#111',
-        fontWeight: '600',
     },
     etaCard: {
         flexDirection: 'row',

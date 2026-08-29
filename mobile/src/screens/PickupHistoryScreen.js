@@ -1,69 +1,119 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-    View, Text, StyleSheet, FlatList, TouchableOpacity,
+    View, Text, StyleSheet, SectionList, TouchableOpacity,
     RefreshControl, ScrollView, StatusBar
 } from 'react-native';
-import { MapPin, User, Clock, TrendingUp, ChevronRight, Activity, Calendar } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Activity } from 'lucide-react-native';
 import { usePickupHistory } from '../hooks/usePickupHistory';
+import { useAuth } from '../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import PageLoader from '../components/PageLoader';
 import ScreenHeader from '../components/ScreenHeader';
+import { getMaterialImage } from './HomeScreen';
+import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 
 const STATUS_CONFIG = {
-    PENDING: { color: '#F59E0B', label: 'Pending', bg: '#FFFBEB' },
-    ACCEPTED: { color: '#3B82F6', label: 'Accepted', bg: '#EFF6FF' },
-    ARRIVED: { color: '#8B5CF6', label: 'Arrived', bg: '#F5F3FF' },
-    COMPLETED: { color: '#10B981', label: 'Completed', bg: '#ECFDF5' },
-    CANCELLED: { color: '#EF4444', label: 'Cancelled', bg: '#FEF2F2' },
+    PENDING: { color: '#B45309', label: 'Pending' },
+    ACCEPTED: { color: '#1D4ED8', label: 'Accepted' },
+    ARRIVED: { color: '#6D28D9', label: 'Collector arrived' },
+    COMPLETED: { color: '#059669', label: 'Completed' },
+    CANCELLED: { color: '#DC2626', label: 'Cancelled' },
 };
 
 const FILTER_OPTIONS = ['ALL', 'PENDING', 'COMPLETED', 'CANCELLED'];
 
+/**
+ * The headline amount for a job.
+ *
+ * Track A is pay-to-clear, so the money is what the pickup cost. Track B is
+ * sell-recyclables, so it's what the waste was worth. Reading waste_price for
+ * everything - as this screen used to - showed every disposal as GH₵0.00.
+ *
+ * Deliberately not the collector's take-home: that nets off commission, and
+ * the authoritative record for it is the wallet's transaction list.
+ */
+const jobAmount = (item) => {
+    if (item.track_type === 'A') {
+        return parseFloat(item.actual_price ?? item.estimated_price ?? 0);
+    }
+    return parseFloat(item.waste_price ?? 0);
+};
+
+const TRACK_LABEL = { A: 'Disposal', B: 'Recyclables', C: 'Purchase' };
+
 export default function PickupHistoryScreen() {
     const navigation = useNavigation();
+    const { userRole } = useAuth();
     const [activeFilter, setActiveFilter] = useState('ALL');
     const { data: pickups, isLoading, refetch, isRefetching } = usePickupHistory(activeFilter);
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
+    const isCollectorSide = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
 
-    const renderPickupCard = ({ item }) => {
-        const statusInfo = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING;
+    // Group into months, the way a statement reads.
+    const sections = useMemo(() => {
+        const buckets = new Map();
+        const now = new Date();
+
+        for (const item of pickups || []) {
+            const d = new Date(item.created_at);
+            if (isNaN(d)) continue;
+            const key = `${d.getFullYear()}-${d.getMonth()}`;
+            if (!buckets.has(key)) {
+                buckets.set(key, {
+                    title: d.toLocaleDateString('en-GB', {
+                        month: 'long',
+                        // Only spell out the year once it stops being obvious.
+                        ...(d.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+                    }),
+                    sortKey: d.getFullYear() * 12 + d.getMonth(),
+                    data: [],
+                });
+            }
+            buckets.get(key).data.push(item);
+        }
+
+        return [...buckets.values()].sort((a, b) => b.sortKey - a.sortKey);
+    }, [pickups]);
+
+    const renderRow = ({ item }) => {
+        const status = STATUS_CONFIG[item.status] || STATUS_CONFIG.PENDING;
+        const amount = jobAmount(item);
+        const when = new Date(item.created_at);
+        const stamp = isNaN(when)
+            ? ''
+            : when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+              + ', ' + when.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const other = isCollectorSide ? item.provider_name : item.collector_name;
 
         return (
-            <TouchableOpacity style={styles.card} activeOpacity={0.7}>
-                <View style={styles.cardMain}>
-                    <View style={styles.cardLeft}>
-                        <View style={[styles.statusIndicator, { backgroundColor: statusInfo.color }]} />
-                        <View style={styles.infoCol}>
-                            <Text style={styles.materialText}>{item.material_type || 'Waste Pickup'}</Text>
-                            <View style={styles.locationRow}>
-                                <MapPin size={12} color="#999" />
-                                <Text style={styles.locationText} numberOfLines={1}>{item.pickup_address}</Text>
-                            </View>
-                        </View>
-                    </View>
-                    <View style={styles.cardRight}>
-                        <Text style={styles.priceText}>₵{parseFloat(item.waste_price || 0).toFixed(2)}</Text>
-                        <View style={[styles.badge, { backgroundColor: statusInfo.bg }]}>
-                            <Text style={[styles.badgeText, { color: statusInfo.color }]}>{statusInfo.label}</Text>
-                        </View>
-                    </View>
+            <TouchableOpacity style={styles.row} activeOpacity={0.7}>
+                <Image
+                    source={{ uri: getMaterialImage(item.material_type) }}
+                    style={styles.thumb}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    placeholder={MATERIAL_PLACEHOLDER}
+                    transition={IMAGE_TRANSITION_MS}
+                />
+
+                <View style={styles.rowMain}>
+                    <Text style={styles.address} numberOfLines={2}>
+                        {item.pickup_address || item.material_type || 'Waste pickup'}
+                    </Text>
+                    <Text style={styles.subline} numberOfLines={1}>
+                        {stamp}
+                        {item.status !== 'COMPLETED' && (
+                            <Text style={{ color: status.color }}> · {status.label}</Text>
+                        )}
+                        {!!other && item.status === 'COMPLETED' && ` · ${other}`}
+                    </Text>
                 </View>
 
-                <View style={styles.cardFooter}>
-                    <View style={styles.footerItem}>
-                        <Calendar size={12} color="#999" />
-                        <Text style={styles.footerText}>{formatDate(item.created_at)}</Text>
-                    </View>
-                    {item.collector_name && (
-                        <View style={styles.footerItem}>
-                            <User size={12} color="#999" />
-                            <Text style={styles.footerText}>{item.collector_name}</Text>
-                        </View>
-                    )}
+                <View style={styles.rowRight}>
+                    <Text style={styles.amount}>₵{amount.toFixed(2)}</Text>
+                    <Text style={styles.track}>{TRACK_LABEL[item.track_type] || ''}</Text>
                 </View>
             </TouchableOpacity>
         );
@@ -72,11 +122,15 @@ export default function PickupHistoryScreen() {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-                <Activity size={40} color="#111" />
+                <Activity size={36} color="#9CA3AF" />
             </View>
-            <Text style={styles.emptyTitle}>No Activity Yet</Text>
+            <Text style={styles.emptyTitle}>Nothing here yet</Text>
             <Text style={styles.emptyText}>
-                Your {activeFilter !== 'ALL' ? activeFilter.toLowerCase() : ''} pickup history will appear here.
+                {activeFilter === 'ALL'
+                    ? (isCollectorSide
+                        ? 'Jobs you take on will be listed here once they wrap up.'
+                        : 'Pickups you request will be listed here.')
+                    : `No ${activeFilter.toLowerCase()} pickups.`}
             </Text>
         </View>
     );
@@ -87,209 +141,127 @@ export default function PickupHistoryScreen() {
 
             <ScreenHeader title="Pickup History" onBack={() => navigation.goBack()} />
 
-            <View style={styles.contentContainer}>
-                <View style={styles.filterSection}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
-                        {FILTER_OPTIONS.map(filter => (
-                            <TouchableOpacity
-                                key={filter}
-                                style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
-                                onPress={() => setActiveFilter(filter)}
-                            >
-                                <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
-                                    {filter}
-                                </Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </View>
-
-                {isLoading ? (
-                    <View style={styles.center}>
-                        <PageLoader fullScreen={false} label="Loading your history..." />
-                    </View>
-                ) : (
-                    <FlatList
-                        data={pickups || []}
-                        renderItem={renderPickupCard}
-                        keyExtractor={(item) => item.id.toString()}
-                        contentContainerStyle={styles.listContent}
-                        ListEmptyComponent={renderEmpty}
-                        showsVerticalScrollIndicator={false}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={isRefetching}
-                                onRefresh={refetch}
-                                tintColor="#111"
-                            />
-                        }
-                    />
-                )}
+            <View style={styles.filterSection}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+                    {FILTER_OPTIONS.map(filter => (
+                        <TouchableOpacity
+                            key={filter}
+                            style={[styles.filterChip, activeFilter === filter && styles.filterChipActive]}
+                            onPress={() => setActiveFilter(filter)}
+                        >
+                            <Text style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}>
+                                {filter === 'ALL' ? 'All' : STATUS_CONFIG[filter]?.label || filter}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
             </View>
+
+            {isLoading ? (
+                <PageLoader label="Loading your history..." />
+            ) : (
+                <SectionList
+                    sections={sections}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderRow}
+                    renderSectionHeader={({ section }) => (
+                        <Text style={styles.sectionHeader}>{section.title}</Text>
+                    )}
+                    stickySectionHeadersEnabled={false}
+                    contentContainerStyle={[styles.listContent, sections.length === 0 && { flexGrow: 1 }]}
+                    ListEmptyComponent={renderEmpty}
+                    showsVerticalScrollIndicator={false}
+                    refreshControl={
+                        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#111" />
+                    }
+                />
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
-    },
-    contentContainer: {
-        flex: 1,
-        backgroundColor: '#fff',
-        paddingTop: 20,
-    },
-    filterSection: {
-        marginBottom: 15,
-    },
-    filterContent: {
-        paddingHorizontal: 25,
-        gap: 12,
-    },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
+
+    filterSection: { paddingTop: 16, paddingBottom: 4 },
+    filterContent: { paddingHorizontal: 20, gap: 8 },
     filterChip: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 15,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
         backgroundColor: '#F3F4F6',
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
     },
-    filterChipActive: {
-        backgroundColor: '#111',
-        borderColor: '#111',
-        shadowColor: '#111',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    filterText: {
-        fontSize: 14,
-        color: '#6B7280',
-        fontWeight: '600',
-    },
-    filterTextActive: {
-        color: '#fff',
-    },
-    listContent: {
-        paddingHorizontal: 25,
-        paddingBottom: 40,
-        paddingTop: 10,
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 24,
-        padding: 16,
-        marginBottom: 16,
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
-    },
-    cardMain: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    cardLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flex: 1,
-    },
-    statusIndicator: {
-        width: 4,
-        height: 40,
-        borderRadius: 2,
-        marginRight: 12,
-    },
-    infoCol: {
-        flex: 1,
-    },
-    materialText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 4,
-    },
-    locationRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    locationText: {
-        fontSize: 13,
-        color: '#999',
-    },
-    cardRight: {
-        alignItems: 'flex-end',
-    },
-    priceText: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111',
+    filterChipActive: { backgroundColor: '#111' },
+    filterText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
+    filterTextActive: { color: '#fff' },
+
+    listContent: { paddingHorizontal: 20, paddingBottom: 60 },
+
+    sectionHeader: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#111827',
+        letterSpacing: -0.3,
+        marginTop: 26,
         marginBottom: 6,
     },
-    badge: {
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    badgeText: {
-        fontSize: 11,
-        fontWeight: 'bold',
-    },
-    cardFooter: {
-        flexDirection: 'row',
-        marginTop: 15,
-        paddingTop: 15,
-        borderTopWidth: 1,
-        borderTopColor: '#F9FAFB',
-        gap: 15,
-    },
-    footerItem: {
+
+    row: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        paddingVertical: 14,
+        gap: 14,
     },
-    footerText: {
-        fontSize: 12,
-        color: '#999',
+    thumb: {
+        width: 56,
+        height: 56,
+        borderRadius: 14,
+        backgroundColor: '#F3F4F6',
+    },
+    rowMain: { flex: 1 },
+    address: {
+        fontSize: 15,
+        color: '#111827',
         fontWeight: '500',
+        lineHeight: 20,
+        marginBottom: 3,
     },
-    center: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
+    subline: { fontSize: 13, color: '#9CA3AF' },
+    rowRight: { alignItems: 'flex-end' },
+    amount: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#111827',
+        fontVariant: ['tabular-nums'],
     },
+    track: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+
     emptyContainer: {
+        flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 80,
+        paddingBottom: 60,
     },
     emptyIconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: '#FAFAFA',
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: '#F9FAFB',
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 20,
+        marginBottom: 18,
     },
     emptyTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1F2937',
-        marginBottom: 8,
+        fontSize: 17,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 6,
     },
     emptyText: {
-        fontSize: 14,
+        fontSize: 13.5,
         color: '#9CA3AF',
         textAlign: 'center',
-        paddingHorizontal: 40,
-        lineHeight: 20,
+        paddingHorizontal: 50,
+        lineHeight: 19,
     },
 });

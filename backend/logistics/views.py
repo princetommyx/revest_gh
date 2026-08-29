@@ -46,8 +46,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'COLLECTOR':
-            # Collectors see:
+        # RECYCLER picks up jobs from this same board exactly like COLLECTOR
+        # does elsewhere in the app (accept/track/complete have no role
+        # restriction) - this used to check only 'COLLECTOR', so a recycler
+        # fell through to the provider-only branch below and saw an empty
+        # board instead of nearby pending jobs or their own accepted ones.
+        if user.role in ('COLLECTOR', 'RECYCLER'):
+            # Collectors/recyclers see:
             # 1. Nearby PENDING jobs
             # 2. Their own active jobs (ACCEPTED, ARRIVED)
             
@@ -478,8 +483,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
     def notify_nearby_collectors(self, request):
         # Radius in km
-        RADIUS = 10 
-        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        RADIUS = 10
+        # Excluded RECYCLER here (and nowhere else in the accept/track flow),
+        # so a recycler was never pushed a 'new_request' event or push
+        # notification for a job they were otherwise fully able to accept.
+        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
         
         nearby = []
         for collector in online_collectors:
@@ -519,14 +527,30 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def history(self, request):
         """
-        Return completed rides for the current user.
+        Every pickup belonging to the current user, newest first.
+
+        Scoped by which side of the job they were on: collectors and recyclers
+        by the jobs assigned to them, everyone else by the jobs they raised.
+        Accepts an optional ?status= to back the filter chips in the app.
+
+        Note this deliberately does not reuse get_queryset(): that one is built
+        for the live job board, so for a collector it returns their active jobs
+        plus any nearby PENDING request from the last two hours and never any
+        COMPLETED one. Reading history from it showed collectors other people's
+        open requests and none of their own finished work.
         """
         user = request.user
-        if user.role == 'COLLECTOR':
-            rides = PickupRequest.objects.filter(collector=user, status='COMPLETED').order_by('-created_at')
+
+        if user.role in ('COLLECTOR', 'RECYCLER'):
+            rides = PickupRequest.objects.filter(collector=user)
         else:
-            # For Providers or others
-            rides = PickupRequest.objects.filter(provider=user, status='COMPLETED').order_by('-created_at')
+            rides = PickupRequest.objects.filter(provider=user)
+
+        status_filter = request.query_params.get('status')
+        if status_filter and status_filter.upper() != 'ALL':
+            rides = rides.filter(status=status_filter.upper())
+
+        rides = rides.select_related('provider', 'collector').order_by('-created_at')
 
         serializer = self.get_serializer(rides, many=True)
         return Response(serializer.data)
@@ -550,8 +574,8 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         except ValueError:
              return Response({'error': 'Invalid coordinates'}, status=400)
 
-        # 1. Find nearest online collector
-        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        # 1. Find nearest online collector (recyclers pick up Track A jobs too)
+        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
         nearest_collector = None
         min_dist = float('inf')
         

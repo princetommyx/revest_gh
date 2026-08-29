@@ -15,6 +15,7 @@ import {
     UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
     Recycle
 } from 'lucide-react-native';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const resolveImageUrl = (path) => {
     if (!path) return null;
@@ -283,7 +284,8 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingTop: 32,
-        paddingBottom: 60,
+        // Profile is now a tab, so it must clear the floating bar too.
+        paddingBottom: TAB_BAR_CLEARANCE,
     },
     identityContainer: {
         paddingHorizontal: 32,

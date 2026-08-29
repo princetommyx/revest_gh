@@ -14,6 +14,32 @@ export const AuthProvider = ({ children }) => {
         loadStoredAuth();
     }, []);
 
+    /**
+     * Pull the full profile from the server and adopt it.
+     *
+     * Login only returns {id, username, email, role, is_staff, is_superuser}.
+     * Nothing in the app was calling getProfile(), so the client's idea of the
+     * user never contained first_name, phone_number, city, profile_picture_url
+     * or is_verified. Edit Profile initialised its form from those missing
+     * fields and then POSTed empty strings back, so changing an avatar also
+     * wiped the user's name, phone and city.
+     */
+    const hydrateProfile = useCallback(async () => {
+        try {
+            const full = await authApi.getProfile();
+            if (full?.id) {
+                setUser(full);
+                if (full.role) setUserRole(full.role);
+                await authStorage.updateUserData(full);
+            }
+            return full;
+        } catch (error) {
+            // Non-fatal: we keep whatever we already had rather than signing out.
+            console.log('Could not refresh profile:', error?.message);
+            return null;
+        }
+    }, []);
+
     const loadStoredAuth = useCallback(async () => {
         try {
             // Run all SecureStore reads in PARALLEL for faster startup
@@ -26,13 +52,16 @@ export const AuthProvider = ({ children }) => {
             if (token) {
                 setUserRole(role);
                 setUser(userData);
+                // Show the cached user immediately, then reconcile in the
+                // background so a stale avatar or city can't linger.
+                hydrateProfile();
             }
         } catch (error) {
             console.error('Error loading auth state:', error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [hydrateProfile]);
 
     const signIn = useCallback(async (username, password) => {
         const data = await authApi.login(username, password);
@@ -52,8 +81,10 @@ export const AuthProvider = ({ children }) => {
 
         setUser(data.user);
         setUserRole(data.user.role || 'SELLER');
+        // The login payload is a thin subset; fetch the real profile.
+        await hydrateProfile();
         return data;
-    }, []);
+    }, [hydrateProfile]);
 
     const verifyLogin = useCallback(async (userId, otp) => {
         const data = await authApi.verifyLoginOTP(userId, otp);
@@ -68,8 +99,9 @@ export const AuthProvider = ({ children }) => {
 
         setUser(data.user);
         setUserRole(data.user.role || 'SELLER');
+        await hydrateProfile();
         return data;
-    }, []);
+    }, [hydrateProfile]);
 
     const signUp = useCallback(async (userData) => {
         const data = await authApi.register(userData);
@@ -85,9 +117,10 @@ export const AuthProvider = ({ children }) => {
 
             setUser(data.user);
             setUserRole(data.user.role || 'SELLER');
+            await hydrateProfile();
         }
         return data;
-    }, []);
+    }, [hydrateProfile]);
 
     const googleSignIn = useCallback(async (token, role) => {
         const data = await authApi.googleLogin(token, role);
@@ -105,8 +138,9 @@ export const AuthProvider = ({ children }) => {
 
         setUser(userForState);
         setUserRole(roleForState);
+        await hydrateProfile();
         return data;
-    }, []);
+    }, [hydrateProfile]);
 
     const signOut = useCallback(async () => {
         try {
@@ -133,6 +167,7 @@ export const AuthProvider = ({ children }) => {
         user,
         setUser,
         updateUser,
+        refreshProfile: hydrateProfile,
         userRole,
         loading,
         signIn,
@@ -141,7 +176,7 @@ export const AuthProvider = ({ children }) => {
         googleSignIn,
         signOut,
         isAuthenticated: !!user
-    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut, updateUser]);
+    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut, updateUser, hydrateProfile]);
 
     return (
         <AuthContext.Provider value={value}>

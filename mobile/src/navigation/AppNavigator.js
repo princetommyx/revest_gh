@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, Map as MapIcon, MessageSquare, Wallet, Store, LayoutGrid, Truck } from 'lucide-react-native';
+import { House, MessageSquare, Wallet, Store, Truck, User } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +33,8 @@ import SavedLocationsScreen from '../screens/SavedLocationsScreen';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import TrackingWidget from '../components/TrackingWidget';
+import { BASE_URL } from '../api/client';
+import { TAB_BAR_HEIGHT, TAB_BAR_BOTTOM } from '../constants/layout';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -40,75 +42,156 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const CustomTabBar = ({ state, descriptors, navigation }) => {
+const TAB_ICONS = {
+    Home: House,
+    Pickups: Truck,
+    Marketplace: Store,
+    Chat: MessageSquare,
+    Wallet: Wallet,
+    // Fallback for the avatar tab when the user hasn't set a photo.
+    You: User,
+};
+
+const resolveAvatar = (user) => {
+    const path = user?.profile_picture_url || user?.profile_picture;
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    let clean = path.startsWith('/') ? path : `/${path}`;
+    if (!clean.startsWith('/media/')) clean = `/media${clean}`;
+    return `${BASE_URL}${clean}`;
+};
+
+const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) => {
+    // Each button owns its animation so the active pill can grow/fade in
+    // rather than snapping between tabs.
+    const anim = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
+
+    useEffect(() => {
+        Animated.spring(anim, {
+            toValue: isFocused ? 1 : 0,
+            friction: 7,
+            tension: 70,
+            useNativeDriver: true,
+        }).start();
+    }, [isFocused]);
+
+    const color = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.55)';
+
     return (
-        <View style={navStyles.floatingWrapper}>
-            {state.routes.map((route, index) => {
-                const { options } = descriptors[route.key];
-                const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
-                const isFocused = state.index === index;
+        <TouchableOpacity onPress={onPress} style={navStyles.tabButton} activeOpacity={0.7}>
+            <View style={navStyles.tabItem}>
+                <Animated.View
+                    pointerEvents="none"
+                    style={[
+                        navStyles.activePill,
+                        {
+                            opacity: anim,
+                            transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }) }],
+                        },
+                    ]}
+                />
+                <View style={navStyles.iconWrapper}>
+                    {avatarUri ? (
+                        <Image
+                            source={{ uri: avatarUri }}
+                            style={[navStyles.avatar, isFocused && navStyles.avatarActive]}
+                        />
+                    ) : IconComp ? (
+                        <IconComp size={22} color={color} strokeWidth={isFocused ? 2.6 : 2} />
+                    ) : null}
 
-                const onPress = () => {
-                    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                    if (!isFocused && !event.defaultPrevented) {
-                        navigation.navigate(route.name);
-                    }
-                };
-
-                let IconComp;
-                if (route.name === 'Home') IconComp = House;
-                else if (route.name === 'Pickups') IconComp = Truck;
-                else if (route.name === 'Marketplace') IconComp = Store;
-                else if (route.name === 'Chat') IconComp = MessageSquare;
-                else if (route.name === 'Wallet') IconComp = Wallet;
-
-                const color = isFocused ? '#000000' : '#6B7280';
-
-                return (
-                    <TouchableOpacity
-                        key={route.key}
-                        onPress={onPress}
-                        style={navStyles.tabButton}
-                        activeOpacity={0.8}
-                    >
-                        <View style={[navStyles.tabItem, isFocused && navStyles.tabItemActive]}>
-                            <View style={navStyles.iconWrapper}>
-                                <IconComp size={24} color={color} strokeWidth={isFocused ? 2.5 : 2} />
-                                {options.tabBarBadge && (
-                                    <View style={navStyles.badge}>
-                                        <Text style={navStyles.badgeText}>{options.tabBarBadge}</Text>
-                                    </View>
-                                )}
-                            </View>
-                            <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]}>
-                                {label}
-                            </Text>
+                    {!!badge && (
+                        <View style={navStyles.badge}>
+                            <Text style={navStyles.badgeText}>{badge}</Text>
                         </View>
-                    </TouchableOpacity>
-                );
-            })}
+                    )}
+                </View>
+                <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]} numberOfLines={1}>
+                    {label}
+                </Text>
+            </View>
+        </TouchableOpacity>
+    );
+};
+
+const CustomTabBar = ({ state, descriptors, navigation }) => {
+    const { user } = useAuth();
+    const avatarUri = resolveAvatar(user);
+
+    return (
+        <View style={navStyles.floatingShadow}>
+            <View style={navStyles.floatingClip}>
+                <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={navStyles.tint} pointerEvents="none" />
+
+                <View style={navStyles.row}>
+                    {state.routes.map((route, index) => {
+                        const { options } = descriptors[route.key];
+                        const label = options.tabBarLabel !== undefined ? options.tabBarLabel : route.name;
+                        const isFocused = state.index === index;
+
+                        const onPress = () => {
+                            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                            if (!isFocused && !event.defaultPrevented) {
+                                Haptics.selectionAsync().catch(() => { });
+                                navigation.navigate(route.name);
+                            }
+                        };
+
+                        // An uncapped count overflows the pill - WhatsApp caps too.
+                        const raw = options.tabBarBadge;
+                        const badge = raw ? (Number(raw) > 99 ? '99+' : String(raw)) : null;
+
+                        return (
+                            <TabButton
+                                key={route.key}
+                                label={label}
+                                isFocused={isFocused}
+                                onPress={onPress}
+                                IconComp={TAB_ICONS[route.name]}
+                                badge={badge}
+                                avatarUri={route.name === 'You' ? avatarUri : null}
+                            />
+                        );
+                    })}
+                </View>
+            </View>
         </View>
     );
 };
 
 const navStyles = StyleSheet.create({
-    floatingWrapper: {
+    // Shadow and clipping are split: iOS won't render a shadow on a view that
+    // also clips its children, which the blur layer requires.
+    floatingShadow: {
         position: 'absolute',
-        bottom: Platform.OS === 'ios' ? 24 : 16,
-        left: 20,
-        right: 20,
-        borderRadius: 40,
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        paddingHorizontal: 12,
-        paddingVertical: 12,
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        elevation: 8,
+        bottom: TAB_BAR_BOTTOM,
+        left: 16,
+        right: 16,
+        borderRadius: 32,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.18,
+        shadowRadius: 20,
+        elevation: 12,
+    },
+    floatingClip: {
+        borderRadius: 32,
+        overflow: 'hidden',
+    },
+    // Blur alone is too transparent over busy content (the map especially),
+    // so a dark scrim sits on top of it for legibility.
+    tint: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(17,17,17,0.82)',
+    },
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 6,
+        paddingVertical: 8,
+        minHeight: TAB_BAR_HEIGHT,
     },
     tabButton: {
         flex: 1,
@@ -117,43 +200,61 @@ const navStyles = StyleSheet.create({
     tabItem: {
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 24,
+        paddingVertical: 6,
+        // Was 10 — with five tabs that left barely enough room for a
+        // seven-character label before it started truncating.
+        paddingHorizontal: 4,
+        borderRadius: 20,
+        alignSelf: 'stretch',
     },
-    tabItemActive: {
-        backgroundColor: '#F3F4F6',
+    activePill: {
+        ...StyleSheet.absoluteFillObject,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.16)',
     },
     iconWrapper: {
         position: 'relative',
-        marginBottom: 2,
+        marginBottom: 3,
+        height: 24,
+        justifyContent: 'center',
+    },
+    avatar: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    avatarActive: {
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
     },
     tabLabel: {
         fontSize: 10,
-        color: '#6B7280',
-        fontWeight: '500',
-        marginTop: 2,
+        color: 'rgba(255,255,255,0.55)',
+        fontWeight: '600',
     },
     tabLabelActive: {
-        color: '#000000',
+        color: '#FFFFFF',
         fontWeight: '700',
     },
     badge: {
         position: 'absolute',
-        top: -6,
-        right: -10,
+        top: -5,
+        right: -11,
         backgroundColor: '#FF3B30',
-        minWidth: 18,
-        height: 18,
+        minWidth: 17,
+        height: 17,
         borderRadius: 9,
         justifyContent: 'center',
         alignItems: 'center',
         paddingHorizontal: 4,
+        borderWidth: 1.5,
+        borderColor: '#111111',
     },
     badgeText: {
         color: '#fff',
-        fontSize: 10,
-        fontWeight: 'bold',
+        fontSize: 9,
+        fontWeight: '800',
     },
 });
 
@@ -201,7 +302,15 @@ function MainTabs() {
                 <Tab.Screen name="Home" component={HomeScreen} />
 
                 {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
-                    <Tab.Screen name="Marketplace" component={MarketplaceScreen} />
+                    <Tab.Screen
+                        name="Marketplace"
+                        component={MarketplaceScreen}
+                        // Without this the label falls back to the route name.
+                        // "Marketplace" is far wider than a fifth of the bar, so
+                        // it wrapped onto two lines and collided with the tab
+                        // above it. Route name stays "Marketplace" for navigation.
+                        options={{ tabBarLabel: 'Market' }}
+                    />
                 )}
 
                 <Tab.Screen
@@ -222,6 +331,12 @@ function MainTabs() {
                     />
                 )}
                 <Tab.Screen name="Wallet" component={WalletScreen} />
+
+                {/* WhatsApp-style "You" tab - shows the user's own avatar
+                    instead of a generic icon. Named 'You' rather than
+                    'Profile' so the existing stack route of that name keeps
+                    working for full-screen pushes from other screens. */}
+                <Tab.Screen name="You" component={ProfileScreen} />
             </Tab.Navigator>
             <TrackingWidget />
         </View>

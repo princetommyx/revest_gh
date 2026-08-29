@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 venv/
 .DS_Store
+
+# Runtime logs - profile_debug.log used to be written here on every
+# profile update and contained personal data.
+*.log

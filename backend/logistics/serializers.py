@@ -11,22 +11,33 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     Lightweight serializer for pickup list views
     """
     provider = PublicUserSerializer(read_only=True)
+    # Was left to DRF's default (a bare PrimaryKeyRelatedField), unlike
+    # `provider` and unlike this same field on the Detail serializer - so a
+    # disposer's tracking card, which reads from this list endpoint, only
+    # ever got the collector's raw id and had nothing to show a name or
+    # avatar from. Every accepted job silently rendered a blank name and
+    # fell through to fake "Driver" / "Truck / No Plate" placeholder copy.
+    collector = PublicUserSerializer(read_only=True)
     collector_name = serializers.CharField(source='collector.username', read_only=True)
+    provider_name = serializers.CharField(source='provider.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     listing_image = serializers.SerializerMethodField()
     distance_km = serializers.SerializerMethodField()
+    duration_min = serializers.SerializerMethodField()
+    collector_eta_min = serializers.SerializerMethodField()
 
     class Meta:
         model = PickupRequest
         fields = (
             'id', 'material_type', 'track_type', 'track_type_display',
-            'bag_size', 'weight_kg', 'quantity_estimate', 
+            'bag_size', 'weight_kg', 'quantity_estimate',
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
-            'distance_km',
+            'distance_km', 'duration_min', 'collector_eta_min',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
-            'created_at', 'provider', 'collector', 'collector_name',
+            'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'is_verified'
@@ -50,6 +61,53 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
                 pass
         return None
 
+    def get_duration_min(self, obj):
+        """
+        ETA from the requesting user's position to this job's pickup point.
+
+        The model also has a `duration_min` field, but that's the full
+        pickup->destination trip length estimated once at booking time - the
+        mobile app never actually sends it on create, so it's always null,
+        and even if populated it isn't "time until the collector gets here"
+        anyway. This computes that instead, the same way distance_km does,
+        using the same average-speed assumption as estimate_price().
+        """
+        request = self.context.get('request')
+        if not request or not request.query_params:
+            return None
+
+        lat = request.query_params.get('lat')
+        lon = request.query_params.get('lon')
+
+        if lat and lon:
+            try:
+                from .utils import haversine
+                dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
+                avg_speed_kmh = 40.0
+                return round((dist / avg_speed_kmh) * 60)
+            except (ValueError, TypeError, ZeroDivisionError):
+                pass
+        return None
+
+    def get_collector_eta_min(self, obj):
+        """
+        ETA from the assigned collector's last known live position to this
+        job's pickup point - what the disposer's tracking card actually
+        needs. Unlike distance_km/duration_min above, this can't come from
+        query params: the disposer's own fetch never sends lat/lon (only a
+        collector-role fetch does), so it has to be computed from fields
+        already on the object itself.
+        """
+        if obj.current_lat is None or obj.current_lon is None or not obj.latitude or not obj.longitude:
+            return None
+        try:
+            from .utils import haversine
+            dist = haversine(float(obj.current_lat), float(obj.current_lon), float(obj.latitude), float(obj.longitude))
+            avg_speed_kmh = 40.0
+            return round((dist / avg_speed_kmh) * 60)
+        except (ValueError, TypeError, ZeroDivisionError):
+            return None
+
     def get_listing_image(self, obj):
         image_to_use = None
         if obj.image:
@@ -70,7 +128,9 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
     Full serializer for detailed pickup views with tracking data
     """
     provider = PublicUserSerializer(read_only=True)
-    collector =PublicUserSerializer(read_only=True)
+    collector = PublicUserSerializer(read_only=True)
+    collector_name = serializers.CharField(source='collector.username', read_only=True)
+    provider_name = serializers.CharField(source='provider.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     track_type_display = serializers.CharField(source='get_track_type_display', read_only=True)
     listing_image = serializers.SerializerMethodField()
@@ -82,8 +142,9 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
             'bag_size', 'weight_kg', 'quantity_estimate', 
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address',
-            'created_at', 'provider', 'collector',
+            'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
             'distance_km', 'duration_min',
@@ -112,6 +173,7 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
             'quantity_estimate', 'latitude', 'longitude', 'estimated_price',
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
+            'pickup_address',
             'destination_latitude', 'destination_longitude', 'destination_address'
         )
     

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { logisticsApi } from '../api/logistics';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,12 +9,20 @@ export const usePickups = (location) => {
     const [isRefetching, setIsRefetching] = useState(false);
     const [isError, setIsError] = useState(false);
 
-    const fetchPickups = async (isManual = false) => {
+    // RECYCLER is a job-board picker-upper exactly like COLLECTOR (see
+    // isCollectorRole elsewhere in the app), but this only checked for
+    // 'COLLECTOR' - a recycler fell into the else branch below, which calls
+    // the endpoint with no lat/lon and gets back only jobs *they* raised as
+    // a requester (effectively empty for a pure collector-side account), so
+    // nearby pending jobs and their own accepted jobs never appeared.
+    const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+
+    const fetchPickups = useCallback(async (isManual = false) => {
         if (isManual) setIsRefetching(true);
         else setIsLoading(true);
 
         try {
-            if (userRole === 'COLLECTOR') {
+            if (isCollectorRole) {
                 if (!location) {
                     setData([]);
                     return;
@@ -37,13 +45,24 @@ export const usePickups = (location) => {
             setIsLoading(false);
             setIsRefetching(false); // Reset isRefetching
         }
-    };
+    }, [isCollectorRole, location?.latitude, location?.longitude]);
 
     useEffect(() => {
-        if (userRole === 'COLLECTOR' ? !!location : true) {
+        if (isCollectorRole ? !!location : true) {
             fetchPickups();
         }
-    }, [userRole, location?.latitude, location?.longitude]);
+        // Deliberately keyed on lat/lon primitives, not the `location` object -
+        // a new location object arrives on every GPS tick even when the
+        // collector hasn't meaningfully moved, which would refire this on
+        // every tick instead of only when it actually matters.
+    }, [fetchPickups, isCollectorRole, location?.latitude, location?.longitude]);
 
-    return { data, isLoading, isRefetching, isError, refetch: () => fetchPickups(true) }; // Returned isRefetching and modified refetch
+    // `refetch` used to be a fresh arrow function every render, so any effect
+    // that depended on it (e.g. a polling interval) got torn down and
+    // recreated on every re-render instead of ever completing its interval.
+    // useCallback keeps its identity stable across renders that don't
+    // actually change what it does.
+    const refetch = useCallback(() => fetchPickups(true), [fetchPickups]);
+
+    return { data, isLoading, isRefetching, isError, refetch };
 };

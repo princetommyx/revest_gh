@@ -13,6 +13,7 @@ import { notificationsApi } from '../api/notifications';
 import { useNotifications } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import PageLoader from '../components/PageLoader';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -141,7 +142,8 @@ export default function ChatScreen({ route }) {
                 style={styles.convCard}
                 onPress={() => navigation.navigate('ChatDetail', {
                     contactId: item.contact_id,
-                    contactName: item.contact_username
+                    contactName: item.contact_username,
+                    contactIsOnline: item.contact_is_online,
                 })}
                 activeOpacity={0.7}
             >
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
     markAll: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginRight: 20, marginBottom: 10, gap: 6 },
     markAllText: { fontSize: 13, fontWeight: '600', color: '#111' },
     
-    listPadding: { paddingHorizontal: 20, paddingBottom: 40 },
+    listPadding: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
     
     convCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16 },
     avatarWrapper: { marginRight: 16 },
