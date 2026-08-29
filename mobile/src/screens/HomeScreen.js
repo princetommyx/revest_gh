@@ -387,21 +387,23 @@ export default function HomeScreen({ navigation }) {
                             </ScrollView>
                         )}
 
-                        <View style={styles.searchRow}>
-                            <View style={styles.searchBar}>
-                                <Search size={20} color="#999" />
-                                <TextInput
-                                    style={styles.searchInput}
-                                    placeholder="Search waste materials..."
-                                    placeholderTextColor="#999"
-                                    value={search}
-                                    onChangeText={setSearch}
-                                />
+                        {isCollectorRole && (
+                            <View style={styles.searchRow}>
+                                <View style={styles.searchBar}>
+                                    <Search size={20} color="#999" />
+                                    <TextInput
+                                        style={styles.searchInput}
+                                        placeholder="Search waste materials..."
+                                        placeholderTextColor="#999"
+                                        value={search}
+                                        onChangeText={setSearch}
+                                    />
+                                </View>
+                                <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
+                                    <SlidersHorizontal size={20} color="#111" />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
-                                <SlidersHorizontal size={20} color="#111" />
-                            </TouchableOpacity>
-                        </View>
+                        )}
 
                         {renderPromoBanners()}
 
@@ -430,7 +432,15 @@ export default function HomeScreen({ navigation }) {
                         </View>
                     ) : (
                         <View style={{ alignItems: 'center', marginTop: 40 }}>
-                            <Text style={{ color: '#999' }}>No items found.</Text>
+                            <Text style={{ color: '#999', marginBottom: 16 }}>No items found.</Text>
+                            {!isCollectorRole && (
+                                <AnimatedButton 
+                                    style={{ backgroundColor: '#111', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+                                    onPress={() => navigation.navigate('CreateListing')}
+                                >
+                                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Post Waste</Text>
+                                </AnimatedButton>
+                            )}
                         </View>
                     )
                 }
