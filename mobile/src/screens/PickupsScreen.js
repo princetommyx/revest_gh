@@ -323,7 +323,7 @@ export default function PickupsScreen({ route }) {
         waste_value: pickupData?.waste_price ? parseFloat(pickupData.waste_price).toFixed(2) : null,
         distance_km: null,
         duration_min: null,
-        payment_method: 'DIGITAL',
+        payment_method: 'CASH',
         listing_id: pickupData?.listing_id || null,
         track_type: pickupData?.track_type || 'A',
         image: null
@@ -443,7 +443,7 @@ export default function PickupsScreen({ route }) {
                     waste_value: pickupData.waste_price ? parseFloat(pickupData.waste_price).toFixed(2) : prev.waste_value,
                     listing_id: pickupData.listing_id || prev.listing_id,
                     track_type: pickupData.track_type || prev.track_type,
-                    payment_method: 'DIGITAL'
+                    payment_method: 'CASH'
                 };
             });
 
@@ -834,7 +834,7 @@ export default function PickupsScreen({ route }) {
                     : (`${VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Standard'} Load`),
                 vehicle_type: selectedVehicle,
                 track_type: isListingFlow ? 'B' : 'A',
-                payment_method: isListingFlow ? 'DIGITAL' : 'CASH',
+                payment_method: 'CASH',
                 estimated_price: requestForm.delivery_fee || '0.00',                waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
                 delivery_fee: isListingFlow ? (requestForm.delivery_fee || '0.00') : '0.00',
                 // Was computed by fetchEstimate() and shown on the route
