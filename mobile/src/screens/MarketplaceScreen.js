@@ -7,7 +7,8 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown
+import {
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 import { marketApi } from '../api/market';
@@ -19,12 +20,12 @@ import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 const { width } = Dimensions.get('window');
 
 const CATEGORIES = [
-    { id: '', name: 'All' },
-    { id: 'Plastics', name: 'Plastics' },
-    { id: 'Metals', name: 'Metals' },
-    { id: 'Paper', name: 'Paper' },
-    { id: 'Glass', name: 'Glass' },
-    { id: 'Electronics', name: 'E-Waste' }
+    { id: '', name: 'All', icon: LayoutGrid },
+    { id: 'Plastics', name: 'Plastics', icon: Droplet },
+    { id: 'Metals', name: 'Metals', icon: Magnet },
+    { id: 'Paper', name: 'Paper', icon: FileText },
+    { id: 'Glass', name: 'Glass', icon: Droplet },
+    { id: 'Electronics', name: 'E-Waste', icon: Blocks }
 ];
 
 const AVAILABLE_LOCATIONS = [
@@ -113,6 +114,9 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     const renderListing = ({ item }) => {
         const liked = likeOverrides[item.id] ?? item.is_liked;
+        const materialObj = CATEGORIES.find(c => c.id.toLowerCase() === item.material_type?.toLowerCase()) || CATEGORIES[1];
+        const MaterialIcon = materialObj.icon;
+        
         return (
         <TouchableOpacity
             style={styles.listingCard}
@@ -131,7 +135,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                     />
                 ) : (
                     <View style={styles.placeholderImg}>
-                        <Package size={30} color="#E0E0E0" />
+                        <Package size={30} color="#ccc" />
                     </View>
                 )}
 
@@ -151,11 +155,25 @@ export default function MarketplaceScreen({ navigation, route }) {
             </View>
             <View style={styles.listingDetails}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                <View style={styles.listingSubRow}>
-                    <Text style={styles.listingLoc} numberOfLines={1}>{item.location}</Text>
-                    {item.quantity && (
-                        <Text style={[styles.listingLoc, { fontWeight: '600' }]} numberOfLines={1}>{item.quantity}</Text>
-                    )}
+                
+                <View style={styles.iconRow}>
+                    <MaterialIcon size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.listingLoc}>{materialObj.name}</Text>
+                </View>
+                
+                <View style={styles.iconRow}>
+                    <Package size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={styles.listingLoc} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
+                    <MapPin size={12} color="#666" style={{ marginLeft: 8, marginRight: 4 }} />
+                    <Text style={styles.listingLoc} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
+                    <Text style={styles.distanceText}> • 1.8 km</Text>
+                </View>
+
+                <View style={styles.priceRow}>
+                    <Text style={styles.listingPrice}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
+                    <View style={styles.viewDetailsBtn}>
+                        <Text style={styles.viewDetailsText}>View details &gt;</Text>
+                    </View>
                 </View>
             </View>
         </TouchableOpacity>
@@ -171,9 +189,9 @@ export default function MarketplaceScreen({ navigation, route }) {
                     <ChevronLeft size={24} color="#111" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'All Waste' : 'My Waste'}</Text>
-                {/* Filtering already lives in the category/location/sort pills below -
-                    this spacer just keeps the title visually centered against the back button. */}
-                <View style={styles.iconBtn} />
+                <TouchableOpacity style={styles.iconBtnRound} onPress={() => setShowLocationModal(true)}>
+                    <SlidersHorizontal size={20} color="#111" />
+                </TouchableOpacity>
             </SafeAreaView>
 
             {/* Search Bar */}
@@ -181,11 +199,14 @@ export default function MarketplaceScreen({ navigation, route }) {
                 <Search size={20} color="#999" />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search..."
+                    placeholder="Search waste materials..."
                     value={search}
                     onChangeText={setSearch}
                     placeholderTextColor="#999"
                 />
+                <TouchableOpacity style={styles.searchBtn}>
+                    <Search size={18} color="#fff" />
+                </TouchableOpacity>
             </View>
 
             {/* Filter Pills Row */}
@@ -193,28 +214,47 @@ export default function MarketplaceScreen({ navigation, route }) {
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catList}>
                     {CATEGORIES.map(item => {
                         const isActive = filter === item.id;
+                        const IconComp = item.icon;
                         return (
                             <TouchableOpacity
                                 key={item.id}
                                 style={[styles.catChip, isActive && styles.catChipActive]}
                                 onPress={() => setFilter(item.id)}
                             >
+                                {IconComp && isActive && item.id === '' && <IconComp size={16} color="#fff" style={{ marginRight: 6 }} />}
+                                {IconComp && !isActive && <IconComp size={16} color="#111" style={{ marginRight: 6 }} />}
                                 <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                                     {item.name}
                                 </Text>
                             </TouchableOpacity>
                         );
                     })}
-                    
-                    <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowLocationModal(true)}>
-                        <Text style={styles.catChipText}>{locationFilter ? (locationFilter.length > 8 ? locationFilter.substring(0,8)+'...' : locationFilter) : 'Location'}</Text>
-                        <ChevronDown size={14} color="#666" style={{marginLeft: 4}} />
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowSortModal(true)}>
-                        <Text style={styles.catChipText}>{sortBy ? SORT_OPTIONS.find(o => o.id === sortBy)?.label.split(':')[0] : 'Sort by'}</Text>
-                        <ChevronDown size={14} color="#666" style={{marginLeft: 4}} />
+                    <TouchableOpacity style={styles.catChip}>
+                        <LayoutGrid size={16} color="#111" style={{ marginRight: 6 }} />
+                        <Text style={styles.catChipText}>More</Text>
                     </TouchableOpacity>
                 </ScrollView>
+            </View>
+
+            {/* Near You Header */}
+            <View style={styles.nearYouRow}>
+                {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MapPin size={16} color="#059669" />
+                        <Text style={styles.showingText}>Showing waste </Text>
+                        <Text style={styles.nearYouText}>near you</Text>
+                    </View>
+                ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Package size={16} color="#059669" />
+                        <Text style={styles.showingText}>Showing your </Text>
+                        <Text style={styles.nearYouText}>recent waste</Text>
+                    </View>
+                )}
+                <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowSortModal(true)}>
+                    <Text style={styles.dropdownText}>{sortBy ? SORT_OPTIONS.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
+                    <ChevronDown size={14} color="#111" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
             </View>
 
             {/* Results Grid */}
@@ -350,15 +390,38 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    iconBtnRound: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F9FAFB',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     searchBarWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 20,
         backgroundColor: '#F9FAFB',
-        borderRadius: 24,
-        paddingHorizontal: 20,
-        height: 52,
+        borderRadius: 28,
+        paddingLeft: 20,
+        paddingRight: 6,
+        height: 56,
         marginBottom: 20,
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 10,
+        fontSize: 16,
+        color: '#111',
+    },
+    searchBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#059669',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     searchInput: {
         flex: 1,
@@ -374,29 +437,58 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     catChip: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 24,
-        backgroundColor: '#fff',
-    },
-    catChipActive: {
-        backgroundColor: '#111',
-    },
-    dropdownChip: {
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 24,
         backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#F3F4F6',
         flexDirection: 'row',
         alignItems: 'center',
     },
+    catChipActive: {
+        backgroundColor: '#111',
+        borderColor: '#111',
+    },
+    dropdownChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        backgroundColor: '#fff',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    dropdownText: {
+        fontSize: 13,
+        color: '#111',
+        fontWeight: '500',
+    },
     catChipText: {
         fontSize: 14,
-        color: '#666',
+        color: '#111',
         fontWeight: '600',
     },
     catChipTextActive: {
         color: '#fff',
+    },
+    nearYouRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        marginBottom: 16,
+    },
+    showingText: {
+        fontSize: 15,
+        color: '#111',
+        marginLeft: 8,
+    },
+    nearYouText: {
+        fontSize: 15,
+        color: '#059669',
+        fontWeight: '600',
     },
     resultsContainer: {
         flex: 1,
@@ -435,15 +527,15 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 12,
         left: 12,
-        backgroundColor: '#E5F6EE', // Soft pastel green
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
+        backgroundColor: '#059669',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
     },
     floatingTagText: {
-        color: '#059669', // Darker green
-        fontSize: 11,
-        fontWeight: 'bold',
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
     },
     floatingHeart: {
         position: 'absolute',
@@ -468,23 +560,44 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#111',
         fontWeight: 'bold',
+        marginBottom: 8,
+    },
+    iconRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 6,
     },
-    listingSubRow: {
+    listingLoc: {
+        fontSize: 12,
+        color: '#555',
+    },
+    distanceText: {
+        fontSize: 12,
+        color: '#059669',
+        fontWeight: '500',
+    },
+    priceRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-end',
-    },
-    listingLoc: {
-        flex: 1,
-        fontSize: 12,
-        color: '#888',
-        marginRight: 10,
+        alignItems: 'center',
+        marginTop: 6,
     },
     listingPrice: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#111',
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#059669',
+    },
+    viewDetailsBtn: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#059669',
+    },
+    viewDetailsText: {
+        color: '#059669',
+        fontSize: 12,
+        fontWeight: '600',
     },
     emptyBox: {
         alignItems: 'center',
