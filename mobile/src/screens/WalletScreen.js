@@ -12,9 +12,9 @@ import { ChevronRight, HelpCircle, Clock, Plus, Banknote, ArrowLeft } from 'luci
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const PAYMENT_METHODS = [
-    { id: 'ATL', name: 'AirtelTigo Money', icon: '📱' },
-    { id: 'MTN', name: 'MTN Mobile Money', icon: '📱' },
-    { id: 'TEL', name: 'Telecel cash', icon: '📱' },
+    { id: 'ATL', name: 'AirtelTigo Money', icon: { uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/AirtelTigo_Logo.png/150px-AirtelTigo_Logo.png' } },
+    { id: 'MTN', name: 'MTN Mobile Money', icon: { uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/New-mtn-logo.jpg/150px-New-mtn-logo.jpg' } },
+    { id: 'TEL', name: 'Telecel cash', icon: { uri: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Telecel_logo.svg/150px-Telecel_logo.svg.png' } },
     { id: 'CASH', name: 'Cash', icon: <Banknote size={20} color="#059669" /> },
 ];
 
@@ -116,7 +116,9 @@ export default function WalletScreen() {
                                 >
                                     <View style={styles.methodLeft}>
                                         <View style={styles.methodIconWrapper}>
-                                            {typeof method.icon === 'string' ? (
+                                            {method.icon?.uri ? (
+                                                <Image source={{ uri: method.icon.uri }} style={{ width: 24, height: 24, resizeMode: 'contain', borderRadius: 4 }} />
+                                            ) : typeof method.icon === 'string' ? (
                                                 <Text style={styles.methodEmoji}>{method.icon}</Text>
                                             ) : (
                                                 method.icon
