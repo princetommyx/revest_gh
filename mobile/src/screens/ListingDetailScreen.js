@@ -130,9 +130,6 @@ export default function ListingDetailScreen({ route, navigation }) {
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.roundBlurBtn}>
                             <ArrowLeft size={20} color="#111" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.roundBlurBtn} onPress={() => navigation.navigate('Main', { screen: 'Pickups' })}>
-                            <ShoppingCart size={18} color="#111" />
-                        </TouchableOpacity>
                     </View>
                 </View>
 

@@ -65,27 +65,36 @@ export default function EditProfileScreen({ navigation }) {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const data = new FormData();
-            Object.keys(formData).forEach(key => {
-                const value = formData[key];
-                if (value === null || value === undefined) return;
-                const text = value.toString().trim();
-                // Never send a blank. The form is seeded from the cached user,
-                // and if any field hasn't loaded yet an empty string would
-                // overwrite a good value on the server - someone changing only
-                // their photo could lose their name, phone and city.
-                if (text === '') return;
-                data.append(key, text);
-            });
+            let payload;
+            
             if (image) {
+                payload = new FormData();
+                Object.keys(formData).forEach(key => {
+                    const value = formData[key];
+                    if (value === null || value === undefined) return;
+                    const text = value.toString().trim();
+                    if (text === '') return;
+                    payload.append(key, text);
+                });
+                
                 const uri = image;
                 let filename = uri.split('/').pop() || 'photo.jpg';
                 if (!filename.includes('.')) filename += '.jpg';
                 const match = /\.(\w+)$/.exec(filename);
                 const type = match ? `image/${match[1] === 'jpg' ? 'jpeg' : match[1]}` : `image/jpeg`;
-                data.append('profile_picture', { uri, name: filename, type });
+                payload.append('profile_picture', { uri, name: filename, type });
+            } else {
+                payload = {};
+                Object.keys(formData).forEach(key => {
+                    const value = formData[key];
+                    if (value === null || value === undefined) return;
+                    const text = value.toString().trim();
+                    if (text === '') return;
+                    payload[key] = text;
+                });
             }
-            const updatedUser = await authApi.updateProfile(data);
+            
+            const updatedUser = await authApi.updateProfile(payload);
             updateUser(updatedUser);
             Toast.show({ type: 'success', text1: 'Profile updated!' });
             navigation.goBack();
