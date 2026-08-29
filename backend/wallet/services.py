@@ -7,6 +7,23 @@ from django.db import transaction
 
 class WalletService:
     @staticmethod
+    def monetization_enabled():
+        """
+        Master switch for every in-app money movement tied to a pickup job:
+        escrow locking at request time, the disposer's early payout on arrival,
+        and all completion payouts/commission.
+
+        Off by default. Revesta currently just connects disposers to collectors
+        and they settle the price physically between themselves - nothing is
+        taken and nothing is paid out in-app. The payout logic below is left
+        intact rather than deleted so commission can be switched back on (set
+        the MONETIZATION_ENABLED SystemConfig row to 'true') once there's
+        enough traction, without a code change.
+        """
+        from .models import SystemConfig
+        return SystemConfig.get_bool('MONETIZATION_ENABLED', default=False)
+
+    @staticmethod
     def check_eligibility_for_job(user):
         """
         Check if user (Collector) is eligible to accept a job.
