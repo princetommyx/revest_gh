@@ -328,10 +328,6 @@ export default function PickupsScreen({ route }) {
     const [showSearchModal, setShowSearchModal] = useState(false);
 
 
-    // Destination State
-    const [destinationAddress, setDestinationAddress] = useState('');
-    const [destinationLocation, setDestinationLocation] = useState(null);
-    const [selectionMode, setSelectionMode] = useState('PICKUP'); // 'PICKUP' or 'DESTINATION'
     const [uiState, setUiState] = useState('IDLE');
     const [selectedVehicle, setSelectedVehicle] = useState('tricycle');
 
@@ -492,8 +488,7 @@ export default function PickupsScreen({ route }) {
         }
     }, [prefillLocation]);
 
-    const startMapSelection = (mode = 'PICKUP') => {
-        setSelectionMode(mode);
+    const startMapSelection = () => {
         setShowRequestModal(false);
         setShowSearchModal(false);
         setIsSelectingLocation(true);
@@ -702,19 +697,9 @@ export default function PickupsScreen({ route }) {
         setIsSelectingLocation(false);
         if (mapRegion) {
             const address = await reverseGeocode(mapRegion.latitude, mapRegion.longitude);
-
-            if (selectionMode === 'PICKUP') {
-                setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
-                setCustomAddress(address);
-                setUseCurrentLocation(false);
-            } else {
-                setDestinationLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
-                setDestinationAddress(address);
-            }
-
-            // Return to the booking sheet instead of jumping straight into the
-            // request modal - the disposer still needs to set the other
-            // location (pickup or destination) before they can continue.
+            setLocation({ latitude: mapRegion.latitude, longitude: mapRegion.longitude });
+            setCustomAddress(address);
+            setUseCurrentLocation(false);
             setShowRequestModal(false);
         }
     };
@@ -854,9 +839,6 @@ export default function PickupsScreen({ route }) {
                 latitude: location.latitude,
                 longitude: location.longitude,
                 pickup_address: resolvedPickupAddress || null,
-                destination_address: destinationAddress,
-                destination_latitude: destinationLocation?.latitude,
-                destination_longitude: destinationLocation?.longitude
             };
 
             if (requestForm.listing_id) {
@@ -895,8 +877,6 @@ export default function PickupsScreen({ route }) {
             setShowRequestModal(false);
             setUiState('IDLE');
             setCustomAddress('');
-            setDestinationAddress('');
-            setDestinationLocation(null);
             refetch();
         } catch (error) {
             console.error("Create Request Error:", error);
@@ -963,17 +943,9 @@ export default function PickupsScreen({ route }) {
     }, [searchQuery, location]);
 
     const handleSelectSearchedLocation = (place) => {
-        // Was hardcoded to always write into the pickup fields, which was
-        // harmless only because nothing opened this modal for a destination
-        // pick. Route by selectionMode so it can serve both.
-        if (selectionMode === 'DESTINATION') {
-            setDestinationAddress(place.name);
-            setDestinationLocation({ latitude: place.lat, longitude: place.lon });
-        } else {
-            setCustomAddress(place.name);
-            setLocation({ latitude: place.lat, longitude: place.lon });
-            setUseCurrentLocation(false);
-        }
+        setCustomAddress(place.name);
+        setLocation({ latitude: place.lat, longitude: place.lon });
+        setUseCurrentLocation(false);
 
         addRecentLocation({ address: place.name, latitude: place.lat, longitude: place.lon });
 
@@ -1479,43 +1451,22 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dragHandle} />
                     </View>
                     <View style={styles.locationInputBox}>
-                        {/* Bolt/Yango-style route picker: one connected line running
-                            through both stops instead of two separate labeled form
-                            fields - the dot color and position on the line say
-                            "pickup" or "destination" on their own. */}
-                        <View style={styles.routeInputWrap}>
-                            <View style={styles.routeIconCol}>
-                                <View style={styles.routeDotPickupLg} />
-                                <View style={styles.routeConnectorLine} />
-                                <View style={styles.routeDotDestLg} />
-                            </View>
-                            <View style={styles.routeTextCol}>
-                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('PICKUP'); setShowSearchModal(true); }}>
-                                    <Text style={styles.routeFieldText} numberOfLines={1}>
-                                        {customAddress || 'Current Location'}
-                                    </Text>
-                                    <ChevronRight size={18} color="#C7CBD1" />
-                                </TouchableOpacity>
+                        {/* Just the pickup point - there's no destination for the
+                            disposer to set here. Where the waste physically ends up
+                            (landfill, transfer station, recycling facility) is the
+                            collector's own logistics decision, not something Track A
+                            pricing, routing, or the collector's job screen ever reads;
+                            asking the disposer for it was a Bolt/Uber pattern that
+                            didn't actually fit a "come collect my waste" service. */}
+                        <TouchableOpacity style={styles.pickupFieldRow} onPress={() => { setShowSearchModal(true); }}>
+                            <View style={styles.routeDotPickupLg} />
+                            <Text style={styles.routeFieldText} numberOfLines={1}>
+                                {customAddress || 'Current Location'}
+                            </Text>
+                            <ChevronRight size={18} color="#C7CBD1" />
+                        </TouchableOpacity>
 
-                                <View style={styles.routeFieldDivider} />
-
-                                <TouchableOpacity style={styles.routeFieldRow} onPress={() => { setSelectionMode('DESTINATION'); setShowSearchModal(true); }}>
-                                    <Text
-                                        style={[styles.routeFieldText, !destinationAddress && styles.routeFieldPlaceholder]}
-                                        numberOfLines={1}
-                                    >
-                                        {destinationAddress || 'Where should your waste be taken?'}
-                                    </Text>
-                                    {destinationAddress ? (
-                                        <X size={18} color="#9CA3AF" onPress={() => setDestinationAddress('')} />
-                                    ) : (
-                                        <ChevronRight size={18} color="#C7CBD1" />
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-
-                        {(useCurrentLocation ? !!location : !!customAddress) && !!destinationAddress && (
+                        {(useCurrentLocation ? !!location : !!customAddress) && (
                             <AnimatedButton
                                 style={styles.continueBtnUbride}
                                 haptic
@@ -1546,19 +1497,15 @@ export default function PickupsScreen({ route }) {
 
                     <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
 
-                    {/* Route summary - the price/ETA preview Bolt/Uber always show before you commit */}
+                    {/* Pickup + the price/ETA preview Bolt/Uber always show before you
+                        commit. No destination row - a collector's distance/time to
+                        reach the pickup point is what this is estimating, not a trip
+                        to somewhere the disposer would choose. */}
                     <View style={styles.routeSummaryCard}>
                         <View style={styles.routeSummaryRow}>
                             <View style={styles.dotIndicatorPickup} />
                             <Text style={styles.routeSummaryText} numberOfLines={1}>
                                 {customAddress || 'Current Location'}
-                            </Text>
-                        </View>
-                        <View style={styles.routeSummaryConnector} />
-                        <View style={styles.routeSummaryRow}>
-                            <View style={styles.dotIndicatorDest} />
-                            <Text style={styles.routeSummaryText} numberOfLines={1}>
-                                {destinationAddress || 'Destination'}
                             </Text>
                         </View>
 
@@ -1753,9 +1700,7 @@ export default function PickupsScreen({ route }) {
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
                             <X size={24} color="#111" />
                         </TouchableOpacity>
-                        <Text style={styles.searchTitle}>
-                            {selectionMode === 'DESTINATION' ? 'Choose Destination' : 'Choose Pickup Location'}
-                        </Text>
+                        <Text style={styles.searchTitle}>Choose Pickup Location</Text>
                         <View style={{ width: 40 }} />
                     </View>
 
@@ -1782,7 +1727,7 @@ export default function PickupsScreen({ route }) {
                         for an address search can't find. */}
                     <TouchableOpacity
                         style={styles.searchResultItem}
-                        onPress={() => startMapSelection(selectionMode)}
+                        onPress={() => startMapSelection()}
                     >
                         <View style={[styles.searchResultIcon, { backgroundColor: '#F3F4F6' }]}>
                             <MapPin size={20} color="#111" />
@@ -1826,7 +1771,7 @@ export default function PickupsScreen({ route }) {
                         )
                     ) : (
                         <ScrollView style={styles.searchResultsContainer} keyboardShouldPersistTaps="handled">
-                            {selectionMode === 'PICKUP' && deviceLocationRef.current && (
+                            {deviceLocationRef.current && (
                                 <>
                                     <Text style={styles.searchSectionTitle}>NEARBY</Text>
                                     <TouchableOpacity
@@ -2219,23 +2164,21 @@ const styles = StyleSheet.create({
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    // Pickup = green (matches the brand + the "you are here" dot everywhere
-    // else in the app), destination = black square, connected by a single
-    // line - the classic Bolt/Uber "this is your trip" visual instead of two
-    // separately labeled form fields.
+    // Green pickup dot, matching the "you are here" dot used everywhere else
+    // in the app (route summary below, the tracking cards).
     dotIndicatorPickup: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
-    dotIndicatorDest: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
-    routeInputWrap: { flexDirection: 'row' },
-    routeIconCol: { width: 20, alignItems: 'center', paddingVertical: 6 },
     routeDotPickupLg: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
-    routeDotDestLg: { width: 9, height: 9, borderRadius: 2, backgroundColor: '#111' },
-    routeConnectorLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4, borderRadius: 1 },
-    routeTextCol: { flex: 1, marginLeft: 12 },
-    routeFieldRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 8 },
+    pickupFieldRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+    },
     routeFieldText: { flex: 1, fontSize: 16, fontWeight: '600', color: '#111' },
-    routeFieldPlaceholder: { color: '#9CA3AF', fontWeight: '500' },
-    routeFieldDivider: { height: 1, backgroundColor: '#F3F4F6' },
-    continueBtnUbride: { marginTop: 20, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+    continueBtnUbride: { marginTop: 16, backgroundColor: '#111', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
     continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
@@ -2249,7 +2192,6 @@ const styles = StyleSheet.create({
     confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
     routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
     routeSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    routeSummaryConnector: { width: 1, height: 14, backgroundColor: '#D1D5DB', marginLeft: 5, marginVertical: 2 },
     routeSummaryText: { flex: 1, fontSize: 14, color: '#111', fontWeight: '500' },
     routeSummaryDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
     routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },

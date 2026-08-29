@@ -194,7 +194,7 @@ export default function ProfileScreen({ navigation }) {
                                 <View style={styles.contextRow}>
                                     <MapPin size={14} color="#666" />
                                     <Text style={styles.contextDesc} numberOfLines={1}>
-                                        {activeJob.pickup_address || 'Custom location'} → {activeJob.destination_address || 'Drop-off'}
+                                        {activeJob.pickup_address || 'Custom location'}
                                     </Text>
                                 </View>
                                 <Text style={styles.contextLink}>View details</Text>
