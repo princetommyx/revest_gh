@@ -4,6 +4,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     RegisterView, AdminRegisterView, UserDetailView, UserProfileView,
     UpdateLocationView, ChangePasswordView,
+    DeactivateAccountView, DeleteAccountView,
     PasswordResetRequestView, PasswordResetVerifyView, PasswordResetConfirmView,
     CustomTokenObtainPairView,
     VerifyLoginOTPView, SubmitFeedbackView,
@@ -33,6 +34,8 @@ urlpatterns = [
     path('me/', UserDetailView.as_view(), name='user_detail'),
     path('location/', UpdateLocationView.as_view(), name='update_location'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),
+    path('account/deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),
+    path('account/delete/', DeleteAccountView.as_view(), name='delete_account'),
     path('push-token/', DeviceTokenView.as_view(), name='update_push_token'),
     path('notifications/', NotificationViewSet.as_view({'get': 'list', 'patch': 'read_all'}), name='notification_list'),
     path('notifications/<int:pk>/', NotificationViewSet.as_view({'patch': 'read', 'delete': 'destroy'}), name='notification_detail'),

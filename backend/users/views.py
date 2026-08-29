@@ -31,6 +31,8 @@ from .serializers import (
     NotificationSerializer,
     DeviceTokenSerializer,
     UserFeedbackSerializer,
+    DeactivateAccountSerializer,
+    DeleteAccountSerializer,
 )
 from .email_service import send_welcome_email, send_login_alert
 
@@ -240,6 +242,102 @@ class ChangePasswordView(views.APIView):
             )
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeactivateAccountView(views.APIView):
+    """
+    Temporary, self-reversible: hides the user (is_online cleared, so they
+    stop being matched as a nearby collector) and requires re-login, but
+    leaves is_active alone so that re-login is possible at all. Logging back
+    in clears is_deactivated automatically (see VerifyLoginOTPView).
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        serializer = DeactivateAccountSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+        user.is_deactivated = True
+        user.is_online = False
+        user.save(update_fields=["is_deactivated", "is_online"])
+
+        logger.info(f"Account deactivated: {user.username}")
+        return Response({"status": "success", "message": "Account deactivated."})
+
+
+class DeleteAccountView(views.APIView):
+    """
+    Anonymizes rather than hard-deletes. PickupRequest.provider/collector,
+    chat.Message.sender/receiver and wallet.Escrow.payer all CASCADE from
+    User - an actual user.delete() would silently wipe other people's job
+    history, chat threads and transaction records along with it. Blocked
+    while there's money in the wallet or a job still in progress, so nothing
+    gets stranded.
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        serializer = DeleteAccountSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user
+
+        wallet = getattr(user, "wallet", None)
+        if wallet and wallet.balance > 0:
+            return Response(
+                {
+                    "detail": "Please withdraw your wallet balance before deleting your account.",
+                    "code": "wallet_balance",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from logistics.models import PickupRequest
+
+        active_statuses = ["PENDING", "ACCEPTED", "ARRIVED"]
+        has_active_job = PickupRequest.objects.filter(
+            models.Q(provider=user) | models.Q(collector=user),
+            status__in=active_statuses,
+        ).exists()
+        if has_active_job:
+            return Response(
+                {
+                    "detail": "You have an active pickup in progress. Please complete or cancel it before deleting your account.",
+                    "code": "active_pickup",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        import uuid
+
+        anon_id = uuid.uuid4().hex[:12]
+        user.username = f"deleted_{anon_id}"
+        user.email = f"deleted_{anon_id}@deleted.revesta.invalid"
+        user.first_name = ""
+        user.last_name = ""
+        user.phone_number = None
+        user.city = None
+        user.profile_picture = None
+        user.profile_picture_url = None
+        user.national_id = None
+        user.company_name = None
+        user.tax_id = None
+        user.expo_push_token = None
+        user.google_id = None
+        user.current_lat = None
+        user.current_lon = None
+        user.is_online = False
+        user.is_deactivated = False
+        # is_active=False is what actually locks them out: SimpleJWT's
+        # get_user() re-checks it on every request, so this alone invalidates
+        # any access token they're still holding - no separate blacklist needed.
+        user.is_active = False
+        user.set_unusable_password()
+        user.save()
+
+        logger.info(f"Account deleted (anonymized): user id {user.id}")
+        return Response({"status": "success", "message": "Account deleted."})
 
 
 def find_user_by_identifier(identifier):
@@ -697,6 +795,14 @@ class VerifyLoginOTPView(views.APIView):
                 verification.is_verified = True
                 verification.save()
 
+                # Logging back in with valid credentials is the reactivation
+                # action for a self-deactivated account - the same pattern
+                # most consumer apps use, rather than a separate flow.
+                reactivated = user.is_deactivated
+                if reactivated:
+                    user.is_deactivated = False
+                    user.save(update_fields=["is_deactivated"])
+
                 refresh = RefreshToken.for_user(user)
 
                 # Structure exactly like the successful login serializer did
@@ -704,6 +810,7 @@ class VerifyLoginOTPView(views.APIView):
                     {
                         "refresh": str(refresh),
                         "access": str(refresh.access_token),
+                        "reactivated": reactivated,
                         "user": {
                             "id": user.id,
                             "username": user.username,
