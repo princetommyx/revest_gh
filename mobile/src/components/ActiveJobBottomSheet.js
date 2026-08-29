@@ -1,11 +1,20 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing, Dimensions } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 
 const BRAND_GREEN = '#059669';
+
+// The sheet is absolutely positioned at bottom:0 inside a parent with no fixed
+// height, so `maxHeight: '100%'` resolved against an auto-sized box and did
+// nothing - a long job (roadmap + route + payment summary) grew the sheet
+// straight past the top of the screen, hiding the first roadmap step behind
+// the status bar and the map's floating controls. Cap it against the real
+// window instead and let the ScrollView inside handle the overflow, so the
+// map and its buttons always stay reachable above the sheet.
+const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.74;
 
 // The final node always renders as a checkmark once reached (handled by
 // PickupProgressRoadmap itself), so this icon is only a fallback.
@@ -258,7 +267,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 20,
         elevation: 20,
-        maxHeight: '100%',
+        maxHeight: SHEET_MAX_HEIGHT,
     },
     containerPending: {
         borderTopWidth: 3,

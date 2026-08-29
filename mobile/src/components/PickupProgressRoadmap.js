@@ -7,9 +7,13 @@ const BRAND_GREEN = '#059669';
 const TRACK_COLOR = '#E5E7EB';
 const TRACK_DONE_COLOR = '#A7F3D0';
 
-const NODE_SIZE = 48;
-const STEP_GAP = 92;
-const TOP_PAD = 28;
+// Tightened from 48/92/28: at the old spacing four steps alone stood ~370px
+// tall, which was most of what pushed the collector's sheet off the top of the
+// screen. Kept loose enough that a node never overlaps the label above it
+// (label bottom sits ~NODE_SIZE/2 + 20 below its node centre).
+const NODE_SIZE = 42;
+const STEP_GAP = 72;
+const TOP_PAD = 24;
 const LEFT_X = 20;   // percent
 const RIGHT_X = 80;  // percent
 
@@ -115,9 +119,9 @@ export default function PickupProgressRoadmap({ steps, currentIndex, isComplete 
                             ]}
                         >
                             {(isDone || isFinal) ? (
-                                <CheckCircle size={22} color="#fff" />
+                                <CheckCircle size={20} color="#fff" />
                             ) : (
-                                <Icon size={20} color={isActive ? BRAND_GREEN : '#9CA3AF'} />
+                                <Icon size={18} color={isActive ? BRAND_GREEN : '#9CA3AF'} />
                             )}
                         </Animated.View>
                     );

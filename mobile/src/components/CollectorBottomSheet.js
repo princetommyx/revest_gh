@@ -1,10 +1,16 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, ScrollView, Dimensions } from 'react-native';
 import { Phone, MessageCircle, Clock, UserCheck, MapPin, CheckCircle, User } from 'lucide-react-native';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 
 const BRAND_GREEN = '#059669';
+
+// Same guard as the collector's sheet: this card sits 120px off the bottom and
+// had no height cap or scroll container, so on a shorter screen the roadmap
+// pushed the collector's name and the Chat/Call buttons off the top edge. Cap
+// it and scroll inside so the whole card is always reachable.
+const CARD_MAX_HEIGHT = Dimensions.get('window').height * 0.68;
 
 // The final node always renders as a checkmark once reached (handled by
 // PickupProgressRoadmap itself), so this icon is only a fallback.
@@ -60,6 +66,7 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
         }]}>
             <View style={styles.dragHandle} />
 
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             {/* Header: Collector Info & Quick Actions */}
             <View style={styles.header}>
                 {avatarUrl ? (
@@ -123,6 +130,7 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                     <Text style={styles.cancelLinkText}>Cancel pickup</Text>
                 </TouchableOpacity>
             )}
+            </ScrollView>
         </Animated.View>
     );
 }
@@ -137,6 +145,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 20,
         elevation: 20,
+        maxHeight: CARD_MAX_HEIGHT,
     },
     dragHandle: {
         width: 40,

@@ -194,15 +194,25 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
         pickup_request.status = 'ARRIVED'
         pickup_request.save()
-        
-        # Early Payout for Sellers (Track B & C)
+
+        # Early Payout for Sellers (Track B & C).
+        # The status is already committed above, so letting this raise would
+        # return an error for a state change that actually succeeded - the
+        # collector sees "failed" while the job really did move to ARRIVED.
+        # Log it instead, same as `complete` already does for its payouts.
         if pickup_request.track_type in ['B', 'C']:
             from wallet.services import WalletService
-            WalletService.process_disposer_early_payout(pickup_request)
-        
+            try:
+                WalletService.process_disposer_early_payout(pickup_request)
+            except Exception as e:
+                logger.exception(
+                    f"Early payout failed for job {pickup_request.id} "
+                    f"(track {pickup_request.track_type}): {e}"
+                )
+
         # Track A: Inform provider that collector is here
         # Track B: Inform provider and wait for weight verification
-        
+
         self.notify_provider(pickup_request, 'driver_arrived')
         return Response({'status': 'driver arrived'})
 
@@ -418,29 +428,43 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 collector=pickup_request.collector.username if pickup_request.collector else "Your collector",
                 material=pickup_request.material_type,
             )
-            send_push_notification(
-                pickup_request.provider,
-                title,
-                body,
-                data={"type": status_type, "request_id": pickup_request.id},
-                urgency='URGENT',
-            )
+            # The push is the disposer's fallback for a dropped socket, so it
+            # must not be skipped just because the socket send above failed -
+            # and it must not fail the collector's request either.
+            try:
+                send_push_notification(
+                    pickup_request.provider,
+                    title,
+                    body,
+                    data={"type": status_type, "request_id": pickup_request.id},
+                    urgency='URGENT',
+                )
+            except Exception as e:
+                logger.warning(f"Push notification failed for request {pickup_request.id}: {e}")
 
     def _notify_user(self, user, type, request_obj, message_data=None):
-        channel_layer = get_channel_layer()
         if not message_data:
              message_data = {
                 "type": type,
                 "request_id": request_obj.id,
              }
-             
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}",
-            {
-                "type": "logistics_notification",
-                "message": message_data
-            }
-        )
+
+        # Best-effort: the websocket layer is Redis-backed in production, and an
+        # unreachable Redis used to bubble up and turn a successful accept /
+        # arrive / complete into a 500 for the caller.
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer is None:
+                return
+            async_to_sync(channel_layer.group_send)(
+                f"user_{user.id}",
+                {
+                    "type": "logistics_notification",
+                    "message": message_data
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Websocket notify failed for user {user.id} ({type}): {e}")
 
     @extend_schema(
         summary="Find available jobs",

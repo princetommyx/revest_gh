@@ -8,7 +8,10 @@ class CommissionRule(models.Model):
     Configuration for commission rates per waste type.
     """
     material_type = models.CharField(max_length=100, unique=True, help_text="Must match material_type in PickupRequest")
-    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, help_text="Percentage (e.g., 20.00 for 20%)")
+    # Decimal defaults, not float ones: a freshly built (get_or_create'd) row
+    # holds its default in memory until it is re-read, so a float default makes
+    # `instance.field += Decimal(...)` raise TypeError on brand-new rows.
+    commission_percent = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('20.00'), help_text="Percentage (e.g., 20.00 for 20%)")
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -18,7 +21,7 @@ class CommissionRule(models.Model):
 
 class Wallet(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wallet')
-    balance = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     currency = models.CharField(max_length=3, default='GHS')
     is_frozen = models.BooleanField(default=False, help_text="Lock wallet for suspicious activity")
     trust_score = models.IntegerField(default=100, help_text="0-100 score based on payment history")
@@ -30,8 +33,8 @@ class Wallet(models.Model):
     last_pin_change = models.DateTimeField(null=True, blank=True)
     
     # Limits
-    daily_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=5000.00)
-    transaction_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=2000.00)
+    daily_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('5000.00'))
+    transaction_withdrawal_limit = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('2000.00'))
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
