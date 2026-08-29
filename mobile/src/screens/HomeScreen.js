@@ -100,7 +100,9 @@ export default function HomeScreen({ navigation }) {
 
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
     const myActiveJob = isCollectorRole
-        ? pickupJobs.find(j => j.collector === user?.id && ['ACCEPTED', 'ARRIVED'].includes(j.status))
+        // `collector` is now the serialized user object (see logistics
+        // serializers), not a bare id - compare .id, not the object itself.
+        ? pickupJobs.find(j => j.collector?.id === user?.id && ['ACCEPTED', 'ARRIVED'].includes(j.status))
         : pickupJobs.find(j => ['PENDING', 'ACCEPTED', 'ARRIVED'].includes(j.status));
     const { recentLocations } = useRecentPickupLocations();
     const [locationFilter, setLocationFilter] = useState('');

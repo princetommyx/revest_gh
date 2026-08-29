@@ -11,6 +11,13 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     Lightweight serializer for pickup list views
     """
     provider = PublicUserSerializer(read_only=True)
+    # Was left to DRF's default (a bare PrimaryKeyRelatedField), unlike
+    # `provider` and unlike this same field on the Detail serializer - so a
+    # disposer's tracking card, which reads from this list endpoint, only
+    # ever got the collector's raw id and had nothing to show a name or
+    # avatar from. Every accepted job silently rendered a blank name and
+    # fell through to fake "Driver" / "Truck / No Plate" placeholder copy.
+    collector = PublicUserSerializer(read_only=True)
     collector_name = serializers.CharField(source='collector.username', read_only=True)
     provider_name = serializers.CharField(source='provider.username', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
