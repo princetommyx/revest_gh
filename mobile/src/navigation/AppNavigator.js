@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, MessageSquare, Wallet, Store, Truck, User } from 'lucide-react-native';
+import { House, MessageSquare, Wallet, Store, CarFront, User } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,7 +44,7 @@ const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
     Home: House,
-    Pickups: Truck,
+    Pickups: CarFront,
     Marketplace: Store,
     Chat: MessageSquare,
     Wallet: Wallet,
@@ -75,7 +75,7 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
         }).start();
     }, [isFocused]);
 
-    const color = isFocused ? '#FFFFFF' : 'rgba(255,255,255,0.55)';
+    const color = isFocused ? '#111111' : 'rgba(17,17,17,0.5)';
 
     return (
         <TouchableOpacity onPress={onPress} style={navStyles.tabButton} activeOpacity={0.7}>
@@ -121,7 +121,7 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     return (
         <View style={navStyles.floatingShadow}>
             <View style={navStyles.floatingClip}>
-                <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+                <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
                 <View style={navStyles.tint} pointerEvents="none" />
 
                 <View style={navStyles.row}>
@@ -183,7 +183,7 @@ const navStyles = StyleSheet.create({
     // so a dark scrim sits on top of it for legibility.
     tint: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(17,17,17,0.82)',
+        backgroundColor: 'rgba(255,255,255,0.92)',
     },
     row: {
         flexDirection: 'row',
@@ -210,7 +210,7 @@ const navStyles = StyleSheet.create({
     activePill: {
         ...StyleSheet.absoluteFillObject,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.16)',
+        backgroundColor: 'rgba(0,0,0,0.06)',
     },
     iconWrapper: {
         position: 'relative',
@@ -226,15 +226,15 @@ const navStyles = StyleSheet.create({
     },
     avatarActive: {
         borderWidth: 1.5,
-        borderColor: '#FFFFFF',
+        borderColor: '#111111',
     },
     tabLabel: {
         fontSize: 10,
-        color: 'rgba(255,255,255,0.55)',
+        color: 'rgba(17,17,17,0.5)',
         fontWeight: '600',
     },
     tabLabelActive: {
-        color: '#FFFFFF',
+        color: '#111111',
         fontWeight: '700',
     },
     badge: {

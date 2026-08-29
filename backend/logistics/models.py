@@ -44,6 +44,7 @@ class PickupRequest(models.Model):
     image = models.ImageField(upload_to='pickup_requests/', null=True, blank=True)
     
     quantity_estimate = models.CharField(max_length=100)
+    vehicle_type = models.CharField(max_length=50, null=True, blank=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')

@@ -31,7 +31,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         model = PickupRequest
         fields = (
             'id', 'material_type', 'track_type', 'track_type_display',
-            'bag_size', 'weight_kg', 'quantity_estimate',
+            'bag_size', 'weight_kg', 'quantity_estimate', 'vehicle_type',
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
             'distance_km', 'duration_min', 'collector_eta_min',
@@ -139,7 +139,7 @@ class PickupRequestDetailSerializer(serializers.ModelSerializer):
         model = PickupRequest
         fields = (
             'id', 'material_type', 'track_type', 'track_type_display',
-            'bag_size', 'weight_kg', 'quantity_estimate', 
+            'bag_size', 'weight_kg', 'quantity_estimate', 'vehicle_type',
             'status', 'status_display',
             'latitude', 'longitude', 'current_lat', 'current_lon', 'last_location_at',
             'pickup_address',
@@ -170,7 +170,7 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
         model = PickupRequest
         fields = (
             'id', 'material_type', 'track_type', 'bag_size', 'weight_kg',
-            'quantity_estimate', 'latitude', 'longitude', 'estimated_price',
+            'quantity_estimate', 'vehicle_type', 'latitude', 'longitude', 'estimated_price',
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
             'pickup_address',

@@ -352,7 +352,11 @@ export default function HomeScreen({ navigation }) {
                                 onPress={() => navigation.navigate('Pickups')}
                             >
                                 <View style={styles.requestPickupIconBox}>
-                                    <Truck size={22} color="#fff" />
+                                    <Image 
+                                        source={require('../../assets/pickup.jpg')} 
+                                        style={{width: 44, height: 44, borderRadius: 8}} 
+                                        contentFit="contain"
+                                    />
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.requestPickupTitle}>Request a Pickup</Text>
@@ -459,11 +463,12 @@ const styles = StyleSheet.create({
     requestPickupIconBox: {
         width: 44,
         height: 44,
-        borderRadius: 22,
-        backgroundColor: 'rgba(255,255,255,0.15)',
+        borderRadius: 8,
+        backgroundColor: '#fff',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 14,
+        overflow: 'hidden',
     },
     requestPickupTitle: { fontSize: 15, fontWeight: '700', color: '#fff', marginBottom: 2 },
     requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },

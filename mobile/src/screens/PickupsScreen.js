@@ -21,7 +21,7 @@ import {
     Truck, MapPin, Navigation, Menu, Bell,
     CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, ArrowRight, Plus, Calendar,
     ChevronRight, Activity, Camera, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
-    User
+    User, LocateFixed
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -49,8 +49,8 @@ const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
 const VEHICLES = [
-    { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', icon: Truck },
-    { id: 'pickup', label: 'Pickup Truck', capacity: 'Bulk loads', icon: Truck }
+    { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', image: require('../../assets/tricycle.jpg') },
+    { id: 'pickup', label: 'Pickup Truck', capacity: 'Bulk loads', image: require('../../assets/pickup.jpg') }
 ];
 
 
@@ -299,6 +299,17 @@ export default function PickupsScreen({ route }) {
     // Live collector positions pushed over the websocket, keyed by pickup id.
     // Takes priority over the polled `current_lat`/`current_lon` snapshot.
     const [liveCollectorLocations, setLiveCollectorLocations] = useState({});
+
+    const [refreshing, setRefreshing] = useState(false);
+
+    const centerToUserLocation = () => {
+        if (mapRef.current && location) {
+            mapRef.current.animateCamera({
+                center: location,
+                zoom: 16
+            }, { duration: 500 });
+        }
+    };
 
     const [requestLoading, setRequestLoading] = useState(false);
     // Only opened for the pre-filled listing flow now (see the pickupData
@@ -826,8 +837,9 @@ export default function PickupsScreen({ route }) {
                 quantity_estimate: isListingFlow
                     ? (requestForm.quantity_estimate || 'Standard')
                     : (`${VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Standard'} Load`),
-                track_type: requestForm.track_type,
-                payment_method: requestForm.payment_method,
+                vehicle_type: selectedVehicle,
+                track_type: isListingFlow ? 'B' : 'A',
+                payment_method: isListingFlow ? 'DIGITAL' : 'CASH',
                 estimated_price: requestForm.delivery_fee || '0.00',
                 waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
                 delivery_fee: requestForm.delivery_fee || '0.00',
@@ -879,11 +891,16 @@ export default function PickupsScreen({ route }) {
             setCustomAddress('');
             refetch();
         } catch (error) {
-            console.error("Create Request Error:", error);
+            console.log("Create Request Error:", error.response?.data || error.message);
             const errorData = error.response?.data;
 
-            if (errorData?.detail === 'Insufficient funds' || errorData?.code === 'insufficient_funds') {
-                const required = errorData.required || (parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0));
+            const isInsufficientFunds = errorData?.detail === 'Insufficient funds' 
+                || errorData?.code === 'insufficient_funds' 
+                || errorData?.code === 'escrow_failed'
+                || (typeof errorData?.detail === 'string' && errorData.detail.includes('Insufficient funds'));
+
+            if (isInsufficientFunds) {
+                const required = errorData?.required || (parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0));
 
                 Alert.alert(
                     "Insufficient Funds",
@@ -1421,13 +1438,21 @@ export default function PickupsScreen({ route }) {
 
             {!isSelectingLocation && !navigatingJob && (
                 <View style={styles.floatingTopBarUbride}>
-                    <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
-                        <User size={20} color="#111" />
-                    </TouchableOpacity>
+                    {uiState === 'VEHICLE_SELECT' ? (
+                        <TouchableOpacity style={[styles.menuBtn, { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]} onPress={() => setUiState('IDLE')}>
+                            <ArrowLeft size={20} color="#111" />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
+                            <Menu size={20} color="#111" />
+                        </TouchableOpacity>
+                    )}
                     <View style={{ flex: 1 }} />
-                    <TouchableOpacity style={styles.bellBtnUbride} onPress={() => navigation.navigate('PickupHistory')}>
-                        <Clock size={20} color="#111" />
-                    </TouchableOpacity>
+                    {uiState !== 'VEHICLE_SELECT' && (
+                        <TouchableOpacity style={styles.menuBtn} onPress={centerToUserLocation}>
+                            <LocateFixed size={20} color="#111" />
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
 
@@ -1514,69 +1539,79 @@ export default function PickupsScreen({ route }) {
             )}
 
             {!isSelectingLocation && userRole === 'SELLER' && uiState === 'VEHICLE_SELECT' && (
-                <View style={styles.bottomSheetUbrideVehicles}>
-                    <TouchableOpacity style={styles.backVehicleBtn} onPress={() => setUiState('IDLE')}>
+                <View style={[styles.bottomSheetUbrideVehicles, { paddingHorizontal: 20, paddingBottom: 40, paddingTop: 12 }]}>
+                    <View style={styles.dragHandleContainer}>
                         <View style={styles.dragHandle} />
-                    </TouchableOpacity>
-
-                    <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
-
-                    {/* The pickup pin + ETA bubble are on the map itself now (see
-                        the marker above), Bolt-style, so this card is just the
-                        price/ETA preview rather than repeating the address too. */}
-                    <View style={styles.routeSummaryCard}>
-                        <View style={styles.routeSummaryStatsRow}>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>Distance</Text>
-                                <Text style={styles.routeSummaryStatValue}>
-                                    {requestForm.distance_km ? `${requestForm.distance_km} km` : '—'}
-                                </Text>
-                            </View>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>ETA</Text>
-                                <Text style={styles.routeSummaryStatValue}>
-                                    {requestForm.duration_min ? `${Math.round(requestForm.duration_min)} min` : '—'}
-                                </Text>
-                            </View>
-                            <View style={styles.routeSummaryStat}>
-                                <Text style={styles.routeSummaryStatLabel}>Est. fee</Text>
-                                <Text style={[styles.routeSummaryStatValue, { color: '#059669' }]}>
-                                    {requestForm.delivery_fee ? `GHS ${parseFloat(requestForm.delivery_fee).toFixed(2)}` : '—'}
-                                </Text>
-                            </View>
-                        </View>
                     </View>
 
-                    <Text style={styles.loadSizeLabel}>LOAD SIZE</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vehicleScroll}>
+                    <Text style={[styles.confirmScreenTitle, { marginTop: 12, fontSize: 24, fontWeight: '800', color: '#000', marginBottom: 4 }]}>Choose vehicle</Text>
+                    <Text style={{ fontSize: 14, color: '#666', marginBottom: 24 }}>Select the vehicle that fits your waste</Text>
+
+                    <View style={{ marginBottom: 24 }}>
                         {VEHICLES.map(v => {
-                            const Icon = v.icon;
+                            const isSelected = selectedVehicle === v.id;
                             return (
                                 <TouchableOpacity
                                     key={v.id}
-                                    style={[styles.vehicleCard, selectedVehicle === v.id && styles.vehicleCardActive]}
+                                    style={[
+                                        {
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            padding: 16,
+                                            borderWidth: 1.5,
+                                            borderColor: isSelected ? '#FACC15' : '#E5E7EB',
+                                            borderRadius: 12,
+                                            marginBottom: 12,
+                                            backgroundColor: '#FFF',
+                                            shadowColor: '#000',
+                                            shadowOffset: { width: 0, height: 2 },
+                                            shadowOpacity: 0.05,
+                                            shadowRadius: 3,
+                                            elevation: 2
+                                        }
+                                    ]}
                                     onPress={() => setSelectedVehicle(v.id)}
                                 >
-                                    <Icon size={40} color={selectedVehicle === v.id ? '#111' : '#666'} style={{ marginBottom: 10 }} />
-                                    <Text style={[styles.vehicleName, selectedVehicle === v.id && styles.vehicleNameActive]}>{v.label}</Text>
-                                    <Text style={[styles.vehicleTime, selectedVehicle === v.id && styles.vehicleTimeActive]}>{v.capacity}</Text>
-                                    {selectedVehicle === v.id && (
-                                        <View style={styles.vehicleCheckBadge}>
-                                            <CircleCheck size={12} color="#fff" />
-                                        </View>
-                                    )}
+                                    <View style={{ 
+                                        width: 24, 
+                                        height: 24, 
+                                        borderRadius: 12, 
+                                        borderWidth: 2, 
+                                        borderColor: isSelected ? '#FACC15' : '#D1D5DB',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginRight: 16
+                                    }}>
+                                        {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FACC15' }} />}
+                                    </View>
+
+                                    <View style={{ width: 60, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+                                        <Image source={v.image} style={{ width: 60, height: 40, resizeMode: 'cover', borderRadius: 6 }} />
+                                    </View>
+
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 4 }}>{v.label}</Text>
+                                        <Text style={{ fontSize: 14, color: '#6B7280' }}>{v.capacity}</Text>
+                                    </View>
                                 </TouchableOpacity>
                             );
                         })}
-                    </ScrollView>
+                    </View>
 
-                    {/* The route summary card above already shows pickup, destination,
-                        distance, ETA and fee - that IS the confirmation. A second modal
-                        used to reopen here and ask "Current or Custom pickup location?"
-                        from scratch, contradicting the location just set on the previous
-                        sheet. Submit directly instead. */}
-                    <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
-                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request Pickup</Text>}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+                        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700', fontStyle: 'italic' }}>i</Text>
+                        </View>
+                        <Text style={{ fontSize: 14, color: '#4B5563' }}>Make sure your waste is ready for pickup</Text>
+                    </View>
+
+                    <AnimatedButton 
+                        style={{ backgroundColor: '#111', paddingVertical: 18, borderRadius: 12, alignItems: 'center' }} 
+                        haptic 
+                        onPress={handleCreateRequest} 
+                        disabled={requestLoading}
+                    >
+                        {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Request pickup</Text>}
                     </AnimatedButton>
                 </View>
             )}

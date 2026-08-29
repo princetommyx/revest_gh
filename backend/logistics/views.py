@@ -456,10 +456,18 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # Filter by time: Only show jobs created in the last 60 minutes
         one_hour_ago = timezone.now() - timedelta(minutes=60)
         # Optimization: Limit to latest 50 pending jobs to prevent scanning entire DB
-        jobs = PickupRequest.objects.filter(
+        jobs_query = PickupRequest.objects.filter(
             status='PENDING', 
             created_at__gte=one_hour_ago
-        ).select_related('provider').order_by('-created_at')[:50]
+        )
+        if hasattr(request.user, 'vehicle_type') and request.user.vehicle_type:
+            jobs_query = jobs_query.filter(
+                models.Q(vehicle_type=request.user.vehicle_type) | 
+                models.Q(vehicle_type__isnull=True) | 
+                models.Q(vehicle_type='')
+            )
+            
+        jobs = jobs_query.select_related('provider').order_by('-created_at')[:50]
         
         # Filter by location if coordinates are provided
         lat = request.query_params.get('lat')
@@ -488,6 +496,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # so a recycler was never pushed a 'new_request' event or push
         # notification for a job they were otherwise fully able to accept.
         online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
+        if request.vehicle_type:
+            online_collectors = online_collectors.filter(
+                models.Q(vehicle_type=request.vehicle_type) | 
+                models.Q(vehicle_type__isnull=True) | 
+                models.Q(vehicle_type='')
+            )
         
         nearby = []
         for collector in online_collectors:
