@@ -816,6 +816,15 @@ export default function PickupsScreen({ route }) {
         setRequestLoading(true);
         try {
             const isListingFlow = !!requestForm.listing_id;
+
+            // Booking with "Current Location" (no typed/picked address) never
+            // set pickup_address at all, so every such job showed up as
+            // "Disposer • Unknown Location" on the collector's card - not a
+            // display bug, the address genuinely was never captured. Resolve
+            // it from the GPS fix now so there's always a real address on
+            // the job, the same way map-pin selection already does.
+            const resolvedPickupAddress = customAddress.trim()
+                || await reverseGeocode(location.latitude, location.longitude);
             // The backend trusts these prices as sent (create serializer accepts
             // waste_price/delivery_fee directly), but this screen was hardcoding
             // all three to '0.00' regardless of what fetchEstimate()/the listing
@@ -844,6 +853,7 @@ export default function PickupsScreen({ route }) {
                 duration_min: requestForm.duration_min || null,
                 latitude: location.latitude,
                 longitude: location.longitude,
+                pickup_address: resolvedPickupAddress || null,
                 destination_address: destinationAddress,
                 destination_latitude: destinationLocation?.latitude,
                 destination_longitude: destinationLocation?.longitude
@@ -853,8 +863,10 @@ export default function PickupsScreen({ route }) {
                 requestData.listing = parseInt(requestForm.listing_id);
             }
 
+            // Only a manually chosen address belongs in "recent locations" -
+            // a GPS reverse-geocode isn't something the disposer picked and
+            // would just be noise in that list.
             if (customAddress.trim()) {
-                requestData.pickup_address = customAddress.trim();
                 addRecentLocation({
                     address: customAddress.trim(),
                     latitude: location?.latitude,
@@ -2071,7 +2083,12 @@ export default function PickupsScreen({ route }) {
                     ) : (
                         <CollectorBottomSheet
                             job={activeSellerJob}
-                            collector={activeSellerJob.collector || { first_name: 'Driver', last_name: '', vehicle_type: 'Truck' }}
+                            // The list endpoint now actually serializes collector
+                            // as a real user object (was a bare id, silently
+                            // breaking this whole card and the Chat/Call buttons
+                            // below) - a fake "Driver / Truck" filler object is
+                            // no longer needed once collector is genuinely assigned.
+                            collector={activeSellerJob.collector}
                             onChatPress={() => {
                                 if (!activeSellerJob.collector?.id) return;
                                 navigation.navigate('ChatDetail', {
