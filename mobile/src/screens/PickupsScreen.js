@@ -1376,6 +1376,30 @@ export default function PickupsScreen({ route }) {
             >
                 {memoizedMarkers}
 
+                {/* Bolt-style pickup pin + ETA bubble while confirming - the map
+                    stays "alive" behind the vehicle-select sheet instead of going
+                    blank, the way it does on Bolt/Uber's own confirm screen. */}
+                {userRole === 'SELLER' && uiState === 'VEHICLE_SELECT' && location && (
+                    <ActiveMarker
+                        coordinate={{
+                            latitude: location.coords?.latitude ?? location.latitude,
+                            longitude: location.coords?.longitude ?? location.longitude,
+                        }}
+                        anchor={{ x: 0.5, y: 1 }}
+                    >
+                        <View style={{ alignItems: 'center' }}>
+                            <View style={styles.pickupEtaBubble}>
+                                <Text style={styles.pickupEtaBubbleText}>
+                                    Pickup{requestForm.duration_min ? ` · ${Math.round(requestForm.duration_min)} min` : ''}
+                                </Text>
+                            </View>
+                            <View style={styles.destinationPin}>
+                                <View style={styles.destinationPinInner} />
+                            </View>
+                        </View>
+                    </ActiveMarker>
+                )}
+
                 {isSelectingLocation && (
                     <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -16, marginTop: -32 }}>
                         <MapPin size={32} color="#111" fill="#111" />
@@ -1497,20 +1521,10 @@ export default function PickupsScreen({ route }) {
 
                     <Text style={styles.confirmScreenTitle}>Confirm your pickup</Text>
 
-                    {/* Pickup + the price/ETA preview Bolt/Uber always show before you
-                        commit. No destination row - a collector's distance/time to
-                        reach the pickup point is what this is estimating, not a trip
-                        to somewhere the disposer would choose. */}
+                    {/* The pickup pin + ETA bubble are on the map itself now (see
+                        the marker above), Bolt-style, so this card is just the
+                        price/ETA preview rather than repeating the address too. */}
                     <View style={styles.routeSummaryCard}>
-                        <View style={styles.routeSummaryRow}>
-                            <View style={styles.dotIndicatorPickup} />
-                            <Text style={styles.routeSummaryText} numberOfLines={1}>
-                                {customAddress || 'Current Location'}
-                            </Text>
-                        </View>
-
-                        <View style={styles.routeSummaryDivider} />
-
                         <View style={styles.routeSummaryStatsRow}>
                             <View style={styles.routeSummaryStat}>
                                 <Text style={styles.routeSummaryStatLabel}>Distance</Text>
@@ -2164,9 +2178,8 @@ const styles = StyleSheet.create({
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
     dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
     locationInputBox: { },
-    // Green pickup dot, matching the "you are here" dot used everywhere else
-    // in the app (route summary below, the tracking cards).
-    dotIndicatorPickup: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
+    // Green pickup dot, matching the "you are here" pin used on the map and
+    // the tracking cards elsewhere in the app.
     routeDotPickupLg: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: '#059669' },
     pickupFieldRow: {
         flexDirection: 'row',
@@ -2183,6 +2196,8 @@ const styles = StyleSheet.create({
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
     destinationPinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
+    pickupEtaBubble: { backgroundColor: '#059669', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginBottom: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 },
+    pickupEtaBubbleText: { fontSize: 13, fontWeight: '700', color: '#fff' },
     compactMarkerLabel: { backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
@@ -2191,9 +2206,6 @@ const styles = StyleSheet.create({
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
     confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
     routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
-    routeSummaryRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    routeSummaryText: { flex: 1, fontSize: 14, color: '#111', fontWeight: '500' },
-    routeSummaryDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 14 },
     routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
     routeSummaryStat: { alignItems: 'center', flex: 1 },
     routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
