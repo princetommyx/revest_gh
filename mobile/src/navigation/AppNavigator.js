@@ -134,7 +134,6 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
                         const onPress = () => {
                             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
                             if (!isFocused && !event.defaultPrevented) {
-                                Haptics.selectionAsync().catch(() => { });
                                 navigation.navigate(route.name);
                             }
                         };
