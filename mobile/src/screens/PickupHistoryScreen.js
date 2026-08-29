@@ -112,7 +112,13 @@ export default function PickupHistoryScreen() {
                 </View>
 
                 <View style={styles.rowRight}>
-                    <Text style={styles.amount}>₵{amount.toFixed(2)}</Text>
+                    {/* Track A is paid directly to the collector, not through the
+                        app - showing "₵0.00" here would read as "this was free". */}
+                    {item.track_type === 'A' ? (
+                        <Text style={styles.directPayLabel}>Direct pay</Text>
+                    ) : (
+                        <Text style={styles.amount}>₵{amount.toFixed(2)}</Text>
+                    )}
                     <Text style={styles.track}>{TRACK_LABEL[item.track_type] || ''}</Text>
                 </View>
             </TouchableOpacity>
@@ -233,6 +239,11 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: '#111827',
         fontVariant: ['tabular-nums'],
+    },
+    directPayLabel: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#9CA3AF',
     },
     track: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
 

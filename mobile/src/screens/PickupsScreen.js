@@ -821,17 +821,12 @@ export default function PickupsScreen({ route }) {
             // the job, the same way map-pin selection already does.
             const resolvedPickupAddress = customAddress.trim()
                 || await reverseGeocode(location.latitude, location.longitude);
-            // The backend trusts these prices as sent (create serializer accepts
-            // waste_price/delivery_fee directly), but this screen was hardcoding
-            // all three to '0.00' regardless of what fetchEstimate()/the listing
-            // computed - so every request silently locked zero escrow no matter
-            // what fee the disposer was shown. track_type and payment_method were
-            // omitted too, so every request landed as Track A / CASH on the
-            // backend, skipping the digital escrow lock entirely.
-            // Track A (direct booking, no listing) has no material value - only
-            // the distance-based delivery_fee was ever shown to the user, so
-            // waste_price stays 0 there; the listing flow's waste_price is the
-            // seller's real listing price.
+            // Track A (direct booking, no listing): the platform doesn't quote or
+            // collect a fee for this - the disposer just picks a vehicle size for
+            // their waste, and pays the collector directly once the job's done.
+            // So it's CASH with no price, on purpose. The listing flow (Track B/C)
+            // is a real marketplace transaction against a seller's actual listing
+            // price, and keeps its existing digital pricing/escrow behavior.
             const requestData = {
                 material_type: requestForm.material_type || 'General Waste',
                 quantity_estimate: isListingFlow
@@ -840,9 +835,8 @@ export default function PickupsScreen({ route }) {
                 vehicle_type: selectedVehicle,
                 track_type: isListingFlow ? 'B' : 'A',
                 payment_method: isListingFlow ? 'DIGITAL' : 'CASH',
-                estimated_price: requestForm.delivery_fee || '0.00',
-                waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
-                delivery_fee: requestForm.delivery_fee || '0.00',
+                estimated_price: requestForm.delivery_fee || '0.00',                waste_price: isListingFlow ? (requestForm.waste_value || '0.00') : '0.00',
+                delivery_fee: isListingFlow ? (requestForm.delivery_fee || '0.00') : '0.00',
                 // Was computed by fetchEstimate() and shown on the route
                 // summary card, but never actually sent - the trip's
                 // distance/duration were silently dropped on every request.
@@ -1598,7 +1592,9 @@ export default function PickupsScreen({ route }) {
                         })}
                     </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, marginBottom: 24 }}>
+                    
+                    <Text style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginBottom: 16 }}>Payment is arranged directly with your collector.</Text>
+<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, marginBottom: 24 }}>
                         <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                             <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700', fontStyle: 'italic' }}>i</Text>
                         </View>
@@ -1613,8 +1609,7 @@ export default function PickupsScreen({ route }) {
                     >
                         {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Request pickup</Text>}
                     </AnimatedButton>
-                </View>
-            )}
+                </View>            )}
 
             {!isSelectingLocation && isCollectorRole && sortedJobs.length > 0 && (
                 <View style={[styles.collectorBottomSheetUbride, { bottom: 0 }]}>
@@ -2237,24 +2232,31 @@ const styles = StyleSheet.create({
     compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
 
     bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
-    backVehicleBtn: { alignItems: 'center', marginBottom: 12, paddingVertical: 10 },
     dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
-    confirmScreenTitle: { fontSize: 18, fontWeight: '700', color: '#111', marginBottom: 14 },
-    routeSummaryCard: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 16, marginBottom: 16 },
-    routeSummaryStatsRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    routeSummaryStat: { alignItems: 'center', flex: 1 },
-    routeSummaryStatLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '600', marginBottom: 4, letterSpacing: 0.4 },
-    routeSummaryStatValue: { fontSize: 15, color: '#111', fontWeight: '700' },
-    loadSizeLabel: { fontSize: 11, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1, marginBottom: 10 },
-    vehicleScroll: { gap: 15, paddingBottom: 20 },
-    vehicleCard: { width: 110, height: 130, borderRadius: 16, borderWidth: 2, borderColor: '#F3F4F6', backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', padding: 10 },
-    vehicleCardActive: { borderColor: '#34D399', backgroundColor: '#F0FDF4' },
-    vehicleName: { fontSize: 14, fontWeight: 'bold', color: '#666' },
-    vehicleNameActive: { color: '#111' },
-    vehicleTime: { fontSize: 11, color: '#999', marginTop: 4 },
-    vehicleTimeActive: { color: '#34D399' },
-    vehicleCheckBadge: { position: 'absolute', bottom: -6, backgroundColor: '#34D399', borderRadius: 10, padding: 2 },
-    bookRideBtn: { backgroundColor: '#34D399', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', marginTop: 10 },
+    chooseVehicleTitle: { fontSize: 22, fontWeight: '800', color: '#111', marginBottom: 4 },
+    chooseVehicleSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 18 },
+    vehicleRowGroup: { gap: 12, marginBottom: 16 },
+    vehicleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        borderWidth: 1.5,
+        borderColor: '#F3F4F6',
+        borderRadius: 16,
+        padding: 14,
+    },
+    vehicleRowActive: { borderColor: '#059669', backgroundColor: '#F7FEFB' },
+    radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
+    radioOuterActive: { borderColor: '#059669' },
+    radioInner: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#059669' },
+    vehicleArtBox: { width: 60, height: 60, borderRadius: 14, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
+    vehicleArtBoxActive: { backgroundColor: '#ECFDF5' },
+    vehicleRowName: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 2 },
+    vehicleRowCapacity: { fontSize: 13, color: '#9CA3AF' },
+    paymentNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginBottom: 12 },
+    readyNoticeBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, marginBottom: 16 },
+    readyNoticeText: { fontSize: 13, color: '#4B5563', flex: 1 },
+    bookRideBtn: { backgroundColor: '#111', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
