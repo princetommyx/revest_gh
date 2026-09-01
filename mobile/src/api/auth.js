@@ -62,6 +62,16 @@ export const authApi = {
         return response.data;
     },
 
+    deactivateAccount: async (password) => {
+        const response = await apiClient.post('users/account/deactivate/', password ? { password } : {});
+        return response.data;
+    },
+
+    deleteAccount: async (password) => {
+        const response = await apiClient.post('users/account/delete/', password ? { password } : {});
+        return response.data;
+    },
+
     updateMyLocation: async ({ latitude, longitude, is_online }) => {
         const response = await apiClient.patch('users/location/', { latitude, longitude, is_online });
         return response.data;

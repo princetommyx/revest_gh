@@ -260,6 +260,33 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 
+class _PasswordConfirmSerializer(serializers.Serializer):
+    """
+    Shared by deactivate/delete: require the current password before a
+    destructive account action - except for Google-auth users, who were
+    created with an unusable password (create_user(password=None)) and have
+    no password to confirm with. Being authenticated at all is their
+    confirmation in that case.
+    """
+    password = serializers.CharField(required=False, write_only=True, allow_blank=True)
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        if user.has_usable_password():
+            password = attrs.get('password')
+            if not password or not user.check_password(password):
+                raise serializers.ValidationError({"password": "Incorrect password."})
+        return attrs
+
+
+class DeactivateAccountSerializer(_PasswordConfirmSerializer):
+    pass
+
+
+class DeleteAccountSerializer(_PasswordConfirmSerializer):
+    pass
+
+
 # Keep original for backward compatibility (used in some views)
 class UserSerializer(UserProfileSerializer):
     """

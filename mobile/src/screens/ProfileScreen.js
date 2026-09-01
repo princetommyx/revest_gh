@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    ScrollView, Alert, StatusBar, Image, ActivityIndicator, Share
+    ScrollView, Alert, StatusBar, Image, ActivityIndicator, Share,
+    Modal, TextInput, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
@@ -10,10 +11,11 @@ import { logisticsApi } from '../api/logistics';
 import { marketApi } from '../api/market';
 import { authApi } from '../api/auth';
 import { BASE_URL } from '../api/client';
+import Toast from 'react-native-toast-message';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
     UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
-    Recycle, UserMinus, UserX
+    Recycle, UserX, Trash2, X
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
@@ -59,6 +61,50 @@ const NavLink = ({ title, subtitle, subtitleColor = '#9CA3AF', icon: Icon, iconC
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
 
+    // 'deactivate' | 'delete' | null
+    const [dangerModal, setDangerModal] = useState(null);
+    const [dangerPassword, setDangerPassword] = useState('');
+    const [dangerLoading, setDangerLoading] = useState(false);
+    const [dangerError, setDangerError] = useState('');
+
+    // Google-auth accounts were created with no password at all
+    // (create_user(password=None)) - nothing to confirm with, so being
+    // authenticated is their confirmation instead.
+    const needsPasswordConfirm = user?.auth_provider !== 'GOOGLE';
+
+    const closeDangerModal = () => {
+        setDangerModal(null);
+        setDangerPassword('');
+        setDangerError('');
+    };
+
+    const handleDangerConfirm = async () => {
+        setDangerLoading(true);
+        setDangerError('');
+        try {
+            if (dangerModal === 'deactivate') {
+                await authApi.deactivateAccount(needsPasswordConfirm ? dangerPassword : undefined);
+            } else {
+                await authApi.deleteAccount(needsPasswordConfirm ? dangerPassword : undefined);
+            }
+            closeDangerModal();
+            Toast.show({
+                type: 'success',
+                text1: dangerModal === 'deactivate' ? 'Account deactivated' : 'Account deleted',
+                text2: dangerModal === 'deactivate' ? 'Log back in anytime to reactivate.' : 'Sorry to see you go.',
+            });
+            await signOut();
+        } catch (error) {
+            const data = error.response?.data;
+            const detail = data?.detail
+                || data?.password?.[0]
+                || (data && typeof data === 'object' ? Object.values(data).flat()[0] : null);
+            setDangerError(typeof detail === 'string' ? detail : 'Something went wrong. Please try again.');
+        } finally {
+            setDangerLoading(false);
+        }
+    };
+
     const handleLogout = () => {
         Alert.alert(
             "Log Out",
@@ -70,42 +116,6 @@ export default function ProfileScreen({ navigation }) {
         );
     };
 
-    const handleDeactivate = () => {
-        Alert.alert(
-            "Deactivate Account",
-            "Are you sure you want to deactivate your account? Your profile and data will be hidden but not deleted.",
-            [
-                { text: "Cancel", style: "cancel" },
-                { text: "Deactivate", style: "destructive", onPress: async () => {
-                    try {
-                        await authApi.deactivateAccount();
-                        signOut();
-                    } catch (e) {
-                        Alert.alert("Error", "Could not deactivate account. Try again.");
-                    }
-                }}
-            ]
-        );
-    };
-
-    const handleDelete = () => {
-        Alert.alert(
-            "Delete Account",
-            "Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.",
-            [
-                { text: "Cancel", style: "cancel" },
-                { text: "Delete Account", style: "destructive", onPress: async () => {
-                    try {
-                        await authApi.deactivateAccount();
-                        signOut();
-                    } catch (e) {
-                        const errMsg = e.response?.data?.detail || e.response?.data?.message || e.message || "Could not delete account. Try again.";
-                        Alert.alert("Error", `Failed: ${errMsg}`);
-                    }
-                }}
-            ]
-        );
-    };
 
     const handleInvite = async () => {
         try {
@@ -305,13 +315,82 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Danger Zone" />
                     <NavCard>
-                        <NavLink title="Deactivate Account" icon={UserMinus} onPress={handleDeactivate} danger />
-                        <NavLink title="Delete Account" icon={UserX} onPress={handleDelete} danger />
+                        <NavLink
+                            title="Deactivate Account"
+                            subtitle="Hide your account temporarily. Log back in anytime to reactivate."
+                            icon={UserX}
+                            iconColor="#B45309"
+                            iconBg="#FFFBEB"
+                            onPress={() => setDangerModal('deactivate')}
+                        />
+                        <NavLink title="Delete Account" icon={Trash2} onPress={() => setDangerModal('delete')} danger />
                         <NavLink title="Log Out" icon={LogOut} onPress={handleLogout} danger isLast />
                     </NavCard>
                 </View>
 
             </ScrollView>
+
+            <Modal
+                visible={!!dangerModal}
+                transparent
+                animationType="fade"
+                onRequestClose={closeDangerModal}
+            >
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.dangerOverlay}
+                >
+                    <View style={styles.dangerCard}>
+                        <View style={styles.dangerCardHeader}>
+                            <Text style={styles.dangerCardTitle}>
+                                {dangerModal === 'deactivate' ? 'Deactivate Account' : 'Delete Account'}
+                            </Text>
+                            <TouchableOpacity onPress={closeDangerModal}>
+                                <X size={22} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.dangerCardDesc}>
+                            {dangerModal === 'deactivate'
+                                ? "Your account will be hidden and you'll be signed out. Nothing is deleted — log back in anytime to pick up right where you left off."
+                                : "This permanently removes your personal information and can't be undone. You'll need to withdraw your wallet balance and finish or cancel any active pickup first."}
+                        </Text>
+
+                        {needsPasswordConfirm && (
+                            <TextInput
+                                style={styles.dangerPasswordInput}
+                                placeholder="Confirm your password"
+                                placeholderTextColor="#9CA3AF"
+                                secureTextEntry
+                                value={dangerPassword}
+                                onChangeText={setDangerPassword}
+                                autoCapitalize="none"
+                            />
+                        )}
+
+                        {!!dangerError && <Text style={styles.dangerErrorText}>{dangerError}</Text>}
+
+                        <View style={styles.dangerActionsRow}>
+                            <TouchableOpacity style={styles.dangerCancelBtn} onPress={closeDangerModal} disabled={dangerLoading}>
+                                <Text style={styles.dangerCancelBtnText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.dangerConfirmBtn, (needsPasswordConfirm && !dangerPassword.trim()) && styles.dangerConfirmBtnDisabled]}
+                                onPress={handleDangerConfirm}
+                                disabled={dangerLoading || (needsPasswordConfirm && !dangerPassword.trim())}
+                            >
+                                {dangerLoading ? (
+                                    <ActivityIndicator color="#fff" size="small" />
+                                ) : (
+                                    <Text style={styles.dangerConfirmBtnText}>
+                                        {dangerModal === 'deactivate' ? 'Deactivate' : 'Delete Account'}
+                                    </Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -539,5 +618,81 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#D1D5DB',
         lineHeight: 17,
+    },
+    dangerOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+    },
+    dangerCard: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 24,
+    },
+    dangerCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 14,
+    },
+    dangerCardTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    dangerCardDesc: {
+        fontSize: 14,
+        color: '#4B5563',
+        lineHeight: 20,
+        marginBottom: 18,
+    },
+    dangerPasswordInput: {
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
+        fontSize: 15,
+        color: '#111827',
+        marginBottom: 12,
+    },
+    dangerErrorText: {
+        fontSize: 13,
+        color: '#EF4444',
+        marginBottom: 12,
+    },
+    dangerActionsRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 6,
+    },
+    dangerCancelBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+    },
+    dangerCancelBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#111827',
+    },
+    dangerConfirmBtn: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 14,
+        backgroundColor: '#EF4444',
+        alignItems: 'center',
+    },
+    dangerConfirmBtnDisabled: {
+        opacity: 0.5,
+    },
+    dangerConfirmBtnText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#fff',
     },
 });

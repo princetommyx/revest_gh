@@ -58,6 +58,13 @@ class User(AbstractUser):
     # Security & Device Binding
     last_device_id = models.CharField(max_length=255, blank=True, null=True)
     mfa_enabled = models.BooleanField(default=False)
+
+    # Self-service account deactivation. Deliberately separate from is_active:
+    # is_active gates login entirely (used for deletion/bans) and stays True
+    # here so a deactivated user can still log back in - doing so clears this
+    # flag automatically (see VerifyLoginOTPView), the same "log back in to
+    # reactivate" pattern most consumer apps use.
+    is_deactivated = models.BooleanField(default=False)
     
     def __str__(self):
         return self.username
