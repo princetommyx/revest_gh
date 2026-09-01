@@ -211,21 +211,6 @@ class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
 
 @extend_schema(
     tags=["users"],
-    summary="Deactivate account",
-    description="Deactivates the authenticated user's account.",
-)
-class DeactivateAccountView(views.APIView):
-    permission_classes = (permissions.IsAuthenticated,)
-
-    def post(self, request, *args, **kwargs):
-        user = request.user
-        user.is_active = False
-        user.save()
-        return Response({"detail": "Account deactivated successfully."}, status=status.HTTP_200_OK)
-
-
-@extend_schema(
-    tags=["users"],
     summary="Update user location",
     description="Update the current user's GPS coordinates and online status. Used for real-time tracking.",
 )
