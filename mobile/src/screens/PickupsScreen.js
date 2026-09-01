@@ -1587,6 +1587,23 @@ export default function PickupsScreen({ route }) {
                                         <Text style={{ fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 4 }}>{v.label}</Text>
                                         <Text style={{ fontSize: 14, color: '#6B7280' }}>{v.capacity}</Text>
                                     </View>
+                                    
+                                    {requestForm.duration_min && requestForm.distance_km && (
+                                        <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                                                <Clock size={14} color="#111" style={{ marginRight: 4 }} />
+                                                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>
+                                                    ~{Math.round(requestForm.duration_min)} min
+                                                </Text>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <MapPin size={12} color="#6B7280" style={{ marginRight: 2 }} />
+                                                <Text style={{ fontSize: 13, color: '#6B7280' }}>
+                                                    {parseFloat(requestForm.distance_km).toFixed(1)} km
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    )}
                                 </TouchableOpacity>
                             );
                         })}

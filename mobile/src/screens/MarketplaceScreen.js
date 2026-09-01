@@ -105,9 +105,21 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     // Apply local sorting
     const sortedListings = [...visibleListings].sort((a, b) => {
-        if (sortBy === 'price_asc') return parseFloat(a.price) - parseFloat(b.price);
-        if (sortBy === 'price_desc') return parseFloat(b.price) - parseFloat(a.price);
-        if (sortBy === 'newest') return new Date(b.created_at) - new Date(a.created_at);
+        if (sortBy === 'price_asc') {
+            const priceA = a.is_free ? 0 : parseFloat(a.price || 0);
+            const priceB = b.is_free ? 0 : parseFloat(b.price || 0);
+            return priceA - priceB;
+        }
+        if (sortBy === 'price_desc') {
+            const priceA = a.is_free ? 0 : parseFloat(a.price || 0);
+            const priceB = b.is_free ? 0 : parseFloat(b.price || 0);
+            return priceB - priceA;
+        }
+        if (sortBy === 'newest') {
+            const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            return dateB - dateA;
+        }
         return 0; // Default
     });
 
@@ -155,16 +167,19 @@ export default function MarketplaceScreen({ navigation, route }) {
             <View style={styles.listingDetails}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
                 
-                <View style={styles.iconRow}>
+                <View style={[styles.iconRow, { marginBottom: 4 }]}>
                     <MaterialIcon size={12} color="#666" style={{ marginRight: 4 }} />
-                    <Text style={styles.listingLoc}>{materialObj.name}</Text>
+                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{materialObj.name}</Text>
                 </View>
                 
-                <View style={styles.iconRow}>
+                <View style={[styles.iconRow, { marginBottom: 4 }]}>
                     <Package size={12} color="#666" style={{ marginRight: 4 }} />
-                    <Text style={styles.listingLoc} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
-                    <MapPin size={12} color="#666" style={{ marginLeft: 8, marginRight: 4 }} />
-                    <Text style={styles.listingLoc} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
+                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
+                </View>
+
+                <View style={[styles.iconRow, { marginBottom: 4 }]}>
+                    <MapPin size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
                     <Text style={styles.distanceText}> • 1.8 km</Text>
                 </View>
 

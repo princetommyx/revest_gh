@@ -74,7 +74,11 @@ export default function EditProfileScreen({ navigation }) {
                     if (value === null || value === undefined) return;
                     const text = value.toString().trim();
                     if (text === '') return;
-                    payload.append(key, text);
+                    
+                    const originalValue = (user[key] || '').toString().trim();
+                    if (text !== originalValue) {
+                        payload.append(key, text);
+                    }
                 });
                 
                 const uri = image;
@@ -90,7 +94,11 @@ export default function EditProfileScreen({ navigation }) {
                     if (value === null || value === undefined) return;
                     const text = value.toString().trim();
                     if (text === '') return;
-                    payload[key] = text;
+                    
+                    const originalValue = (user[key] || '').toString().trim();
+                    if (text !== originalValue) {
+                        payload[key] = text;
+                    }
                 });
             }
             

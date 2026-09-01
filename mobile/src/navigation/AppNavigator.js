@@ -344,7 +344,7 @@ const BRAND_GREEN = '#059669';
 const CustomSplashScreen = ({ isAppReady, onFinish }) => {
     const scaleAnim = useRef(new Animated.Value(0.9)).current;
     const opacityAnim = useRef(new Animated.Value(0)).current;
-    const breatheAnim = useRef(new Animated.Value(1)).current;
+    const bounceAnim = useRef(new Animated.Value(0)).current;
     const ring1Scale = useRef(new Animated.Value(0.6)).current;
     const ring1Opacity = useRef(new Animated.Value(0.4)).current;
     const ring2Scale = useRef(new Animated.Value(0.6)).current;
@@ -372,11 +372,11 @@ const CustomSplashScreen = ({ isAppReady, onFinish }) => {
             })
         ]).start();
 
-        // Logo breathing loop - subtle, alive, not distracting
+        // Logo bouncing loop
         Animated.loop(
             Animated.sequence([
-                Animated.timing(breatheAnim, { toValue: 1.045, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-                Animated.timing(breatheAnim, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+                Animated.timing(bounceAnim, { toValue: -25, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+                Animated.timing(bounceAnim, { toValue: 0, duration: 450, easing: Easing.in(Easing.quad), useNativeDriver: true }),
             ])
         ).start();
 
@@ -450,7 +450,18 @@ const CustomSplashScreen = ({ isAppReady, onFinish }) => {
                     <Animated.View style={[styles.pingRing, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
                     <Animated.View style={{
                         opacity: opacityAnim,
-                        transform: [{ scale: Animated.multiply(scaleAnim, breatheAnim) }],
+                        transform: [
+                            { scale: scaleAnim },
+                            { translateY: bounceAnim }
+                        ],
+                        borderRadius: 56,
+                        overflow: 'hidden',
+                        backgroundColor: '#fff',
+                        elevation: 4,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 8,
                     }}>
                         <Image source={require('../../assets/icon.png')} style={{ width: 112, height: 112 }} resizeMode="contain" />
                     </Animated.View>

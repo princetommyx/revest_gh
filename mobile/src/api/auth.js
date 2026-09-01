@@ -41,6 +41,16 @@ export const authApi = {
         return response.data;
     },
 
+    deleteAccount: async () => {
+        const response = await apiClient.delete('users/profile/');
+        return response.data;
+    },
+
+    deactivateAccount: async () => {
+        const response = await apiClient.post('users/deactivate/');
+        return response.data;
+    },
+
     updateProfile: async (data) => {
         console.log('[AuthAPI] Updating profile...', { hasFormData: data instanceof FormData });
         const response = await apiClient.patch('users/profile/', data);

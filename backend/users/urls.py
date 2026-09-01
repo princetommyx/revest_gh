@@ -9,7 +9,8 @@ from .views import (
     VerifyLoginOTPView, SubmitFeedbackView,
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
-    TestSMSView, HubtelTestView, AdminSendPushView
+    TestSMSView, HubtelTestView, AdminSendPushView,
+    DeactivateAccountView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
 from .kyc_views import KYCSubmitView, KYCStatusView
@@ -30,6 +31,7 @@ urlpatterns = [
     
     # User Profile & Management
     path('profile/', UserProfileView.as_view(), name='user_profile'),
+    path('deactivate/', DeactivateAccountView.as_view(), name='deactivate_account'),
     path('me/', UserDetailView.as_view(), name='user_detail'),
     path('location/', UpdateLocationView.as_view(), name='update_location'),
     path('change-password/', ChangePasswordView.as_view(), name='change_password'),

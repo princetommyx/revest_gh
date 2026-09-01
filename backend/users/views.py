@@ -177,10 +177,10 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 
 @extend_schema(
     tags=["users"],
-    summary="Get/Update user profile",
-    description="Retrieve or update the authenticated user's profile information.",
+    summary="Get/Update/Delete user profile",
+    description="Retrieve, update, or permanently delete the authenticated user's profile information.",
 )
-class UserProfileView(generics.RetrieveUpdateAPIView):
+class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = (permissions.IsAuthenticated, IsOwnerOrAdmin)
     # Explicitly allow file uploads
@@ -189,12 +189,37 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            from rest_framework.response import Response
+            from rest_framework import status
+            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
     # An update() override used to append every request to a plaintext
     # profile_debug.log next to the code, dumping request.data verbatim - so
     # each profile edit wrote that user's real name, phone number and city to
     # an unrotated file on the server, forever. Removed rather than tidied:
     # the framework's own logging is the place for this, and none of it should
     # include personal data.
+
+
+@extend_schema(
+    tags=["users"],
+    summary="Deactivate account",
+    description="Deactivates the authenticated user's account.",
+)
+class DeactivateAccountView(views.APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        user.is_active = False
+        user.save()
+        return Response({"detail": "Account deactivated successfully."}, status=status.HTTP_200_OK)
 
 
 @extend_schema(

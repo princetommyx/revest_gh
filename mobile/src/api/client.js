@@ -123,5 +123,5 @@ apiClient.interceptors.response.use(
     }
 );
 
-export const BASE_URL = baseURL.replace('/api/v1', ''); // Remove /api/v1 for media files
+export const BASE_URL = baseURL.replace(/\/api\/v1\/?$/, '').replace(/\/$/, ''); // Remove /api/v1 and any trailing slash for media files
 export default apiClient;

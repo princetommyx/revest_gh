@@ -13,7 +13,7 @@ import { BASE_URL } from '../api/client';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
     UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
-    Recycle
+    Recycle, UserMinus, UserX
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
@@ -66,6 +66,43 @@ export default function ProfileScreen({ navigation }) {
             [
                 { text: "Cancel", style: "cancel" },
                 { text: "Log Out", style: "destructive", onPress: () => signOut() }
+            ]
+        );
+    };
+
+    const handleDeactivate = () => {
+        Alert.alert(
+            "Deactivate Account",
+            "Are you sure you want to deactivate your account? Your profile and data will be hidden but not deleted.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Deactivate", style: "destructive", onPress: async () => {
+                    try {
+                        await authApi.deactivateAccount();
+                        signOut();
+                    } catch (e) {
+                        Alert.alert("Error", "Could not deactivate account. Try again.");
+                    }
+                }}
+            ]
+        );
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Delete Account",
+            "Are you absolutely sure you want to delete your account? This action is permanent and cannot be undone.",
+            [
+                { text: "Cancel", style: "cancel" },
+                { text: "Delete Account", style: "destructive", onPress: async () => {
+                    try {
+                        await authApi.deactivateAccount();
+                        signOut();
+                    } catch (e) {
+                        const errMsg = e.response?.data?.detail || e.response?.data?.message || e.message || "Could not delete account. Try again.";
+                        Alert.alert("Error", `Failed: ${errMsg}`);
+                    }
+                }}
             ]
         );
     };
@@ -265,9 +302,11 @@ export default function ProfileScreen({ navigation }) {
                     </NavCard>
                 </View>
 
-                {/* Log Out */}
                 <View style={styles.navBlock}>
+                    <SectionHeader title="Danger Zone" />
                     <NavCard>
+                        <NavLink title="Deactivate Account" icon={UserMinus} onPress={handleDeactivate} danger />
+                        <NavLink title="Delete Account" icon={UserX} onPress={handleDelete} danger />
                         <NavLink title="Log Out" icon={LogOut} onPress={handleLogout} danger isLast />
                     </NavCard>
                 </View>
