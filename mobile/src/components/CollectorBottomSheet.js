@@ -1,10 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, ScrollView, Dimensions } from 'react-native';
 import { Trash2, Truck, RefreshCw, User } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 
 const BRAND_GREEN = '#059669';
 const BRAND_BEIGE = '#F4F0E6'; // matches the screenshot background
+
+// This card sits 120px off the bottom and had no height cap or scroll
+// container, so on a shorter screen its content pushed the collector's name
+// off the top edge. Cap it and scroll inside so the whole card stays reachable.
+const CARD_MAX_HEIGHT = Dimensions.get('window').height * 0.68;
 
 const resolveImageUrl = (path) => {
     if (!path) return null;
@@ -53,6 +58,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
                 translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [24, 0] })
             }]
         }]}>
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             {/* Header: Collector Info */}
             <View style={styles.header}>
                 {avatarUrl ? (
@@ -118,6 +124,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
                     <Text style={styles.cancelLinkText}>Cancel Request</Text>
                 </TouchableOpacity>
             )}
+            </ScrollView>
         </Animated.View>
     );
 }
@@ -133,6 +140,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 20,
         elevation: 20,
+        maxHeight: CARD_MAX_HEIGHT,
     },
     header: {
         flexDirection: 'row',

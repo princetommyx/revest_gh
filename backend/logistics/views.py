@@ -121,9 +121,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
         RECYCLER_COMMISSION = Decimal('5.00')
         total_amount = waste_price + delivery_fee
-        
+
         provider_is_recycler = (provider.role == 'RECYCLER')
-        if provider_is_recycler and track_type in ['B', 'C']:
+        monetized = WalletService.monetization_enabled()
+
+        if monetized and provider_is_recycler and track_type in ['B', 'C']:
             total_amount += RECYCLER_COMMISSION
 
         # 1. Save the request first
@@ -134,20 +136,20 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # A) It's Track A (Disposer always pays)
         # B) The provider is a RECYCLER (Track C or helping Track B)
         # We skip escrow for SELLER/DISPOSER on Track B because they shouldn't pay delivery upfront.
-        
-        provider_is_recycler = (provider.role == 'RECYCLER')
+        #
+        # All of this is gated on monetization being switched on. While it's off
+        # Revesta takes nothing at request time - locking a buyer's funds we then
+        # never release would strand their money, since the completion payouts
+        # that release escrow are gated on the same flag.
         should_lock_escrow = (track_type == 'A') or (track_type == 'B' and provider_is_recycler) or (track_type == 'C')
 
-        if payment_method == 'DIGITAL' and total_amount > 0 and should_lock_escrow:
+        if monetized and payment_method == 'DIGITAL' and total_amount > 0 and should_lock_escrow:
             try:
                 WalletService.lock_escrow(request, provider, total_amount, track_type=track_type)
             except ValueError as e:
                 request.status = 'CANCELLED'
                 request.save()
                 raise serializers.ValidationError({"detail": str(e), "code": "escrow_failed"})
-        elif payment_method == 'DIGITAL' and track_type == 'B' and not provider_is_recycler:
-            # We don't lock escrow, but we mark it as expecting system or recycler payment later
-            pass
 
         # Logic to find nearby collectors
         self.notify_nearby_collectors(request)
@@ -194,15 +196,26 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
         pickup_request.status = 'ARRIVED'
         pickup_request.save()
-        
-        # Early Payout for Sellers (Track B & C)
+
+        # Early Payout for Sellers (Track B & C).
+        # The status is already committed above, so letting this raise would
+        # return an error for a state change that actually succeeded - the
+        # collector sees "failed" while the job really did move to ARRIVED.
+        # Log it instead, same as `complete` already does for its payouts.
         if pickup_request.track_type in ['B', 'C']:
             from wallet.services import WalletService
-            WalletService.process_disposer_early_payout(pickup_request)
-        
+            if WalletService.monetization_enabled():
+                try:
+                    WalletService.process_disposer_early_payout(pickup_request)
+                except Exception as e:
+                    logger.exception(
+                        f"Early payout failed for job {pickup_request.id} "
+                        f"(track {pickup_request.track_type}): {e}"
+                    )
+
         # Track A: Inform provider that collector is here
         # Track B: Inform provider and wait for weight verification
-        
+
         self.notify_provider(pickup_request, 'driver_arrived')
         return Response({'status': 'driver arrived'})
 
@@ -266,17 +279,20 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'COMPLETED'
         pickup_request.save()
         
-        # Process Payouts based on Track Type
-        try:
-            if pickup_request.track_type == 'A':
-                WalletService.process_track_a_completion(pickup_request)
-            elif pickup_request.track_type == 'C':
-                WalletService.process_track_c_completion(pickup_request)
-            else:
-                WalletService.process_track_b_completion(pickup_request)
-        except Exception as e:
-            # Log error but don't fail the request response
-            logger.error(f"Error processing {pickup_request.track_type} payout for job {pickup_request.id}: {e}")
+        # Process Payouts based on Track Type - only when monetization is on.
+        # While it's off the job just closes: the disposer and collector settle
+        # the price physically between themselves and nothing moves in-app.
+        if WalletService.monetization_enabled():
+            try:
+                if pickup_request.track_type == 'A':
+                    WalletService.process_track_a_completion(pickup_request)
+                elif pickup_request.track_type == 'C':
+                    WalletService.process_track_c_completion(pickup_request)
+                else:
+                    WalletService.process_track_b_completion(pickup_request)
+            except Exception as e:
+                # Log error but don't fail the request response
+                logger.error(f"Error processing {pickup_request.track_type} payout for job {pickup_request.id}: {e}")
         
         self.notify_provider(pickup_request, 'job_completed')
         return Response({'status': 'job completed'})
@@ -418,29 +434,43 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 collector=pickup_request.collector.username if pickup_request.collector else "Your collector",
                 material=pickup_request.material_type,
             )
-            send_push_notification(
-                pickup_request.provider,
-                title,
-                body,
-                data={"type": status_type, "request_id": pickup_request.id},
-                urgency='URGENT',
-            )
+            # The push is the disposer's fallback for a dropped socket, so it
+            # must not be skipped just because the socket send above failed -
+            # and it must not fail the collector's request either.
+            try:
+                send_push_notification(
+                    pickup_request.provider,
+                    title,
+                    body,
+                    data={"type": status_type, "request_id": pickup_request.id},
+                    urgency='URGENT',
+                )
+            except Exception as e:
+                logger.warning(f"Push notification failed for request {pickup_request.id}: {e}")
 
     def _notify_user(self, user, type, request_obj, message_data=None):
-        channel_layer = get_channel_layer()
         if not message_data:
              message_data = {
                 "type": type,
                 "request_id": request_obj.id,
              }
-             
-        async_to_sync(channel_layer.group_send)(
-            f"user_{user.id}",
-            {
-                "type": "logistics_notification",
-                "message": message_data
-            }
-        )
+
+        # Best-effort: the websocket layer is Redis-backed in production, and an
+        # unreachable Redis used to bubble up and turn a successful accept /
+        # arrive / complete into a 500 for the caller.
+        try:
+            channel_layer = get_channel_layer()
+            if channel_layer is None:
+                return
+            async_to_sync(channel_layer.group_send)(
+                f"user_{user.id}",
+                {
+                    "type": "logistics_notification",
+                    "message": message_data
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Websocket notify failed for user {user.id} ({type}): {e}")
 
     @extend_schema(
         summary="Find available jobs",

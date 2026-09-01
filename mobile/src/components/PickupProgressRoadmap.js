@@ -3,13 +3,21 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CheckCircle } from 'lucide-react-native';
 
-const BRAND_GREEN = '#059669';
+// Black is the app's primary (every primary button, the tab bar, the sheet
+// CTAs) - green is only ever an accent here, so the tracker reads as part of
+// the app rather than its own thing. Completed path is solid black against the
+// light grey of the stretch that hasn't happened yet.
+const TRACK_ACCENT = '#111';
 const TRACK_COLOR = '#E5E7EB';
-const TRACK_DONE_COLOR = '#A7F3D0';
+const TRACK_DONE_COLOR = '#111';
 
-const NODE_SIZE = 48;
-const STEP_GAP = 92;
-const TOP_PAD = 28;
+// Tightened from 48/92/28: at the old spacing four steps alone stood ~370px
+// tall, which was most of what pushed the collector's sheet off the top of the
+// screen. Kept loose enough that a node never overlaps the label above it
+// (label bottom sits ~NODE_SIZE/2 + 20 below its node centre).
+const NODE_SIZE = 42;
+const STEP_GAP = 72;
+const TOP_PAD = 24;
 const LEFT_X = 20;   // percent
 const RIGHT_X = 80;  // percent
 
@@ -115,9 +123,9 @@ export default function PickupProgressRoadmap({ steps, currentIndex, isComplete 
                             ]}
                         >
                             {(isDone || isFinal) ? (
-                                <CheckCircle size={22} color="#fff" />
+                                <CheckCircle size={20} color="#fff" />
                             ) : (
-                                <Icon size={20} color={isActive ? BRAND_GREEN : '#9CA3AF'} />
+                                <Icon size={18} color={isActive ? TRACK_ACCENT : '#9CA3AF'} />
                             )}
                         </Animated.View>
                     );
@@ -156,7 +164,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
     },
     progressLabel: { fontSize: 15, fontWeight: '700', color: '#111827' },
-    progressCaption: { fontSize: 11, fontWeight: '700', color: BRAND_GREEN, letterSpacing: 0.4, marginTop: 2 },
+    progressCaption: { fontSize: 11, fontWeight: '700', color: '#6B7280', letterSpacing: 0.4, marginTop: 2 },
     progressPercent: { fontSize: 20, fontWeight: '800', color: '#111827' },
 
     trackBg: {
@@ -169,7 +177,7 @@ const styles = StyleSheet.create({
     trackFill: {
         height: '100%',
         borderRadius: 3,
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: TRACK_ACCENT,
     },
 
     node: {
@@ -184,12 +192,14 @@ const styles = StyleSheet.create({
         borderColor: '#F3F4F6',
     },
     nodeDone: {
-        backgroundColor: BRAND_GREEN,
-        borderColor: BRAND_GREEN,
+        backgroundColor: TRACK_ACCENT,
+        borderColor: TRACK_ACCENT,
     },
     nodeActive: {
-        backgroundColor: '#ECFDF5',
-        borderColor: BRAND_GREEN,
+        // Neutral grey fill rather than the old mint - the black ring is what
+        // marks the step you're on.
+        backgroundColor: '#F3F4F6',
+        borderColor: TRACK_ACCENT,
     },
 
     labelWrap: {
