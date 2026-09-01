@@ -21,7 +21,7 @@ import {
     Truck, MapPin, Navigation, Menu, Bell,
     CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, ArrowRight, Plus, Calendar,
     ChevronRight, Activity, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
-    User
+    User, ShieldCheck, Leaf
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -47,6 +47,8 @@ const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
+
+const BRAND_GREEN = '#34D399';
 
 const VEHICLES = [
     { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', icon: Truck },
@@ -1307,7 +1309,7 @@ export default function PickupsScreen({ route }) {
                 {/* Bolt-style pickup pin + ETA bubble while confirming - the map
                     stays "alive" behind the vehicle-select sheet instead of going
                     blank, the way it does on Bolt/Uber's own confirm screen. */}
-                {userRole === 'SELLER' && uiState === 'VEHICLE_SELECT' && location && (
+                {userRole === 'SELLER' && (uiState === 'VEHICLE_SELECT' || uiState === 'CONFIRM') && location && (
                     <ActiveMarker
                         coordinate={{
                             latitude: location.coords?.latitude ?? location.latitude,
@@ -1518,8 +1520,136 @@ export default function PickupsScreen({ route }) {
                             <Text style={styles.readyNoticeText}>Make sure your waste is ready for pickup</Text>
                         </View>
 
-                        <AnimatedButton style={styles.bookRideBtn} haptic onPress={handleCreateRequest} disabled={requestLoading}>
-                            {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.bookRideBtnText}>Request pickup</Text>}
+                        {/* Advances to the confirm step rather than firing the
+                            request straight off - the request only goes out from
+                            the CONFIRM sheet below. */}
+                        <AnimatedButton style={styles.bookRideBtn} haptic onPress={() => setUiState('CONFIRM')}>
+                            <Text style={styles.bookRideBtnText}>Continue</Text>
+                        </AnimatedButton>
+                    </View>
+                </>
+            )}
+
+            {!isSelectingLocation && userRole === 'SELLER' && uiState === 'CONFIRM' && (
+                <>
+                    <View style={styles.floatingTopBar}>
+                        <TouchableOpacity style={styles.floatingBackBtnDark} onPress={() => setUiState('VEHICLE_SELECT')}>
+                            <ArrowLeft size={22} color="#F5F5F5" />
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.confirmSheet}>
+                        <View style={styles.confirmHandleWrap}>
+                            <View style={styles.confirmHandle} />
+                        </View>
+
+                        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                            <View style={styles.confirmTitleRow}>
+                                <View style={styles.confirmLogoBox}>
+                                    <Leaf size={22} color={BRAND_GREEN} />
+                                </View>
+                                <Text style={styles.confirmTitle}>Confirm Pickup</Text>
+                            </View>
+                            <Text style={styles.confirmSubtitle}>
+                                We'll find a nearby collector to pick up your waste.
+                            </Text>
+
+                            <View style={styles.confirmCard}>
+                                <View style={styles.confirmCardRow}>
+                                    <View style={styles.confirmIconBoxGreen}>
+                                        <MapPin size={20} color={BRAND_GREEN} />
+                                    </View>
+                                    <View style={styles.confirmCardTextCol}>
+                                        <Text style={styles.confirmCardLabel}>Pickup location</Text>
+                                        <Text style={styles.confirmCardValue} numberOfLines={2}>
+                                            {customAddress || 'Current location'}
+                                        </Text>
+                                        <Text style={styles.confirmCardSub} numberOfLines={1}>
+                                            {customAddress
+                                                ? (user?.city || 'Selected on map')
+                                                : 'Using your device location'}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity style={styles.confirmChangeBtn} onPress={() => setUiState('IDLE')}>
+                                        <Text style={styles.confirmChangeText}>Change</Text>
+                                        <ChevronRight size={14} color={BRAND_GREEN} />
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.confirmCardDivider} />
+
+                                {/* The vehicle was chosen a step back, so it gets
+                                    confirmed here too - otherwise the last thing you
+                                    see before committing hides half the request. */}
+                                <View style={styles.confirmCardRow}>
+                                    <View style={styles.confirmIconBoxNeutral}>
+                                        <Truck size={20} color="#9CA3AF" />
+                                    </View>
+                                    <View style={styles.confirmCardTextCol}>
+                                        <Text style={styles.confirmCardLabel}>Vehicle</Text>
+                                        <Text style={styles.confirmCardValue}>
+                                            {VEHICLES.find(v => v.id === selectedVehicle)?.label || 'Tricycle'}
+                                        </Text>
+                                        <Text style={styles.confirmCardSub}>
+                                            {VEHICLES.find(v => v.id === selectedVehicle)?.capacity || ''}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity style={styles.confirmChangeBtn} onPress={() => setUiState('VEHICLE_SELECT')}>
+                                        <Text style={styles.confirmChangeText}>Change</Text>
+                                        <ChevronRight size={14} color={BRAND_GREEN} />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            <View style={styles.confirmCard}>
+                                <View style={styles.confirmCardRow}>
+                                    <View style={styles.confirmIconBoxNeutral}>
+                                        <Clock size={20} color="#9CA3AF" />
+                                    </View>
+                                    <View style={styles.confirmCardTextCol}>
+                                        <Text style={styles.confirmInfoTitle}>What happens next?</Text>
+                                        <Text style={styles.confirmInfoBody}>
+                                            We'll match you with a nearby waste collector.
+                                            You'll be notified once they accept.
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+
+                            {/* Deliberately not the mockup's "you'll be charged after
+                                the service is completed" - Revesta takes nothing at
+                                all right now, so promising a later charge would be
+                                telling the disposer something untrue. */}
+                            <View style={styles.confirmCard}>
+                                <View style={styles.confirmCardRow}>
+                                    <View style={styles.confirmIconBoxGreen}>
+                                        <ShieldCheck size={20} color={BRAND_GREEN} />
+                                    </View>
+                                    <View style={styles.confirmCardTextCol}>
+                                        <Text style={styles.confirmInfoTitle}>No payment through Revesta</Text>
+                                        <Text style={styles.confirmInfoBody}>
+                                            You and your collector agree the price between yourselves
+                                            and settle it directly. Revesta doesn't charge you anything.
+                                        </Text>
+                                    </View>
+                                </View>
+                            </View>
+                        </ScrollView>
+
+                        <AnimatedButton
+                            style={styles.confirmCtaBtn}
+                            haptic
+                            onPress={handleCreateRequest}
+                            disabled={requestLoading}
+                        >
+                            {requestLoading ? (
+                                <ActivityIndicator color="#052E1B" />
+                            ) : (
+                                <>
+                                    <Text style={styles.confirmCtaText}>Confirm Request</Text>
+                                    <ArrowRight size={20} color="#052E1B" style={styles.confirmCtaIcon} />
+                                </>
+                            )}
                         </AnimatedButton>
                     </View>
                 </>
@@ -2137,6 +2267,106 @@ const styles = StyleSheet.create({
     readyNoticeText: { fontSize: 13, color: '#4B5563', flex: 1 },
     bookRideBtn: { backgroundColor: '#111', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
     bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+
+    // --- Confirm Pickup sheet (dark) ---
+    // The map underneath is already dark, so this step goes near-black rather
+    // than white: the sheet reads as part of the map instead of a lightbox
+    // stapled over it. Green carries the CTA and the accents because black on
+    // black would disappear - the surface is what's black here, not the button.
+    floatingBackBtnDark: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: 'rgba(28,28,30,0.92)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.10)',
+    },
+    confirmSheet: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: '#0D0D0F',
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: Platform.OS === 'ios' ? 34 : 24,
+        maxHeight: Dimensions.get('window').height * 0.78,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.08)',
+    },
+    confirmHandleWrap: { alignItems: 'center', paddingVertical: 8 },
+    confirmHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.22)' },
+    confirmTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 8 },
+    confirmLogoBox: {
+        width: 42,
+        height: 42,
+        borderRadius: 12,
+        backgroundColor: 'rgba(52,211,153,0.14)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confirmTitle: { fontSize: 24, fontWeight: '800', color: '#F7F7F8', letterSpacing: -0.3 },
+    confirmSubtitle: { fontSize: 14.5, color: '#9BA1A6', marginBottom: 18, lineHeight: 20 },
+    confirmCard: {
+        backgroundColor: '#17181B',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.06)',
+        paddingHorizontal: 14,
+        paddingVertical: 14,
+        marginBottom: 12,
+    },
+    confirmCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    confirmCardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+    confirmIconBoxGreen: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: 'rgba(52,211,153,0.14)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confirmIconBoxNeutral: {
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    confirmCardTextCol: { flex: 1 },
+    confirmCardLabel: { fontSize: 12.5, color: '#8B9096', marginBottom: 3 },
+    confirmCardValue: { fontSize: 16, fontWeight: '700', color: '#F2F3F4', marginBottom: 2 },
+    confirmCardSub: { fontSize: 13, color: '#7C8288' },
+    confirmChangeBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 2,
+        backgroundColor: 'rgba(52,211,153,0.10)',
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderRadius: 10,
+    },
+    confirmChangeText: { fontSize: 13.5, fontWeight: '600', color: BRAND_GREEN },
+    confirmInfoTitle: { fontSize: 15.5, fontWeight: '700', color: '#F2F3F4', marginBottom: 5 },
+    confirmInfoBody: { fontSize: 13.5, color: '#9BA1A6', lineHeight: 19.5 },
+    confirmCtaBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#22C55E',
+        borderRadius: 16,
+        paddingVertical: 18,
+        marginTop: 8,
+    },
+    // Deep green rather than white so the label keeps its contrast on the
+    // bright CTA instead of glaring against it.
+    confirmCtaText: { fontSize: 16.5, fontWeight: '800', color: '#052E1B' },
+    confirmCtaIcon: { marginLeft: 10 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
     collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
