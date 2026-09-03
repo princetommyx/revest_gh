@@ -12,7 +12,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.revesta.mobile",
       "infoPlist": {
-        "UIBackgroundModes": ["location"],
+        "UIBackgroundModes": [
+          "location"
+        ],
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Revesta shares your location with the disposer so they can track your pickup live, including while the app is in the background during an active job.",
         "NSLocationWhenInUseUsageDescription": "Revesta uses your location to find nearby pickups and show your position on the map."
       }
@@ -67,10 +69,12 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "kotlinVersion": "1.9.24"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "runtimeVersion": "1.0.0",
     "extra": {
