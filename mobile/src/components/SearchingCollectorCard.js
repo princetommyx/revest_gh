@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Image } from 'react-native';
 import { Truck } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const VEHICLE_IMAGES = {
     tricycle: require('../../assets/tricycle.jpg'),
@@ -14,9 +15,10 @@ const STATUS_MESSAGES = [
     'Still searching - almost there...',
 ];
 
-const BRAND_GREEN = '#059669';
 
 export default function SearchingCollectorCard({ onCancel, vehicleType }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const ring1Scale = useRef(new Animated.Value(0.6)).current;
     const ring1Opacity = useRef(new Animated.Value(0.35)).current;
     const ring2Scale = useRef(new Animated.Value(0.6)).current;
@@ -73,7 +75,7 @@ export default function SearchingCollectorCard({ onCancel, vehicleType }) {
                             style={styles.vehicleImage} 
                         />
                     ) : (
-                        <Truck size={22} color="#fff" />
+                        <Truck size={22} color={colors.onPrimary} />
                     )}
                 </Animated.View>
             </View>
@@ -91,15 +93,15 @@ export default function SearchingCollectorCard({ onCancel, vehicleType }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     card: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
         borderRadius: 24,
         paddingTop: 20,
         paddingBottom: 20,
         paddingHorizontal: 24,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 28,
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: c.accent,
         justifyContent: 'center',
         alignItems: 'center',
         overflow: 'hidden',
@@ -136,18 +138,18 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         marginBottom: 4,
     },
     subtext: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 6,
     },
     elapsed: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '600',
         marginBottom: 16,
     },
@@ -155,11 +157,11 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         paddingHorizontal: 24,
         borderRadius: 12,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.dangerSoft,
     },
     cancelText: {
-        color: '#DC2626',
+        color: c.danger,
         fontSize: 14,
         fontWeight: '700',
     },
-});
+}));

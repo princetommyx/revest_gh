@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Animated, TextInput, Image } from 'react-native';
 import { Star, X } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function RatingModal({ visible, onClose, onSubmit, job }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const [rating, setRating] = useState(0);
     const [feedback, setFeedback] = useState('');
     const [fadeAnim] = useState(new Animated.Value(0));
@@ -56,13 +59,13 @@ export default function RatingModal({ visible, onClose, onSubmit, job }) {
                     ]}
                 >
                     <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                        <X size={20} color="#666" />
+                        <X size={20} color={colors.textSecondary} />
                     </TouchableOpacity>
 
                     {/* Illustration Header */}
                     <View style={styles.illustrationContainer}>
                         <View style={styles.illustrationCircle}>
-                            <Star size={48} color="#F59E0B" fill="#F59E0B" />
+                            <Star size={48} color={colors.warning} fill={colors.warning} />
                         </View>
                     </View>
 
@@ -82,8 +85,8 @@ export default function RatingModal({ visible, onClose, onSubmit, job }) {
                             >
                                 <Star 
                                     size={40} 
-                                    color={star <= rating ? "#F59E0B" : "#E5E7EB"} 
-                                    fill={star <= rating ? "#F59E0B" : "transparent"} 
+                                    color={star <= rating ? colors.warning : colors.border} 
+                                    fill={star <= rating ? colors.warning : "transparent"} 
                                 />
                             </TouchableOpacity>
                         ))}
@@ -93,7 +96,7 @@ export default function RatingModal({ visible, onClose, onSubmit, job }) {
                     <TextInput
                         style={styles.input}
                         placeholder="Add a comment (optional)"
-                        placeholderTextColor="#9CA3AF"
+                        placeholderTextColor={colors.textMuted}
                         value={feedback}
                         onChangeText={setFeedback}
                         multiline
@@ -113,7 +116,7 @@ export default function RatingModal({ visible, onClose, onSubmit, job }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -123,11 +126,11 @@ const styles = StyleSheet.create({
     },
     modalContainer: {
         width: '100%',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 24,
         padding: 24,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
@@ -140,7 +143,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 1,
@@ -153,19 +156,19 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: '#FEF3C7',
+        backgroundColor: c.warningSoft,
         justifyContent: 'center',
         alignItems: 'center',
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 8,
     },
     subtitle: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 24,
         lineHeight: 20,
@@ -180,14 +183,14 @@ const styles = StyleSheet.create({
     },
     input: {
         width: '100%',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         padding: 16,
         paddingTop: 16,
         fontSize: 15,
-        color: '#111',
+        color: c.text,
         minHeight: 100,
         textAlignVertical: 'top',
         marginBottom: 24,
@@ -195,17 +198,17 @@ const styles = StyleSheet.create({
     submitBtn: {
         width: '100%',
         height: 56,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
     },
     submitBtnDisabled: {
-        backgroundColor: '#9CA3AF',
+        backgroundColor: c.textMuted,
     },
     submitBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     }
-});
+}));

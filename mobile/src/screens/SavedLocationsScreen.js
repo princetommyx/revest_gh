@@ -10,20 +10,24 @@ import Toast from 'react-native-toast-message';
 import { placesApi } from '../api/places';
 import { useSavedLocations } from '../hooks/useSavedLocations';
 import PageLoader from '../components/PageLoader';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const KIND_META = {
-    HOME: { Icon: Home, color: '#059669', bg: '#ECFDF5' },
-    WORK: { Icon: Briefcase, color: '#3B82F6', bg: '#EFF6FF' },
-    OTHER: { Icon: MapPin, color: '#F59E0B', bg: '#FFFBEB' },
+    // Token names, not hex - this map is module scope, resolved at render.
+    HOME: { Icon: Home, tone: 'accent', softTone: 'accentSoft' },
+    WORK: { Icon: Briefcase, tone: 'info', softTone: 'infoSoft' },
+    OTHER: { Icon: MapPin, tone: 'warning', softTone: 'warningSoft' },
 };
 
 const LocationRow = ({ item, onDelete, isLast }) => {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const meta = KIND_META[item.kind] || KIND_META.OTHER;
     const { Icon } = meta;
     return (
         <View style={[styles.locationItem, isLast && styles.locationItemLast]}>
-            <View style={[styles.iconContainer, { backgroundColor: meta.bg }]}>
-                <Icon size={18} color={meta.color} strokeWidth={2} />
+            <View style={[styles.iconContainer, { backgroundColor: colors[meta.softTone] }]}>
+                <Icon size={18} color={colors[meta.tone]} strokeWidth={2} />
             </View>
             <View style={styles.textContainer}>
                 <Text style={styles.title}>{item.label}</Text>
@@ -34,13 +38,15 @@ const LocationRow = ({ item, onDelete, isLast }) => {
                 onPress={() => onDelete(item)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-                <Trash2 size={18} color="#D1D5DB" />
+                <Trash2 size={18} color={colors.textMuted} />
             </TouchableOpacity>
         </View>
     );
 };
 
 export default function SavedLocationsScreen({ navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const { savedLocations, addLocation, removeLocation, isLoaded } = useSavedLocations();
 
     const [pickerOpen, setPickerOpen] = useState(false);
@@ -126,11 +132,11 @@ export default function SavedLocationsScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <ArrowLeft size={22} color="#111827" strokeWidth={2.5} />
+                    <ArrowLeft size={22} color={colors.text} strokeWidth={2.5} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Saved Locations</Text>
                 <View style={{ width: 40 }} />
@@ -146,16 +152,16 @@ export default function SavedLocationsScreen({ navigation }) {
                         <View style={styles.quickAddRow}>
                             {!hasHome && (
                                 <TouchableOpacity style={styles.quickAddCard} onPress={() => openPicker('HOME')} activeOpacity={0.8}>
-                                    <View style={[styles.quickAddIcon, { backgroundColor: '#ECFDF5' }]}>
-                                        <Home size={20} color="#059669" />
+                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.accentSoft }]}>
+                                        <Home size={20} color={colors.accent} />
                                     </View>
                                     <Text style={styles.quickAddLabel}>Add Home</Text>
                                 </TouchableOpacity>
                             )}
                             {!hasWork && (
                                 <TouchableOpacity style={styles.quickAddCard} onPress={() => openPicker('WORK')} activeOpacity={0.8}>
-                                    <View style={[styles.quickAddIcon, { backgroundColor: '#EFF6FF' }]}>
-                                        <Briefcase size={20} color="#3B82F6" />
+                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.infoSoft }]}>
+                                        <Briefcase size={20} color={colors.info} />
                                     </View>
                                     <Text style={styles.quickAddLabel}>Add Work</Text>
                                 </TouchableOpacity>
@@ -197,7 +203,7 @@ export default function SavedLocationsScreen({ navigation }) {
 
                     {savedLocations.length === 0 && (
                         <View style={styles.emptyBox}>
-                            <Bookmark size={44} color="#D1D5DB" />
+                            <Bookmark size={44} color={colors.textMuted} />
                             <Text style={styles.emptyTitle}>No saved locations yet</Text>
                             <Text style={styles.emptyText}>
                                 Save the places you request pickups from most, so you don't have to search for them every time.
@@ -206,7 +212,7 @@ export default function SavedLocationsScreen({ navigation }) {
                     )}
 
                     <TouchableOpacity style={styles.addBtn} activeOpacity={0.7} onPress={() => openPicker('OTHER')}>
-                        <Plus size={20} color="#059669" strokeWidth={2.5} style={{ marginRight: 8 }} />
+                        <Plus size={20} color={colors.accent} strokeWidth={2.5} style={{ marginRight: 8 }} />
                         <Text style={styles.addBtnText}>Add new location</Text>
                     </TouchableOpacity>
 
@@ -218,7 +224,7 @@ export default function SavedLocationsScreen({ navigation }) {
                 <SafeAreaView style={styles.container}>
                     <View style={styles.header}>
                         <TouchableOpacity onPress={closePicker} style={styles.backBtn}>
-                            <X size={22} color="#111827" strokeWidth={2.5} />
+                            <X size={22} color={colors.text} strokeWidth={2.5} />
                         </TouchableOpacity>
                         <Text style={styles.headerTitle}>
                             {pendingKind === 'HOME' ? 'Set Home' : pendingKind === 'WORK' ? 'Set Work' : 'Add Location'}
@@ -231,11 +237,11 @@ export default function SavedLocationsScreen({ navigation }) {
                         style={{ flex: 1 }}
                     >
                         <View style={styles.searchWrap}>
-                            <Search size={18} color="#9CA3AF" />
+                            <Search size={18} color={colors.textMuted} />
                             <TextInput
                                 style={styles.searchInput}
                                 placeholder="Search for a place in Ghana"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor={colors.textMuted}
                                 value={query}
                                 onChangeText={runSearch}
                                 autoFocus
@@ -243,14 +249,14 @@ export default function SavedLocationsScreen({ navigation }) {
                             />
                             {query.length > 0 && (
                                 <TouchableOpacity onPress={() => runSearch('')}>
-                                    <X size={18} color="#9CA3AF" />
+                                    <X size={18} color={colors.textMuted} />
                                 </TouchableOpacity>
                             )}
                         </View>
 
                         {searching ? (
                             <View style={styles.searchStatus}>
-                                <ActivityIndicator size="small" color="#111" />
+                                <ActivityIndicator size="small" color={colors.text} />
                             </View>
                         ) : (
                             <FlatList
@@ -261,7 +267,7 @@ export default function SavedLocationsScreen({ navigation }) {
                                 renderItem={({ item }) => (
                                     <TouchableOpacity style={styles.resultRow} onPress={() => handleSelectPlace(item)}>
                                         <View style={styles.resultIcon}>
-                                            <MapPin size={16} color="#6B7280" />
+                                            <MapPin size={16} color={colors.textSecondary} />
                                         </View>
                                         <View style={{ flex: 1 }}>
                                             <Text style={styles.resultName} numberOfLines={1}>{item.name}</Text>
@@ -285,10 +291,10 @@ export default function SavedLocationsScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
     },
     header: {
         flexDirection: 'row',
@@ -302,14 +308,14 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     scrollContent: {
         paddingHorizontal: 24,
@@ -325,7 +331,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         padding: 14,
     },
@@ -339,18 +345,18 @@ const styles = StyleSheet.create({
     quickAddLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     sectionTitle: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
         letterSpacing: 1.2,
         marginBottom: 12,
         marginTop: 28,
     },
     listContainer: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 18,
         paddingHorizontal: 14,
     },
@@ -359,7 +365,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F1F2',
+        borderBottomColor: c.borderSubtle,
     },
     locationItemLast: {
         borderBottomWidth: 0,
@@ -378,12 +384,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 3,
     },
     address: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     deleteBtn: {
         padding: 6,
@@ -396,13 +402,13 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginTop: 16,
         marginBottom: 6,
     },
     emptyText: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
         lineHeight: 19,
     },
@@ -415,13 +421,13 @@ const styles = StyleSheet.create({
     addBtnText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#059669',
+        color: c.accent,
     },
     searchWrap: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 10,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 16,
         paddingHorizontal: 16,
         height: 52,
@@ -431,7 +437,7 @@ const styles = StyleSheet.create({
     searchInput: {
         flex: 1,
         fontSize: 15,
-        color: '#111827',
+        color: c.text,
     },
     searchStatus: {
         paddingTop: 24,
@@ -442,13 +448,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     resultIcon: {
         width: 34,
         height: 34,
         borderRadius: 12,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 14,
@@ -456,17 +462,17 @@ const styles = StyleSheet.create({
     resultName: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 2,
     },
     resultAddress: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     searchHint: {
         fontSize: 13,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
         marginTop: 32,
     },
-});
+}));

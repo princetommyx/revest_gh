@@ -9,10 +9,16 @@ import { PhoneAuth } from '../services/PhoneAuth';
 import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
 import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
+
+// Google's brand red - a brand mark keeps its colour in both themes.
+const GOOGLE_RED = '#DB4437';
 
 const { width } = Dimensions.get('window');
 
 export default function RegisterScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const { signUp, googleSignIn } = useAuth();
     const [step, setStep] = useState(1);
@@ -325,7 +331,7 @@ export default function RegisterScreen() {
                 onPress={() => handleRoleSelect(role)}
                 style={[
                     styles.roleCard,
-                    isSelected && { borderColor: '#111', backgroundColor: '#F9FAFB' }
+                    isSelected && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }
                 ]}
             >
                 <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
@@ -335,7 +341,7 @@ export default function RegisterScreen() {
                     <Text style={styles.roleTitle}>{title}</Text>
                     <Text style={styles.roleDesc}>{desc}</Text>
                 </View>
-                {isSelected && <Check size={20} color="#111" />}
+                {isSelected && <Check size={20} color={colors.text} />}
             </TouchableOpacity>
         );
     };
@@ -353,7 +359,7 @@ export default function RegisterScreen() {
     const renderHeader = () => (
         <View style={styles.header}>
             <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-                <ArrowLeft size={24} color="#000" />
+                <ArrowLeft size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={styles.greetingText}>Create your account</Text>
             <Text style={styles.welcomeText}>Provide your full name, email, and password to create your account and get started.</Text>
@@ -372,24 +378,24 @@ export default function RegisterScreen() {
                             title="Become a Collector"
                             desc="Pick up waste and earn money"
                             icon={Truck}
-                            color="#333"
-                            bgColor="#F3F4F6"
+                            color={colors.text}
+                            bgColor={colors.surfaceSunken}
                         />
                         <RoleCard
                             role="SELLER"
                             title="Become a Disposer"
                             desc="Dispose of waste responsibly"
                             icon={Trash}
-                            color="#333"
-                            bgColor="#F3F4F6"
+                            color={colors.text}
+                            bgColor={colors.surfaceSunken}
                         />
                         <RoleCard
                             role="RECYCLER"
                             title="Become a Recycler"
                             desc="Buy and process recyclables"
                             icon={Recycle}
-                            color="#333"
-                            bgColor="#F3F4F6"
+                            color={colors.text}
+                            bgColor={colors.surfaceSunken}
                         />
                     </View>
                 </ScrollView>
@@ -404,7 +410,7 @@ export default function RegisterScreen() {
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                         <View style={styles.otpHeader}>
                             <TouchableOpacity onPress={() => setStep(2)} style={styles.otpBackButton}>
-                                <ArrowLeft size={20} color="#111" />
+                                <ArrowLeft size={20} color={colors.text} />
                             </TouchableOpacity>
                         </View>
 
@@ -412,7 +418,7 @@ export default function RegisterScreen() {
                             <Text style={styles.titleCentered}>Enter otp</Text>
                             <Text style={styles.subtitleCentered}>
                                 A code to verify your account was sent to{"\n"}
-                                <Text style={{ color: '#000', fontWeight: '500' }}>
+                                <Text style={{ color: colors.text, fontWeight: '500' }}>
                                     {formData.phone_number.startsWith('+') ? formData.phone_number : `+233 ${formData.phone_number.replace(/^0+/, '')}`}
                                 </Text>
                             </Text>
@@ -440,7 +446,7 @@ export default function RegisterScreen() {
                                 onPress={confirmCode}
                                 disabled={verifying || verificationCode.length < 6}
                             >
-                                {verifying ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Continue</Text>}
+                                {verifying ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
                             </TouchableOpacity>
 
                             <TouchableOpacity onPress={sendVerification} style={styles.resendBtn} disabled={loading}>
@@ -473,7 +479,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="ethan_miller"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.username}
                                     onChangeText={(val) => handleChange('username', val.toLowerCase().replace(/\s/g, ''))}
                                     autoCapitalize="none"
@@ -487,7 +493,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="ethan_miller007@gmail.com"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.email}
                                     onChangeText={(val) => handleChange('email', val)}
                                     keyboardType="email-address"
@@ -506,7 +512,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="000 000 0000"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.phone_number}
                                     onChangeText={(val) => handleChange('phone_number', val)}
                                     keyboardType="phone-pad"
@@ -520,7 +526,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="••••••••••"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.password}
                                     onChangeText={(val) => handleChange('password', val)}
                                     secureTextEntry={!showPassword}
@@ -528,7 +534,7 @@ export default function RegisterScreen() {
                                     autoCapitalize="none"
                                 />
                                 <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                                    {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                                    {showPassword ? <EyeOff size={20} color={colors.textMuted} /> : <Eye size={20} color={colors.textMuted} />}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -539,7 +545,7 @@ export default function RegisterScreen() {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="••••••••••"
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.confirm_password}
                                     onChangeText={(val) => handleChange('confirm_password', val)}
                                     secureTextEntry={!showPassword}
@@ -547,7 +553,7 @@ export default function RegisterScreen() {
                                     autoCapitalize="none"
                                 />
                                 <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                                    {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                                    {showPassword ? <EyeOff size={20} color={colors.textMuted} /> : <Eye size={20} color={colors.textMuted} />}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -560,7 +566,7 @@ export default function RegisterScreen() {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="e.g. TRUCK"
-                                            placeholderTextColor="#999"
+                                            placeholderTextColor={colors.textMuted}
                                             value={formData.vehicle_type}
                                             onChangeText={(val) => handleChange('vehicle_type', val)}
                                         />
@@ -572,7 +578,7 @@ export default function RegisterScreen() {
                                         <TextInput
                                             style={styles.input}
                                             placeholder="AAA-1234"
-                                            placeholderTextColor="#999"
+                                            placeholderTextColor={colors.textMuted}
                                             value={formData.license_plate}
                                             onChangeText={(val) => handleChange('license_plate', val)}
                                         />
@@ -607,7 +613,7 @@ export default function RegisterScreen() {
                                                 <TextInput
                                                     style={styles.input}
                                                     placeholder="Acme Recycling"
-                                                    placeholderTextColor="#999"
+                                                    placeholderTextColor={colors.textMuted}
                                                     value={formData.company_name}
                                                     onChangeText={(val) => handleChange('company_name', val)}
                                                 />
@@ -619,7 +625,7 @@ export default function RegisterScreen() {
                                                 <TextInput
                                                     style={styles.input}
                                                     placeholder="TIN-XXXX"
-                                                    placeholderTextColor="#999"
+                                                    placeholderTextColor={colors.textMuted}
                                                     value={formData.tax_id}
                                                     onChangeText={(val) => handleChange('tax_id', val)}
                                                 />
@@ -634,7 +640,7 @@ export default function RegisterScreen() {
                                                 </View>
                                             ) : (
                                                 <View style={styles.uploadRow}>
-                                                    <Upload size={20} color="#111" />
+                                                    <Upload size={20} color={colors.text} />
                                                     <Text style={[styles.uploadInfo, { marginLeft: 10 }]}>Business Certificate</Text>
                                                 </View>
                                             )}
@@ -647,7 +653,7 @@ export default function RegisterScreen() {
                                             <TextInput
                                                 style={styles.input}
                                                 placeholder="GHA-XXXXX"
-                                                placeholderTextColor="#999"
+                                                placeholderTextColor={colors.textMuted}
                                                 value={formData.national_id}
                                                 onChangeText={(val) => handleChange('national_id', val)}
                                             />
@@ -662,9 +668,9 @@ export default function RegisterScreen() {
                         <Switch
                             value={formData.termsAccepted}
                             onValueChange={(val) => handleChange('termsAccepted', val)}
-                            trackColor={{ false: '#E5E7EB', true: '#000' }}
-                            thumbColor={'#fff'}
-                            ios_backgroundColor="#E5E7EB"
+                            trackColor={{ false: colors.border, true: colors.primary }}
+                            thumbColor={colors.surface}
+                            ios_backgroundColor={colors.border}
                             style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
                         />
                         <Text style={styles.termsText}>I agree to the Terms & Privacy Policy</Text>
@@ -676,7 +682,7 @@ export default function RegisterScreen() {
                         disabled={loading}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={colors.onPrimary} />
                         ) : (
                             <Text style={styles.registerButtonText}>Sign Up</Text>
                         )}
@@ -701,7 +707,7 @@ export default function RegisterScreen() {
                             disabled={googleLoading}
                         >
                             {googleLoading ? (
-                                <ActivityIndicator color="#111" size="small" />
+                                <ActivityIndicator color={colors.text} size="small" />
                             ) : (
                                 <>
                                     <Text style={styles.googleG}>G</Text>
@@ -730,7 +736,7 @@ export default function RegisterScreen() {
                         </TouchableOpacity>
                         
                         <View style={styles.successIconWrapper}>
-                            <CircleCheck size={50} color="#10B981" />
+                            <CircleCheck size={50} color={colors.success} />
                         </View>
                         
                         <Text style={styles.modalTitle}>Successful!</Text>
@@ -750,10 +756,10 @@ export default function RegisterScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
     },
     scrollContent: {
         flexGrow: 1,
@@ -775,8 +781,8 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
-        shadowColor: '#000',
+        backgroundColor: c.surface,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -786,14 +792,14 @@ const styles = StyleSheet.create({
     greetingText: {
         fontSize: 26,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         marginTop: 40,
         marginBottom: 10,
         textAlign: 'center',
     },
     welcomeText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         paddingHorizontal: 20,
@@ -807,11 +813,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         height: 56,
         flex: 0.48,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -820,19 +826,19 @@ const styles = StyleSheet.create({
     googleG: {
         fontWeight: 'bold',
         fontSize: 18,
-        color: '#DB4437',
+        color: GOOGLE_RED,
         marginRight: 8,
     },
     appleIcon: {
         fontSize: 20,
-        color: '#000',
+        color: c.text,
         marginRight: 8,
         marginTop: -2,
     },
     socialText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#333',
+        color: c.text,
     },
     dividerRow: {
         flexDirection: 'row',
@@ -842,23 +848,23 @@ const styles = StyleSheet.create({
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     dividerText: {
         paddingHorizontal: 15,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontSize: 14,
     },
     cardTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 20,
         textAlign: 'center',
     },
     roleLabel: {
         fontSize: 14,
-        color: '#999',
+        color: c.textMuted,
         marginBottom: 25,
         fontWeight: '500',
         textAlign: 'center',
@@ -872,9 +878,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         padding: 20,
         borderWidth: 2,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
     },
     iconCircle: {
         width: 48,
@@ -890,12 +896,12 @@ const styles = StyleSheet.create({
     roleTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 4,
     },
     roleDesc: {
         fontSize: 13,
-        color: '#666',
+        color: c.textSecondary,
     },
     formFields: {
         marginBottom: 20,
@@ -905,7 +911,7 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 14,
-        color: '#333',
+        color: c.text,
         marginBottom: 8,
         marginLeft: 4,
         fontWeight: '500',
@@ -913,11 +919,11 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         height: 56,
         paddingHorizontal: 20,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
         shadowRadius: 5,
@@ -926,7 +932,7 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 15,
-        color: '#333',
+        color: c.text,
         paddingVertical: 0, 
     },
     eyeIcon: {
@@ -937,22 +943,22 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 10,
         borderRightWidth: 1,
-        borderRightColor: '#E5E7EB',
+        borderRightColor: c.border,
         paddingRight: 10,
     },
     countryCode: {
         fontSize: 15,
-        color: '#333',
+        color: c.text,
         fontWeight: '500',
     },
     verifySmallBtn: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 15,
     },
     verifySmallText: {
-        color: '#111',
+        color: c.text,
         fontSize: 12,
         fontWeight: '600',
     },
@@ -965,25 +971,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
     },
     smallChipActive: {
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
     },
     smallChipText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     smallChipTextActive: {
-        color: '#fff',
+        color: c.onPrimary,
     },
     uploadBox: {
         marginTop: 15,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         padding: 20,
         borderStyle: 'dashed',
     },
@@ -1000,11 +1006,11 @@ const styles = StyleSheet.create({
     uploadInfo: {
         flex: 1,
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
     },
     changeLink: {
         fontSize: 13,
-        color: '#111',
+        color: c.text,
         fontWeight: 'bold',
     },
     termsRow: {
@@ -1015,24 +1021,24 @@ const styles = StyleSheet.create({
     },
     termsText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         marginLeft: 8,
     },
     registerButton: {
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
         height: 56,
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 25,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 5,
     },
     registerButtonText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -1040,11 +1046,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerText: {
-        color: '#666',
+        color: c.textSecondary,
         fontSize: 14,
     },
     footerLinkBold: {
-        color: '#000',
+        color: c.text,
         fontWeight: 'bold',
     },
     // Modal Styles
@@ -1057,7 +1063,7 @@ const styles = StyleSheet.create({
     },
     modalCard: {
         width: '100%',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 24,
         padding: 30,
         alignItems: 'center',
@@ -1070,19 +1076,19 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
     modalCloseText: {
         fontSize: 20,
-        color: '#111',
+        color: c.text,
         fontWeight: '600',
     },
     successIconWrapper: {
         width: 150,
         height: 120,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
@@ -1092,13 +1098,13 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 12,
         textAlign: 'center',
     },
     modalDesc: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 30,
@@ -1108,14 +1114,14 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     modalDoneBtnText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: c.onPrimary,
     },
     // OTP Header styles to match ForgotPassword
     otpHeader: {
@@ -1127,16 +1133,16 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6'
+        borderColor: c.borderSubtle
     },
     otpInput: {
         width: '100%',
         height: 56,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 28,
         textAlign: 'center',
         fontSize: 24,
@@ -1144,10 +1150,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 25,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     modalBtn: {
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
         width: '100%',
         height: 56,
         borderRadius: 28,
@@ -1156,12 +1162,12 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     modalBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
     modalCancel: {
-        color: '#999',
+        color: c.textMuted,
         fontSize: 14,
         fontWeight: '600',
     },
@@ -1169,7 +1175,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#22C55E', // Green check mark
+        backgroundColor: c.success, // Green check mark
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
@@ -1183,32 +1189,32 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: '#FAFAFA', // light outer ring
+        backgroundColor: c.bg, // light outer ring
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 30,
         position: 'relative',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         borderStyle: 'dashed'
     },
     verificationInnerCircle: {
         width: 70,
         height: 70,
         borderRadius: 35,
-        backgroundColor: '#111', // matching app's main dark color
+        backgroundColor: c.primary, // matching app's main dark color
         alignItems: 'center',
         justifyContent: 'center',
     },
     verificationTitle: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         marginBottom: 10,
     },
     verificationDesc: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 30,
         paddingHorizontal: 20,
@@ -1227,20 +1233,20 @@ const styles = StyleSheet.create({
         width: 45,
         height: 55,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
     },
     otpBoxActive: {
-        borderColor: '#111',
-        backgroundColor: '#fff',
+        borderColor: c.primary,
+        backgroundColor: c.surface,
     },
     otpText: {
         fontSize: 24,
         fontWeight: '600',
-        color: '#111',
+        color: c.text,
     },
     hiddenOtpInput: {
         position: 'absolute',
@@ -1257,7 +1263,7 @@ const styles = StyleSheet.create({
     },
     phoneDisplayText: {
         fontSize: 16,
-        color: '#4B5563',
+        color: c.textSecondary,
         marginRight: 10,
         fontWeight: '500',
     },
@@ -1265,40 +1271,40 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#E5E7EB'
+        borderColor: c.border
     },
     sendAgainBtn: {
         width: '100%',
         height: 50,
         borderRadius: 25,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 15,
-        backgroundColor: '#fff'
+        backgroundColor: c.surface
     },
     sendAgainText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#111',
+        color: c.text,
     },
     verifySubmitBtn: {
         width: '100%',
         height: 50,
         borderRadius: 25,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     verifySubmitText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: c.onPrimary,
     },
     stepContainer: {
         flex: 1,
@@ -1306,13 +1312,13 @@ const styles = StyleSheet.create({
     titleCentered: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 10,
         textAlign: 'center',
     },
     subtitleCentered: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         lineHeight: 22,
         marginBottom: 30,
         textAlign: 'center',
@@ -1330,14 +1336,14 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#F7F7F9',
+        backgroundColor: c.surfaceAlt,
         alignItems: 'center',
         justifyContent: 'center',
     },
     otpCircleActive: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: '#111',
+        borderColor: c.primary,
     },
     spacer: {
         flex: 1,
@@ -1347,19 +1353,19 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 'auto',
         marginBottom: 15,
     },
     btnDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     btnText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: c.onPrimary,
     },
     resendBtn: {
         alignItems: 'center',
@@ -1367,11 +1373,11 @@ const styles = StyleSheet.create({
     },
     resendText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
     },
     resendLink: {
-        color: '#111',
+        color: c.text,
         fontWeight: 'bold',
         textDecorationLine: 'underline',
     }
-});
+}));

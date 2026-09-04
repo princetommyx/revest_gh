@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Switch, ActivityIndicator } from 'react-native'
 import * as Haptics from 'expo-haptics';
 import { authApi } from '../api/auth';
 import { getOnlinePreference, setOnlinePreference } from '../utils/collectorPresence';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
-const BRAND_GREEN = '#059669';
 
 /**
  * Bolt/Uber driver-app style online toggle - the missing piece that lets a
@@ -12,6 +12,8 @@ const BRAND_GREEN = '#059669';
  * pickup requests, instead of it happening silently in the background.
  */
 export default function OnlineToggleCard({ location }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const [isOnline, setIsOnline] = useState(null); // null = loading
     const [busy, setBusy] = useState(false);
 
@@ -45,7 +47,7 @@ export default function OnlineToggleCard({ location }) {
         <View style={[styles.card, online ? styles.cardOnline : styles.cardOffline]}>
             <View style={styles.textBlock}>
                 <View style={styles.statusRow}>
-                    <View style={[styles.dot, { backgroundColor: online ? BRAND_GREEN : '#9CA3AF' }]} />
+                    <View style={[styles.dot, { backgroundColor: online ? colors.accent : colors.textMuted }]} />
                     <Text style={styles.title}>{online ? "You're Online" : "You're Offline"}</Text>
                 </View>
                 <Text style={styles.subtitle}>
@@ -54,36 +56,36 @@ export default function OnlineToggleCard({ location }) {
             </View>
 
             {busy || isOnline === null ? (
-                <ActivityIndicator color={BRAND_GREEN} />
+                <ActivityIndicator color={colors.accent} />
             ) : (
                 <Switch
                     value={online}
                     onValueChange={handleToggle}
-                    trackColor={{ false: '#E5E7EB', true: '#A7F3D0' }}
-                    thumbColor={online ? BRAND_GREEN : '#f4f3f4'}
-                    ios_backgroundColor="#E5E7EB"
+                    trackColor={{ false: colors.border, true: colors.accentSoft }}
+                    thumbColor={online ? colors.accent : colors.surface}
+                    ios_backgroundColor={colors.border}
                 />
             )}
         </View>
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 20,
         padding: 18,
         marginBottom: 16,
         borderWidth: 1.5,
     },
     cardOnline: {
-        borderColor: '#A7F3D0',
+        borderColor: c.accent,
     },
     cardOffline: {
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
     },
     textBlock: {
         flex: 1,
@@ -103,10 +105,10 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
     },
     subtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
-});
+}));

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { walletApi } from '../api/wallet';
 
 /**
@@ -11,7 +11,10 @@ export const useWallet = () => {
     const [isError, setIsError] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(false);
 
-    const fetchWallet = async (isManual = false) => {
+    // useCallback matters here: `refetch` below is handed to useFocusEffect on
+    // the wallet screen. As a fresh arrow function each render it changed
+    // identity every time, re-firing the effect, setting state, and looping.
+    const fetchWallet = useCallback(async (isManual = false) => {
         if (isManual) setIsRefetching(true);
         else setIsLoading(true);
 
@@ -26,11 +29,11 @@ export const useWallet = () => {
             setIsLoading(false);
             setIsRefetching(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchWallet();
-    }, []);
+    }, [fetchWallet]);
 
     const deposit = async (depositData) => {
         setIsActionLoading(true);
@@ -71,13 +74,15 @@ export const useWallet = () => {
         }
     };
 
+    const refetch = useCallback(() => fetchWallet(true), [fetchWallet]);
+
     return {
         data,
         isLoading,
         isRefetching,
         isError,
         isActionLoading,
-        refetch: () => fetchWallet(true),
+        refetch,
         deposit,
         withdraw,
         verifyPayment

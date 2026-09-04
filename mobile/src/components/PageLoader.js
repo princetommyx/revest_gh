@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated, Easing } from 'react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
-const BRAND_GREEN = '#059669';
 
 /**
  * Branded in-page loader - reuses the splash screen's radar-ping + breathing
@@ -9,6 +9,7 @@ const BRAND_GREEN = '#059669';
  * instead of a bare platform spinner.
  */
 export default function PageLoader({ label, size = 'large', fullScreen = true }) {
+    const styles = useStyles();
     const breatheAnim = useRef(new Animated.Value(1)).current;
     const ring1Scale = useRef(new Animated.Value(0.6)).current;
     const ring1Opacity = useRef(new Animated.Value(0.35)).current;
@@ -56,7 +57,7 @@ export default function PageLoader({ label, size = 'large', fullScreen = true })
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         alignItems: 'center',
         justifyContent: 'center',
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     },
     fullScreen: {
         flex: 1,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
     },
     ring: {
         position: 'absolute',
@@ -74,6 +75,6 @@ const styles = StyleSheet.create({
         marginTop: 16,
         fontSize: 13,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
     },
-});
+}));

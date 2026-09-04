@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Animated, ScrollView, Dimensions } from 'react-native';
 import { Trash2, Truck, RefreshCw, User } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
-const BRAND_GREEN = '#059669';
-const BRAND_BEIGE = '#F4F0E6'; // matches the screenshot background
+// Deliberate warm card in light mode. Dark mode falls back to the normal
+// surface - a beige panel on a near-black ground glares.
+const BRAND_BEIGE = '#F4F0E6';
 
 // This card sits 120px off the bottom and had no height cap or scroll
 // container, so on a shorter screen its content pushed the collector's name
@@ -20,6 +22,8 @@ const resolveImageUrl = (path) => {
 };
 
 export default function CollectorBottomSheet({ collector, job, onCancel }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const entrance = useRef(new Animated.Value(0)).current;
     const [elapsed, setElapsed] = useState(0);
 
@@ -65,7 +69,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
                     <Image source={{ uri: avatarUrl }} style={styles.avatar} />
                 ) : (
                     <View style={styles.avatarPlaceholder}>
-                        <User size={36} color="#9CA3AF" />
+                        <User size={36} color={colors.textMuted} />
                     </View>
                 )}
                 <View style={styles.collectorInfo}>
@@ -80,7 +84,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
             {/* Horizontal Progress Tracker */}
             <View style={styles.progressContainer}>
                 <View style={styles.step}>
-                    <Trash2 size={24} color={currentStep >= 0 ? BRAND_GREEN : '#9CA3AF'} />
+                    <Trash2 size={24} color={currentStep >= 0 ? colors.accent : colors.textMuted} />
                     <Text style={[styles.stepLabel, currentStep >= 0 && styles.stepLabelActive]}>Pickup</Text>
                 </View>
                 
@@ -90,7 +94,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
                 </View>
 
                 <View style={styles.step}>
-                    <Truck size={24} color={currentStep >= 1 ? BRAND_GREEN : '#9CA3AF'} />
+                    <Truck size={24} color={currentStep >= 1 ? colors.accent : colors.textMuted} />
                     <Text style={[styles.stepLabel, currentStep >= 1 && styles.stepLabelActive]}>Transport</Text>
                 </View>
 
@@ -100,7 +104,7 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
                 </View>
 
                 <View style={styles.step}>
-                    <RefreshCw size={24} color={currentStep >= 2 ? BRAND_GREEN : '#9CA3AF'} />
+                    <RefreshCw size={24} color={currentStep >= 2 ? colors.accent : colors.textMuted} />
                     <Text style={[styles.stepLabel, currentStep >= 2 && styles.stepLabelActive]}>Processing</Text>
                 </View>
             </View>
@@ -129,13 +133,13 @@ export default function CollectorBottomSheet({ collector, job, onCancel }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
-        backgroundColor: BRAND_BEIGE,
+        backgroundColor: c.isDark ? c.surface : BRAND_BEIGE,
         borderRadius: 24,
         padding: 24,
         paddingTop: 32,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
@@ -150,13 +154,13 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     avatarPlaceholder: {
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -168,23 +172,23 @@ const styles = StyleSheet.create({
     assignedLabel: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         marginBottom: 2,
     },
     name: {
         fontSize: 22,
         fontWeight: '800',
-        color: '#111',
+        color: c.text,
         marginBottom: 4,
     },
     tagline: {
         fontSize: 13,
         fontStyle: 'italic',
-        color: '#4B5563',
+        color: c.textSecondary,
     },
     divider: {
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         marginVertical: 24,
     },
     progressContainer: {
@@ -200,24 +204,24 @@ const styles = StyleSheet.create({
     },
     stepLabel: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginTop: 8,
         fontWeight: '500',
     },
     stepLabelActive: {
-        color: '#111',
+        color: c.text,
         fontWeight: '600',
     },
     progressLineContainer: {
         flex: 1,
         height: 2,
-        backgroundColor: '#D1D5DB',
+        backgroundColor: c.border,
         marginHorizontal: 8,
         justifyContent: 'center',
     },
     progressLine: {
         height: '100%',
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: c.accent,
         width: 0, // In a real app, this could animate
     },
     progressLineActive: {
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 5,
         borderBottomColor: 'transparent',
         borderLeftWidth: 8,
-        borderLeftColor: BRAND_GREEN,
+        borderLeftColor: c.accent,
         transform: [{ translateX: 8 }],
     },
     statusBox: {
@@ -243,18 +247,18 @@ const styles = StyleSheet.create({
     statusBold: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 4,
     },
     timerText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginBottom: 4,
     },
     statusDesc: {
         fontSize: 14,
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'center',
         paddingHorizontal: 20,
     },
@@ -262,11 +266,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 12,
         borderTopWidth: 1,
-        borderTopColor: '#E5E7EB',
+        borderTopColor: c.border,
     },
     cancelLinkText: {
-        color: '#111',
+        color: c.text,
         fontSize: 16,
         fontWeight: '700',
     },
-});
+}));

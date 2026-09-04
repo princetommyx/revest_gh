@@ -14,10 +14,13 @@ import { useNotifications } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import PageLoader from '../components/PageLoader';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ChatScreen({ route }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const { user } = useAuth();
     const insets = useSafeAreaInsets();
@@ -125,7 +128,7 @@ export default function ChatScreen({ route }) {
                         <Image source={{ uri: profileImg }} style={styles.onlineAvatar} />
                     ) : (
                         <View style={[styles.onlineAvatar, styles.avatarPlaceholder]}>
-                            <User size={20} color="#999" />
+                            <User size={20} color={colors.textMuted} />
                         </View>
                     )}
                     {item.contact_is_online && <View style={styles.onlineDot} />}
@@ -152,7 +155,7 @@ export default function ChatScreen({ route }) {
                         <Image source={{ uri: profileImg }} style={styles.avatar} />
                     ) : (
                         <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                            <User size={24} color="#999" />
+                            <User size={24} color={colors.textMuted} />
                         </View>
                     )}
                 </View>
@@ -180,8 +183,8 @@ export default function ChatScreen({ route }) {
 
     const renderNotification = ({ item }) => (
         <TouchableOpacity style={styles.notifCard} activeOpacity={0.7}>
-            <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? '#FEF2F2' : '#F9FAFB' }]}>
-                {item.urgency === 'URGENT' ? <CircleAlert size={20} color="#EF4444" /> : <Bell size={20} color="#111" />}
+            <View style={[styles.notifIcon, { backgroundColor: item.urgency === 'URGENT' ? colors.dangerSoft : colors.surfaceAlt }]}>
+                {item.urgency === 'URGENT' ? <CircleAlert size={20} color={colors.danger} /> : <Bell size={20} color={colors.text} />}
             </View>
             <View style={styles.notifInfo}>
                 <View style={styles.notifTop}>
@@ -196,7 +199,7 @@ export default function ChatScreen({ route }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             {/* Minimal Header */}
             <SafeAreaView edges={['top']} style={styles.headerArea}>
@@ -206,13 +209,13 @@ export default function ChatScreen({ route }) {
                             <Image source={{ uri: resolveImageUrl(user.profile_picture_url) }} style={styles.myAvatar} />
                         ) : (
                             <View style={[styles.myAvatar, styles.avatarPlaceholder]}>
-                                <User size={18} color="#999" />
+                                <User size={18} color={colors.textMuted} />
                             </View>
                         )}
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Messages</Text>
                     <TouchableOpacity style={styles.headerRightBtn}>
-                        <Ellipsis size={24} color="#111" />
+                        <Ellipsis size={24} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -221,16 +224,16 @@ export default function ChatScreen({ route }) {
                 {/* Search Bar */}
                 <View style={styles.searchContainer}>
                     <View style={styles.searchBox}>
-                        <Search size={20} color="#999" />
+                        <Search size={20} color={colors.textMuted} />
                         <TextInput
                             style={styles.searchField}
                             placeholder="Search messages..."
                             value={search}
                             onChangeText={setSearch}
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity>
-                            <Mic size={20} color="#999" />
+                            <Mic size={20} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -268,7 +271,7 @@ export default function ChatScreen({ route }) {
 
                 {activeTab === 'Notifications' && notifications.length > 0 && (
                     <TouchableOpacity style={styles.markAll} onPress={handleMarkAllRead}>
-                        <Check size={14} color="#111" />
+                        <Check size={14} color={colors.text} />
                         <Text style={styles.markAllText}>Mark all as read</Text>
                     </TouchableOpacity>
                 )}
@@ -286,7 +289,7 @@ export default function ChatScreen({ route }) {
                         showsVerticalScrollIndicator={false}
                         ListEmptyComponent={
                             <View style={styles.emptyView}>
-                                {activeTab === 'Notifications' ? <Bell size={60} color="#F3F4F6" /> : <MessageSquare size={60} color="#F3F4F6" />}
+                                {activeTab === 'Notifications' ? <Bell size={60} color={colors.border} /> : <MessageSquare size={60} color={colors.border} />}
                                 <Text style={styles.emptyTitle}>Nothing here yet</Text>
                                 <Text style={styles.emptySub}>Messages and alerts will show up here.</Text>
                             </View>
@@ -303,37 +306,37 @@ export default function ChatScreen({ route }) {
                 onPress={() => navigation.navigate('SupportChat')}
                 activeOpacity={0.8}
             >
-                <Bot size={24} color="#FFF" />
+                <Bot size={24} color={colors.onPrimary} />
             </TouchableOpacity>
         </View>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF' },
-    headerArea: { backgroundColor: '#FFF' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surface },
+    headerArea: { backgroundColor: c.surface },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12 },
     headerLeftBtn: { width: 40, height: 40, justifyContent: 'center' },
     myAvatar: { width: 36, height: 36, borderRadius: 18 },
-    headerTitle: { fontSize: 20, fontWeight: '700', color: '#111' },
+    headerTitle: { fontSize: 20, fontWeight: '700', color: c.text },
     headerRightBtn: { width: 40, height: 40, alignItems: 'flex-end', justifyContent: 'center' },
     
-    contentWrap: { flex: 1, backgroundColor: '#FFF' },
+    contentWrap: { flex: 1, backgroundColor: c.surface },
     
     searchContainer: { paddingHorizontal: 20, paddingVertical: 10 },
     searchBox: {
-        flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB',
+        flexDirection: 'row', alignItems: 'center', backgroundColor: c.surfaceAlt,
         borderRadius: 24, paddingHorizontal: 16, height: 48,
-        borderWidth: 1, borderColor: '#F3F4F6'
+        borderWidth: 1, borderColor: c.borderSubtle
     },
-    searchField: { flex: 1, marginHorizontal: 12, fontSize: 15, color: '#111' },
+    searchField: { flex: 1, marginHorizontal: 12, fontSize: 15, color: c.text },
     
     tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 15, gap: 10 },
-    tabChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F9FAFB', flexDirection: 'row', alignItems: 'center' },
-    tabChipActive: { backgroundColor: '#111' },
-    tabText: { fontSize: 13, fontWeight: '600', color: '#666' },
-    tabTextActive: { color: '#FFF' },
-    tabRedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444', marginLeft: 6 },
+    tabChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: c.surfaceAlt, flexDirection: 'row', alignItems: 'center' },
+    tabChipActive: { backgroundColor: c.primary },
+    tabText: { fontSize: 13, fontWeight: '600', color: c.textSecondary },
+    tabTextActive: { color: c.onPrimary },
+    tabRedDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: c.danger, marginLeft: 6 },
     
     onlineUsersSection: { marginBottom: 20 },
     onlineScrollContent: { paddingHorizontal: 20, gap: 20 },
@@ -342,14 +345,14 @@ const styles = StyleSheet.create({
     onlineAvatar: { width: 56, height: 56, borderRadius: 28 },
     onlineDot: { 
         position: 'absolute', bottom: 2, right: 2, width: 14, height: 14, 
-        borderRadius: 7, backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#FFF' 
+        borderRadius: 7, backgroundColor: c.success, borderWidth: 2, borderColor: c.border 
     },
-    onlineName: { fontSize: 12, color: '#111', fontWeight: '500' },
+    onlineName: { fontSize: 12, color: c.text, fontWeight: '500' },
     
-    avatarPlaceholder: { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' },
+    avatarPlaceholder: { backgroundColor: c.surfaceSunken, justifyContent: 'center', alignItems: 'center' },
     
     markAll: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', marginRight: 20, marginBottom: 10, gap: 6 },
-    markAllText: { fontSize: 13, fontWeight: '600', color: '#111' },
+    markAllText: { fontSize: 13, fontWeight: '600', color: c.text },
     
     listPadding: { paddingHorizontal: 20, paddingBottom: TAB_BAR_CLEARANCE },
     
@@ -358,28 +361,28 @@ const styles = StyleSheet.create({
     avatar: { width: 52, height: 52, borderRadius: 26 },
     convMain: { flex: 1 },
     convTop: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-    contactName: { fontSize: 16, fontWeight: '600', color: '#111', flex: 1, paddingRight: 10 },
+    contactName: { fontSize: 16, fontWeight: '600', color: c.text, flex: 1, paddingRight: 10 },
     nameUnread: { fontWeight: '800' },
-    convTime: { fontSize: 12, color: '#999' },
-    timeUnread: { color: '#111', fontWeight: '600' },
+    convTime: { fontSize: 12, color: c.textMuted },
+    timeUnread: { color: c.text, fontWeight: '600' },
     convBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    lastMsg: { fontSize: 14, color: '#666', flex: 1, paddingRight: 10 },
-    msgUnread: { color: '#111', fontWeight: '600' },
-    unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111' },
+    lastMsg: { fontSize: 14, color: c.textSecondary, flex: 1, paddingRight: 10 },
+    msgUnread: { color: c.text, fontWeight: '600' },
+    unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary },
     
-    notifCard: { flexDirection: 'row', padding: 16, backgroundColor: '#FFF', marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6' },
+    notifCard: { flexDirection: 'row', padding: 16, backgroundColor: c.surface, marginBottom: 8, borderRadius: 16, borderWidth: 1, borderColor: c.borderSubtle },
     notifIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
     notifInfo: { flex: 1, marginLeft: 16 },
     notifTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    notifTitle: { fontSize: 15, fontWeight: '600', color: '#111', flex: 1 },
+    notifTitle: { fontSize: 15, fontWeight: '600', color: c.text, flex: 1 },
     notifTitleUnread: { fontWeight: '800' },
-    notifTimeSmall: { fontSize: 12, color: '#999' },
-    notifBody: { fontSize: 14, color: '#666', lineHeight: 20 },
-    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#111', marginLeft: 12, alignSelf: 'center' },
+    notifTimeSmall: { fontSize: 12, color: c.textMuted },
+    notifBody: { fontSize: 14, color: c.textSecondary, lineHeight: 20 },
+    greenDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.primary, marginLeft: 12, alignSelf: 'center' },
     
     emptyView: { alignItems: 'center', paddingVertical: 100 },
-    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: '#111', marginTop: 20 },
-    emptySub: { fontSize: 15, color: '#999', marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
+    emptyTitle: { fontSize: 18, fontWeight: 'bold', color: c.text, marginTop: 20 },
+    emptySub: { fontSize: 15, color: c.textMuted, marginTop: 8, textAlign: 'center', paddingHorizontal: 40 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     
     floatingWidget: {
@@ -389,14 +392,14 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 10,
         elevation: 8,
         zIndex: 100,
     }
-});
+}));

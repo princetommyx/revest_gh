@@ -4,8 +4,11 @@ import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import { usePickups } from '../hooks/usePickups';
 import { Activity, Navigation } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function TrackingWidget() {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
     
@@ -72,30 +75,30 @@ export default function TrackingWidget() {
         >
             <View style={styles.content}>
                 <Animated.View style={[styles.pulseIcon, { opacity: pulseAnim }]}>
-                    <Activity size={18} color="#fff" />
+                    <Activity size={18} color={colors.onPrimary} />
                 </Animated.View>
                 <View style={styles.textContainer}>
                     <Text style={styles.title}>{getStatusText()}</Text>
                     <Text style={styles.subtitle}>Tap to view tracking map</Text>
                 </View>
                 <View style={styles.actionIcon}>
-                    <Navigation size={16} color="#fff" />
+                    <Navigation size={16} color={colors.onPrimary} />
                 </View>
             </View>
         </TouchableOpacity>
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         position: 'absolute',
         top: Platform.OS === 'ios' ? 60 : 40,
         left: 20,
         right: 20,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 16,
         padding: 16,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     title: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
         marginBottom: 2,
@@ -136,4 +139,4 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     }
-});
+}));

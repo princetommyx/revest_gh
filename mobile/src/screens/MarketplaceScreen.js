@@ -15,6 +15,7 @@ import { useListings } from '../hooks/useListings';
 import { SkeletonCard } from '../components/Skeleton';
 import * as Haptics from 'expo-haptics';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,8 @@ const SORT_OPTIONS = [
 ];
 
 export default function MarketplaceScreen({ navigation, route }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
     const [filter, setFilter] = useState('');
@@ -146,7 +149,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                     />
                 ) : (
                     <View style={styles.placeholderImg}>
-                        <Package size={30} color="#ccc" />
+                        <Package size={30} color={colors.textMuted} />
                     </View>
                 )}
 
@@ -161,24 +164,24 @@ export default function MarketplaceScreen({ navigation, route }) {
                     onPress={() => handleToggleLike(item)}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                    <Heart size={16} color={liked ? '#EF4444' : '#111'} fill={liked ? '#EF4444' : 'transparent'} />
+                    <Heart size={16} color={liked ? colors.danger : colors.text} fill={liked ? colors.danger : 'transparent'} />
                 </TouchableOpacity>
             </View>
             <View style={styles.listingDetails}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
                 
                 <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <MaterialIcon size={12} color="#666" style={{ marginRight: 4 }} />
+                    <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{materialObj.name}</Text>
                 </View>
                 
                 <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <Package size={12} color="#666" style={{ marginRight: 4 }} />
+                    <Package size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
                 </View>
 
                 <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <MapPin size={12} color="#666" style={{ marginRight: 4 }} />
+                    <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
                     <Text style={styles.distanceText}> • 1.8 km</Text>
                 </View>
@@ -196,30 +199,30 @@ export default function MarketplaceScreen({ navigation, route }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <SafeAreaView edges={['top']} style={styles.header}>
                 <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.navigate('House')}>
-                    <ChevronLeft size={24} color="#111" />
+                    <ChevronLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'All Waste' : 'My Waste'}</Text>
                 <TouchableOpacity style={styles.iconBtnRound} onPress={() => setShowLocationModal(true)}>
-                    <SlidersHorizontal size={20} color="#111" />
+                    <SlidersHorizontal size={20} color={colors.text} />
                 </TouchableOpacity>
             </SafeAreaView>
 
             {/* Search Bar */}
             <View style={styles.searchBarWrapper}>
-                <Search size={20} color="#999" />
+                <Search size={20} color={colors.textMuted} />
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search waste materials..."
                     value={search}
                     onChangeText={setSearch}
-                    placeholderTextColor="#999"
+                    placeholderTextColor={colors.textMuted}
                 />
                 <TouchableOpacity style={styles.searchBtn}>
-                    <Search size={18} color="#fff" />
+                    <Search size={18} color={colors.onPrimary} />
                 </TouchableOpacity>
             </View>
 
@@ -235,8 +238,8 @@ export default function MarketplaceScreen({ navigation, route }) {
                                 style={[styles.catChip, isActive && styles.catChipActive]}
                                 onPress={() => setFilter(item.id)}
                             >
-                                {IconComp && isActive && item.id === '' && <IconComp size={16} color="#fff" style={{ marginRight: 6 }} />}
-                                {IconComp && !isActive && <IconComp size={16} color="#111" style={{ marginRight: 6 }} />}
+                                {IconComp && isActive && item.id === '' && <IconComp size={16} color={colors.onPrimary} style={{ marginRight: 6 }} />}
+                                {IconComp && !isActive && <IconComp size={16} color={colors.text} style={{ marginRight: 6 }} />}
                                 <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                                     {item.name}
                                 </Text>
@@ -244,7 +247,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                         );
                     })}
                     <TouchableOpacity style={styles.catChip}>
-                        <LayoutGrid size={16} color="#111" style={{ marginRight: 6 }} />
+                        <LayoutGrid size={16} color={colors.text} style={{ marginRight: 6 }} />
                         <Text style={styles.catChipText}>More</Text>
                     </TouchableOpacity>
                 </ScrollView>
@@ -254,20 +257,20 @@ export default function MarketplaceScreen({ navigation, route }) {
             <View style={styles.nearYouRow}>
                 {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <MapPin size={16} color="#059669" />
+                        <MapPin size={16} color={colors.accent} />
                         <Text style={styles.showingText}>Showing waste </Text>
                         <Text style={styles.nearYouText}>near you</Text>
                     </View>
                 ) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Package size={16} color="#059669" />
+                        <Package size={16} color={colors.accent} />
                         <Text style={styles.showingText}>Showing your </Text>
                         <Text style={styles.nearYouText}>recent waste</Text>
                     </View>
                 )}
                 <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowSortModal(true)}>
                     <Text style={styles.dropdownText}>{sortBy ? SORT_OPTIONS.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
-                    <ChevronDown size={14} color="#111" style={{ marginLeft: 4 }} />
+                    <ChevronDown size={14} color={colors.text} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
             </View>
 
@@ -292,11 +295,11 @@ export default function MarketplaceScreen({ navigation, route }) {
                         columnWrapperStyle={styles.columnWrapper}
                         showsVerticalScrollIndicator={false}
                         refreshControl={
-                            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#111" />
+                            <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.text} />
                         }
                         ListEmptyComponent={
                             <View style={styles.emptyBox}>
-                                <ShoppingCart size={60} color="#E0E7E0" />
+                                <ShoppingCart size={60} color={colors.border} />
                                 <Text style={styles.emptyTitle}>{userRole === 'RECYCLER' ? 'No items found' : 'No waste posted yet'}</Text>
                                 <Text style={styles.emptyText}>{userRole === 'RECYCLER' ? 'Try adjusting your filters or search terms.' : 'Request a pickup and it will appear here.'}</Text>
                                 <TouchableOpacity style={styles.resetBtn} onPress={() => { setFilter(''); setLocationFilter(''); setSearch(''); setSortBy(''); }}>
@@ -380,10 +383,10 @@ export default function MarketplaceScreen({ navigation, route }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
     },
     header: {
         flexDirection: 'row',
@@ -396,7 +399,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     iconBtn: {
         width: 40,
@@ -408,7 +411,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -416,7 +419,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginHorizontal: 20,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 28,
         paddingLeft: 20,
         paddingRight: 6,
@@ -427,13 +430,13 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 10,
         fontSize: 16,
-        color: '#111',
+        color: c.text,
     },
     searchBtn: {
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#059669',
+        backgroundColor: c.accent,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -441,7 +444,7 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 10,
         fontSize: 16,
-        color: '#111',
+        color: c.text,
     },
     filterSection: {
         marginBottom: 20,
@@ -454,38 +457,38 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 10,
         borderRadius: 24,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         flexDirection: 'row',
         alignItems: 'center',
     },
     catChipActive: {
-        backgroundColor: '#111',
-        borderColor: '#111',
+        backgroundColor: c.primary,
+        borderColor: c.primary,
     },
     dropdownChip: {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         flexDirection: 'row',
         alignItems: 'center',
     },
     dropdownText: {
         fontSize: 13,
-        color: '#111',
+        color: c.text,
         fontWeight: '500',
     },
     catChipText: {
         fontSize: 14,
-        color: '#111',
+        color: c.text,
         fontWeight: '600',
     },
     catChipTextActive: {
-        color: '#fff',
+        color: c.onPrimary,
     },
     nearYouRow: {
         flexDirection: 'row',
@@ -496,12 +499,12 @@ const styles = StyleSheet.create({
     },
     showingText: {
         fontSize: 15,
-        color: '#111',
+        color: c.text,
         marginLeft: 8,
     },
     nearYouText: {
         fontSize: 15,
-        color: '#059669',
+        color: c.accent,
         fontWeight: '600',
     },
     resultsContainer: {
@@ -516,14 +519,14 @@ const styles = StyleSheet.create({
     },
     listingCard: {
         width: (width - 55) / 2,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         marginBottom: 25,
     },
     imageBox: {
         width: '100%',
         height: 160,
         borderRadius: 24,
-        backgroundColor: '#F9FBF9',
+        backgroundColor: c.surfaceAlt,
         overflow: 'hidden',
         position: 'relative',
         marginBottom: 12,
@@ -541,13 +544,13 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 12,
         left: 12,
-        backgroundColor: '#059669',
+        backgroundColor: c.accent,
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 12,
     },
     floatingTagText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 12,
         fontWeight: '600',
     },
@@ -558,10 +561,10 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
@@ -572,7 +575,7 @@ const styles = StyleSheet.create({
     },
     listingTitle: {
         fontSize: 16,
-        color: '#111',
+        color: c.text,
         fontWeight: 'bold',
         marginBottom: 8,
     },
@@ -583,11 +586,11 @@ const styles = StyleSheet.create({
     },
     listingLoc: {
         fontSize: 12,
-        color: '#555',
+        color: c.textSecondary,
     },
     distanceText: {
         fontSize: 12,
-        color: '#059669',
+        color: c.accent,
         fontWeight: '500',
     },
     priceRow: {
@@ -599,17 +602,17 @@ const styles = StyleSheet.create({
     listingPrice: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#059669',
+        color: c.accent,
     },
     viewDetailsBtn: {
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#059669',
+        borderColor: c.accent,
     },
     viewDetailsText: {
-        color: '#059669',
+        color: c.accent,
         fontSize: 12,
         fontWeight: '600',
     },
@@ -621,12 +624,12 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: c.text,
         marginTop: 15,
     },
     emptyText: {
         fontSize: 14,
-        color: '#999',
+        color: c.textMuted,
         marginTop: 8,
         textAlign: 'center',
         paddingHorizontal: 40,
@@ -635,11 +638,11 @@ const styles = StyleSheet.create({
         marginTop: 20,
         paddingHorizontal: 25,
         paddingVertical: 12,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 18,
     },
     resetBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontWeight: 'bold',
     },
     modalOverlay: {
@@ -648,7 +651,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
         paddingHorizontal: 25,
@@ -665,23 +668,23 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     closeModalBtn: {
         padding: 5,
     },
     closeModalText: {
         fontSize: 15,
-        color: '#999',
+        color: c.textMuted,
         fontWeight: '600',
     },
     modalOption: {
         paddingVertical: 18,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     modalOptionActive: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         paddingHorizontal: 15,
         borderBottomWidth: 0,
@@ -689,21 +692,21 @@ const styles = StyleSheet.create({
     },
     modalOptionText: {
         fontSize: 16,
-        color: '#333',
+        color: c.text,
     },
     modalOptionTextActive: {
-        color: '#111',
+        color: c.text,
         fontWeight: 'bold',
     },
     fab: {
         position: 'absolute',
         bottom: 30,
         alignSelf: 'center',
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         paddingHorizontal: 24,
         paddingVertical: 14,
         borderRadius: 30,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
@@ -711,8 +714,8 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     fabText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     }
-});
+}));

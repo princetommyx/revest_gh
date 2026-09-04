@@ -12,13 +12,16 @@ import PageLoader from '../components/PageLoader';
 import ScreenHeader from '../components/ScreenHeader';
 import { getMaterialImage } from './HomeScreen';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const STATUS_CONFIG = {
-    PENDING: { color: '#B45309', label: 'Pending' },
-    ACCEPTED: { color: '#1D4ED8', label: 'Accepted' },
-    ARRIVED: { color: '#6D28D9', label: 'Collector arrived' },
-    COMPLETED: { color: '#059669', label: 'Completed' },
-    CANCELLED: { color: '#DC2626', label: 'Cancelled' },
+    // Token names, not hex - this map is module scope, where the theme isn't
+    // available. Resolved against the palette at render time.
+    PENDING: { tone: 'warning', label: 'Pending' },
+    ACCEPTED: { tone: 'info', label: 'Accepted' },
+    ARRIVED: { tone: 'info', label: 'Collector arrived' },
+    COMPLETED: { tone: 'accent', label: 'Completed' },
+    CANCELLED: { tone: 'danger', label: 'Cancelled' },
 };
 
 const FILTER_OPTIONS = ['ALL', 'PENDING', 'COMPLETED', 'CANCELLED'];
@@ -43,6 +46,8 @@ const jobAmount = (item) => {
 const TRACK_LABEL = { A: 'Disposal', B: 'Recyclables', C: 'Purchase' };
 
 export default function PickupHistoryScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const { userRole } = useAuth();
     const [activeFilter, setActiveFilter] = useState('ALL');
@@ -105,7 +110,7 @@ export default function PickupHistoryScreen() {
                     <Text style={styles.subline} numberOfLines={1}>
                         {stamp}
                         {item.status !== 'COMPLETED' && (
-                            <Text style={{ color: status.color }}> · {status.label}</Text>
+                            <Text style={{ color: colors[status.tone] || colors.textSecondary }}> · {status.label}</Text>
                         )}
                         {!!other && item.status === 'COMPLETED' && ` · ${other}`}
                     </Text>
@@ -128,7 +133,7 @@ export default function PickupHistoryScreen() {
     const renderEmpty = () => (
         <View style={styles.emptyContainer}>
             <View style={styles.emptyIconCircle}>
-                <Activity size={36} color="#9CA3AF" />
+                <Activity size={36} color={colors.textMuted} />
             </View>
             <Text style={styles.emptyTitle}>Nothing here yet</Text>
             <Text style={styles.emptyText}>
@@ -143,7 +148,7 @@ export default function PickupHistoryScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <ScreenHeader title="Pickup History" onBack={() => navigation.goBack()} />
 
@@ -178,7 +183,7 @@ export default function PickupHistoryScreen() {
                     ListEmptyComponent={renderEmpty}
                     showsVerticalScrollIndicator={false}
                     refreshControl={
-                        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor="#111" />
+                        <RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.text} />
                     }
                 />
             )}
@@ -186,8 +191,8 @@ export default function PickupHistoryScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surface },
 
     filterSection: { paddingTop: 16, paddingBottom: 4 },
     filterContent: { paddingHorizontal: 20, gap: 8 },
@@ -195,18 +200,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 8,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
     },
-    filterChipActive: { backgroundColor: '#111' },
-    filterText: { fontSize: 13, color: '#6B7280', fontWeight: '600' },
-    filterTextActive: { color: '#fff' },
+    filterChipActive: { backgroundColor: c.primary },
+    filterText: { fontSize: 13, color: c.textSecondary, fontWeight: '600' },
+    filterTextActive: { color: c.onPrimary },
 
     listContent: { paddingHorizontal: 20, paddingBottom: 60 },
 
     sectionHeader: {
         fontSize: 20,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         letterSpacing: -0.3,
         marginTop: 26,
         marginBottom: 6,
@@ -222,30 +227,30 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 14,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
     },
     rowMain: { flex: 1 },
     address: {
         fontSize: 15,
-        color: '#111827',
+        color: c.text,
         fontWeight: '500',
         lineHeight: 20,
         marginBottom: 3,
     },
-    subline: { fontSize: 13, color: '#9CA3AF' },
+    subline: { fontSize: 13, color: c.textMuted },
     rowRight: { alignItems: 'flex-end' },
     amount: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         fontVariant: ['tabular-nums'],
     },
     directPayLabel: {
         fontSize: 12,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
     },
-    track: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+    track: { fontSize: 11, color: c.textMuted, marginTop: 2 },
 
     emptyContainer: {
         flex: 1,
@@ -257,7 +262,7 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 36,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 18,
@@ -265,14 +270,14 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 6,
     },
     emptyText: {
         fontSize: 13.5,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
         paddingHorizontal: 50,
         lineHeight: 19,
     },
-});
+}));

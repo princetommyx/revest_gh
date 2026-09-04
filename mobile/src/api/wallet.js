@@ -2,8 +2,16 @@ import apiClient from './client';
 
 export const walletApi = {
     getWallet: async () => {
-        const response = await apiClient.get('wallet/');
-        return Array.isArray(response.data) ? response.data[0] : response.data;
+        // 'wallet/' is the ViewSet's list route, and DRF pagination is on
+        // globally - so it returns {count, next, previous, results:[...]} and
+        // the unwrapping below never fired, leaving balance/recent_transactions
+        // undefined and every screen showing 0.00. 'wallet/me/' is a custom
+        // action that returns the single wallet object unpaginated.
+        const response = await apiClient.get('wallet/me/');
+        const data = response.data;
+        if (Array.isArray(data)) return data[0];
+        if (data && Array.isArray(data.results)) return data.results[0];
+        return data;
     },
 
     deposit: async (data) => {

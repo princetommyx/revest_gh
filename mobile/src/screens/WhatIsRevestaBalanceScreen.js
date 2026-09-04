@@ -1,14 +1,17 @@
 import React from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView } from 'react-native';
 import { ArrowLeft, Wallet, ShieldCheck, Banknote, Zap } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const WhatIsRevestaBalanceScreen = ({ navigation }) => {
+    const styles = useStyles();
+    const { colors } = useTheme();
     return (
         <SafeAreaView style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#111827" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Revesta Balance</Text>
                 <View style={{ width: 40 }} />
@@ -16,7 +19,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.iconContainer}>
-                    <Wallet size={48} color="#059669" />
+                    <Wallet size={48} color={colors.accent} />
                 </View>
                 
                 <Text style={styles.mainTitle}>What is Revesta Balance?</Text>
@@ -27,7 +30,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
                 <View style={styles.featuresContainer}>
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <Banknote size={24} color="#059669" />
+                            <Banknote size={24} color={colors.accent} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Cashless Payments</Text>
@@ -39,7 +42,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <Zap size={24} color="#D97706" />
+                            <Zap size={24} color={colors.warning} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Instant Transactions</Text>
@@ -51,7 +54,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <ShieldCheck size={24} color="#2563EB" />
+                            <ShieldCheck size={24} color={colors.info} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Safe & Secure</Text>
@@ -66,10 +69,10 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
     );
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
     },
     header: {
         flexDirection: 'row',
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     backButton: {
         padding: 8,
@@ -87,7 +90,7 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     scrollContent: {
         padding: 24,
@@ -96,7 +99,7 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
         alignSelf: 'center',
@@ -105,13 +108,13 @@ const styles = StyleSheet.create({
     mainTitle: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         textAlign: 'center',
         marginBottom: 12,
     },
     description: {
         fontSize: 16,
-        color: '#4B5563',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 24,
         marginBottom: 40,
@@ -127,7 +130,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
@@ -138,14 +141,14 @@ const styles = StyleSheet.create({
     featureTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4,
     },
     featureDesc: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 20,
     },
-});
+}));
 
 export default WhatIsRevestaBalanceScreen;

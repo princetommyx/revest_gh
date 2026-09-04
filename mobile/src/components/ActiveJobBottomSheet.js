@@ -4,8 +4,8 @@ import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, N
 import AnimatedButton from './AnimatedButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
-const BRAND_GREEN = '#059669';
 
 // The sheet is absolutely positioned at bottom:0 inside a parent with no fixed
 // height, so `maxHeight: '100%'` resolved against an auto-sized box and did
@@ -45,6 +45,8 @@ const formatDate = (value) => {
 };
 
 export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, onNavigate, onArrive, onComplete, onAccept, requestLoading, isCollapsed, onToggleCollapse }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const pulseAnim = useRef(new Animated.Value(0.5)).current;
     const isPending = job?.status === 'PENDING';
 
@@ -105,7 +107,7 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                         <Image source={{ uri: avatarUrl }} style={styles.avatar} />
                     ) : (
                         <View style={styles.avatarPlaceholder}>
-                            <User size={24} color="#9CA3AF" />
+                            <User size={24} color={colors.textMuted} />
                         </View>
                     )}
                     <View style={styles.providerInfo}>
@@ -116,10 +118,10 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                     </View>
                     <View style={styles.actions}>
                         <TouchableOpacity style={styles.actionBtn} onPress={onChatPress}>
-                            <MessageCircle size={20} color="#111" />
+                            <MessageCircle size={20} color={colors.text} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.actionBtn} onPress={onCallPress}>
-                            <Phone size={20} color="#111" />
+                            <Phone size={20} color={colors.text} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -133,7 +135,7 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                     numbers. Show an honest placeholder instead. */}
                 <View style={styles.timeRow}>
                     <View style={styles.timeInfo}>
-                        <Clock size={16} color={BRAND_GREEN} />
+                        <Clock size={16} color={colors.accent} />
                         <Text style={styles.timeLabel}>Your pickup ETA</Text>
                         <Text style={styles.timeValue}>{job.duration_min != null ? `~${Math.round(job.duration_min)} min` : '—'}</Text>
                     </View>
@@ -188,7 +190,7 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                                 {job.listing_image ? (
                                     <Image source={{ uri: job.listing_image }} style={styles.routeThumb} />
                                 ) : (
-                                    <Package size={22} color="#9CA3AF" />
+                                    <Package size={22} color={colors.textMuted} />
                                 )}
                             </View>
                         </View>
@@ -230,23 +232,23 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                 <View style={styles.actionContainer}>
                     {job.status === 'PENDING' && (
                         <AnimatedButton style={styles.primaryBtn} onPress={() => onAccept(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color="#fff" /> : <Text style={styles.primaryBtnText}>Accept Job</Text>}
+                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Accept Job</Text>}
                         </AnimatedButton>
                     )}
                     {job.status === 'ACCEPTED' && (
                         <View style={styles.dualActions}>
-                            <AnimatedButton style={[styles.primaryBtn, { flex: 1, backgroundColor: '#F3F4F6' }]} onPress={() => onNavigate(job)}>
-                                <Navigation size={20} color="#111" style={{ marginRight: 8 }} />
-                                <Text style={[styles.primaryBtnText, { color: '#111' }]}>{isCollapsed ? 'Show Details' : 'Navigate'}</Text>
+                            <AnimatedButton style={[styles.primaryBtn, { flex: 1, backgroundColor: colors.surfaceSunken }]} onPress={() => onNavigate(job)}>
+                                <Navigation size={20} color={colors.text} style={{ marginRight: 8 }} />
+                                <Text style={[styles.primaryBtnText, { color: colors.text }]}>{isCollapsed ? 'Show Details' : 'Navigate'}</Text>
                             </AnimatedButton>
                             <AnimatedButton style={[styles.primaryBtn, { flex: 1 }]} onPress={() => onArrive(job.id)} disabled={requestLoading}>
-                                {requestLoading ? <Activity color="#fff" /> : <Text style={styles.primaryBtnText}>Arrived</Text>}
+                                {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Arrived</Text>}
                             </AnimatedButton>
                         </View>
                     )}
                     {job.status === 'ARRIVED' && (
                         <AnimatedButton style={styles.primaryBtn} onPress={() => onComplete(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color="#fff" /> : <Text style={styles.primaryBtnText}>Complete Job</Text>}
+                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Complete Job</Text>}
                         </AnimatedButton>
                     )}
                 </View>
@@ -255,14 +257,14 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         padding: 24,
         paddingBottom: Platform.OS === 'ios' ? 100 : 90,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
@@ -271,13 +273,13 @@ const styles = StyleSheet.create({
     },
     containerPending: {
         borderTopWidth: 3,
-        borderTopColor: BRAND_GREEN,
+        borderTopColor: c.accent,
     },
     newRequestBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'center',
-        backgroundColor: '#F0FDF4',
+        backgroundColor: c.accentSoft,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
@@ -288,19 +290,19 @@ const styles = StyleSheet.create({
         width: 6,
         height: 6,
         borderRadius: 3,
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: c.accent,
     },
     newRequestText: {
         fontSize: 11,
         fontWeight: '700',
-        color: BRAND_GREEN,
+        color: c.accent,
         letterSpacing: 0.6,
     },
     dragHandle: {
         width: 40,
         height: 5,
         borderRadius: 3,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         alignSelf: 'center',
         marginBottom: 20,
     },
@@ -313,13 +315,13 @@ const styles = StyleSheet.create({
         width: 52,
         height: 52,
         borderRadius: 26,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
     },
     avatarPlaceholder: {
         width: 52,
         height: 52,
         borderRadius: 26,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -331,11 +333,11 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 17,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
     },
     rolePill: {
         alignSelf: 'flex-start',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 6,
         paddingHorizontal: 7,
         paddingVertical: 3,
@@ -343,7 +345,7 @@ const styles = StyleSheet.create({
     rolePillText: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#6B7280',
+        color: c.textSecondary,
         letterSpacing: 0.5,
     },
     actions: {
@@ -354,13 +356,13 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     metaRow: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontWeight: '500',
         marginBottom: 18,
         fontVariant: ['tabular-nums'],
@@ -378,26 +380,26 @@ const styles = StyleSheet.create({
     },
     timeLabel: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     timeValue: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     timeEst: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginBottom: 20,
     },
     routeCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         padding: 16,
         marginBottom: 10,
@@ -413,20 +415,20 @@ const styles = StyleSheet.create({
         width: 9,
         height: 9,
         borderRadius: 4.5,
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: c.accent,
         marginRight: 12,
     },
     routeDotDest: {
         width: 9,
         height: 9,
         borderRadius: 2,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         marginRight: 12,
     },
     routeConnector: {
         width: 1,
         height: 14,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         marginLeft: 4.5,
         marginVertical: 2,
     },
@@ -436,24 +438,24 @@ const styles = StyleSheet.create({
     routeLabel: {
         fontSize: 10,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
         letterSpacing: 0.5,
         marginBottom: 2,
     },
     routeValue: {
         fontSize: 13.5,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     routeThumbBox: {
         width: 48,
         height: 48,
         borderRadius: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         marginLeft: 12,
     },
     routeThumb: {
@@ -463,7 +465,7 @@ const styles = StyleSheet.create({
     },
     materialLine: {
         fontSize: 12.5,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginBottom: 20,
         marginLeft: 4,
     },
@@ -473,12 +475,12 @@ const styles = StyleSheet.create({
     paymentTitle: {
         fontSize: 15,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 16,
     },
     cashNote: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 19,
     },
     paymentRow: {
@@ -488,28 +490,28 @@ const styles = StyleSheet.create({
     },
     paymentLabel: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     paymentValue: {
         fontSize: 14,
-        color: '#374151',
+        color: c.text,
     },
     paymentTotalRow: {
         marginTop: 8,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
+        borderTopColor: c.borderSubtle,
         marginBottom: 0,
     },
     paymentTotalLabel: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     paymentTotalValue: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     actionContainer: {
         marginTop: 10,
@@ -519,7 +521,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     primaryBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 8,
@@ -528,8 +530,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     primaryBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 14,
         fontWeight: 'bold',
     },
-});
+}));

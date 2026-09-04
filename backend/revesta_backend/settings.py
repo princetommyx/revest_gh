@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'chat',
     'admin_dashboard',  # Admin dashboard system
     'wallet',  # Enabled for mobile app
+    'moderation',  # User blocking + content reporting
 ]
 
 MIDDLEWARE = [
@@ -307,6 +308,22 @@ else:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Google Sign-In.
+# Every OAuth client that is allowed to authenticate against this backend. A
+# token is only accepted if its audience is one of these, which is what stops
+# a Google token minted for some *other* app being replayed here. Defaults are
+# the clients in mobile/google-services.json; override per environment with a
+# comma-separated GOOGLE_OAUTH_CLIENT_IDS.
+GOOGLE_OAUTH_CLIENT_IDS = [
+    cid.strip() for cid in os.environ.get(
+        'GOOGLE_OAUTH_CLIENT_IDS',
+        # Android client (com.revesta.mobile)
+        '132479987352-0mb8h8gaaj2c8qg8jdebgd7u7nsglau3.apps.googleusercontent.com,'
+        # Web client
+        '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com'
+    ).split(',') if cid.strip()
+]
 
 # Paystack
 PAYSTACK_SECRET_KEY = os.environ.get('PAYSTACK_SECRET_KEY')

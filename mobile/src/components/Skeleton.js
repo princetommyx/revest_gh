@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, Easing, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 /**
  * Skeleton loading component - replaces spinners for better UX
@@ -12,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
  * (Bolt/Uber-style shimmer) instead of a flat opacity pulse.
  */
 const ShimmerBox = ({ style }) => {
+    const styles = useStyles();
     const translateX = useRef(new Animated.Value(0)).current;
     const [width, setWidth] = useState(0);
 
@@ -46,19 +48,19 @@ const ShimmerBox = ({ style }) => {
     );
 };
 
-export const SkeletonCard = ({ style }) => (
+export const SkeletonCard = ({ style }) => { const styles = useStyles(); const { colors } = useTheme(); return (
     <View style={[styles.card, style]}>
         <ShimmerBox style={styles.imagePlaceholder} />
         <ShimmerBox style={styles.textPlaceholder} />
         <ShimmerBox style={[styles.textPlaceholder, { width: '70%' }]} />
         <ShimmerBox style={[styles.textPlaceholder, { width: '50%' }]} />
     </View>
-);
+); };
 
 /**
  * Small skeleton for list items
  */
-export const SkeletonListItem = () => (
+export const SkeletonListItem = () => { const styles = useStyles(); const { colors } = useTheme(); return (
     <View style={styles.listItem}>
         <ShimmerBox style={styles.avatar} />
         <View style={styles.content}>
@@ -66,54 +68,54 @@ export const SkeletonListItem = () => (
             <ShimmerBox style={[styles.line, { width: '60%' }]} />
         </View>
     </View>
-);
+); };
 
 /**
  * Wallet Screen Skeleton
  */
-export const SkeletonWalletPage = () => (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
+export const SkeletonWalletPage = () => { const styles = useStyles(); const { colors } = useTheme(); return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
         {/* Header */}
         <View style={{ padding: 24, paddingVertical: 16 }}>
-            <ShimmerBox style={{ width: 100, height: 30, backgroundColor: '#E0E0E0', borderRadius: 4 }} />
+            <ShimmerBox style={{ width: 100, height: 30, backgroundColor: colors.skeleton, borderRadius: 4 }} />
         </View>
 
         {/* Balance Section */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-            <ShimmerBox style={{ width: 100, height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 16 }} />
-            <ShimmerBox style={{ width: 200, height: 60, backgroundColor: '#E0E0E0', borderRadius: 8 }} />
+            <ShimmerBox style={{ width: 100, height: 16, backgroundColor: colors.skeleton, borderRadius: 4, marginBottom: 16 }} />
+            <ShimmerBox style={{ width: 200, height: 60, backgroundColor: colors.skeleton, borderRadius: 8 }} />
         </View>
 
         {/* Actions Row */}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 32, marginBottom: 40 }}>
             {[1, 2, 3].map(i => (
                 <View key={i} style={{ alignItems: 'center', gap: 8 }}>
-                    <ShimmerBox style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#E0E0E0' }} />
-                    <ShimmerBox style={{ width: 40, height: 12, borderRadius: 4, backgroundColor: '#E0E0E0' }} />
+                    <ShimmerBox style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.skeleton }} />
+                    <ShimmerBox style={{ width: 40, height: 12, borderRadius: 4, backgroundColor: colors.skeleton }} />
                 </View>
             ))}
         </View>
 
         {/* Transactions */}
         <View style={{ paddingHorizontal: 24 }}>
-            <ShimmerBox style={{ width: 150, height: 24, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 24 }} />
+            <ShimmerBox style={{ width: 150, height: 24, backgroundColor: colors.skeleton, borderRadius: 4, marginBottom: 24 }} />
 
             {[1, 2, 3, 4].map(i => (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 16 }}>
-                    <ShimmerBox style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: '#E0E0E0' }} />
+                    <ShimmerBox style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors.skeleton }} />
                     <View style={{ flex: 1 }}>
-                        <ShimmerBox style={{ width: '60%', height: 16, backgroundColor: '#E0E0E0', borderRadius: 4, marginBottom: 8 }} />
-                        <ShimmerBox style={{ width: '40%', height: 12, backgroundColor: '#E0E0E0', borderRadius: 4 }} />
+                        <ShimmerBox style={{ width: '60%', height: 16, backgroundColor: colors.skeleton, borderRadius: 4, marginBottom: 8 }} />
+                        <ShimmerBox style={{ width: '40%', height: 12, backgroundColor: colors.skeleton, borderRadius: 4 }} />
                     </View>
                 </View>
             ))}
         </View>
     </View>
-);
+); };
 /**
  * Wallet balance skeleton (Legacy)
  */
-export const SkeletonWalletCard = () => (
+export const SkeletonWalletCard = () => { const styles = useStyles(); const { colors } = useTheme(); return (
     <View style={styles.walletCard}>
         <ShimmerBox style={styles.label} />
         <ShimmerBox style={styles.balance} />
@@ -122,18 +124,18 @@ export const SkeletonWalletCard = () => (
             <ShimmerBox style={styles.button} />
         </View>
     </View>
-);
+); };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     shimmerBase: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         overflow: 'hidden',
     },
 
     // Listing Card Skeleton
     card: {
         width: '48.5%',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 8,
         marginBottom: 10,
         overflow: 'hidden',
@@ -141,11 +143,11 @@ const styles = StyleSheet.create({
     },
     imagePlaceholder: {
         height: 150,
-        backgroundColor: '#E0E0E0',
+        backgroundColor: c.skeleton,
     },
     textPlaceholder: {
         height: 14,
-        backgroundColor: '#E0E0E0',
+        backgroundColor: c.skeleton,
         margin: 10,
         borderRadius: 4
     },
@@ -154,14 +156,14 @@ const styles = StyleSheet.create({
     listItem: {
         flexDirection: 'row',
         padding: 15,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         marginBottom: 1
     },
     avatar: {
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#E0E0E0'
+        backgroundColor: c.skeleton
     },
     content: {
         flex: 1,
@@ -170,7 +172,7 @@ const styles = StyleSheet.create({
     },
     line: {
         height: 14,
-        backgroundColor: '#E0E0E0',
+        backgroundColor: c.skeleton,
         marginBottom: 8,
         borderRadius: 4
     },
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
     // Wallet Card Skeleton
     walletCard: {
         margin: 20,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 25,
         padding: 25,
         elevation: 10
@@ -207,4 +209,4 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.2)',
         borderRadius: 15
     }
-});
+}));

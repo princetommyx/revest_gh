@@ -2,14 +2,15 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { CheckCircle } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 // Black is the app's primary (every primary button, the tab bar, the sheet
 // CTAs) - green is only ever an accent here, so the tracker reads as part of
 // the app rather than its own thing. Completed path is solid black against the
 // light grey of the stretch that hasn't happened yet.
-const TRACK_ACCENT = '#111';
-const TRACK_COLOR = '#E5E7EB';
-const TRACK_DONE_COLOR = '#111';
+// Black in light mode; in dark it inverts to the light primary - a black node
+// on a near-black ground would be invisible. Both come from the palette's
+// primary pair, which already encodes exactly that inversion.
 
 // Tightened from 48/92/28: at the old spacing four steps alone stood ~370px
 // tall, which was most of what pushed the collector's sheet off the top of the
@@ -33,6 +34,8 @@ const RIGHT_X = 80;  // percent
  * is no step here that isn't a real PickupRequest status.
  */
 export default function PickupProgressRoadmap({ steps, currentIndex, isComplete }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const pulse = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
@@ -90,9 +93,9 @@ export default function PickupProgressRoadmap({ steps, currentIndex, isComplete 
 
             <View style={{ height: svgHeight, marginTop: 20 }}>
                 <Svg width="100%" height={svgHeight} viewBox={`0 0 100 ${svgHeight}`} preserveAspectRatio="none" style={StyleSheet.absoluteFill}>
-                    <Path d={fullPath} stroke={TRACK_COLOR} strokeWidth={3} fill="none" vectorEffect="non-scaling-stroke" />
+                    <Path d={fullPath} stroke={colors.border} strokeWidth={3} fill="none" vectorEffect="non-scaling-stroke" />
                     {!!donePath && (
-                        <Path d={donePath} stroke={TRACK_DONE_COLOR} strokeWidth={3} fill="none" vectorEffect="non-scaling-stroke" />
+                        <Path d={donePath} stroke={colors.primary} strokeWidth={3} fill="none" vectorEffect="non-scaling-stroke" />
                     )}
                 </Svg>
 
@@ -123,9 +126,9 @@ export default function PickupProgressRoadmap({ steps, currentIndex, isComplete 
                             ]}
                         >
                             {(isDone || isFinal) ? (
-                                <CheckCircle size={20} color="#fff" />
+                                <CheckCircle size={20} color={colors.onPrimary} />
                             ) : (
-                                <Icon size={18} color={isActive ? TRACK_ACCENT : '#9CA3AF'} />
+                                <Icon size={18} color={isActive ? colors.primary : colors.textMuted} />
                             )}
                         </Animated.View>
                     );
@@ -157,27 +160,27 @@ export default function PickupProgressRoadmap({ steps, currentIndex, isComplete 
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     progressCard: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    progressLabel: { fontSize: 15, fontWeight: '700', color: '#111827' },
-    progressCaption: { fontSize: 11, fontWeight: '700', color: '#6B7280', letterSpacing: 0.4, marginTop: 2 },
-    progressPercent: { fontSize: 20, fontWeight: '800', color: '#111827' },
+    progressLabel: { fontSize: 15, fontWeight: '700', color: c.text },
+    progressCaption: { fontSize: 11, fontWeight: '700', color: c.textSecondary, letterSpacing: 0.4, marginTop: 2 },
+    progressPercent: { fontSize: 20, fontWeight: '800', color: c.text },
 
     trackBg: {
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginTop: 12,
         overflow: 'hidden',
     },
     trackFill: {
         height: '100%',
         borderRadius: 3,
-        backgroundColor: TRACK_ACCENT,
+        backgroundColor: c.primary,
     },
 
     node: {
@@ -185,21 +188,21 @@ const styles = StyleSheet.create({
         width: NODE_SIZE,
         height: NODE_SIZE,
         borderRadius: NODE_SIZE / 2,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 2,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
     },
     nodeDone: {
-        backgroundColor: TRACK_ACCENT,
-        borderColor: TRACK_ACCENT,
+        backgroundColor: c.primary,
+        borderColor: c.primary,
     },
     nodeActive: {
         // Neutral grey fill rather than the old mint - the black ring is what
         // marks the step you're on.
-        backgroundColor: '#F3F4F6',
-        borderColor: TRACK_ACCENT,
+        backgroundColor: c.surfaceSunken,
+        borderColor: c.primary,
     },
 
     labelWrap: {
@@ -210,10 +213,10 @@ const styles = StyleSheet.create({
     nodeLabel: {
         fontSize: 11.5,
         fontWeight: '600',
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
     },
     nodeLabelActive: {
-        color: '#111827',
+        color: c.text,
     },
-});
+}));
