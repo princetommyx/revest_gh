@@ -11,8 +11,11 @@ import { authApi } from '../api/auth';
 import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import ScreenHeader from '../components/ScreenHeader';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function EditProfileScreen({ navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const { user, updateUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [image, setImage] = useState(null);
@@ -127,7 +130,7 @@ export default function EditProfileScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <ScreenHeader
                 title="Edit Profile"
@@ -135,7 +138,7 @@ export default function EditProfileScreen({ navigation }) {
                 right={
                     <TouchableOpacity style={styles.saveBtnTop} onPress={handleSave} disabled={loading}>
                         {loading
-                            ? <ActivityIndicator size="small" color="#111827" />
+                            ? <ActivityIndicator size="small" color={colors.text} />
                             : <Text style={styles.saveBtnTextTop}>Save</Text>}
                     </TouchableOpacity>
                 }
@@ -156,11 +159,11 @@ export default function EditProfileScreen({ navigation }) {
                                 />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <User size={48} color="#111" />
+                                    <User size={48} color={colors.text} />
                                 </View>
                             )}
                             <TouchableOpacity style={styles.cameraIcon} onPress={pickImage}>
-                                <Camera size={18} color="#fff" />
+                                <Camera size={18} color={colors.onPrimary} />
                             </TouchableOpacity>
                         </View>
                         <Text style={styles.avatarHint}>Change Profile Photo</Text>
@@ -171,13 +174,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>First Name</Text>
                             <View style={styles.fieldRow}>
-                                <User size={18} color="#9CA3AF" />
+                                <User size={18} color={colors.textMuted} />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.first_name}
                                     onChangeText={(t) => setFormData(p => ({ ...p, first_name: t }))}
                                     placeholder="e.g. John"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                         </View>
@@ -185,13 +188,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>Last Name</Text>
                             <View style={styles.fieldRow}>
-                                <User size={18} color="#9CA3AF" />
+                                <User size={18} color={colors.textMuted} />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.last_name}
                                     onChangeText={(t) => setFormData(p => ({ ...p, last_name: t }))}
                                     placeholder="e.g. Doe"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                         </View>
@@ -199,14 +202,14 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>Mobile Number</Text>
                             <View style={styles.fieldRow}>
-                                <Phone size={18} color="#9CA3AF" />
+                                <Phone size={18} color={colors.textMuted} />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.phone_number}
                                     onChangeText={(t) => setFormData(p => ({ ...p, phone_number: t }))}
                                     placeholder="+233..."
                                     keyboardType="phone-pad"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                         </View>
@@ -214,13 +217,13 @@ export default function EditProfileScreen({ navigation }) {
                         <View style={styles.inputBox}>
                             <Text style={styles.label}>City/Location</Text>
                             <View style={styles.fieldRow}>
-                                <MapPin size={18} color="#9CA3AF" />
+                                <MapPin size={18} color={colors.textMuted} />
                                 <TextInput
                                     style={styles.fieldInput}
                                     value={formData.city}
                                     onChangeText={(t) => setFormData(p => ({ ...p, city: t }))}
                                     placeholder="Enter your city"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                 />
                             </View>
                         </View>
@@ -228,19 +231,19 @@ export default function EditProfileScreen({ navigation }) {
                         {/* Static Field */}
                         <View style={styles.disabledBox}>
                             <View style={styles.disabledIcon}>
-                                <Mail size={16} color="#999" />
+                                <Mail size={16} color={colors.textMuted} />
                             </View>
                             <View style={styles.disabledTextCol}>
                                 <Text style={styles.disabledLabel}>Email Address</Text>
                                 <Text style={styles.disabledValue}>{user?.email}</Text>
                             </View>
-                            <Shield size={16} color="#ccc" />
+                            <Shield size={16} color={colors.textMuted} />
                         </View>
                     </View>
 
                     {/* Bottom Action */}
                     <TouchableOpacity style={styles.footerBtn} onPress={handleSave} disabled={loading}>
-                        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.footerBtnText}>Update Profile</Text>}
+                        {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.footerBtnText}>Update Profile</Text>}
                     </TouchableOpacity>
 
                 </ScrollView>
@@ -249,28 +252,28 @@ export default function EditProfileScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
-    saveBtnTop: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: '#F3F4F6' },
-    saveBtnTextTop: { color: '#111827', fontWeight: '700', fontSize: 14 },
-    contentWrap: { flex: 1, backgroundColor: '#fff' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surface },
+    saveBtnTop: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, backgroundColor: c.surfaceSunken },
+    saveBtnTextTop: { color: c.text, fontWeight: '700', fontSize: 14 },
+    contentWrap: { flex: 1, backgroundColor: c.surface },
     scrollPadding: { padding: 25, paddingBottom: 50 },
     avatarSection: { alignItems: 'center', marginBottom: 35 },
     avatarWrapper: { position: 'relative' },
-    avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
-    avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#FAFAFA', borderWidth: 3, borderColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-    cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#fff' },
-    avatarHint: { fontSize: 13, color: '#999', marginTop: 12, fontWeight: '600' },
+    avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: c.border, shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 10 },
+    avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: c.bg, borderWidth: 3, borderColor: c.border, justifyContent: 'center', alignItems: 'center' },
+    cameraIcon: { position: 'absolute', bottom: 0, right: 0, width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: c.border },
+    avatarHint: { fontSize: 13, color: c.textMuted, marginTop: 12, fontWeight: '600' },
     formSection: { gap: 20, marginBottom: 40 },
     inputBox: { gap: 8 },
-    label: { fontSize: 13, fontWeight: 'bold', color: '#1A1A1A', marginLeft: 4 },
-    fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 16, paddingHorizontal: 15, height: 56 },
-    fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
-    disabledBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: '#F3F4F6' },
-    disabledIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    label: { fontSize: 13, fontWeight: 'bold', color: c.text, marginLeft: 4 },
+    fieldRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surfaceSunken, borderRadius: 16, paddingHorizontal: 15, height: 56 },
+    fieldInput: { flex: 1, marginLeft: 10, fontSize: 15, color: c.text },
+    disabledBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surfaceAlt, borderRadius: 16, padding: 15, borderWidth: 1, borderColor: c.borderSubtle },
+    disabledIcon: { width: 32, height: 32, borderRadius: 8, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     disabledTextCol: { flex: 1 },
-    disabledLabel: { fontSize: 11, color: '#999', fontWeight: 'bold', textTransform: 'uppercase' },
-    disabledValue: { fontSize: 14, color: '#666', marginTop: 2 },
-    footerBtn: { backgroundColor: '#111', height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: '#111', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
-    footerBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-});
+    disabledLabel: { fontSize: 11, color: c.textMuted, fontWeight: 'bold', textTransform: 'uppercase' },
+    disabledValue: { fontSize: 14, color: c.textSecondary, marginTop: 2 },
+    footerBtn: { backgroundColor: c.primary, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
+    footerBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: 'bold' },
+}));

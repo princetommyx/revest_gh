@@ -13,10 +13,13 @@ import { marketApi } from '../api/market';
 import Toast from 'react-native-toast-message';
 
 import { useQueryClient } from '@tanstack/react-query';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function CreateListingScreen({ route, navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const editListing = route?.params?.editListing;
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
@@ -259,13 +262,13 @@ export default function CreateListingScreen({ route, navigation }) {
             behavior={Platform.OS === 'ios' ? 'padding' : null}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             {/* Compact Header */}
             <SafeAreaView edges={['top', 'left', 'right']} style={styles.headerContainer}>
                 <View style={styles.headerRow}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <ArrowLeft size={24} color="#111" />
+                        <ArrowLeft size={24} color={colors.text} />
                     </TouchableOpacity>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.headerTitle}>{editListing ? 'Update Waste' : 'Post Waste'}</Text>
@@ -284,18 +287,18 @@ export default function CreateListingScreen({ route, navigation }) {
                                 <Image source={{ uri: selectedAsset.uri }} style={styles.previewImage} />
                                 {isScanning && (
                                     <View style={styles.scanningOverlay}>
-                                        <ActivityIndicator color="#fff" size="small" />
+                                        <ActivityIndicator color={colors.onPrimary} size="small" />
                                         <Text style={styles.scanningText}>Analyzing...</Text>
                                     </View>
                                 )}
                                 <TouchableOpacity style={styles.removeImageBtn} onPress={(e) => { e.stopPropagation(); setSelectedAsset(null); }}>
-                                    <X size={14} color="#fff" />
+                                    <X size={14} color={colors.onPrimary} />
                                 </TouchableOpacity>
                             </View>
                         ) : (
                             <View style={styles.uploadPlaceholder}>
                                 <View style={styles.uploadIconCircle}>
-                                    <Camera size={22} color="#111" />
+                                    <Camera size={22} color={colors.text} />
                                 </View>
                                 <View style={styles.uploadTextContainer}>
                                     <Text style={styles.uploadTitle}>Add Photos</Text>
@@ -317,6 +320,8 @@ export default function CreateListingScreen({ route, navigation }) {
                         
                         <View style={styles.categoryGrid}>
                             {[
+                                // Material hues are categorical identity, not theming -
+                                // each is mid-tone and legible on either ground.
                                 { id: 'Plastics', icon: Package, color: '#3B82F6' },
                                 { id: 'Metals', icon: Database, color: '#64748B' },
                                 { id: 'Paper', icon: FileText, color: '#EAB308' },
@@ -347,7 +352,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                         onPress={() => handleChange('material_type', cat.id)}
                                     >
                                         <View style={styles.categoryCardInner}>
-                                            <IconComp size={20} color={isActive ? '#111' : '#666'} />
+                                            <IconComp size={20} color={isActive ? colors.text : colors.textSecondary} />
                                             <Text style={[styles.categoryCardText, isActive && styles.categoryCardTextActive]}>
                                                 {cat.id}
                                             </Text>
@@ -363,7 +368,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="e.g. 50kg Mixed Plastic Bottles"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                     value={MATERIAL_DISPLAY_MAP[formData.material_type] || formData.title}
                                     onChangeText={(val) => handleChange('title', val)}
                                 />
@@ -376,7 +381,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 <TextInput
                                     style={styles.input}
                                     placeholder="e.g. 50 kg or 10 units"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.quantity}
                                     onChangeText={(val) => handleChange('quantity', val)}
                                 />
@@ -386,11 +391,11 @@ export default function CreateListingScreen({ route, navigation }) {
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Location</Text>
                             <View style={styles.inputWrapper}>
-                                <MapPin size={18} color="#9CA3AF" style={styles.inputIcon} />
+                                <MapPin size={18} color={colors.textMuted} style={styles.inputIcon} />
                                 <TextInput
                                     style={styles.input}
                                     placeholder="e.g. Madina, Accra"
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.location}
                                     onChangeText={(val) => handleChange('location', val)}
                                 />
@@ -404,8 +409,8 @@ export default function CreateListingScreen({ route, navigation }) {
                                 onPress={() => handleChange('track_type', 'B')}
                                 activeOpacity={0.8}
                             >
-                                <View style={[styles.actionIconBox, formData.track_type === 'B' ? { backgroundColor: '#111' } : { backgroundColor: '#F3F4F6' }]}>
-                                    <Tag size={20} color={formData.track_type === 'B' ? '#fff' : '#6B7280'} />
+                                <View style={[styles.actionIconBox, formData.track_type === 'B' ? { backgroundColor: colors.primary } : { backgroundColor: colors.surfaceSunken }]}>
+                                    <Tag size={20} color={formData.track_type === 'B' ? colors.onPrimary : colors.textSecondary} />
                                 </View>
                                 <View style={styles.actionCardContent}>
                                     <Text style={[styles.actionCardTitle, formData.track_type === 'B' && styles.actionCardTitleActive]}>Sell to Buyers</Text>
@@ -418,8 +423,8 @@ export default function CreateListingScreen({ route, navigation }) {
                                 onPress={() => handleChange('track_type', 'A')}
                                 activeOpacity={0.8}
                             >
-                                <View style={[styles.actionIconBox, formData.track_type === 'A' ? { backgroundColor: '#111' } : { backgroundColor: '#F3F4F6' }]}>
-                                    <Info size={20} color={formData.track_type === 'A' ? '#fff' : '#6B7280'} />
+                                <View style={[styles.actionIconBox, formData.track_type === 'A' ? { backgroundColor: colors.primary } : { backgroundColor: colors.surfaceSunken }]}>
+                                    <Info size={20} color={formData.track_type === 'A' ? colors.onPrimary : colors.textSecondary} />
                                 </View>
                                 <View style={styles.actionCardContent}>
                                     <Text style={[styles.actionCardTitle, formData.track_type === 'A' && styles.actionCardTitleActive]}>Safe Disposal</Text>
@@ -436,7 +441,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                     <TextInput
                                         style={styles.input}
                                         placeholder="0.00"
-                                        placeholderTextColor="#9CA3AF"
+                                        placeholderTextColor={colors.textMuted}
                                         keyboardType="decimal-pad"
                                         value={formData.price?.toString()}
                                         onChangeText={(val) => handleChange('price', val)}
@@ -452,7 +457,7 @@ export default function CreateListingScreen({ route, navigation }) {
                             </View>
                         ) : (
                             <View style={styles.freeNotice}>
-                                <Info size={16} color="#6B7280" />
+                                <Info size={16} color={colors.textSecondary} />
                                 <Text style={styles.freeNoticeText}>Safe Disposal pickups are free for you - the collector handles responsible recycling.</Text>
                             </View>
                         )}
@@ -463,7 +468,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 <TextInput
                                     style={[styles.input, styles.textArea]}
                                     placeholder="Tell buyers more about the items, their condition, type, and any other important details."
-                                    placeholderTextColor="#9CA3AF"
+                                    placeholderTextColor={colors.textMuted}
                                     value={formData.description}
                                     onChangeText={(val) => handleChange('description', val)}
                                     multiline
@@ -481,7 +486,7 @@ export default function CreateListingScreen({ route, navigation }) {
                             disabled={loading || !formData.title || !formData.material_type || !formData.quantity || !formData.location}
                         >
                             {loading ? (
-                                <ActivityIndicator color="#fff" />
+                                <ActivityIndicator color={colors.onPrimary} />
                             ) : (
                                 <Text style={styles.submitBtnText}>{editListing ? 'Update Waste' : 'Post Waste'}</Text>
                             )}
@@ -494,18 +499,18 @@ export default function CreateListingScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
     },
     headerContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         paddingHorizontal: 20,
         paddingTop: 10,
         paddingBottom: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     headerRow: {
         flexDirection: 'row',
@@ -516,7 +521,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -526,11 +531,11 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     headerSubtitle: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 2,
     },
     scrollContent: {
@@ -542,10 +547,10 @@ const styles = StyleSheet.create({
     },
     compactUploadBox: {
         width: '100%',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1.5,
         borderStyle: 'dashed',
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 16,
         overflow: 'hidden',
         marginBottom: 25,
@@ -559,7 +564,7 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 15,
@@ -570,11 +575,11 @@ const styles = StyleSheet.create({
     uploadTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     uploadSub: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 2,
     },
     previewContainer: {
@@ -594,7 +599,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     scanningText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontWeight: 'bold',
         fontSize: 12,
         marginTop: 8,
@@ -619,7 +624,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 12,
     },
     categoryGrid: {
@@ -634,17 +639,17 @@ const styles = StyleSheet.create({
     },
     categoryCard: {
         width: '100%',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         borderRadius: 12,
         paddingVertical: 12,
         paddingHorizontal: 12,
     },
     categoryCardActive: {
-        backgroundColor: '#FFF',
-        borderColor: '#111',
-        shadowColor: '#000',
+        backgroundColor: c.surface,
+        borderColor: c.primary,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 4,
@@ -656,12 +661,12 @@ const styles = StyleSheet.create({
     },
     categoryCardText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '600',
         marginLeft: 10,
     },
     categoryCardTextActive: {
-        color: '#111',
+        color: c.text,
     },
     formSection: {
         marginTop: 0,
@@ -672,15 +677,15 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginBottom: 8,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 15,
         height: 52,
@@ -691,19 +696,19 @@ const styles = StyleSheet.create({
     currencyPrefix: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#6B7280',
+        color: c.textSecondary,
         marginRight: 8,
     },
     priceHint: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 8,
         lineHeight: 16,
     },
     freeNotice: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 12,
         padding: 14,
         marginBottom: 20,
@@ -712,13 +717,13 @@ const styles = StyleSheet.create({
     freeNoticeText: {
         flex: 1,
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 18,
     },
     input: {
         flex: 1,
         fontSize: 15,
-        color: '#111',
+        color: c.text,
     },
     textAreaWrapper: {
         height: 120,
@@ -735,17 +740,17 @@ const styles = StyleSheet.create({
     actionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 16,
         padding: 15,
         marginBottom: 12,
     },
     actionCardActive: {
-        backgroundColor: '#FFF',
-        borderColor: '#111',
-        shadowColor: '#000',
+        backgroundColor: c.surface,
+        borderColor: c.primary,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 6,
@@ -765,19 +770,19 @@ const styles = StyleSheet.create({
     actionCardTitle: {
         fontSize: 15,
         fontWeight: 'bold',
-        color: '#374151',
+        color: c.text,
         marginBottom: 4,
     },
     actionCardTitleActive: {
-        color: '#111',
+        color: c.text,
     },
     actionCardSub: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 16,
     },
     submitBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         height: 56,
         borderRadius: 16,
         alignItems: 'center',
@@ -785,16 +790,16 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     submitBtnDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     submitBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
     lockedLabel: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontStyle: 'italic',
     }
-});
+}));

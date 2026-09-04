@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Mail, Facebook, Github, Globe } from 'lucide-react-native';
 import { adminApi } from '../api/admin';
 import { BASE_URL } from '../api/client';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,6 +40,7 @@ const FALLBACK_SLIDES = [
 ];
 
 export default function OnboardingScreen() {
+    const styles = useStyles();
     const navigation = useNavigation();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [dynamicSlides, setDynamicSlides] = useState(null);
@@ -179,10 +181,10 @@ export default function OnboardingScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
     },
     image: {
         width,
@@ -204,12 +206,12 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 32,
         fontWeight: '900',
-        color: '#fff',
+        color: c.onPrimary,
         marginBottom: 10,
     },
     description: {
         fontSize: 18,
-        color: '#eee',
+        color: c.textSecondary,
         lineHeight: 26,
     },
     skipContainer: {
@@ -219,7 +221,7 @@ const styles = StyleSheet.create({
         zIndex: 10,
     },
     skipText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
         padding: 10,
@@ -238,23 +240,23 @@ const styles = StyleSheet.create({
     dot: {
         height: 6,
         borderRadius: 3,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         marginHorizontal: 4,
     },
     button: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         height: 60,
         borderRadius: 15,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 8,
     },
     buttonText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 18,
         fontWeight: 'bold',
     },
@@ -265,13 +267,13 @@ const styles = StyleSheet.create({
     },
     authContent: {
         width: '100%',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 40,
         paddingTop: 30,
         paddingBottom: 40,
         paddingHorizontal: 20,
         alignItems: 'center',
-        shadowColor: '#111',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 20 },
         shadowOpacity: 0.1,
         shadowRadius: 30,
@@ -309,7 +311,7 @@ const styles = StyleSheet.create({
     welcomeHeading: {
         fontSize: 32,
         fontWeight: '900',
-        color: '#111',
+        color: c.text,
         marginBottom: 5,
     },
     brandRow: {
@@ -319,12 +321,12 @@ const styles = StyleSheet.create({
     brandTextDark: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#1a1a1a',
+        color: c.text,
     },
     brandTextGreen: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     authActionArea: {
         width: '100%',
@@ -332,35 +334,35 @@ const styles = StyleSheet.create({
     primaryBtn: {
         width: '100%',
         height: 58,
-        backgroundColor: '#1E3A8A', // Deep blue as in reference
+        backgroundColor: c.info, // Deep blue as in reference
         borderRadius: 29,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 15,
-        shadowColor: '#1E3A8A',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 5,
     },
     primaryBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
     secondaryBtn: {
         width: '100%',
         height: 58,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 29,
         borderWidth: 1.5,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         justifyContent: 'center',
         alignItems: 'center',
     },
     secondaryBtnText: {
-        color: '#1a1a1a',
+        color: c.text,
         fontSize: 16,
         fontWeight: 'bold',
     },
-});
+}));

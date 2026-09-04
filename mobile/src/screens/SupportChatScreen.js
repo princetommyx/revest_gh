@@ -9,10 +9,13 @@ import { Send, Bot, ArrowLeft, User, Paperclip, File, X } from 'lucide-react-nat
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import apiClient from '../api/client';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function SupportChatScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const insets = useSafeAreaInsets();
     const [messages, setMessages] = useState([
@@ -176,13 +179,13 @@ export default function SupportChatScreen() {
             <View style={[styles.msgRow, isUser ? styles.msgRowUser : (isSystem ? styles.msgRowSystem : styles.msgRowSupport)]}>
                 {(isAi || isHuman) && (
                     <View style={styles.supportAvatar}>
-                        {isAi ? <Bot size={14} color="#fff" /> : <User size={14} color="#fff" />}
+                        {isAi ? <Bot size={14} color={colors.onPrimary} /> : <User size={14} color={colors.onPrimary} />}
                     </View>
                 )}
                 <View style={[styles.msgBubble, isUser ? styles.bubbleUser : (isSystem ? styles.bubbleSystem : styles.bubbleSupport)]}>
                     {item.attachment && (
                         <View style={[styles.attachmentBubble, isUser ? styles.attachmentBubbleUser : styles.attachmentBubbleSupport]}>
-                            <File size={16} color={isUser ? "#FFF" : "#111"} />
+                            <File size={16} color={isUser ? colors.onPrimary : colors.text} />
                             <Text style={[styles.attachmentText, isUser ? styles.textUser : styles.textSupport]} numberOfLines={1}>
                                 {item.attachment.split('/').pop()}
                             </Text>
@@ -205,19 +208,19 @@ export default function SupportChatScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             {/* Minimal Header */}
             <SafeAreaView edges={['top']} style={styles.headerArea}>
                 <View style={styles.headerRow}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <ArrowLeft size={24} color="#111" />
+                        <ArrowLeft size={24} color={colors.text} />
                     </TouchableOpacity>
                     
                     <View style={styles.headerCenter}>
                         <View style={styles.headerAvatarWrap}>
                             <View style={styles.headerAvatar}>
-                                {agent ? <User size={18} color="#fff" /> : <Bot size={18} color="#fff" />}
+                                {agent ? <User size={18} color={colors.onPrimary} /> : <Bot size={18} color={colors.onPrimary} />}
                             </View>
                             <View style={handoffActive && !agent ? styles.yellowDot : styles.greenDot} />
                         </View>
@@ -253,7 +256,7 @@ export default function SupportChatScreen() {
                     ListFooterComponent={
                         isTyping ? (
                             <View style={styles.typingBox}>
-                                <ActivityIndicator size="small" color="#111" />
+                                <ActivityIndicator size="small" color={colors.text} />
                                 <Text style={styles.typingText}>Typing...</Text>
                             </View>
                         ) : (
@@ -280,11 +283,11 @@ export default function SupportChatScreen() {
                     {attachment && (
                         <View style={styles.attachmentPreview}>
                             <View style={styles.attachmentPreviewLeft}>
-                                <File size={16} color="#111" />
+                                <File size={16} color={colors.text} />
                                 <Text style={styles.attachmentPreviewText} numberOfLines={1}>{attachment.name}</Text>
                             </View>
                             <TouchableOpacity onPress={clearAttachment}>
-                                <X size={18} color="#ef4444" />
+                                <X size={18} color={colors.danger} />
                             </TouchableOpacity>
                         </View>
                     )}
@@ -295,13 +298,13 @@ export default function SupportChatScreen() {
                             value={inputText}
                             onChangeText={setInputText}
                             multiline
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                         />
 
                         {!inputText.trim() && !attachment ? (
                             <View style={styles.rightActionsRow}>
                                 <TouchableOpacity style={styles.inputActionBtn} onPress={pickDocument}>
-                                    <Paperclip size={20} color="#999" />
+                                    <Paperclip size={20} color={colors.textMuted} />
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -309,7 +312,7 @@ export default function SupportChatScreen() {
                                 style={styles.sendBtn}
                                 onPress={() => sendMessage(inputText)}
                             >
-                                <Send size={18} color="#fff" />
+                                <Send size={18} color={colors.onPrimary} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -319,23 +322,23 @@ export default function SupportChatScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF' },
-    headerArea: { backgroundColor: '#FFF', paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surface },
+    headerArea: { backgroundColor: c.surface, paddingBottom: 10, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, marginTop: 10 },
     backBtn: { width: 40, height: 40, justifyContent: 'center' },
     
     headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center' },
     headerAvatarWrap: { position: 'relative', marginRight: 12 },
-    headerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
-    greenDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#10B981', borderWidth: 2, borderColor: '#FFF' },
-    yellowDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#F59E0B', borderWidth: 2, borderColor: '#FFF' },
+    headerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
+    greenDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: c.accent, borderWidth: 2, borderColor: c.border },
+    yellowDot: { position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: c.warning, borderWidth: 2, borderColor: c.border },
     
-    headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#111' },
-    statusLabel: { fontSize: 13, color: '#10B981', fontWeight: '500', marginTop: 2 },
+    headerTitle: { fontSize: 16, fontWeight: 'bold', color: c.text },
+    statusLabel: { fontSize: 13, color: c.success, fontWeight: '500', marginTop: 2 },
     
     headerActions: { flexDirection: 'row', alignItems: 'center' },
-    contentContainer: { flex: 1, backgroundColor: '#FAFAFA' },
+    contentContainer: { flex: 1, backgroundColor: c.bg },
     listContent: { padding: 20, paddingBottom: 20 },
     
     msgRow: { flexDirection: 'row', marginBottom: 20, alignItems: 'flex-end' },
@@ -343,40 +346,40 @@ const styles = StyleSheet.create({
     msgRowSupport: { justifyContent: 'flex-start' },
     msgRowSystem: { justifyContent: 'center', marginVertical: 10 },
     
-    supportAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', marginRight: 10, marginBottom: 2 },
+    supportAvatar: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center', marginRight: 10, marginBottom: 2 },
     
     msgBubble: { maxWidth: '75%', padding: 16, borderRadius: 24 },
-    bubbleUser: { backgroundColor: '#111', borderBottomRightRadius: 6 },
-    bubbleSupport: { backgroundColor: '#FFF', borderBottomLeftRadius: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-    bubbleSystem: { backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 15, paddingVertical: 8 },
+    bubbleUser: { backgroundColor: c.primary, borderBottomRightRadius: 6 },
+    bubbleSupport: { backgroundColor: c.surface, borderBottomLeftRadius: 6, shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
+    bubbleSystem: { backgroundColor: c.surfaceSunken, borderRadius: 12, paddingHorizontal: 15, paddingVertical: 8 },
     
     msgText: { fontSize: 15, lineHeight: 22 },
-    textUser: { color: '#fff' },
-    textSupport: { color: '#111' },
-    textSystem: { color: '#666', fontSize: 12, fontWeight: '600' },
+    textUser: { color: c.onPrimary },
+    textSupport: { color: c.text },
+    textSystem: { color: c.textSecondary, fontSize: 12, fontWeight: '600' },
     
     msgTime: { fontSize: 11, marginTop: 6, alignSelf: 'flex-end' },
     timeUser: { color: 'rgba(255,255,255,0.7)' },
-    timeSupport: { color: '#999' },
+    timeSupport: { color: c.textMuted },
     
     typingBox: { flexDirection: 'row', alignItems: 'center', marginLeft: 42, marginBottom: 15 },
-    typingText: { fontSize: 13, color: '#999', marginLeft: 8, fontStyle: 'italic' },
+    typingText: { fontSize: 13, color: c.textMuted, marginLeft: 8, fontStyle: 'italic' },
     
     quickReplyContainer: { marginTop: 10, marginBottom: 5 },
     quickReplyList: { gap: 10 },
-    quickReplyChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, backgroundColor: '#FFF', borderWidth: 1, borderColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
-    quickReplyText: { fontSize: 13, color: '#111', fontWeight: '600' },
+    quickReplyChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 16, backgroundColor: c.surface, borderWidth: 1, borderColor: c.borderSubtle, shadowColor: c.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 2, elevation: 1 },
+    quickReplyText: { fontSize: 13, color: c.text, fontWeight: '600' },
     
-    inputArea: { backgroundColor: '#FAFAFA', paddingHorizontal: 16, paddingTop: 10 },
-    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 30, paddingHorizontal: 10, minHeight: 56 },
+    inputArea: { backgroundColor: c.bg, paddingHorizontal: 16, paddingTop: 10 },
+    inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surfaceSunken, borderRadius: 30, paddingHorizontal: 10, minHeight: 56 },
     inputActionBtn: { padding: 6 },
     rightActionsRow: { flexDirection: 'row', gap: 4 },
-    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+    sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center' },
     attachmentPreview: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginHorizontal: 20,
         marginBottom: 10,
         paddingHorizontal: 12,
@@ -384,7 +387,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     attachmentPreviewLeft: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 10 },
-    attachmentPreviewText: { marginLeft: 8, fontSize: 13, color: '#111', flex: 1 },
+    attachmentPreviewText: { marginLeft: 8, fontSize: 13, color: c.text, flex: 1 },
     attachmentBubble: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -393,8 +396,8 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     attachmentBubbleUser: { backgroundColor: 'rgba(255,255,255,0.2)' },
-    attachmentBubbleSupport: { backgroundColor: '#F3F4F6' },
+    attachmentBubbleSupport: { backgroundColor: c.surfaceSunken },
     attachmentText: { marginLeft: 6, fontSize: 13, flex: 1 },
     
-    input: { flex: 1, fontSize: 15, color: '#111', paddingVertical: 10, paddingHorizontal: 5, maxHeight: 100 },
-});
+    input: { flex: 1, fontSize: 15, color: c.text, paddingVertical: 10, paddingHorizontal: 5, maxHeight: 100 },
+}));

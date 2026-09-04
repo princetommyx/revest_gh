@@ -8,29 +8,29 @@ import apiClient from '../api/client';
 import { authApi } from '../api/auth';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const STATUS_BANNER = {
     PENDING: {
         title: 'Verification under review',
         body: "We've received your documents and are reviewing them. You don't need to submit again unless we ask you to.",
-        bg: '#FFFBEB',
-        color: '#B45309',
+        tone: 'warning',
     },
     VERIFIED: {
         title: "You're verified",
         body: 'Your identity has been confirmed. Nothing further is needed.',
-        bg: '#ECFDF5',
-        color: '#059669',
+        tone: 'accent',
     },
     REJECTED: {
         title: 'Resubmission needed',
         body: 'We couldn’t verify your last submission. Please upload clear photos and try again.',
-        bg: '#FEF2F2',
-        color: '#DC2626',
+        tone: 'danger',
     },
 };
 
 export default function KYCVerificationScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const [loading, setLoading] = useState(false);
     const [kycStatus, setKycStatus] = useState(null);
@@ -165,10 +165,10 @@ export default function KYCVerificationScreen() {
                 </View>
             ) : (
                 <View style={styles.placeholderContainer}>
-                    <Icon size={32} color="#757575" />
+                    <Icon size={32} color={colors.textSecondary} />
                     <Text style={styles.placeholderText}>{label}</Text>
                     <View style={styles.uploadBadge}>
-                        <Upload size={14} color="#fff" />
+                        <Upload size={14} color={colors.onPrimary} />
                     </View>
                 </View>
             )}
@@ -179,7 +179,7 @@ export default function KYCVerificationScreen() {
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <ArrowLeft size={24} color="#333" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Identity Verification</Text>
                 <View style={{ width: 44 }} />
@@ -187,8 +187,8 @@ export default function KYCVerificationScreen() {
 
             <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                 {!statusLoading && STATUS_BANNER[kycStatus] && (
-                    <View style={[styles.statusBanner, { backgroundColor: STATUS_BANNER[kycStatus].bg }]}>
-                        <Text style={[styles.statusTitle, { color: STATUS_BANNER[kycStatus].color }]}>
+                    <View style={[styles.statusBanner, { backgroundColor: colors[STATUS_BANNER[kycStatus].tone + 'Soft'] }]}>
+                        <Text style={[styles.statusTitle, { color: colors[STATUS_BANNER[kycStatus].tone] }]}>
                             {STATUS_BANNER[kycStatus].title}
                         </Text>
                         <Text style={styles.statusBody}>{STATUS_BANNER[kycStatus].body}</Text>
@@ -206,11 +206,11 @@ export default function KYCVerificationScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.label}>ECOWAS / National ID Number</Text>
                     <View style={styles.inputWrapper}>
-                        <CreditCard size={20} color="#757575" />
+                        <CreditCard size={20} color={colors.textSecondary} />
                         <TextInput
                             style={styles.input}
                             placeholder="GHA-123456789-0"
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                             value={idNumber}
                             onChangeText={setIdNumber}
                             autoCapitalize="characters"
@@ -261,7 +261,7 @@ export default function KYCVerificationScreen() {
                     disabled={loading}
                 >
                     {loading ? (
-                        <ActivityIndicator color="#fff" />
+                        <ActivityIndicator color={colors.onPrimary} />
                     ) : (
                         <Text style={styles.submitBtnText}>Submit Verification</Text>
                     )}
@@ -271,10 +271,10 @@ export default function KYCVerificationScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
     },
     header: {
         flexDirection: 'row',
@@ -282,9 +282,9 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingVertical: 15,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     backButton: {
         width: 44,
@@ -292,12 +292,12 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 22,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
     },
     headerTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1F2937',
+        color: c.text,
     },
     content: {
         padding: 20,
@@ -315,32 +315,32 @@ const styles = StyleSheet.create({
     },
     statusBody: {
         fontSize: 13,
-        color: '#4B5563',
+        color: c.textSecondary,
         lineHeight: 19,
     },
     statusReason: {
         fontSize: 13,
-        color: '#111827',
+        color: c.text,
         fontWeight: '600',
         marginTop: 8,
     },
     infoAlert: {
-        backgroundColor: '#E0F2FE',
+        backgroundColor: c.infoSoft,
         padding: 16,
         borderRadius: 12,
         marginBottom: 24,
         borderWidth: 1,
-        borderColor: '#BAE6FD',
+        borderColor: c.info,
     },
     infoTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#0369A1',
+        color: c.info,
         marginBottom: 6,
     },
     infoText: {
         fontSize: 14,
-        color: '#0C4A6E',
+        color: c.text,
         lineHeight: 20,
     },
     inputGroup: {
@@ -349,15 +349,15 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#374151',
+        color: c.text,
         marginBottom: 8,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 16,
         height: 56,
@@ -366,12 +366,12 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
         fontSize: 16,
-        color: '#1F2937',
+        color: c.text,
     },
     sectionTitle: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#1F2937',
+        color: c.text,
         marginBottom: 12,
     },
     gridContainer: {
@@ -385,10 +385,10 @@ const styles = StyleSheet.create({
     },
     pickerBox: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
         borderStyle: 'dashed',
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         borderRadius: 12,
         overflow: 'hidden',
     },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     placeholderText: {
         marginTop: 8,
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
         textAlign: 'center',
         fontWeight: '500',
     },
@@ -409,13 +409,13 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: 8,
         right: 8,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         width: 28,
         height: 28,
         borderRadius: 14,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
@@ -437,37 +437,37 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     changeText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 12,
         fontWeight: '600',
     },
     disclaimerText: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         textAlign: 'center',
         marginBottom: 24,
         paddingHorizontal: 10,
     },
     submitBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         height: 56,
         borderRadius: 28,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#111',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
     },
     submitBtnDisabled: {
-        backgroundColor: '#9CA3AF',
+        backgroundColor: c.textMuted,
         shadowOpacity: 0,
         elevation: 0,
     },
     submitBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
-});
+}));

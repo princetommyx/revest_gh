@@ -43,12 +43,13 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 const ActiveMap = MapView;
 const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
 
-const BRAND_GREEN = '#34D399';
+const BRAND_GREEN = '#34D399';  // module scope - no theme here
 
 const VEHICLES = [
     { id: 'tricycle', label: 'Tricycle', capacity: '1-5 bags', image: require('../../assets/tricycle.jpg') },
@@ -265,6 +266,8 @@ const darkMapStyle = [
 ];
 
 export default function PickupsScreen({ route }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
 
@@ -1138,10 +1141,10 @@ export default function PickupsScreen({ route }) {
                 >
                     <View style={[
                         styles.markerContainer,
-                        job.status === 'COMPLETED' && { borderColor: '#999' },
-                        job.status === 'ACCEPTED' && { borderColor: '#111' }
+                        job.status === 'COMPLETED' && { borderColor: colors.textMuted },
+                        job.status === 'ACCEPTED' && { borderColor: colors.text }
                     ]}>
-                        <MapPin size={24} color={job.status === 'PENDING' ? '#111' : (job.status === 'ACCEPTED' ? '#111' : '#999')} />
+                        <MapPin size={24} color={job.status === 'PENDING' ? colors.text : (job.status === 'ACCEPTED' ? colors.text : colors.textMuted)} />
                     </View>
                 </ActiveMarker>
             );
@@ -1163,15 +1166,15 @@ export default function PickupsScreen({ route }) {
                         >
                             {isNavigatingThis ? (
                                 <View style={styles.bubbleDotContainer}>
-                                    <View style={[styles.customMapBubble, { backgroundColor: '#111', padding: 8, borderRadius: 20 }]}>
-                                        <Truck size={20} color="#fff" />
+                                    <View style={[styles.customMapBubble, { backgroundColor: colors.text, padding: 8, borderRadius: 20 }]}>
+                                        <Truck size={20} color={colors.onPrimary} />
                                     </View>
-                                    <View style={[styles.customMapBubbleTriangle, { borderBottomColor: '#111' }]} />
+                                    <View style={[styles.customMapBubbleTriangle, { borderBottomColor: colors.text }]} />
                                 </View>
                             ) : (
-                                <View style={[styles.markerContainer, { borderColor: '#111' }]}>
+                                <View style={[styles.markerContainer, { borderColor: colors.text }]}>
                                     <View style={{ transform: [{ rotate: `${live?.heading || 0}deg` }] }}>
-                                        <Truck size={24} color="#111" />
+                                        <Truck size={24} color={colors.text} />
                                     </View>
                                 </View>
                             )}
@@ -1192,7 +1195,7 @@ export default function PickupsScreen({ route }) {
                         destination={{ latitude: lat, longitude: lon }}
                         apikey={GOOGLE_MAPS_API_KEY}
                         strokeWidth={4}
-                        strokeColor="#059669"
+                        strokeColor={"#059669"} /* on the always-dark map, not the app surface */
                         optimizeWaypoints={true}
                         onError={(errorMessage) => {
                             console.warn("MapViewDirections Error:", errorMessage);
@@ -1276,11 +1279,11 @@ export default function PickupsScreen({ route }) {
         return (
             <SafeAreaView style={styles.permissionContainer}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', top: 50, left: 20}}>
-                    <ArrowLeft size={24} color="#111" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <View style={styles.permissionContent}>
                     <View style={styles.globeIconContainer}>
-                        <Globe size={80} color="#27AE60" />
+                        <Globe size={80} color={colors.success} />
                     </View>
                     <Text style={styles.permissionTitle}>Allow location access</Text>
                     <Text style={styles.permissionDesc}>
@@ -1348,7 +1351,7 @@ export default function PickupsScreen({ route }) {
 
                 {isSelectingLocation && (
                     <View style={{ position: 'absolute', top: '50%', left: '50%', marginLeft: -16, marginTop: -32 }}>
-                        <MapPin size={32} color="#111" fill="#111" />
+                        <MapPin size={32} color={colors.text} fill={colors.text} />
                     </View>
                 )}
             </ActiveMap>
@@ -1368,18 +1371,18 @@ export default function PickupsScreen({ route }) {
             {!isSelectingLocation && !navigatingJob && (
                 <View style={styles.floatingTopBarUbride}>
                     {uiState === 'VEHICLE_SELECT' ? (
-                        <TouchableOpacity style={[styles.menuBtn, { backgroundColor: '#fff', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]} onPress={() => setUiState('IDLE')}>
-                            <ArrowLeft size={20} color="#111" />
+                        <TouchableOpacity style={[styles.menuBtn, { backgroundColor: colors.onPrimary, shadowColor: colors.text, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]} onPress={() => setUiState('IDLE')}>
+                            <ArrowLeft size={20} color={colors.text} />
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
-                            <Menu size={20} color="#111" />
+                            <Menu size={20} color={colors.text} />
                         </TouchableOpacity>
                     )}
                     <View style={{ flex: 1 }} />
                     {uiState !== 'VEHICLE_SELECT' && (
                         <TouchableOpacity style={styles.menuBtn} onPress={centerToUserLocation}>
-                            <LocateFixed size={20} color="#111" />
+                            <LocateFixed size={20} color={colors.text} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -1389,7 +1392,7 @@ export default function PickupsScreen({ route }) {
                 <View style={[styles.navTopBarContainer, { paddingTop: 40 }]} pointerEvents="box-none">
                     <View style={styles.navTopBar} pointerEvents="auto">
                         <TouchableOpacity style={styles.navCloseBtn} onPress={() => { setNavigatingJob(null); setIsCollapsed(false); }}>
-                            <X size={24} color="#111" />
+                            <X size={24} color={colors.text} />
                         </TouchableOpacity>
                         <TouchableOpacity 
                             style={styles.navAddresses}
@@ -1411,13 +1414,13 @@ export default function PickupsScreen({ route }) {
                             <Text style={styles.navAddressText} numberOfLines={1}>
                                 {isCollectorRole ? 'My Location' : 'Collector'}
                             </Text>
-                            <ArrowRight size={16} color="#666" style={{ marginHorizontal: 8 }} />
+                            <ArrowRight size={16} color={colors.textSecondary} style={{ marginHorizontal: 8 }} />
                             <Text style={styles.navAddressText} numberOfLines={1}>
                                 {isCollectorRole ? (navigatingJob.pickup_address || 'Pickup point') : 'My Location'}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.navAddBtn}>
-                            <Plus size={24} color="#111" />
+                            <Plus size={24} color={colors.text} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -1441,7 +1444,7 @@ export default function PickupsScreen({ route }) {
                             didn't actually fit a "come collect my waste" service. */}
                         <TouchableOpacity style={styles.pickupFieldRow} onPress={() => { setShowSearchModal(true); }}>
                             <View style={styles.pickupIconBox}>
-                                <MapPin size={18} color="#059669" />
+                                <MapPin size={18} color={colors.accent} />
                             </View>
                             <View style={styles.pickupFieldTextCol}>
                                 <Text style={styles.pickupFieldLabel}>Pickup from</Text>
@@ -1449,7 +1452,7 @@ export default function PickupsScreen({ route }) {
                                     {customAddress || 'Current Location'}
                                 </Text>
                             </View>
-                            <ChevronRight size={18} color="#C7CBD1" />
+                            <ChevronRight size={18} color={colors.textMuted} />
                         </TouchableOpacity>
 
                         {(useCurrentLocation ? !!location : !!customAddress) && (
@@ -1471,12 +1474,12 @@ export default function PickupsScreen({ route }) {
                                     style={styles.continueBtnUbride}
                                 >
                                     {requestLoading ? (
-                                        <ActivityIndicator color="#fff" />
+                                        <ActivityIndicator color={colors.onPrimary} />
                                     ) : (
                                         <>
                                             <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
                                             <View style={styles.continueBtnIconBubble}>
-                                                <ArrowRight size={16} color="#111" />
+                                                <ArrowRight size={16} color={colors.text} />
                                             </View>
                                         </>
                                     )}
@@ -1493,8 +1496,8 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.dragHandle} />
                     </View>
 
-                    <Text style={{ marginTop: 12, fontSize: 24, fontWeight: '800', color: '#000', marginBottom: 4 }}>Choose vehicle</Text>
-                    <Text style={{ fontSize: 14, color: '#666', marginBottom: 24 }}>Select the vehicle that fits your waste</Text>
+                    <Text style={{ marginTop: 12, fontSize: 24, fontWeight: '800', color: colors.text, marginBottom: 4 }}>Choose vehicle</Text>
+                    <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 24 }}>Select the vehicle that fits your waste</Text>
 
                     <View style={{ marginBottom: 24 }}>
                         {VEHICLES.map(v => {
@@ -1508,11 +1511,11 @@ export default function PickupsScreen({ route }) {
                                             alignItems: 'center',
                                             padding: 16,
                                             borderWidth: 1.5,
-                                            borderColor: isSelected ? '#FACC15' : '#E5E7EB',
+                                            borderColor: isSelected ? colors.warning : colors.border,
                                             borderRadius: 12,
                                             marginBottom: 12,
-                                            backgroundColor: '#FFF',
-                                            shadowColor: '#000',
+                                            backgroundColor: colors.onPrimary,
+                                            shadowColor: colors.text,
                                             shadowOffset: { width: 0, height: 2 },
                                             shadowOpacity: 0.05,
                                             shadowRadius: 3,
@@ -1526,12 +1529,12 @@ export default function PickupsScreen({ route }) {
                                         height: 24, 
                                         borderRadius: 12, 
                                         borderWidth: 2, 
-                                        borderColor: isSelected ? '#FACC15' : '#D1D5DB',
+                                        borderColor: isSelected ? colors.warning : colors.textMuted,
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         marginRight: 16
                                     }}>
-                                        {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#FACC15' }} />}
+                                        {isSelected && <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.warning }} />}
                                     </View>
 
                                     <View style={{ width: 60, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
@@ -1539,21 +1542,21 @@ export default function PickupsScreen({ route }) {
                                     </View>
 
                                     <View style={{ flex: 1 }}>
-                                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 4 }}>{v.label}</Text>
-                                        <Text style={{ fontSize: 14, color: '#6B7280' }}>{v.capacity}</Text>
+                                        <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 }}>{v.label}</Text>
+                                        <Text style={{ fontSize: 14, color: colors.textSecondary }}>{v.capacity}</Text>
                                     </View>
                                     
                                     {requestForm.duration_min && requestForm.distance_km && (
                                         <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                                                <Clock size={14} color="#111" style={{ marginRight: 4 }} />
-                                                <Text style={{ fontSize: 15, fontWeight: '700', color: '#111' }}>
+                                                <Clock size={14} color={colors.text} style={{ marginRight: 4 }} />
+                                                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>
                                                     ~{Math.round(requestForm.duration_min)} min
                                                 </Text>
                                             </View>
                                             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                                <MapPin size={12} color="#6B7280" style={{ marginRight: 2 }} />
-                                                <Text style={{ fontSize: 13, color: '#6B7280' }}>
+                                                <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 2 }} />
+                                                <Text style={{ fontSize: 13, color: colors.textSecondary }}>
                                                     {parseFloat(requestForm.distance_km).toFixed(1)} km
                                                 </Text>
                                             </View>
@@ -1565,23 +1568,23 @@ export default function PickupsScreen({ route }) {
                     </View>
 
                     
-                    <Text style={{ textAlign: 'center', fontSize: 13, color: '#6B7280', marginBottom: 16 }}>Payment is arranged directly with your collector.</Text>
-<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', padding: 16, borderRadius: 12, marginBottom: 24 }}>
-                        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#9CA3AF', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                            <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '700', fontStyle: 'italic' }}>i</Text>
+                    <Text style={{ textAlign: 'center', fontSize: 13, color: colors.textSecondary, marginBottom: 16 }}>Payment is arranged directly with your collector.</Text>
+<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceSunken, padding: 16, borderRadius: 12, marginBottom: 24 }}>
+                        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: colors.textMuted, alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                            <Text style={{ color: colors.onPrimary, fontSize: 12, fontWeight: '700', fontStyle: 'italic' }}>i</Text>
                         </View>
-                        <Text style={{ fontSize: 14, color: '#4B5563' }}>Make sure your waste is ready for pickup</Text>
+                        <Text style={{ fontSize: 14, color: colors.textSecondary }}>Make sure your waste is ready for pickup</Text>
                     </View>
 
                     {/* Advances to the confirm step rather than firing the request
                         straight off - the request only goes out from the CONFIRM
                         sheet below. */}
                     <AnimatedButton 
-                        style={{ backgroundColor: '#111', paddingVertical: 18, borderRadius: 12, alignItems: 'center' }} 
+                        style={{ backgroundColor: colors.text, paddingVertical: 18, borderRadius: 12, alignItems: 'center' }} 
                         haptic 
                         onPress={() => setUiState('CONFIRM')}
                     >
-                        <Text style={{ color: '#FFF', fontSize: 16, fontWeight: '600' }}>Continue</Text>
+                        <Text style={{ color: colors.onPrimary, fontSize: 16, fontWeight: '600' }}>Continue</Text>
                     </AnimatedButton>
                 </View>            )}
 
@@ -1589,7 +1592,7 @@ export default function PickupsScreen({ route }) {
                 <>
                     <View style={styles.floatingTopBar}>
                         <TouchableOpacity style={styles.floatingBackBtnDark} onPress={() => setUiState('VEHICLE_SELECT')}>
-                            <ArrowLeft size={22} color="#F5F5F5" />
+                            <ArrowLeft size={22} color={colors.surfaceSunken} />
                         </TouchableOpacity>
                     </View>
 
@@ -1638,7 +1641,7 @@ export default function PickupsScreen({ route }) {
                                     see before committing hides half the request. */}
                                 <View style={styles.confirmCardRow}>
                                     <View style={styles.confirmIconBoxNeutral}>
-                                        <Truck size={20} color="#9CA3AF" />
+                                        <Truck size={20} color={colors.textMuted} />
                                     </View>
                                     <View style={styles.confirmCardTextCol}>
                                         <Text style={styles.confirmCardLabel}>Vehicle</Text>
@@ -1659,7 +1662,7 @@ export default function PickupsScreen({ route }) {
                             <View style={styles.confirmCard}>
                                 <View style={styles.confirmCardRow}>
                                     <View style={styles.confirmIconBoxNeutral}>
-                                        <Clock size={20} color="#9CA3AF" />
+                                        <Clock size={20} color={colors.textMuted} />
                                     </View>
                                     <View style={styles.confirmCardTextCol}>
                                         <Text style={styles.confirmInfoTitle}>What happens next?</Text>
@@ -1772,7 +1775,7 @@ export default function PickupsScreen({ route }) {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Confirm Request</Text>
                             <TouchableOpacity onPress={() => setShowRequestModal(false)}>
-                                <X size={24} color="#666" />
+                                <X size={24} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -1781,7 +1784,7 @@ export default function PickupsScreen({ route }) {
                             <View style={styles.summaryCard}>
                                 <View style={styles.summaryRow}>
                                     <View style={styles.summaryIconBox}>
-                                        <Package size={16} color="#111" />
+                                        <Package size={16} color={colors.text} />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.summaryLabel}>Material</Text>
@@ -1795,7 +1798,7 @@ export default function PickupsScreen({ route }) {
 
                                 <View style={styles.summaryRow}>
                                     <View style={styles.summaryIconBox}>
-                                        <MapPin size={16} color="#111" />
+                                        <MapPin size={16} color={colors.text} />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.summaryLabel}>Pickup Location</Text>
@@ -1811,7 +1814,7 @@ export default function PickupsScreen({ route }) {
                                     <Text style={styles.summaryLabel}>
                                         {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
                                     </Text>
-                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? '#111' : '#059669' }]}>
+                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? colors.text : colors.accent }]}>
                                         ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
                                     </Text>
                                 </View>
@@ -1822,7 +1825,7 @@ export default function PickupsScreen({ route }) {
                                 onPress={handleCreateRequest}
                                 disabled={requestLoading}
                             >
-                                {requestLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.modalConfirmText}>Confirm Request</Text>}
+                                {requestLoading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.modalConfirmText}>Confirm Request</Text>}
                             </AnimatedButton>
                         </ScrollView>
                     </View>
@@ -1836,13 +1839,13 @@ export default function PickupsScreen({ route }) {
                 animationType="slide"
                 onRequestClose={() => setShowSearchModal(false)}
             >
-                <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+                <SafeAreaView style={{ flex: 1, backgroundColor: colors.onPrimary }}>
                     <StatusBar barStyle="dark-content" />
                     
                     {/* Search Header */}
                     <View style={styles.searchHeader}>
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
-                            <X size={24} color="#111" />
+                            <X size={24} color={colors.text} />
                         </TouchableOpacity>
                         <Text style={styles.searchTitle}>Choose Pickup Location</Text>
                         <View style={{ width: 40 }} />
@@ -1850,11 +1853,11 @@ export default function PickupsScreen({ route }) {
 
                     {/* Search Input */}
                     <View style={styles.searchInputContainer}>
-                        <Search size={20} color="#6B7280" />
+                        <Search size={20} color={colors.textSecondary} />
                         <TextInput
                             style={styles.searchTextInput}
                             placeholder="Search for a location..."
-                            placeholderTextColor="#9CA3AF"
+                            placeholderTextColor={colors.textMuted}
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             autoFocus={true}
@@ -1862,7 +1865,7 @@ export default function PickupsScreen({ route }) {
                         />
                         {searchQuery.length > 0 && (
                             <TouchableOpacity onPress={() => setSearchQuery('')}>
-                                <X size={20} color="#9CA3AF" />
+                                <X size={20} color={colors.textMuted} />
                             </TouchableOpacity>
                         )}
                     </View>
@@ -1873,8 +1876,8 @@ export default function PickupsScreen({ route }) {
                         style={styles.searchResultItem}
                         onPress={() => startMapSelection()}
                     >
-                        <View style={[styles.searchResultIcon, { backgroundColor: '#F3F4F6' }]}>
-                            <MapPin size={20} color="#111" />
+                        <View style={[styles.searchResultIcon, { backgroundColor: colors.surfaceSunken }]}>
+                            <MapPin size={20} color={colors.text} />
                         </View>
                         <View style={styles.searchResultText}>
                             <Text style={styles.searchResultName}>Pin on map</Text>
@@ -1884,7 +1887,7 @@ export default function PickupsScreen({ route }) {
                     {/* Search Results */}
                     {isSearchingLocation ? (
                         <View style={styles.searchCenterContent}>
-                            <ActivityIndicator size="small" color="#059669" />
+                            <ActivityIndicator size="small" color={colors.accent} />
                             <Text style={styles.searchHintText}>Searching...</Text>
                         </View>
                     ) : searchQuery.length > 0 ? (
@@ -1897,7 +1900,7 @@ export default function PickupsScreen({ route }) {
                                         onPress={() => handleSelectSearchedLocation(item)}
                                     >
                                         <View style={styles.searchResultIcon}>
-                                            <MapPin size={20} color="#6B7280" />
+                                            <MapPin size={20} color={colors.textSecondary} />
                                         </View>
                                         <View style={styles.searchResultText}>
                                             <Text style={styles.searchResultName}>{item.name}</Text>
@@ -1933,11 +1936,11 @@ export default function PickupsScreen({ route }) {
                                             setShowSearchModal(false);
                                         }}
                                     >
-                                        <View style={[styles.searchResultIcon, { backgroundColor: '#ECFDF5' }]}>
-                                            <Navigation size={20} color="#059669" />
+                                        <View style={[styles.searchResultIcon, { backgroundColor: colors.accentSoft }]}>
+                                            <Navigation size={20} color={colors.accent} />
                                         </View>
                                         <View style={styles.searchResultText}>
-                                            <Text style={[styles.searchResultName, { color: '#059669' }]}>Use my current location</Text>
+                                            <Text style={[styles.searchResultName, { color: colors.accent }]}>Use my current location</Text>
                                         </View>
                                     </TouchableOpacity>
                                 </>
@@ -1953,7 +1956,7 @@ export default function PickupsScreen({ route }) {
                                             onPress={() => handleSelectSearchedLocation({ name: item.address, lat: item.latitude, lon: item.longitude })}
                                         >
                                             <View style={styles.searchResultIcon}>
-                                                <Clock size={20} color="#6B7280" />
+                                                <Clock size={20} color={colors.textSecondary} />
                                             </View>
                                             <View style={styles.searchResultText}>
                                                 <Text style={styles.searchResultName} numberOfLines={1}>{item.address}</Text>
@@ -1982,7 +1985,7 @@ export default function PickupsScreen({ route }) {
                                 onPress={() => setShowCancelModal(false)}
                                 style={styles.cancelModalClose}
                             >
-                                <X size={24} color="#666" />
+                                <X size={24} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -2006,7 +2009,7 @@ export default function PickupsScreen({ route }) {
                                         selectedCancelReason === reason.id && styles.cancelReasonTextActive
                                     ]}>{reason.label}</Text>
                                     {selectedCancelReason === reason.id && (
-                                        <CircleCheck size={20} color="#E74C3C" />
+                                        <CircleCheck size={20} color={colors.danger} />
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -2023,13 +2026,13 @@ export default function PickupsScreen({ route }) {
                             <TouchableOpacity
                                 style={[
                                     styles.cancelModalConfirmBtn,
-                                    !selectedCancelReason && { backgroundColor: '#ccc' }
+                                    !selectedCancelReason && { backgroundColor: colors.textMuted }
                                 ]}
                                 onPress={handleCancelRequest}
                                 disabled={cancelLoading || !selectedCancelReason}
                             >
                                 {cancelLoading ? (
-                                    <ActivityIndicator color="#fff" size="small" />
+                                    <ActivityIndicator color={colors.onPrimary} size="small" />
                                 ) : (
                                     <Text style={styles.cancelModalConfirmText}>Cancel Request</Text>
                                 )}
@@ -2053,7 +2056,7 @@ export default function PickupsScreen({ route }) {
                         {confirmingJob && (
                             <View style={{ marginVertical: 15 }}>
                                 <View style={styles.jobDetailRow}>
-                                    <Package size={16} color="#666" />
+                                    <Package size={16} color={colors.textSecondary} />
                                     <Text style={styles.jobDetailText}>
                                         {confirmingJob.material_type} ({confirmingJob.quantity_estimate})
                                     </Text>
@@ -2062,11 +2065,11 @@ export default function PickupsScreen({ route }) {
                                 <View style={styles.trackBadgeContainer}>
                                     <View style={[
                                         styles.trackTag,
-                                        { backgroundColor: confirmingJob.track_type === 'A' ? '#FEE2E2' : '#DCFCE7' }
+                                        { backgroundColor: confirmingJob.track_type === 'A' ? colors.dangerSoft : colors.accentSoft }
                                     ]}>
                                         <Text style={[
                                             styles.trackTagText,
-                                            { color: confirmingJob.track_type === 'A' ? '#111' : '#166534' }
+                                            { color: confirmingJob.track_type === 'A' ? colors.text : colors.accent }
                                         ]}>
                                             {confirmingJob.track_type === 'A' ? 'Safe Disposal (Pay to Clear)' : 'Sell Recyclables (Earn Cash)'}
                                         </Text>
@@ -2082,7 +2085,7 @@ export default function PickupsScreen({ route }) {
                             </View>
                         )}
 
-                        <Text style={{ fontSize: 14, color: '#999', textAlign: 'center', marginBottom: 20 }}>
+                        <Text style={{ fontSize: 14, color: colors.textMuted, textAlign: 'center', marginBottom: 20 }}>
                             Mark this job as completed? You and the disposer settle the price
                             between yourselves - Revesta doesn't charge or pay anything.
                         </Text>
@@ -2154,7 +2157,7 @@ export default function PickupsScreen({ route }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     searchHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -2163,25 +2166,25 @@ const styles = StyleSheet.create({
         paddingTop: Platform.OS === 'ios' ? 50 : 20,
         paddingBottom: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     searchCloseBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     searchTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     searchInputContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         marginHorizontal: 20,
         marginTop: 16,
         marginBottom: 8,
@@ -2189,14 +2192,14 @@ const styles = StyleSheet.create({
         height: 52,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     searchTextInput: {
         flex: 1,
         height: '100%',
         marginLeft: 12,
         fontSize: 16,
-        color: '#111827',
+        color: c.text,
     },
     searchResultsContainer: {
         flex: 1,
@@ -2205,7 +2208,7 @@ const styles = StyleSheet.create({
     searchSectionTitle: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
         letterSpacing: 1.2,
         marginTop: 24,
         marginBottom: 12,
@@ -2215,13 +2218,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     searchResultIcon: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
@@ -2232,12 +2235,12 @@ const styles = StyleSheet.create({
     searchResultName: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 4,
     },
     searchResultAddress: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     searchCenterContent: {
         flex: 1,
@@ -2247,85 +2250,85 @@ const styles = StyleSheet.create({
     searchHintText: {
         marginTop: 12,
         fontSize: 15,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     // Ubride Styles
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
-    menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
-    bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+    menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
+    bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     
-    bottomSheetUbride: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#FFFFFF', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12 },
+    bottomSheetUbride: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: c.surface, borderRadius: 24, padding: 20, shadowColor: c.shadow, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12 },
     dragHandleContainer: { alignItems: 'center', marginBottom: 20 },
-    dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB' },
+    dragHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.surfaceSunken },
     locationInputBox: { },
-    sheetTitle: { fontSize: 18, fontWeight: '800', color: '#111', marginBottom: 2 },
-    sheetSubtitle: { fontSize: 13, color: '#8B93A1', marginBottom: 16 },
+    sheetTitle: { fontSize: 18, fontWeight: '800', color: c.text, marginBottom: 2 },
+    sheetSubtitle: { fontSize: 13, color: c.textMuted, marginBottom: 16 },
     pickupFieldRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#EFF1F4',
+        borderColor: c.borderSubtle,
         paddingHorizontal: 12,
         paddingVertical: 12,
     },
     // Tinted icon box, matching the card-with-tinted-icon pattern used across
     // the rest of the app (nav rows, job cards) instead of a bare dot.
-    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center' },
+    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
     pickupFieldTextCol: { flex: 1 },
-    pickupFieldLabel: { fontSize: 11, fontWeight: '600', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
-    pickupFieldValue: { fontSize: 15, fontWeight: '700', color: '#111' },
+    pickupFieldLabel: { fontSize: 11, fontWeight: '600', color: c.textMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
+    pickupFieldValue: { fontSize: 15, fontWeight: '700', color: c.text },
     continueBtnWrap: {
         marginTop: 16,
         borderRadius: 16,
         overflow: 'hidden',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.18,
         shadowRadius: 10,
         elevation: 6,
     },
     continueBtnUbride: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
-    continueBtnTextUbride: { color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
-    continueBtnIconBubble: { position: 'absolute', right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+    continueBtnTextUbride: { color: c.onPrimary, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+    continueBtnIconBubble: { position: 'absolute', right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
 
-    destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#059669', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
-    destinationPinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' },
-    pickupEtaBubble: { backgroundColor: '#059669', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginBottom: 6, shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 },
-    pickupEtaBubbleText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-    compactMarkerLabel: { backgroundColor: '#FFFFFF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-    compactMarkerText: { fontSize: 11, fontWeight: '700', color: '#111' },
+    destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.accent, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: c.border, shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+    destinationPinInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.surface },
+    pickupEtaBubble: { backgroundColor: c.accent, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16, marginBottom: 6, shadowColor: c.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 },
+    pickupEtaBubbleText: { fontSize: 13, fontWeight: '700', color: c.onPrimary },
+    compactMarkerLabel: { backgroundColor: c.surface, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, marginTop: 4, shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+    compactMarkerText: { fontSize: 11, fontWeight: '700', color: c.text },
 
-    bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: '#fff', borderRadius: 30, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
-    dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#E5E7EB' },
-    chooseVehicleTitle: { fontSize: 22, fontWeight: '800', color: '#111', marginBottom: 4 },
-    chooseVehicleSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 18 },
+    bottomSheetUbrideVehicles: { position: 'absolute', bottom: 120, left: 16, right: 16, backgroundColor: c.surface, borderRadius: 30, padding: 20, shadowColor: c.shadow, shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 15 },
+    dragHandle: { width: 40, height: 5, borderRadius: 3, backgroundColor: c.surfaceSunken },
+    chooseVehicleTitle: { fontSize: 22, fontWeight: '800', color: c.text, marginBottom: 4 },
+    chooseVehicleSubtitle: { fontSize: 14, color: c.textSecondary, marginBottom: 18 },
     vehicleRowGroup: { gap: 12, marginBottom: 16 },
     vehicleRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 14,
         borderWidth: 1.5,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         borderRadius: 16,
         padding: 14,
     },
-    vehicleRowActive: { borderColor: '#059669', backgroundColor: '#F7FEFB' },
-    radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#D1D5DB', alignItems: 'center', justifyContent: 'center' },
-    radioOuterActive: { borderColor: '#059669' },
-    radioInner: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: '#059669' },
-    vehicleArtBox: { width: 60, height: 60, borderRadius: 14, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
-    vehicleArtBoxActive: { backgroundColor: '#ECFDF5' },
-    vehicleRowName: { fontSize: 16, fontWeight: '700', color: '#111', marginBottom: 2 },
-    vehicleRowCapacity: { fontSize: 13, color: '#9CA3AF' },
-    paymentNote: { fontSize: 12, color: '#9CA3AF', textAlign: 'center', marginBottom: 12 },
-    readyNoticeBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 12, marginBottom: 16 },
-    readyNoticeText: { fontSize: 13, color: '#4B5563', flex: 1 },
-    bookRideBtn: { backgroundColor: '#111', paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
-    bookRideBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+    vehicleRowActive: { borderColor: c.accent, backgroundColor: c.accentSoft },
+    radioOuter: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+    radioOuterActive: { borderColor: c.accent },
+    radioInner: { width: 11, height: 11, borderRadius: 5.5, backgroundColor: c.accent },
+    vehicleArtBox: { width: 60, height: 60, borderRadius: 14, backgroundColor: c.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+    vehicleArtBoxActive: { backgroundColor: c.accentSoft },
+    vehicleRowName: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 2 },
+    vehicleRowCapacity: { fontSize: 13, color: c.textMuted },
+    paymentNote: { fontSize: 12, color: c.textMuted, textAlign: 'center', marginBottom: 12 },
+    readyNoticeBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: c.surfaceAlt, borderRadius: 12, padding: 12, marginBottom: 16 },
+    readyNoticeText: { fontSize: 13, color: c.textSecondary, flex: 1 },
+    bookRideBtn: { backgroundColor: c.primary, paddingVertical: 18, borderRadius: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' },
+    bookRideBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
 
     // --- Confirm Pickup sheet (dark) ---
     // The map underneath is already dark, so this step goes near-black rather
@@ -2428,47 +2431,47 @@ const styles = StyleSheet.create({
     confirmCtaIcon: { marginLeft: 10 },
 
     collectorBottomSheetUbride: { position: 'absolute', bottom: 110, left: 0, right: 0 },
-    collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: '#fff', borderRadius: 24, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
+    collectorJobCardUbride: { width: Dimensions.get('window').width * 0.9, marginHorizontal: Dimensions.get('window').width * 0.05, backgroundColor: c.surface, borderRadius: 24, padding: 20, shadowColor: c.shadow, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 10 },
     collectorJobHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
-    jobInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, flexShrink: 1, marginRight: 10 },
-    jobInfoText: { fontSize: 13, fontWeight: 'bold', color: '#111', flexShrink: 1 },
-    jobTimeText: { fontSize: 13, color: '#34D399', fontWeight: '600' },
-    jobRouteBox: { backgroundColor: '#F9FAFB', borderRadius: 16, padding: 15, flexDirection: 'row', marginBottom: 20 },
+    jobInfoBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: c.surfaceSunken, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, flexShrink: 1, marginRight: 10 },
+    jobInfoText: { fontSize: 13, fontWeight: 'bold', color: c.text, flexShrink: 1 },
+    jobTimeText: { fontSize: 13, color: c.success, fontWeight: '600' },
+    jobRouteBox: { backgroundColor: c.surfaceAlt, borderRadius: 16, padding: 15, flexDirection: 'row', marginBottom: 20 },
     routeDots: { alignItems: 'center', marginRight: 15, paddingVertical: 10 },
-    routeLine: { width: 2, flex: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
+    routeLine: { width: 2, flex: 1, backgroundColor: c.surfaceSunken, marginVertical: 4 },
     routeTexts: { flex: 1, justifyContent: 'space-between', paddingVertical: 2 },
     addressContainer: { justifyContent: 'center', marginBottom: 12 },
-    routeLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 },
-    routeAddressText: { fontSize: 15, color: '#111', fontWeight: '600' },
+    routeLabel: { fontSize: 10, color: c.textMuted, fontWeight: 'bold', letterSpacing: 1, marginBottom: 4 },
+    routeAddressText: { fontSize: 15, color: c.text, fontWeight: '600' },
 
     // Permission Styles
-    permissionContainer: { flex: 1, backgroundColor: '#FFF' },
+    permissionContainer: { flex: 1, backgroundColor: c.surface },
     permissionContent: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40 },
     globeIconContainer: { marginBottom: 30 },
-    permissionTitle: { fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 12, textAlign: 'center' },
-    permissionDesc: { fontSize: 16, color: '#666', textAlign: 'center', lineHeight: 22 },
+    permissionTitle: { fontSize: 24, fontWeight: '800', color: c.text, marginBottom: 12, textAlign: 'center' },
+    permissionDesc: { fontSize: 16, color: c.textSecondary, textAlign: 'center', lineHeight: 22 },
     permissionFooter: { paddingHorizontal: 20, paddingBottom: 110 },
-    privacyText: { fontSize: 12, color: '#888', textAlign: 'center', marginBottom: 20, lineHeight: 18 },
-    allowButton: { backgroundColor: '#111', height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-    allowButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+    privacyText: { fontSize: 12, color: c.textMuted, textAlign: 'center', marginBottom: 20, lineHeight: 18 },
+    allowButton: { backgroundColor: c.primary, height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    allowButtonText: { color: c.onPrimary, fontSize: 16, fontWeight: '700' },
 
     // Floating Map UI
     floatingTopBar: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 20, right: 20, flexDirection: 'row', alignItems: 'center', zIndex: 10 },
-    floatingBackBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
-    floatingSearchBar: { flex: 1, height: 44, backgroundColor: '#FFF', borderRadius: 22, flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
-    floatingSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#111' },
-    floatingTargetBtn: { width: 44, height: 44, backgroundColor: '#FFF', borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingBackBtn: { width: 44, height: 44, backgroundColor: c.surface, borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchBar: { flex: 1, height: 44, backgroundColor: c.surface, borderRadius: 22, flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
+    floatingSearchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: c.text },
+    floatingTargetBtn: { width: 44, height: 44, backgroundColor: c.surface, borderRadius: 22, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.1, shadowRadius: 4, elevation: 4 },
 
     // Map Markers
-    blackCircleMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
-    blackCircleText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+    blackCircleMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.primary, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.3, shadowRadius: 4, elevation: 5 },
+    blackCircleText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 14 },
 
     kycBanner: {
         position: 'absolute',
         top: 80,
         left: 16,
         right: 16,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 16,
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
@@ -2476,7 +2479,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 14,
         paddingHorizontal: 16,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 16,
@@ -2493,7 +2496,7 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     kycBannerText: { flex: 1 },
-    kycBannerTitle: { fontSize: 14, fontWeight: '700', color: '#fff', marginBottom: 2 },
+    kycBannerTitle: { fontSize: 14, fontWeight: '700', color: c.onPrimary, marginBottom: 2 },
     kycBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
     jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
 
@@ -2505,13 +2508,13 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomLeftRadius: 30,
         borderBottomRightRadius: 30,
         paddingTop: Platform.OS === 'ios' ? 50 : 30,
         paddingBottom: 20,
         paddingHorizontal: 20,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
@@ -2527,7 +2530,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -2538,18 +2541,18 @@ const styles = StyleSheet.create({
     headerTitleMain: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: c.text,
     },
     headerSubText: {
         fontSize: 12,
-        color: '#999',
+        color: c.textMuted,
         marginTop: 2,
     },
     historyBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -2557,7 +2560,7 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     requestButton: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -2566,7 +2569,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     requestButtonText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 14,
         fontWeight: 'bold',
     },
@@ -2578,18 +2581,18 @@ const styles = StyleSheet.create({
         right: 0,
     },
     jobCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         width: width * 0.85,
         marginHorizontal: 10,
         borderRadius: 28,
         padding: 20,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.1,
         shadowRadius: 20,
         elevation: 8,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
     },
     cardHeader: {
         flexDirection: 'row',
@@ -2610,11 +2613,11 @@ const styles = StyleSheet.create({
     jobType: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: c.text,
     },
     jobQty: {
         fontSize: 13,
-        color: '#666',
+        color: c.textSecondary,
         marginTop: 2,
     },
     statusBadge: {
@@ -2629,7 +2632,7 @@ const styles = StyleSheet.create({
     },
     jobDivider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginBottom: 15,
     },
     jobLocationRow: {
@@ -2640,14 +2643,14 @@ const styles = StyleSheet.create({
     },
     jobLoc: {
         fontSize: 13,
-        color: '#666',
+        color: c.textSecondary,
         flex: 1,
     },
     actionRow: {
         marginTop: 10,
     },
     acceptBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
@@ -2656,7 +2659,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     acceptBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 14,
         fontWeight: 'bold',
     },
@@ -2673,19 +2676,19 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 8,
     },
-    navBtn: { backgroundColor: '#111' },
-    arriveBtn: { backgroundColor: '#333' },
+    navBtn: { backgroundColor: c.primary },
+    arriveBtn: { backgroundColor: c.primary },
     actionBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 14,
         fontWeight: 'bold',
     },
     trackingContainer: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         padding: 15,
         borderRadius: 16,
         borderLeftWidth: 4,
-        borderLeftColor: '#111',
+        borderLeftColor: c.primary,
     },
     trackingPulse: {
         flexDirection: 'row',
@@ -2696,11 +2699,11 @@ const styles = StyleSheet.create({
     trackingTitle: {
         fontSize: 13,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     trackingDetail: {
         fontSize: 12,
-        color: '#6B7280',
+        color: c.textSecondary,
     },
     cancelRequestBtn: {
         alignItems: 'center',
@@ -2708,12 +2711,12 @@ const styles = StyleSheet.create({
     },
     cancelText: {
         fontSize: 13,
-        color: '#E74C3C',
+        color: c.danger,
         fontWeight: '600',
     },
     imageUploadText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '500',
     },
     navTopBarContainer: {
@@ -2726,11 +2729,11 @@ const styles = StyleSheet.create({
     navTopBar: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         paddingHorizontal: 15,
         paddingVertical: 12,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
         shadowRadius: 10,
@@ -2750,32 +2753,32 @@ const styles = StyleSheet.create({
     navAddressText: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         maxWidth: 100,
     },
     navAddBtn: {
         padding: 5,
     },
     customMapBubble: {
-        backgroundColor: '#059669',
+        backgroundColor: c.accent,
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
         flexDirection: 'column',
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.3,
         shadowRadius: 3,
         elevation: 4,
     },
     customMapBubbleText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 12,
         fontWeight: '600',
     },
     customMapBubbleTime: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -2789,7 +2792,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 8,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderBottomColor: '#059669',
+        borderBottomColor: c.accent,
         transform: [{ rotate: '180deg' }],
         marginTop: -1, // Overlap slightly to fix gaps
     },
@@ -2801,22 +2804,22 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderWidth: 2,
-        borderColor: '#fff',
-        shadowColor: '#000',
+        borderColor: c.border,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.3,
         shadowRadius: 2,
     },
 
     markerContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         padding: 5,
         borderRadius: 18,
         borderWidth: 2,
-        borderColor: '#111',
-        shadowColor: '#000',
+        borderColor: c.primary,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
@@ -2827,28 +2830,28 @@ const styles = StyleSheet.create({
         top: 60,
         left: 20,
         right: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 20,
         padding: 20,
         alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.1,
         shadowRadius: 10,
         elevation: 5,
     },
     selectionHeader: { alignItems: 'center', marginBottom: 15 },
-    selectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
-    selectionSubtitle: { fontSize: 13, color: '#666', marginTop: 4 },
+    selectionTitle: { fontSize: 18, fontWeight: 'bold', color: c.text },
+    selectionSubtitle: { fontSize: 13, color: c.textSecondary, marginTop: 4 },
     confirmLocationBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         paddingHorizontal: 40,
         paddingVertical: 14,
         borderRadius: 15,
         width: '100%',
         alignItems: 'center',
     },
-    confirmLocationText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+    confirmLocationText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 15 },
 
     modalOverlay: {
         flex: 1,
@@ -2856,7 +2859,7 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
     },
     modalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 35,
         borderTopRightRadius: 35,
         paddingHorizontal: 24,
@@ -2870,7 +2873,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 20,
     },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
+    modalTitle: { fontSize: 20, fontWeight: 'bold', color: c.text },
     modalBody: {},
     pickerContainer: {
         flexDirection: 'row',
@@ -2883,21 +2886,21 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
-        backgroundColor: '#F9FAFB',
+        borderColor: c.border,
+        backgroundColor: c.surfaceAlt,
     },
     pickerItemActive: {
-        backgroundColor: '#111',
-        borderColor: '#111',
+        backgroundColor: c.primary,
+        borderColor: c.primary,
     },
-    pickerItemText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
-    pickerItemTextActive: { color: '#fff', fontWeight: 'bold' },
+    pickerItemText: { color: c.textSecondary, fontSize: 13, fontWeight: '500' },
+    pickerItemTextActive: { color: c.onPrimary, fontWeight: 'bold' },
 
     summaryCard: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         padding: 16,
         marginBottom: 20,
         gap: 14,
@@ -2905,13 +2908,13 @@ const styles = StyleSheet.create({
     summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
     summaryIconBox: {
         width: 32, height: 32, borderRadius: 10,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         justifyContent: 'center', alignItems: 'center',
     },
-    summaryLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600', marginBottom: 2 },
-    summaryValue: { fontSize: 14, color: '#111827', fontWeight: '600' },
+    summaryLabel: { fontSize: 12, color: c.textMuted, fontWeight: '600', marginBottom: 2 },
+    summaryValue: { fontSize: 14, color: c.text, fontWeight: '600' },
     summaryPrice: { fontSize: 20, fontWeight: '800' },
-    summaryDivider: { height: 1, backgroundColor: '#F0F0F0' },
+    summaryDivider: { height: 1, backgroundColor: c.borderSubtle },
 
     estimateContainer: {
         marginBottom: 20,
@@ -2922,24 +2925,24 @@ const styles = StyleSheet.create({
         gap: 10,
         padding: 15,
     },
-    estimateLoadingText: { color: '#6B7280', fontSize: 13 },
+    estimateLoadingText: { color: c.textSecondary, fontSize: 13 },
     estimateBox: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         padding: 20,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     estimateRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 10,
     },
-    estimateLabel: { fontSize: 14, color: '#6B7280' },
-    estimateValue: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A' },
+    estimateLabel: { fontSize: 14, color: c.textSecondary },
+    estimateValue: { fontSize: 14, fontWeight: 'bold', color: c.text },
     divider: {
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         marginVertical: 12,
     },
     estimateTotalRow: {
@@ -2947,26 +2950,26 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         marginBottom: 10,
     },
-    estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A' },
-    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: '#111' },
+    estimateTotalLabel: { fontSize: 16, fontWeight: 'bold', color: c.text },
+    estimateTotalValue: { fontSize: 18, fontWeight: 'bold', color: c.text },
     estimateNote: {
         fontSize: 11,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontStyle: 'italic',
         lineHeight: 16,
     },
     submitRequestBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         paddingVertical: 18,
         borderRadius: 20,
         alignItems: 'center',
-        shadowColor: '#111',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 10,
         elevation: 6,
     },
-    submitRequestBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+    submitRequestBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: 'bold' },
 
     cancelModalOverlay: {
         flex: 1,
@@ -2975,7 +2978,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     cancelModalContent: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         padding: 24,
     },
@@ -2986,7 +2989,7 @@ const styles = StyleSheet.create({
         marginBottom: 10,
     },
     modalConfirmBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         paddingVertical: 16,
         borderRadius: 16,
         alignItems: 'center',
@@ -2994,12 +2997,12 @@ const styles = StyleSheet.create({
         marginTop: 20,
     },
     modalConfirmText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
-    cancelModalTitle: { fontSize: 20, fontWeight: 'bold', color: '#1A1A1A' },
-    cancelModalSubtitle: { fontSize: 14, color: '#6B7280', marginBottom: 20 },
+    cancelModalTitle: { fontSize: 20, fontWeight: 'bold', color: c.text },
+    cancelModalSubtitle: { fontSize: 14, color: c.textSecondary, marginBottom: 20 },
     cancelReasonsList: { maxHeight: 300, marginBottom: 20 },
     cancelReasonItem: {
         flexDirection: 'row',
@@ -3007,41 +3010,41 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 15,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
         marginBottom: 10,
     },
     cancelReasonItemActive: {
-        borderColor: '#FEE2E2',
-        backgroundColor: '#FEF2F2',
+        borderColor: c.dangerSoft,
+        backgroundColor: c.dangerSoft,
     },
     cancelReasonIcon: { fontSize: 20, marginRight: 12 },
-    cancelReasonText: { flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' },
-    cancelReasonTextActive: { color: '#EF4444', fontWeight: 'bold' },
+    cancelReasonText: { flex: 1, fontSize: 14, color: c.text, fontWeight: '500' },
+    cancelReasonTextActive: { color: c.danger, fontWeight: 'bold' },
     cancelModalClose: { padding: 4 },
     cancelModalButtons: { flexDirection: 'row', gap: 12 },
     cancelModalKeepBtn: {
         flex: 1,
         paddingVertical: 15,
         borderRadius: 15,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
     },
     cancelModalConfirmBtn: {
         flex: 1,
         paddingVertical: 15,
         borderRadius: 15,
-        backgroundColor: '#EF4444',
+        backgroundColor: c.danger,
         alignItems: 'center',
     },
-    cancelModalKeepText: { color: '#4B5563', fontWeight: 'bold' },
-    cancelModalConfirmText: { color: '#fff', fontWeight: 'bold' },
+    cancelModalKeepText: { color: c.textSecondary, fontWeight: 'bold' },
+    cancelModalConfirmText: { color: c.onPrimary, fontWeight: 'bold' },
 
     errorBox: {
         position: 'absolute',
         top: 150,
         left: 20,
         right: 20,
-        backgroundColor: '#FEF2F2',
+        backgroundColor: c.dangerSoft,
         padding: 15,
         borderRadius: 15,
         flexDirection: 'row',
@@ -3049,26 +3052,26 @@ const styles = StyleSheet.create({
         gap: 10,
         zIndex: 20,
         borderWidth: 1,
-        borderColor: '#FEE2E2',
+        borderColor: c.dangerSoft,
     },
-    errorText: { color: '#EF4444', fontSize: 13, fontWeight: '500' },
+    errorText: { color: c.danger, fontSize: 13, fontWeight: '500' },
     emptyState: {
         position: 'absolute',
         bottom: 120,
         alignSelf: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         paddingHorizontal: 20,
         paddingVertical: 12,
         borderRadius: 20,
         elevation: 3,
     },
-    emptyText: { color: '#6B7280', fontSize: 13, fontWeight: '500' },
+    emptyText: { color: c.textSecondary, fontSize: 13, fontWeight: '500' },
     jobSeparator: {
         justifyContent: 'center',
         paddingHorizontal: 15,
         paddingVertical: 10,
     },
-    separatorText: { fontSize: 12, fontWeight: 'bold', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 1 },
+    separatorText: { fontSize: 12, fontWeight: 'bold', color: c.textMuted, textTransform: 'uppercase', letterSpacing: 1 },
 
     // Verification Styles
     jobDetailRow: {
@@ -3079,7 +3082,7 @@ const styles = StyleSheet.create({
     },
     jobDetailText: {
         fontSize: 15,
-        color: '#1A1A1A',
+        color: c.text,
         fontWeight: '500',
     },
     trackBadgeContainer: {
@@ -3098,9 +3101,9 @@ const styles = StyleSheet.create({
     imageUploadBtn: {
         width: '100%',
         height: 120,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1.5,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderStyle: 'dashed',
         borderRadius: 16,
         overflow: 'hidden',
@@ -3114,7 +3117,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     imageUploadText: {
-        color: '#666',
+        color: c.textSecondary,
         fontSize: 14,
         fontWeight: '500',
     },
@@ -3123,4 +3126,4 @@ const styles = StyleSheet.create({
         height: '100%',
         resizeMode: 'cover',
     },
-});
+}));
