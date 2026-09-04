@@ -276,10 +276,10 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        <NavLink title="My Listings" icon={Box} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
-                        <NavLink title="Pickup History" icon={Truck} iconColor={colors.accent} iconBg={colors.accentSoft} onPress={() => navigation.navigate('PickupHistory')} />
-                        <NavLink title="Transaction History" icon={Clock} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('TransactionHistory')} />
-                        <NavLink title="Saved Locations" icon={Bookmark} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={() => navigation.navigate('SavedLocations')} isLast />
+                        <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
+                        <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
+                        <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />
                     </NavCard>
                 </View>
 
@@ -302,23 +302,21 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Account" />
                     <NavCard>
-                        <NavLink title="Profile Information" icon={UserCog} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('EditProfile')} />
+                        <NavLink title="Profile Information" icon={UserCog} onPress={() => navigation.navigate('EditProfile')} />
                         <NavLink
                             title="Verification"
                             subtitle={kycLabel}
                             subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
                             icon={ShieldCheck}
-                            iconColor={colors.accent}
-                            iconBg={colors.accentSoft}
+                            iconColor={kycStatus === 'VERIFIED' ? colors.accent : colors.text}
+                            iconBg={kycStatus === 'VERIFIED' ? colors.accentSoft : colors.surfaceSunken}
                             onPress={() => navigation.navigate('KYCVerification')}
                         />
-                        <NavLink title="Security" icon={ShieldAlert} iconColor={colors.danger} iconBg={colors.dangerSoft} onPress={() => navigation.navigate('Security')} />
+                        <NavLink title="Security" icon={ShieldAlert} onPress={() => navigation.navigate('Security')} />
                         <NavLink
                             title="Blocked Accounts"
                             subtitle="People you've blocked from messaging you"
                             icon={Ban}
-                            iconColor={colors.textSecondary}
-                            iconBg={colors.surfaceSunken}
                             onPress={() => navigation.navigate('BlockedUsers')}
                             isLast
                         />
@@ -338,8 +336,8 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Support & Community" />
                     <NavCard>
-                        <NavLink title="Invite someone" icon={Share2} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={handleInvite} />
-                        <NavLink title="Help & Support" icon={MessageCircleQuestion} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('SupportChat')} isLast />
+                        <NavLink title="Invite someone" icon={Share2} onPress={handleInvite} />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestion} onPress={() => navigation.navigate('SupportChat')} isLast />
                     </NavCard>
                 </View>
 

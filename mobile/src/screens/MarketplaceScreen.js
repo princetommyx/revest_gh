@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 import { marketApi } from '../api/market';
@@ -169,27 +169,24 @@ export default function MarketplaceScreen({ navigation, route }) {
             </View>
             <View style={styles.listingDetails}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
+
+                <View style={styles.iconRow}>
                     <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{materialObj.name}</Text>
-                </View>
-                
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <Package size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
+                    <Text style={[styles.listingLoc, { flexShrink: 3 }]} numberOfLines={1}>{materialObj.name}</Text>
+                    <Text style={styles.metaDot}>{'·'}</Text>
+                    <Text style={[styles.listingLoc, { flexShrink: 2 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
                 </View>
 
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
+                <View style={styles.iconRow}>
                     <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
                     <Text style={styles.distanceText}> • 1.8 km</Text>
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={styles.listingPrice}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
+                    <Text style={styles.listingPrice} numberOfLines={1}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
                     <View style={styles.viewDetailsBtn}>
-                        <Text style={styles.viewDetailsText}>View details &gt;</Text>
+                        <ChevronRight size={16} color={colors.onAccent} />
                     </View>
                 </View>
             </View>
@@ -582,11 +579,16 @@ const useStyles = makeStyles((c) => ({
     iconRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 5,
     },
     listingLoc: {
         fontSize: 12,
         color: c.textSecondary,
+    },
+    metaDot: {
+        fontSize: 12,
+        color: c.textMuted,
+        marginHorizontal: 4,
     },
     distanceText: {
         fontSize: 12,
@@ -597,24 +599,23 @@ const useStyles = makeStyles((c) => ({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 6,
+        marginTop: 8,
+        gap: 8,
     },
     listingPrice: {
-        fontSize: 16,
+        flexShrink: 1,
+        fontSize: 15,
         fontWeight: 'bold',
-        color: c.accent,
+        color: c.text,
     },
     viewDetailsBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: c.accent,
-    },
-    viewDetailsText: {
-        color: c.accent,
-        fontSize: 12,
-        fontWeight: '600',
+        flexShrink: 0,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: c.accent,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyBox: {
         alignItems: 'center',
