@@ -5,8 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function ForgotPasswordScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const [step, setStep] = useState(1); // 1: Identifier, 2: OTP, 3: New Password
     const [resetMethod, setResetMethod] = useState('email');
@@ -114,7 +117,7 @@ export default function ForgotPasswordScreen() {
     const renderHeader = () => (
         <View style={styles.header}>
             <TouchableOpacity onPress={() => { step === 1 ? navigation.goBack() : setStep(step - 1) }} style={styles.backButton}>
-                <ArrowLeft size={20} color="#111" />
+                <ArrowLeft size={20} color={colors.text} />
             </TouchableOpacity>
         </View>
     );
@@ -161,7 +164,7 @@ export default function ForgotPasswordScreen() {
                                 onChangeText={setIdentifier}
                                 autoCapitalize="none"
                                 keyboardType="email-address"
-                                placeholderTextColor="#999"
+                                placeholderTextColor={colors.textMuted}
                             />
                         </View>
                     </View>
@@ -179,7 +182,7 @@ export default function ForgotPasswordScreen() {
                                 value={identifier}
                                 onChangeText={setIdentifier}
                                 keyboardType="phone-pad"
-                                placeholderTextColor="#999"
+                                placeholderTextColor={colors.textMuted}
                             />
                         </View>
                     </View>
@@ -192,7 +195,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleRequestOTP}
                     disabled={loading || !isFilled}
                 >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
                 </TouchableOpacity>
             </View>
         );
@@ -205,7 +208,7 @@ export default function ForgotPasswordScreen() {
                 <Text style={styles.titleCentered}>Enter otp</Text>
                 <Text style={styles.subtitleCentered}>
                     A code to reset your password was sent to{"\n"}
-                    <Text style={{ color: '#000', fontWeight: '500' }}>
+                    <Text style={{ color: colors.text, fontWeight: '500' }}>
                         {resetMethod === 'phone' ? (identifier.startsWith('+') ? identifier : `+233 ${identifier.replace(/^0+/, '')}`) : identifier}
                     </Text>
                 </Text>
@@ -233,7 +236,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleVerifyOTP}
                     disabled={!isFilled || loading}
                 >
-                    {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleRequestOTP} style={styles.resendBtn} disabled={loading}>
@@ -259,10 +262,10 @@ export default function ForgotPasswordScreen() {
                             value={newPassword}
                             onChangeText={setNewPassword}
                             secureTextEntry={!showPassword}
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                            {showPassword ? <EyeOff size={20} color={colors.textMuted} /> : <Eye size={20} color={colors.textMuted} />}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -276,10 +279,10 @@ export default function ForgotPasswordScreen() {
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             secureTextEntry={!showPassword}
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
-                            {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                            {showPassword ? <EyeOff size={20} color={colors.textMuted} /> : <Eye size={20} color={colors.textMuted} />}
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -293,7 +296,7 @@ export default function ForgotPasswordScreen() {
                 >
                     {loading ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <ActivityIndicator color="#fff" style={{ marginRight: 10 }} />
+                            <ActivityIndicator color={colors.onPrimary} style={{ marginRight: 10 }} />
                             <Text style={styles.btnText}>Submitting...</Text>
                         </View>
                     ) : (
@@ -326,7 +329,7 @@ export default function ForgotPasswordScreen() {
                         </TouchableOpacity>
                         
                         <View style={styles.successIconWrapper}>
-                            <CircleCheck size={50} color="#10B981" />
+                            <CircleCheck size={50} color={colors.success} />
                         </View>
                         
                         <Text style={styles.modalTitle}>Password Changed!</Text>
@@ -347,10 +350,10 @@ export default function ForgotPasswordScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#fff', // Pure white background matching mockup
+        backgroundColor: c.surface, // Pure white background matching mockup
     },
     scrollContent: {
         flexGrow: 1,
@@ -367,11 +370,11 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: '#F3F4F6'
+        borderColor: c.borderSubtle
     },
     stepContainer: {
         flex: 1,
@@ -379,13 +382,13 @@ const styles = StyleSheet.create({
     titleCentered: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 10,
         textAlign: 'center',
     },
     subtitleCentered: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         lineHeight: 22,
         marginBottom: 30,
         textAlign: 'center',
@@ -393,7 +396,7 @@ const styles = StyleSheet.create({
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 30,
         padding: 5,
         marginBottom: 25,
@@ -405,8 +408,8 @@ const styles = StyleSheet.create({
         borderRadius: 25,
     },
     activeTab: {
-        backgroundColor: '#fff',
-        shadowColor: '#000',
+        backgroundColor: c.surface,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -414,11 +417,11 @@ const styles = StyleSheet.create({
     },
     tabText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     activeTabText: {
-        color: '#111',
+        color: c.text,
     },
     phoneLabel: {
         flexDirection: 'row',
@@ -426,11 +429,11 @@ const styles = StyleSheet.create({
         marginRight: 10,
         paddingRight: 10,
         borderRightWidth: 1,
-        borderRightColor: '#E5E7EB',
+        borderRightColor: c.border,
     },
     countryCode: {
         fontSize: 15,
-        color: '#111',
+        color: c.text,
         marginLeft: 5,
         fontWeight: '500',
     },
@@ -440,21 +443,21 @@ const styles = StyleSheet.create({
     inputLabel: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111',
+        color: c.text,
         marginBottom: 10,
     },
     inputWrapperFilled: {
         flexDirection: 'row',
         alignItems: 'center',
         borderRadius: 16,
-        backgroundColor: '#F7F7F9', // Very light gray filled input
+        backgroundColor: c.surfaceAlt, // Very light gray filled input
         height: 60,
         paddingHorizontal: 16,
     },
     input: {
         flex: 1,
         fontSize: 15,
-        color: '#111',
+        color: c.text,
         paddingVertical: 0,
     },
     eyeIcon: {
@@ -468,19 +471,19 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#111', // Maintaining dark colors
+        backgroundColor: c.primary, // Maintaining dark colors
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 'auto',
         marginBottom: 15,
     },
     btnDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     btnText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: c.onPrimary,
     },
     // OTP Styles
     otpContainerCircles: {
@@ -495,19 +498,19 @@ const styles = StyleSheet.create({
         width: 48,
         height: 48,
         borderRadius: 24,
-        backgroundColor: '#F7F7F9',
+        backgroundColor: c.surfaceAlt,
         alignItems: 'center',
         justifyContent: 'center',
     },
     otpCircleActive: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderWidth: 1,
-        borderColor: '#111',
+        borderColor: c.primary,
     },
     otpText: {
         fontSize: 20,
         fontWeight: '600',
-        color: '#111',
+        color: c.text,
     },
     hiddenOtpInput: {
         position: 'absolute',
@@ -522,10 +525,10 @@ const styles = StyleSheet.create({
     },
     resendText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
     },
     resendLink: {
-        color: '#111',
+        color: c.text,
         fontWeight: 'bold',
         textDecorationLine: 'underline',
     },
@@ -542,10 +545,10 @@ const styles = StyleSheet.create({
         width: 30,
         height: 4,
         borderRadius: 2,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     stepLineActive: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
     },
     // Modal Styles
     modalOverlay: {
@@ -557,7 +560,7 @@ const styles = StyleSheet.create({
     },
     modalCard: {
         width: '100%',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 24,
         padding: 30,
         alignItems: 'center',
@@ -570,19 +573,19 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         alignItems: 'center',
         justifyContent: 'center',
     },
     modalCloseText: {
         fontSize: 20,
-        color: '#111',
+        color: c.text,
         fontWeight: '600',
     },
     successIconWrapper: {
         width: 150,
         height: 120,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
@@ -592,13 +595,13 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 22,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 12,
         textAlign: 'center',
     },
     modalDesc: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         marginBottom: 30,
@@ -608,13 +611,13 @@ const styles = StyleSheet.create({
         width: '100%',
         height: 56,
         borderRadius: 28,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
     modalDoneBtnText: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#fff',
+        color: c.onPrimary,
     }
-});
+}));

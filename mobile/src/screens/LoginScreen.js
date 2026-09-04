@@ -6,12 +6,18 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
 import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
+
+// Google's brand red - a brand mark keeps its colour in both themes.
+const GOOGLE_RED = '#DB4437';
 
 const { width } = Dimensions.get('window');
 
 const Flag = () => <Text style={{ fontSize: 16, marginRight: 4 }}>🇬🇭</Text>;
 
 export default function LoginScreen() {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const [loginMethod, setLoginMethod] = useState('email'); // Default to email to match design
     const [email, setEmail] = useState('');
@@ -156,7 +162,7 @@ export default function LoginScreen() {
             <SafeAreaView style={styles.container}>
                 <View style={[styles.header, { marginTop: 40 }]}>
                     <View style={styles.modalIconContainer}>
-                        <Lock size={32} color="#000" />
+                        <Lock size={32} color={colors.text} />
                     </View>
                     <Text style={styles.greetingText}>Verification Code</Text>
                     <Text style={styles.welcomeText}>
@@ -168,7 +174,7 @@ export default function LoginScreen() {
                     <TextInput
                         style={styles.otpInputFull}
                         placeholder="000000"
-                        placeholderTextColor="#CCC"
+                        placeholderTextColor={colors.textMuted}
                         value={verificationCode}
                         onChangeText={setVerificationCode}
                         keyboardType="number-pad"
@@ -181,7 +187,7 @@ export default function LoginScreen() {
                         disabled={verifying}
                     >
                         {verifying ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={colors.onPrimary} />
                         ) : (
                             <Text style={styles.loginButtonText}>Verify & Login</Text>
                         )}
@@ -191,7 +197,7 @@ export default function LoginScreen() {
                         onPress={() => setShowOtpModal(false)}
                         style={{ alignItems: 'center', marginTop: 15 }}
                     >
-                        <Text style={{ color: '#999', fontSize: 16, fontWeight: '600' }}>Cancel</Text>
+                        <Text style={{ color: colors.textMuted, fontSize: 16, fontWeight: '600' }}>Cancel</Text>
                     </TouchableOpacity>
                 </View>
             </SafeAreaView>
@@ -246,7 +252,7 @@ export default function LoginScreen() {
                                         value={phoneNumber}
                                         onChangeText={setPhoneNumber}
                                         keyboardType="phone-pad"
-                                        placeholderTextColor="#999"
+                                        placeholderTextColor={colors.textMuted}
                                     />
                                 </View>
                             </View>
@@ -260,7 +266,7 @@ export default function LoginScreen() {
                                         value={email}
                                         onChangeText={setEmail}
                                         autoCapitalize="none"
-                                        placeholderTextColor="#999"
+                                        placeholderTextColor={colors.textMuted}
                                     />
                                 </View>
                             </View>
@@ -275,13 +281,13 @@ export default function LoginScreen() {
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
-                                    placeholderTextColor="#999"
+                                    placeholderTextColor={colors.textMuted}
                                 />
                                 <TouchableOpacity
                                     style={styles.eyeIcon}
                                     onPress={() => setShowPassword(!showPassword)}
                                 >
-                                    {showPassword ? <EyeOff size={20} color="#999" /> : <Eye size={20} color="#999" />}
+                                    {showPassword ? <EyeOff size={20} color={colors.textMuted} /> : <Eye size={20} color={colors.textMuted} />}
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -299,7 +305,7 @@ export default function LoginScreen() {
                         disabled={loading}
                     >
                         {loading ? (
-                            <ActivityIndicator color="#fff" />
+                            <ActivityIndicator color={colors.onPrimary} />
                         ) : (
                             <Text style={styles.loginButtonText}>Sign In</Text>
                         )}
@@ -327,7 +333,7 @@ export default function LoginScreen() {
                             disabled={googleLoading}
                         >
                             {googleLoading ? (
-                                <ActivityIndicator color="#111" size="small" />
+                                <ActivityIndicator color={colors.text} size="small" />
                             ) : (
                                 <>
                                     <Text style={styles.googleG}>G</Text>
@@ -350,10 +356,10 @@ export default function LoginScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#FAFAFA', // Light gray background
+        backgroundColor: c.bg, // Light gray background
     },
     scrollContent: {
         flexGrow: 1,
@@ -370,13 +376,13 @@ const styles = StyleSheet.create({
     greetingText: {
         fontSize: 26,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
         marginTop: 40,
         marginBottom: 10,
     },
     welcomeText: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         lineHeight: 22,
         paddingHorizontal: 20,
@@ -390,11 +396,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         height: 56,
         flex: 0.48,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -403,19 +409,19 @@ const styles = StyleSheet.create({
     googleG: {
         fontWeight: 'bold',
         fontSize: 18,
-        color: '#DB4437',
+        color: GOOGLE_RED,
         marginRight: 8,
     },
     appleIcon: {
         fontSize: 20,
-        color: '#000',
+        color: c.text,
         marginRight: 8,
         marginTop: -2,
     },
     socialText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#333',
+        color: c.text,
     },
     dividerRow: {
         flexDirection: 'row',
@@ -425,16 +431,16 @@ const styles = StyleSheet.create({
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
     },
     dividerText: {
         paddingHorizontal: 15,
-        color: '#9CA3AF',
+        color: c.textMuted,
         fontSize: 14,
     },
     tabContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 30,
         padding: 5,
         marginBottom: 20,
@@ -446,8 +452,8 @@ const styles = StyleSheet.create({
         borderRadius: 25,
     },
     activeTab: {
-        backgroundColor: '#fff',
-        shadowColor: '#000',
+        backgroundColor: c.surface,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -455,11 +461,11 @@ const styles = StyleSheet.create({
     },
     tabText: {
         fontSize: 14,
-        color: '#6B7280',
+        color: c.textSecondary,
         fontWeight: '600',
     },
     activeTabText: {
-        color: '#111',
+        color: c.text,
     },
     formSection: {
         marginBottom: 20,
@@ -469,7 +475,7 @@ const styles = StyleSheet.create({
     },
     inputLabel: {
         fontSize: 14,
-        color: '#333',
+        color: c.text,
         marginBottom: 8,
         marginLeft: 4,
         fontWeight: '500',
@@ -477,11 +483,11 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         height: 56,
         paddingHorizontal: 20,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
         shadowRadius: 5,
@@ -492,18 +498,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginRight: 10,
         borderRightWidth: 1,
-        borderRightColor: '#E5E7EB',
+        borderRightColor: c.border,
         paddingRight: 10,
     },
     countryCode: {
         fontSize: 15,
-        color: '#333',
+        color: c.text,
         fontWeight: '500',
     },
     input: {
         flex: 1,
         fontSize: 15,
-        color: '#333',
+        color: c.text,
         paddingVertical: 0,
     },
     eyeIcon: {
@@ -517,25 +523,25 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     forgotPasswordText: {
-        color: '#111',
+        color: c.text,
         fontSize: 14,
         fontWeight: '600',
     },
     loginButton: {
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
         height: 56,
         borderRadius: 28,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 25,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 5,
     },
     loginButtonText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -543,11 +549,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     signupText: {
-        color: '#666',
+        color: c.textSecondary,
         fontSize: 14,
     },
     signupLink: {
-        color: '#000',
+        color: c.text,
         fontWeight: 'bold',
     },
     // Modal Styles
@@ -558,7 +564,7 @@ const styles = StyleSheet.create({
         padding: 20,
     },
     modalCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         padding: 30,
         alignItems: 'center',
@@ -567,7 +573,7 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 20,
@@ -575,12 +581,12 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 10,
     },
     modalDesc: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
         textAlign: 'center',
         marginBottom: 25,
         lineHeight: 20,
@@ -588,7 +594,7 @@ const styles = StyleSheet.create({
     otpInput: {
         width: '100%',
         height: 56,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 28,
         textAlign: 'center',
         fontSize: 24,
@@ -596,10 +602,10 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 25,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
     },
     modalBtn: {
-        backgroundColor: '#000',
+        backgroundColor: c.primary,
         width: '100%',
         height: 56,
         borderRadius: 28,
@@ -608,7 +614,7 @@ const styles = StyleSheet.create({
         marginBottom: 15,
     },
     modalBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -616,14 +622,14 @@ const styles = StyleSheet.create({
         padding: 10,
     },
     modalCancel: {
-        color: '#999',
+        color: c.textMuted,
         fontSize: 14,
         fontWeight: '600',
     },
     otpInputFull: {
         width: '100%',
         height: 60,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 30,
         textAlign: 'center',
         fontSize: 28,
@@ -631,11 +637,11 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 30,
         borderWidth: 1.5,
-        borderColor: '#E5E7EB',
-        shadowColor: '#000',
+        borderColor: c.border,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 2,
     }
-});
+}));

@@ -58,6 +58,15 @@ const styles = StyleSheet.create({
         borderBottomColor: '#eee',
     },
     headerTitle: { fontSize: 18, fontWeight: 'bold' },
+    // styles.closeBtn was referenced by the header button but never defined,
+    // leaving the X with no padding or hit area beyond the icon itself.
+    closeBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     loading: {
         position: 'absolute',
         top: 0,

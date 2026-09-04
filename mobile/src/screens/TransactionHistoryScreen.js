@@ -5,8 +5,11 @@ import { ArrowLeft, Receipt } from 'lucide-react-native';
 import { walletApi } from '../api/wallet';
 import TransactionRow from '../components/TransactionRow';
 import PageLoader from '../components/PageLoader';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function TransactionHistoryScreen({ navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -30,10 +33,10 @@ export default function TransactionHistoryScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
             <SafeAreaView edges={['top']} style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-                    <ArrowLeft size={22} color="#111" />
+                    <ArrowLeft size={22} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Transaction History</Text>
                 <View style={{ width: 40 }} />
@@ -51,7 +54,7 @@ export default function TransactionHistoryScreen({ navigation }) {
                     refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => fetchTransactions(true)} />}
                     ListEmptyComponent={
                         <View style={styles.emptyBox}>
-                            <Receipt size={48} color="#D1D5DB" />
+                            <Receipt size={48} color={colors.textMuted} />
                             <Text style={styles.emptyTitle}>No transactions yet</Text>
                             <Text style={styles.emptyText}>Your deposits, earnings, and payouts will show up here.</Text>
                         </View>
@@ -62,34 +65,34 @@ export default function TransactionHistoryScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingBottom: 15,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     backBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     headerTitle: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#111',
+        color: c.text,
     },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     listContent: { padding: 20, paddingBottom: 60, flexGrow: 1 },
     emptyBox: { alignItems: 'center', justifyContent: 'center', marginTop: 80 },
-    emptyTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginTop: 16, marginBottom: 6 },
-    emptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 40 },
-});
+    emptyTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 16, marginBottom: 6 },
+    emptyText: { fontSize: 13, color: c.textMuted, textAlign: 'center', paddingHorizontal: 40 },
+}));

@@ -7,6 +7,7 @@ import Constants from 'expo-constants';
 import { Mail, MessageSquare, ChevronDown, Phone, Globe, ExternalLink } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import ScreenHeader from '../components/ScreenHeader';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const SUPPORT_EMAIL = 'support@revesta.com';
 const SUPPORT_PHONE = '+233201234567';
@@ -43,6 +44,8 @@ const FAQS = [
 ];
 
 const FaqItem = ({ item, expanded, onToggle }) => {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const rotate = React.useRef(new Animated.Value(expanded ? 1 : 0)).current;
 
     React.useEffect(() => {
@@ -64,7 +67,7 @@ const FaqItem = ({ item, expanded, onToggle }) => {
                         }],
                     }}
                 >
-                    <ChevronDown size={18} color="#111" />
+                    <ChevronDown size={18} color={colors.text} />
                 </Animated.View>
             </View>
             {expanded && <Text style={styles.faqA}>{item.a}</Text>}
@@ -73,6 +76,8 @@ const FaqItem = ({ item, expanded, onToggle }) => {
 };
 
 export default function HelpScreen({ navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const [expandedIndex, setExpandedIndex] = useState(null);
 
     const openUrl = async (url, failureMessage) => {
@@ -102,7 +107,7 @@ export default function HelpScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <ScreenHeader title="Help Center" onBack={() => navigation.goBack()} />
 
@@ -112,16 +117,16 @@ export default function HelpScreen({ navigation }) {
                     <Text style={styles.sectionTitle}>Contact Support</Text>
                     <View style={styles.contactContainer}>
                         <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
-                            <View style={[styles.iconBox, { backgroundColor: '#FAFAFA' }]}>
-                                <Mail size={22} color="#111" />
+                            <View style={[styles.iconBox, { backgroundColor: colors.surfaceAlt }]}>
+                                <Mail size={22} color={colors.text} />
                             </View>
                             <Text style={styles.contactLabel}>Email Us</Text>
                             <Text style={styles.contactSub}>Fast response</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity style={styles.contactCard} onPress={() => navigation.navigate('SupportChat')}>
-                            <View style={[styles.iconBox, { backgroundColor: '#FAFAFA' }]}>
-                                <MessageSquare size={22} color="#111" />
+                            <View style={[styles.iconBox, { backgroundColor: colors.surfaceAlt }]}>
+                                <MessageSquare size={22} color={colors.text} />
                             </View>
                             <Text style={styles.contactLabel}>Live Chat</Text>
                             <Text style={styles.contactSub}>AI Assistant</Text>
@@ -130,14 +135,14 @@ export default function HelpScreen({ navigation }) {
 
                     <View style={styles.otherContacts}>
                         <TouchableOpacity style={styles.linkRow} onPress={handleCall}>
-                            <Phone size={18} color="#666" />
+                            <Phone size={18} color={colors.textSecondary} />
                             <Text style={styles.linkText}>Call Support</Text>
-                            <ChevronDown size={18} color="#ccc" style={{ transform: [{ rotate: '-90deg' }] }} />
+                            <ChevronDown size={18} color={colors.textMuted} style={{ transform: [{ rotate: '-90deg' }] }} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.linkRow} onPress={handleWebsite}>
-                            <Globe size={18} color="#666" />
+                            <Globe size={18} color={colors.textSecondary} />
                             <Text style={styles.linkText}>Visit Website</Text>
-                            <ExternalLink size={16} color="#ccc" />
+                            <ExternalLink size={16} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>
 
@@ -162,28 +167,28 @@ export default function HelpScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFFFFF' },
-    contentWrap: { flex: 1, backgroundColor: '#fff' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surface },
+    contentWrap: { flex: 1, backgroundColor: c.surface },
     scrollPadding: { padding: 25, paddingBottom: 50 },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 20, marginTop: 10 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: c.text, marginBottom: 20, marginTop: 10 },
     contactContainer: { flexDirection: 'row', gap: 15, marginBottom: 20 },
     contactCard: {
-        flex: 1, backgroundColor: '#fff', padding: 20, borderRadius: 24,
-        alignItems: 'center', borderWidth: 1, borderColor: '#F3F4F6',
-        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
+        flex: 1, backgroundColor: c.surface, padding: 20, borderRadius: 24,
+        alignItems: 'center', borderWidth: 1, borderColor: c.borderSubtle,
+        shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 10, elevation: 2
     },
     iconBox: { width: 48, height: 48, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-    contactLabel: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A' },
-    contactSub: { fontSize: 11, color: '#999', marginTop: 4, fontWeight: '600', textTransform: 'uppercase' },
+    contactLabel: { fontSize: 14, fontWeight: 'bold', color: c.text },
+    contactSub: { fontSize: 11, color: c.textMuted, marginTop: 4, fontWeight: '600', textTransform: 'uppercase' },
     otherContacts: { marginBottom: 35 },
-    linkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-    linkText: { flex: 1, marginLeft: 15, fontSize: 15, color: '#4B5563', fontWeight: '500' },
-    faqCard: { marginBottom: 15, padding: 20, backgroundColor: '#F9FAFB', borderRadius: 20, borderWidth: 1, borderColor: '#F3F4F6' },
+    linkRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
+    linkText: { flex: 1, marginLeft: 15, fontSize: 15, color: c.textSecondary, fontWeight: '500' },
+    faqCard: { marginBottom: 15, padding: 20, backgroundColor: c.surfaceAlt, borderRadius: 20, borderWidth: 1, borderColor: c.borderSubtle },
     faqHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    faqQ: { fontSize: 15, fontWeight: 'bold', color: '#1A1A1A', flex: 1, marginRight: 15 },
-    faqA: { fontSize: 14, color: '#6B7280', lineHeight: 22, marginTop: 12 },
+    faqQ: { fontSize: 15, fontWeight: 'bold', color: c.text, flex: 1, marginRight: 15 },
+    faqA: { fontSize: 14, color: c.textSecondary, lineHeight: 22, marginTop: 12 },
     footerInfo: { alignItems: 'center', marginTop: 30 },
-    versionText: { fontSize: 12, color: '#999', fontWeight: 'bold' },
-    copyrightText: { fontSize: 11, color: '#CCC', marginTop: 4 },
-});
+    versionText: { fontSize: 12, color: c.textMuted, fontWeight: 'bold' },
+    copyrightText: { fontSize: 11, color: c.textMuted, marginTop: 4 },
+}));

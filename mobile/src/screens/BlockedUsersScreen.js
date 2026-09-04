@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { moderationApi } from '../api/moderation';
 import { BASE_URL } from '../api/client';
 import PageLoader from '../components/PageLoader';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const resolveImageUrl = (path) => {
     if (!path) return null;
@@ -23,6 +24,8 @@ const displayName = (u) =>
     [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.username || 'User';
 
 export default function BlockedUsersScreen({ navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const [blocked, setBlocked] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -77,7 +80,7 @@ export default function BlockedUsersScreen({ navigation }) {
                     <Image source={{ uri: avatar }} style={styles.avatar} />
                 ) : (
                     <View style={styles.avatarPlaceholder}>
-                        <User size={20} color="#9CA3AF" />
+                        <User size={20} color={colors.textMuted} />
                     </View>
                 )}
                 <View style={{ flex: 1 }}>
@@ -90,7 +93,7 @@ export default function BlockedUsersScreen({ navigation }) {
                     disabled={busy}
                 >
                     {busy
-                        ? <ActivityIndicator size="small" color="#111" />
+                        ? <ActivityIndicator size="small" color={colors.text} />
                         : <Text style={styles.unblockBtnText}>Unblock</Text>}
                 </TouchableOpacity>
             </View>
@@ -99,10 +102,10 @@ export default function BlockedUsersScreen({ navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
             <SafeAreaView edges={['top']} style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-                    <ArrowLeft size={22} color="#111" />
+                    <ArrowLeft size={22} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Blocked Accounts</Text>
                 <View style={{ width: 40 }} />
@@ -122,7 +125,7 @@ export default function BlockedUsersScreen({ navigation }) {
                     }
                     ListEmptyComponent={
                         <View style={styles.emptyBox}>
-                            <Ban size={44} color="#D1D5DB" />
+                            <Ban size={44} color={colors.textMuted} />
                             <Text style={styles.emptyTitle}>No blocked accounts</Text>
                             <Text style={styles.emptyText}>
                                 People you block won't be able to message you, and their listings and
@@ -136,48 +139,48 @@ export default function BlockedUsersScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FAFAFA' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingBottom: 15,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     backBtn: {
-        width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3F4F6',
+        width: 40, height: 40, borderRadius: 20, backgroundColor: c.surfaceSunken,
         alignItems: 'center', justifyContent: 'center',
     },
-    headerTitle: { fontSize: 16, fontWeight: '700', color: '#111' },
+    headerTitle: { fontSize: 16, fontWeight: '700', color: c.text },
     listContent: { padding: 20, flexGrow: 1 },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 16,
         padding: 14,
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderColor: c.borderSubtle,
     },
-    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6' },
+    avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surfaceSunken },
     avatarPlaceholder: {
-        width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6',
+        width: 44, height: 44, borderRadius: 22, backgroundColor: c.surfaceSunken,
         alignItems: 'center', justifyContent: 'center',
     },
-    name: { fontSize: 15, fontWeight: '700', color: '#111' },
-    role: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+    name: { fontSize: 15, fontWeight: '700', color: c.text },
+    role: { fontSize: 12, color: c.textMuted, marginTop: 2 },
     unblockBtn: {
         paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20,
-        backgroundColor: '#F3F4F6', minWidth: 84, alignItems: 'center',
+        backgroundColor: c.surfaceSunken, minWidth: 84, alignItems: 'center',
     },
-    unblockBtnText: { fontSize: 13, fontWeight: '700', color: '#111' },
+    unblockBtnText: { fontSize: 13, fontWeight: '700', color: c.text },
     emptyBox: { alignItems: 'center', justifyContent: 'center', marginTop: 90, paddingHorizontal: 30 },
-    emptyTitle: { fontSize: 16, fontWeight: '700', color: '#111', marginTop: 16, marginBottom: 6 },
-    emptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', lineHeight: 19 },
-});
+    emptyTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginTop: 16, marginBottom: 6 },
+    emptyText: { fontSize: 13, color: c.textMuted, textAlign: 'center', lineHeight: 19 },
+}));

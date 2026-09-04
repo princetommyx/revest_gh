@@ -3,7 +3,7 @@ import {
     View, Text, StyleSheet, TouchableOpacity,
     ScrollView, StatusBar, Image
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWallet } from '../hooks/useWallet';
 import { useAuth } from '../context/AuthContext';
@@ -25,7 +25,12 @@ export default function WalletScreen() {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
     const navigation = useNavigation();
-    const { data: wallet, isLoading } = useWallet();
+    const { data: wallet, isLoading, refetch } = useWallet();
+
+    // Re-sync on focus. Topping up happens on another screen, so without this
+    // the balance shown here stays whatever it was when the screen first
+    // mounted - a user would top up and come back to the old number.
+    useFocusEffect(React.useCallback(() => { refetch(); }, [refetch]));
     const [selectedMethod, setSelectedMethod] = useState('CASH');
 
     if (isLoading) {
