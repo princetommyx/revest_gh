@@ -29,8 +29,17 @@ from django.views.decorators.vary import vary_on_cookie
 @method_decorator(cache_page(1), name='list')
 class ListingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
+        from moderation.models import BlockedUser
+
         queryset = Listing.objects.all().select_related('seller')
-        
+
+        # Blocking hides the other party's listings both ways - the blocker
+        # shouldn't see them, and the blocked user shouldn't be able to keep
+        # reaching the blocker through their own listings either.
+        blocked_ids = BlockedUser.blocked_user_ids(self.request.user)
+        if blocked_ids:
+            queryset = queryset.exclude(seller_id__in=blocked_ids)
+
         lat = self.request.query_params.get('lat')
         lon = self.request.query_params.get('lon')
         

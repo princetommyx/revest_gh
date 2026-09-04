@@ -64,7 +64,17 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             # Pending jobs nearby
             two_hours_ago = timezone.now() - timedelta(hours=2)
             pending_q = models.Q(status='PENDING', created_at__gte=two_hours_ago)
-            
+
+            # A blocked collector must not be able to pick up the blocker's
+            # job and turn up at their address. Only applied to the open
+            # board - a job already accepted stays visible to its collector so
+            # an in-progress pickup can still be completed or cancelled
+            # cleanly rather than vanishing mid-run.
+            from moderation.models import BlockedUser
+            blocked_ids = BlockedUser.blocked_user_ids(user)
+            if blocked_ids:
+                pending_q &= ~models.Q(provider_id__in=blocked_ids)
+
             lat = self.request.query_params.get('lat')
             lon = self.request.query_params.get('lon')
             
@@ -526,6 +536,15 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # so a recycler was never pushed a 'new_request' event or push
         # notification for a job they were otherwise fully able to accept.
         online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
+
+        # Don't alert a collector to a job they can't see on the board anyway
+        # (see get_queryset) - otherwise a block still leaks a push notification
+        # naming the blocker's material and area.
+        from moderation.models import BlockedUser
+        blocked_ids = BlockedUser.blocked_user_ids(request.provider)
+        if blocked_ids:
+            online_collectors = online_collectors.exclude(id__in=blocked_ids)
+
         if request.vehicle_type:
             online_collectors = online_collectors.filter(
                 models.Q(vehicle_type=request.vehicle_type) | 

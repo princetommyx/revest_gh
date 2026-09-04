@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'chat',
     'admin_dashboard',  # Admin dashboard system
     'wallet',  # Enabled for mobile app
+    'moderation',  # User blocking + content reporting
 ]
 
 MIDDLEWARE = [

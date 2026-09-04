@@ -32,6 +32,7 @@ urlpatterns = [
     path('api/v1/users/', include('users.urls')),  # User profiles (will separate later)
     path('api/v1/admin/', include('admin_dashboard.urls')),  # Admin dashboard
     path('api/v1/wallet/', include('wallet.urls')),  # Wallet & transactions
+    path('api/v1/moderation/', include('moderation.urls')),  # Blocking & reporting
     path('api/v1/market/analyze-waste/', AnalyzeWasteView.as_view(), name='analyze-waste'), # AI Analysis
     path('api/v1/support/chat/', SupportAIChatView.as_view(), name='support-ai-chat'),
     path('api/v1/', include(router_v1.urls)),  # ViewSet routes

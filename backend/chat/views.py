@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, filters, status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
@@ -25,12 +26,17 @@ class MessageViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """
-        Return messages where current user is sender OR receiver
+        Return messages where current user is sender OR receiver, excluding
+        anyone on either side of a block.
         """
+        from moderation.models import BlockedUser
+
         user = self.request.user
-        return Message.objects.filter(
-            Q(sender=user) | Q(receiver=user)
-        ).order_by('-timestamp')
+        blocked_ids = BlockedUser.blocked_user_ids(user)
+        qs = Message.objects.filter(Q(sender=user) | Q(receiver=user))
+        if blocked_ids:
+            qs = qs.exclude(Q(sender_id__in=blocked_ids) | Q(receiver_id__in=blocked_ids))
+        return qs.order_by('-timestamp')
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -38,6 +44,14 @@ class MessageViewSet(viewsets.ModelViewSet):
         return MessageSerializer
 
     def perform_create(self, serializer):
+        from moderation.models import BlockedUser
+
+        # Enforced in both directions: the person who was blocked must not be
+        # able to keep messaging the person who blocked them.
+        receiver = serializer.validated_data.get('receiver')
+        if receiver and BlockedUser.is_blocked_between(self.request.user, receiver):
+            raise PermissionDenied("You can't send messages to this user.")
+
         message = serializer.save(sender=self.request.user)
 
         # Send email notification
@@ -77,14 +91,18 @@ class MessageViewSet(viewsets.ModelViewSet):
         Get list of unique users the current user has chatted with,
         along with the last message.
         """
+        from moderation.models import BlockedUser
+
         user = request.user
         # This is a simplified approach. Ideally we'd have a Conversation model.
         # Check messages sent or received
         sent_to = Message.objects.filter(sender=user).values_list('receiver', flat=True).distinct()
         received_from = Message.objects.filter(receiver=user).values_list('sender', flat=True).distinct()
-        
+
         contact_ids = set(list(sent_to) + list(received_from))
-        
+        # Blocked threads disappear from the inbox entirely, in both directions.
+        contact_ids -= BlockedUser.blocked_user_ids(user)
+
         conversations = []
         for contact_id in contact_ids:
             contact = User.objects.filter(id=contact_id).first()
@@ -116,12 +134,20 @@ class MessageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='with/(?P<user_id>[^/.]+)')
     def chat_with(self, request, user_id=None):
         """Get full chat history with a specific user"""
+        from moderation.models import BlockedUser
+
         user = request.user
         other_user = User.objects.filter(id=user_id).first()
-        
+
         if not other_user:
             return Response({'error': 'User not found'}, status=404)
-            
+
+        if BlockedUser.is_blocked_between(user, other_user):
+            return Response(
+                {'error': 'This conversation is unavailable.', 'code': 'blocked'},
+                status=403,
+            )
+
         messages = Message.objects.filter(
             (Q(sender=user) & Q(receiver=other_user)) |
             (Q(sender=other_user) & Q(receiver=user))

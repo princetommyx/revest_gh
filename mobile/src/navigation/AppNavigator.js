@@ -532,6 +532,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="SupportChat" component={SupportChatScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="PickupHistory" component={PickupHistoryScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="TransactionHistory" component={TransactionHistoryScreen} options={{ headerShown: false }} />
+                        <Stack.Screen name="BlockedUsers" component={require('../screens/BlockedUsersScreen').default} options={{ headerShown: false }} />
                         <Stack.Screen name="SavedLocations" component={SavedLocationsScreen} options={{ headerShown: false }} />
                         <Stack.Screen name="KYCVerification" component={KYCVerificationScreen} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false, presentation: 'modal' }} />

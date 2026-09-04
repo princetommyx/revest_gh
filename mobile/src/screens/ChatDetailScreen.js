@@ -2,11 +2,14 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, FlatList, TextInput,
     TouchableOpacity, KeyboardAvoidingView, Platform,
-    ActivityIndicator, Dimensions, StatusBar, Image
+    ActivityIndicator, Dimensions, StatusBar, Image, Modal, Alert
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { chatApi } from '../api/chat';
-import { Send, User, ChevronLeft } from 'lucide-react-native';
+import { moderationApi } from '../api/moderation';
+import ReportSheet from '../components/ReportSheet';
+import { Send, User, ChevronLeft, MoreVertical, Flag, Ban } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useChatSocket } from '../hooks/useChatSocket';
 
@@ -20,6 +23,34 @@ export default function ChatDetailScreen({ route, navigation }) {
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const flatListRef = useRef();
+
+    const [menuVisible, setMenuVisible] = useState(false);
+    // { type: 'USER' | 'MESSAGE', id, label } - null when the sheet is closed.
+    const [reportTarget, setReportTarget] = useState(null);
+
+    const confirmBlock = () => {
+        setMenuVisible(false);
+        Alert.alert(
+            `Block ${contactName}?`,
+            "They won't be able to message you, and you won't see their listings or pickup requests. You can unblock them from your profile.",
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Block',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await moderationApi.blockUser(contactId);
+                            Toast.show({ type: 'success', text1: `${contactName} blocked` });
+                            navigation.goBack();
+                        } catch (error) {
+                            Toast.show({ type: 'error', text1: 'Could not block', text2: 'Please try again.' });
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     useEffect(() => {
         fetchMessages();
@@ -60,14 +91,23 @@ export default function ChatDetailScreen({ route, navigation }) {
         const isMine = (item.sender?.id ?? item.sender) === user?.id;
         return (
             <View style={[styles.messageRow, isMine ? styles.myMessageRow : styles.theirMessageRow]}>
-                <View style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}>
+                <TouchableOpacity
+                    activeOpacity={isMine ? 1 : 0.7}
+                    // Reporting has to be reachable from the offending content
+                    // itself, not just the person - long-press any message the
+                    // other party sent. Your own messages aren't reportable.
+                    onLongPress={isMine ? undefined : () => setReportTarget({
+                        type: 'MESSAGE', id: item.id, label: 'this message',
+                    })}
+                    style={[styles.bubble, isMine ? styles.myBubble : styles.theirBubble]}
+                >
                     <Text style={[styles.messageText, isMine ? styles.myText : styles.theirText]}>
                         {item.content}
                     </Text>
                     <Text style={[styles.timeText, isMine ? styles.myTime : styles.theirTime]}>
                         {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </Text>
-                </View>
+                </TouchableOpacity>
             </View>
         );
     };
@@ -108,9 +148,44 @@ export default function ChatDetailScreen({ route, navigation }) {
                         </View>
                     </View>
 
-                    <View style={styles.headerActions} />
+                    <View style={styles.headerActions}>
+                        <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
+                            <MoreVertical size={22} color="#1A1A1A" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </SafeAreaView>
+
+            {/* Report / block menu */}
+            <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+                <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuVisible(false)}>
+                    <View style={styles.menuCard}>
+                        <TouchableOpacity
+                            style={styles.menuItem}
+                            onPress={() => {
+                                setMenuVisible(false);
+                                setReportTarget({ type: 'USER', id: contactId, label: contactName });
+                            }}
+                        >
+                            <Flag size={18} color="#111" />
+                            <Text style={styles.menuItemText}>Report {contactName}</Text>
+                        </TouchableOpacity>
+                        <View style={styles.menuDivider} />
+                        <TouchableOpacity style={styles.menuItem} onPress={confirmBlock}>
+                            <Ban size={18} color="#DC2626" />
+                            <Text style={[styles.menuItemText, { color: '#DC2626' }]}>Block {contactName}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            <ReportSheet
+                visible={!!reportTarget}
+                onClose={() => setReportTarget(null)}
+                targetType={reportTarget?.type}
+                targetId={reportTarget?.id}
+                targetLabel={reportTarget?.label}
+            />
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
@@ -230,6 +305,41 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 5,
     },
+    menuBtn: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    menuOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.25)',
+        justifyContent: 'flex-start',
+        alignItems: 'flex-end',
+        paddingTop: Platform.OS === 'ios' ? 100 : 70,
+        paddingRight: 16,
+    },
+    menuCard: {
+        backgroundColor: '#fff',
+        borderRadius: 16,
+        paddingVertical: 6,
+        minWidth: 220,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    menuItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+    },
+    menuItemText: { fontSize: 15, fontWeight: '600', color: '#111', flexShrink: 1 },
+    menuDivider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 12 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     messageList: { padding: 20, paddingBottom: 30 },
     messageRow: { marginBottom: 12, width: '100%' },

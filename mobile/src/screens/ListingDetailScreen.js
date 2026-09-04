@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
     ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, 
     Weight, MapPin, Trash, Pencil, MessageCircle, Package, 
-    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase
+    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase, Flag
 } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import { BASE_URL } from '../api/client';
 import { LinearGradient } from 'expo-linear-gradient';
 import PageLoader from '../components/PageLoader';
+import ReportSheet from '../components/ReportSheet';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
 
@@ -31,6 +32,9 @@ export default function ListingDetailScreen({ route, navigation }) {
     const [loading, setLoading] = useState(true);
     const [myLocation, setMyLocation] = useState(null);
     const [showFullDesc, setShowFullDesc] = useState(false);
+    // Must sit with the other hooks, above the early returns below - placing it
+    // after them makes the hook order change once loading finishes.
+    const [reportVisible, setReportVisible] = useState(false);
 
     useEffect(() => {
         fetchListing();
@@ -263,6 +267,15 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
                     )}
 
+                    {/* Reporting has to sit on the content itself, so this
+                        stays with the listing rather than hiding in a menu. */}
+                    {!isOwner && listing.seller && (
+                        <TouchableOpacity style={styles.reportLink} onPress={() => setReportVisible(true)}>
+                            <Flag size={14} color="#9CA3AF" />
+                            <Text style={styles.reportLinkText}>Report this listing</Text>
+                        </TouchableOpacity>
+                    )}
+
                     {/* Similar Waste */}
                     {similarListings.length > 0 && (
                         <View style={styles.similarSection}>
@@ -361,11 +374,28 @@ export default function ListingDetailScreen({ route, navigation }) {
                     </View>
                 )}
             </View>
+
+            <ReportSheet
+                visible={reportVisible}
+                onClose={() => setReportVisible(false)}
+                targetType="LISTING"
+                targetId={listing?.id}
+                targetLabel="this listing"
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
+    reportLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingVertical: 14,
+        marginTop: 4,
+    },
+    reportLinkText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
     container: { flex: 1, backgroundColor: '#fff' },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
     errorText: { fontSize: 16, color: '#111', marginBottom: 12 },

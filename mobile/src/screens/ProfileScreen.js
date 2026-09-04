@@ -15,7 +15,7 @@ import Toast from 'react-native-toast-message';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
     UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
-    Recycle, UserX, Trash2, X
+    Recycle, UserX, Trash2, X, Ban
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
@@ -300,7 +300,16 @@ export default function ProfileScreen({ navigation }) {
                             iconBg="#ECFDF5"
                             onPress={() => navigation.navigate('KYCVerification')}
                         />
-                        <NavLink title="Security" icon={ShieldAlert} iconColor="#EF4444" iconBg="#FEF2F2" onPress={() => navigation.navigate('Security')} isLast />
+                        <NavLink title="Security" icon={ShieldAlert} iconColor="#EF4444" iconBg="#FEF2F2" onPress={() => navigation.navigate('Security')} />
+                        <NavLink
+                            title="Blocked Accounts"
+                            subtitle="People you've blocked from messaging you"
+                            icon={Ban}
+                            iconColor="#6B7280"
+                            iconBg="#F3F4F6"
+                            onPress={() => navigation.navigate('BlockedUsers')}
+                            isLast
+                        />
                     </NavCard>
                 </View>
 
