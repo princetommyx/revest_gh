@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Truck, ChevronRight, Search } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
-const BRAND_GREEN = '#059669';
 
 /**
  * Bolt-style "you have something in progress" takeover for the Home
@@ -10,6 +10,8 @@ const BRAND_GREEN = '#059669';
  * lands, instead of only inside the Pickups tab.
  */
 export default function ActivePickupBanner({ job, role, onPress }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const pulseAnim = useRef(new Animated.Value(0.4)).current;
     const isPending = job.status === 'PENDING';
 
@@ -51,26 +53,26 @@ export default function ActivePickupBanner({ job, role, onPress }) {
             <View style={styles.iconBox}>
                 {isPending ? (
                     <Animated.View style={{ opacity: pulseAnim }}>
-                        <Search size={22} color="#fff" />
+                        <Search size={22} color={colors.onPrimary} />
                     </Animated.View>
                 ) : (
-                    <Truck size={22} color="#fff" />
+                    <Truck size={22} color={colors.onPrimary} />
                 )}
             </View>
             <View style={styles.textBlock}>
                 <Text style={styles.title}>{title}</Text>
                 <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text>
             </View>
-            <ChevronRight size={20} color="#fff" />
+            <ChevronRight size={20} color={colors.onPrimary} />
         </TouchableOpacity>
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     card: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: BRAND_GREEN,
+        backgroundColor: c.accent,
         borderRadius: 20,
         padding: 16,
         marginBottom: 16,
@@ -90,11 +92,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#fff',
+        color: c.onPrimary,
         marginBottom: 2,
     },
     subtitle: {
         fontSize: 12,
         color: 'rgba(255,255,255,0.85)',
     },
-});
+}));

@@ -15,6 +15,7 @@
  */
 
 export const lightColors = {
+    isDark: false,
     // Grounds
     bg: '#FAFAFA',
     surface: '#FFFFFF',
@@ -57,6 +58,7 @@ export const lightColors = {
 };
 
 export const darkColors = {
+    isDark: true,
     // Grounds - neutrals carry a slight green bias so they sit with the brand
     // accent rather than reading as generic grey.
     bg: '#0B0F0E',

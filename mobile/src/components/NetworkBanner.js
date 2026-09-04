@@ -3,8 +3,11 @@ import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { useNetInfo } from '@react-native-community/netinfo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WifiOff, Wifi } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function NetworkBanner() {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const netInfo = useNetInfo();
     const insets = useSafeAreaInsets();
     
@@ -57,7 +60,7 @@ export default function NetworkBanner() {
     }
 
     const isOffline = status === 'offline';
-    const backgroundColor = isOffline ? '#EF4444' : '#10B981'; // Red-500, Emerald-500
+    const backgroundColor = isOffline ? colors.danger : colors.success;
     const Icon = isOffline ? WifiOff : Wifi;
     const text = isOffline ? 'No internet connection' : 'Back online';
 
@@ -71,14 +74,14 @@ export default function NetworkBanner() {
             }
         ]}>
             <View style={styles.content}>
-                <Icon size={16} color="#FFFFFF" style={styles.icon} />
+                <Icon size={16} color={colors.onPrimary} style={styles.icon} />
                 <Text style={styles.text}>{text}</Text>
             </View>
         </Animated.View>
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         position: 'absolute',
         top: 0,
@@ -87,7 +90,7 @@ const styles = StyleSheet.create({
         zIndex: 99999, // Ensure it's on top of everything
         elevation: 99999,
         paddingBottom: 10,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
@@ -102,8 +105,8 @@ const styles = StyleSheet.create({
         marginRight: 8,
     },
     text: {
-        color: '#FFFFFF',
+        color: c.onPrimary,
         fontSize: 14,
         fontWeight: '600',
     }
-});
+}));

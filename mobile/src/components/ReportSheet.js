@@ -6,6 +6,7 @@ import {
 import { X, Check, Flag } from 'lucide-react-native';
 import Toast from 'react-native-toast-message';
 import { moderationApi, REPORT_REASONS } from '../api/moderation';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 /**
  * One report flow shared by every user-generated surface - a chat message, a
@@ -21,6 +22,8 @@ import { moderationApi, REPORT_REASONS } from '../api/moderation';
  *   onReported: optional callback after a successful report
  */
 export default function ReportSheet({ visible, onClose, targetType, targetId, targetLabel, onReported }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const [reason, setReason] = useState(null);
     const [details, setDetails] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -66,7 +69,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                         <View style={styles.headerRow}>
                             <View style={styles.titleWrap}>
                                 <View style={styles.iconBox}>
-                                    <Flag size={16} color="#B45309" />
+                                    <Flag size={16} color={colors.warning} />
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.title}>Report {targetLabel}</Text>
@@ -74,7 +77,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                                 </View>
                             </View>
                             <TouchableOpacity onPress={close} style={styles.closeBtn}>
-                                <X size={18} color="#6B7280" />
+                                <X size={18} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -90,7 +93,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                                         <Text style={[styles.reasonText, active && styles.reasonTextActive]}>
                                             {r.label}
                                         </Text>
-                                        {active && <Check size={18} color="#111" />}
+                                        {active && <Check size={18} color={colors.text} />}
                                     </TouchableOpacity>
                                 );
                             })}
@@ -98,7 +101,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                             <TextInput
                                 style={styles.detailsInput}
                                 placeholder="Add any details (optional)"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor={colors.textMuted}
                                 value={details}
                                 onChangeText={setDetails}
                                 multiline
@@ -112,7 +115,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                             disabled={!reason || submitting}
                         >
                             {submitting
-                                ? <ActivityIndicator color="#fff" />
+                                ? <ActivityIndicator color={colors.onPrimary} />
                                 : <Text style={styles.submitBtnText}>Submit report</Text>}
                         </TouchableOpacity>
                     </View>
@@ -122,10 +125,10 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
     sheet: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
         paddingHorizontal: 20,
@@ -136,32 +139,32 @@ const styles = StyleSheet.create({
     headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
     titleWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
     iconBox: {
-        width: 34, height: 34, borderRadius: 10, backgroundColor: '#FFFBEB',
+        width: 34, height: 34, borderRadius: 10, backgroundColor: c.warningSoft,
         alignItems: 'center', justifyContent: 'center',
     },
-    title: { fontSize: 17, fontWeight: '800', color: '#111', marginBottom: 2 },
-    subtitle: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
+    title: { fontSize: 17, fontWeight: '800', color: c.text, marginBottom: 2 },
+    subtitle: { fontSize: 13, color: c.textSecondary, lineHeight: 18 },
     closeBtn: {
-        width: 30, height: 30, borderRadius: 15, backgroundColor: '#F3F4F6',
+        width: 30, height: 30, borderRadius: 15, backgroundColor: c.surfaceSunken,
         alignItems: 'center', justifyContent: 'center', marginLeft: 8,
     },
     reasonRow: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        borderWidth: 1.5, borderColor: '#F3F4F6', borderRadius: 14,
+        borderWidth: 1.5, borderColor: c.borderSubtle, borderRadius: 14,
         paddingHorizontal: 16, paddingVertical: 14, marginBottom: 10,
     },
-    reasonRowActive: { borderColor: '#111', backgroundColor: '#FAFAFA' },
-    reasonText: { fontSize: 14.5, color: '#4B5563' },
-    reasonTextActive: { color: '#111', fontWeight: '700' },
+    reasonRowActive: { borderColor: c.primary, backgroundColor: c.bg },
+    reasonText: { fontSize: 14.5, color: c.textSecondary },
+    reasonTextActive: { color: c.text, fontWeight: '700' },
     detailsInput: {
-        borderWidth: 1.5, borderColor: '#F3F4F6', borderRadius: 14,
+        borderWidth: 1.5, borderColor: c.borderSubtle, borderRadius: 14,
         paddingHorizontal: 16, paddingVertical: 12, minHeight: 88,
-        fontSize: 14.5, color: '#111', textAlignVertical: 'top', marginTop: 4, marginBottom: 8,
+        fontSize: 14.5, color: c.text, textAlignVertical: 'top', marginTop: 4, marginBottom: 8,
     },
     submitBtn: {
-        backgroundColor: '#111', borderRadius: 16, paddingVertical: 16,
+        backgroundColor: c.primary, borderRadius: 16, paddingVertical: 16,
         alignItems: 'center', marginTop: 12,
     },
     submitBtnDisabled: { opacity: 0.4 },
-    submitBtnText: { color: '#fff', fontSize: 15.5, fontWeight: '700' },
-});
+    submitBtnText: { color: c.onPrimary, fontSize: 15.5, fontWeight: '700' },
+}));

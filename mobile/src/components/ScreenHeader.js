@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 /**
  * The app's single header treatment.
@@ -15,11 +16,13 @@ import { ArrowLeft } from 'lucide-react-native';
  * the title optically centred.
  */
 export default function ScreenHeader({ title, onBack, right, borderless = false }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     return (
         <SafeAreaView edges={['top']} style={[styles.header, borderless && styles.borderless]}>
             {onBack ? (
                 <TouchableOpacity style={styles.backBtn} onPress={onBack} activeOpacity={0.6}>
-                    <ArrowLeft size={22} color="#111827" strokeWidth={2.5} />
+                    <ArrowLeft size={22} color={colors.text} strokeWidth={2.5} />
                 </TouchableOpacity>
             ) : (
                 <View style={styles.slot} />
@@ -32,16 +35,16 @@ export default function ScreenHeader({ title, onBack, right, borderless = false 
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
         paddingBottom: 14,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: c.borderSubtle,
     },
     borderless: {
         borderBottomWidth: 0,
@@ -50,7 +53,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -66,7 +69,7 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 17,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginHorizontal: 8,
     },
-});
+}));

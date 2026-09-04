@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import { Check, X, TriangleAlert, Info, Bell } from 'lucide-react-native';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -13,6 +14,8 @@ const VARIANTS = {
 };
 
 const CustomToast = ({ type = 'info', title, text2 }) => {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const { Icon, color } = VARIANTS[type] || VARIANTS.info;
     const entrance = useRef(new Animated.Value(0)).current;
 
@@ -40,7 +43,7 @@ const CustomToast = ({ type = 'info', title, text2 }) => {
         >
             <View style={styles.card}>
                 <View style={[styles.iconDot, { backgroundColor: color }]}>
-                    <Icon size={14} color="#111" strokeWidth={3} />
+                    <Icon size={14} color={colors.text} strokeWidth={3} />
                 </View>
                 <View style={styles.textWrap}>
                     {title ? <Text style={styles.title} numberOfLines={1}>{title}</Text> : null}
@@ -59,7 +62,7 @@ export const toastConfig = {
     notification: (props) => <CustomToast type="notification" title={props.text1} text2={props.text2} />,
 };
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     wrapper: {
         width: width * 0.92,
         marginTop: 10,
@@ -67,11 +70,11 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'flex-start',
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 16,
         paddingVertical: 14,
         paddingHorizontal: 16,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.25,
         shadowRadius: 16,
@@ -92,7 +95,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#fff',
+        color: c.onPrimary,
         marginBottom: 2,
     },
     subtext: {
@@ -100,4 +103,4 @@ const styles = StyleSheet.create({
         color: 'rgba(255,255,255,0.7)',
         lineHeight: 18,
     },
-});
+}));

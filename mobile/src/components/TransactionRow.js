@@ -2,8 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { getTxnMeta, isCreditAmount, STATUS_LABELS } from '../utils/walletDisplay';
 import { formatRelativeTime } from '../utils/dateFormat';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 export default function TransactionRow({ item }) {
+    const styles = useStyles();
+    const { colors } = useTheme();
     const { Icon, color } = getTxnMeta(item.transaction_type);
     const isCredit = isCreditAmount(item.amount);
     const statusMeta = STATUS_LABELS[item.status];
@@ -22,7 +25,7 @@ export default function TransactionRow({ item }) {
                 </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-                <Text style={[styles.txnAmount, { color: isCredit ? '#10B981' : '#EF4444' }]}>
+                <Text style={[styles.txnAmount, { color: isCredit ? colors.success : colors.danger }]}>
                     {isCredit ? '+' : '-'} ₵{Math.abs(parseFloat(item.amount)).toFixed(2)}
                 </Text>
                 {statusMeta ? (
@@ -35,7 +38,7 @@ export default function TransactionRow({ item }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     txnItem: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -44,7 +47,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 16,
         marginBottom: 12,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.02,
         shadowRadius: 5,
@@ -65,12 +68,12 @@ const styles = StyleSheet.create({
     txnTitle: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#111',
+        color: c.text,
         marginBottom: 4,
     },
     txnSubtitle: {
         fontSize: 13,
-        color: '#666',
+        color: c.textSecondary,
     },
     txnAmount: {
         fontSize: 15,
@@ -78,7 +81,7 @@ const styles = StyleSheet.create({
     },
     txnTime: {
         fontSize: 12,
-        color: '#9CA3AF',
+        color: c.textMuted,
         marginTop: 4,
     },
     statusTag: {
@@ -88,4 +91,4 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 0.3,
     },
-});
+}));

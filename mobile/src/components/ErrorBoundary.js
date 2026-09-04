@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component {
                     )}
 
                     <TouchableOpacity style={styles.btn} onPress={this.handleReset}>
-                        <RefreshCcw size={20} color="#fff" />
+                        <RefreshCcw size={20} color={'#FFFFFF'} />
                         <Text style={styles.btnText}>Try Again</Text>
                     </TouchableOpacity>
                 </View>
@@ -51,28 +51,32 @@ export class ErrorBoundary extends React.Component {
     }
 }
 
+// Deliberately theme-independent. This is a class component (hooks aren't
+// available) and it renders when something upstream has already thrown -
+// possibly the theme provider itself - so it must be able to paint without
+// reading context.
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: '#FFFFFF',
         padding: 20
     },
     title: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: '#E74C3C',
+        color: '#EF4444',
         marginBottom: 10
     },
     subtitle: {
         fontSize: 16,
-        color: '#666',
+        color: '#6B7280',
         textAlign: 'center',
         marginBottom: 30
     },
     debugBox: {
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F9FAFB',
         padding: 10,
         borderRadius: 8,
         marginBottom: 20,
@@ -81,19 +85,19 @@ const styles = StyleSheet.create({
     },
     debugText: {
         fontSize: 12,
-        color: '#333',
+        color: '#111111',
         fontFamily: 'monospace'
     },
     btn: {
         flexDirection: 'row',
-        backgroundColor: '#111',
+        backgroundColor: '#111111',
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 25,
         alignItems: 'center'
     },
     btnText: {
-        color: '#fff',
+        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
         marginLeft: 10
