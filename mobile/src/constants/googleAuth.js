@@ -5,7 +5,7 @@
 // accepts either an ID token or a plain OAuth access token, so requesting
 // just an access token here keeps this working without extra token-audience
 // configuration.
-export const GOOGLE_ANDROID_CLIENT_ID = '132479987352-0mb8h8gaaj2c8qg8jdebgd7u7nsglau3.apps.googleusercontent.com';
+export const GOOGLE_ANDROID_CLIENT_ID = '196345204120-ds6ap4upj2dm1v5l7udibdsim04hm6bv.apps.googleusercontent.com';
 export const GOOGLE_WEB_CLIENT_ID = '132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com';
 
 // No iOS OAuth client has been registered yet (there's no GoogleService-Info.plist
