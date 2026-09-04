@@ -21,11 +21,20 @@ export function useGoogleAuth({ onToken, onError }) {
         if (!response) return;
 
         if (response.type === 'success') {
-            const token = response.authentication?.accessToken;
+            // Prefer the ID token: it's a signed JWT carrying its own audience,
+            // so the backend can verify offline that it was minted for *this*
+            // app. An access token proves nothing about which app it came from
+            // on its own, and costs the server two round trips to Google to
+            // check. Access token stays as a fallback in case Google returned
+            // no id_token for this grant.
+            const idToken = response.authentication?.idToken || response.params?.id_token;
+            const accessToken = response.authentication?.accessToken;
+            const token = idToken || accessToken;
+
             if (token) {
                 onToken?.(token);
             } else {
-                onError?.('Google did not return an access token.');
+                onError?.('Google did not return a usable token.');
             }
         } else if (response.type === 'error') {
             onError?.(response.error?.message || 'Google sign-in failed.');

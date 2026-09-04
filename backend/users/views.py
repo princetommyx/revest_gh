@@ -8,7 +8,11 @@ import random
 import logging
 import os
 import threading
+import requests as http_requests
 from google.oauth2 import id_token
+# NB: this shadows the `requests` HTTP library within this module - it is
+# google.auth's transport adapter, and has no .get()/.post(). Use
+# `http_requests` above for actual HTTP calls.
 from google.auth.transport import requests
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, permissions, status, views, viewsets
@@ -907,39 +911,65 @@ class GoogleLoginView(views.APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        allowed_audiences = getattr(settings, "GOOGLE_OAUTH_CLIENT_IDS", [])
+
         try:
-            # First attempt: Verify as an ID Token (credential)
+            # Preferred path: an ID token. It's signed by Google and carries its
+            # own audience, so it can be verified offline against our client IDs
+            # with no outbound call.
             id_info = None
             try:
-                print(
-                    "DEBUG: Attempting to verify token as Google ID Token..."
-                )
-                # Verify token and check audience matches our Client ID
-                id_info = id_token.verify_oauth2_token(
-                    token,
-                    requests.Request(),
-                    audience="132479987352-q4qc0odon0kcvb1vbs5gb8m385soge6v.apps.googleusercontent.com",
-                )
-                print("DEBUG: ID Token verification successful")
+                logger.info("Google login: verifying token as an ID token")
+                id_info = id_token.verify_oauth2_token(token, requests.Request())
+
+                # verify_oauth2_token without an explicit audience validates the
+                # signature and expiry but NOT who the token was minted for, so
+                # the audience check has to happen here. The app has more than
+                # one OAuth client (Android and Web issue different audiences),
+                # which is why this is a set rather than a single value.
+                aud = id_info.get("aud")
+                if allowed_audiences and aud not in allowed_audiences:
+                    raise ValueError(f"ID token audience {aud} is not one of this app's clients")
+
+                if id_info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+                    raise ValueError("Unexpected token issuer")
+
             except Exception as e:
-                print(
-                    f"DEBUG: ID Token verification failed ({e}), attempting Access Token /userinfo fallack..."
+                logger.info(f"Google login: not a usable ID token ({e}); trying access token")
+
+                # Fallback for older app builds that send an OAuth access token.
+                # /userinfo alone is NOT enough: it happily describes the owner
+                # of ANY valid Google access token, whichever app minted it - so
+                # on its own it would let a token issued to an unrelated app be
+                # replayed here to sign in as that user. Check the audience via
+                # tokeninfo first, and only then trust it.
+                tokeninfo_res = http_requests.get(
+                    "https://oauth2.googleapis.com/tokeninfo",
+                    params={"access_token": token},
+                    timeout=10,
                 )
-                # Second attempt: Treat as Access Token and fetch UserInfo
-                userinfo_res = requests.get(
+                if tokeninfo_res.status_code != 200:
+                    raise ValueError("Google rejected this token")
+
+                tokeninfo = tokeninfo_res.json()
+                aud = tokeninfo.get("aud")
+                if allowed_audiences and aud not in allowed_audiences:
+                    raise ValueError(f"Access token audience {aud} is not one of this app's clients")
+
+                userinfo_res = http_requests.get(
                     "https://www.googleapis.com/oauth2/v3/userinfo",
                     headers={"Authorization": f"Bearer {token}"},
+                    timeout=10,
                 )
-                if userinfo_res.status_code == 200:
-                    id_info = userinfo_res.json()
-                    print("DEBUG: Access Token UserInfo fetch successful")
-                else:
-                    print(
-                        f"DEBUG: Access Token fetch failed: {userinfo_res.text}"
-                    )
-                    raise ValueError(
-                        f"Failed to fetch userinfo: {userinfo_res.text}"
-                    )
+                if userinfo_res.status_code != 200:
+                    raise ValueError("Could not read the Google profile for this token")
+
+                id_info = userinfo_res.json()
+                # tokeninfo is the verified source for identity; don't let an
+                # unverified /userinfo body override it.
+                id_info["sub"] = tokeninfo.get("sub", id_info.get("sub"))
+                if tokeninfo.get("email"):
+                    id_info["email"] = tokeninfo["email"]
 
             if not id_info:
                 return Response(
@@ -1017,6 +1047,15 @@ class GoogleLoginView(views.APIView):
                 except Exception as e:
                     logger.error(f"Error in new Google user notification: {e}")
 
+            # Signing back in reactivates a self-deactivated account, the same
+            # as the OTP login path - otherwise a user who deactivated could
+            # only ever get back in with a password, which Google-auth accounts
+            # don't have.
+            reactivated = user.is_deactivated
+            if reactivated:
+                user.is_deactivated = False
+                user.save(update_fields=["is_deactivated"])
+
             # Generate tokens
             refresh = RefreshToken.for_user(user)
 
@@ -1030,6 +1069,7 @@ class GoogleLoginView(views.APIView):
                 {
                     "refresh": str(refresh),
                     "access": str(refresh.access_token),
+                    "reactivated": reactivated,
                     "user": {
                         "id": user.id,
                         "username": user.username,
