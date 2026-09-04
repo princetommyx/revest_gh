@@ -95,7 +95,7 @@ export default function PickupHistoryScreen() {
         return (
             <TouchableOpacity style={styles.row} activeOpacity={0.7}>
                 <Image
-                    source={{ uri: getMaterialImage(item.material_type) }}
+                    source={{ uri: item.listing_image || getMaterialImage(item.material_type) }}
                     style={styles.thumb}
                     contentFit="cover"
                     cachePolicy="memory-disk"

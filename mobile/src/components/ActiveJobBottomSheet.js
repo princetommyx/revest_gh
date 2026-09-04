@@ -18,7 +18,9 @@ const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.74;
 
 // The final node always renders as a checkmark once reached (handled by
 // PickupProgressRoadmap itself), so this icon is only a fallback.
-const ROADMAP_STEPS = [
+// Exported so CollectorBottomSheet (the disposer's view of the same job)
+// tracks the exact same real, backend-confirmed milestones.
+export const ROADMAP_STEPS = [
     { key: 'requested', label: 'Requested', icon: Clock },
     { key: 'assigned', label: 'Accepted', icon: UserCheck },
     { key: 'arrived', label: 'Arrived', icon: MapPin },
