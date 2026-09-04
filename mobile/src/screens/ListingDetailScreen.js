@@ -20,10 +20,13 @@ import PageLoader from '../components/PageLoader';
 import ReportSheet from '../components/ReportSheet';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ListingDetailScreen({ route, navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const { listingId } = route.params;
     const { user, userRole } = useAuth();
     const insets = useSafeAreaInsets();
@@ -155,7 +158,7 @@ export default function ListingDetailScreen({ route, navigation }) {
             {/* Header Overlay */}
             <View style={[styles.headerToolbar, { paddingTop: Math.max(insets.top, 20) }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconButton}>
-                    <ArrowLeft size={24} color="#111" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle} numberOfLines={1}>{listing.title}</Text>
             </View>
@@ -167,7 +170,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                         <Image source={{ uri: resolveImageUrl(listing.image) }} style={styles.heroImage} resizeMode="cover" />
                     ) : (
                         <View style={[styles.heroImage, styles.heroPlaceholder]}>
-                            <Package size={48} color="#ccc" />
+                            <Package size={48} color={colors.textMuted} />
                         </View>
                     )}
                 </View>
@@ -177,11 +180,11 @@ export default function ListingDetailScreen({ route, navigation }) {
                     {/* Badges Row */}
                     <View style={styles.badgeRow}>
                         <View style={styles.catBadge}>
-                            <Monitor size={14} color="#059669" />
+                            <Monitor size={14} color={colors.accent} />
                             <Text style={styles.catBadgeText}>{listing.material_type || 'Waste'}</Text>
                         </View>
                         <View style={styles.dateBadge}>
-                            <Clock size={14} color="#6B7280" />
+                            <Clock size={14} color={colors.textSecondary} />
                             <Text style={styles.dateBadgeText}>{formattedDate}</Text>
                         </View>
                     </View>
@@ -192,19 +195,19 @@ export default function ListingDetailScreen({ route, navigation }) {
                     {/* Stats Card */}
                     <View style={styles.statsCard}>
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: '#ECFDF5' }]}>
-                                <Weight size={18} color="#059669" />
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.accentSoft }]}>
+                                <Weight size={18} color={colors.accent} />
                             </View>
                             <Text style={styles.statValue}>{listing.quantity || '—'}</Text>
                             <Text style={styles.statLabel}>Weight</Text>
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: '#FFFBEB' }]}>
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.warningSoft }]}>
                                 {listing.seller?.is_verified ? (
-                                    <BadgeCheck size={18} color="#D97706" />
+                                    <BadgeCheck size={18} color={colors.warning} />
                                 ) : (
-                                    <ShieldAlert size={18} color="#D97706" />
+                                    <ShieldAlert size={18} color={colors.warning} />
                                 )}
                             </View>
                             <Text style={styles.statValue}>{listing.seller?.is_verified ? 'Verified' : 'Unverified'}</Text>
@@ -212,8 +215,8 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: '#ECFDF5' }]}>
-                                <MapPin size={18} color="#059669" />
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.accentSoft }]}>
+                                <MapPin size={18} color={colors.accent} />
                             </View>
                             <Text style={styles.statValue}>{distanceKm != null ? `${distanceKm.toFixed(1)} km` : '—'}</Text>
                             <Text style={styles.statLabel}>Distance</Text>
@@ -228,7 +231,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                     {listing.description?.length > 100 && (
                         <TouchableOpacity style={styles.showMoreBtn} onPress={() => setShowFullDesc(!showFullDesc)}>
                             <Text style={styles.showMoreText}>Show {showFullDesc ? 'less' : 'more'}</Text>
-                            {showFullDesc ? <ChevronUp size={16} color="#059669" /> : <ChevronDown size={16} color="#059669" />}
+                            {showFullDesc ? <ChevronUp size={16} color={colors.accent} /> : <ChevronDown size={16} color={colors.accent} />}
                         </TouchableOpacity>
                     )}
 
@@ -245,8 +248,8 @@ export default function ListingDetailScreen({ route, navigation }) {
                                     {[listing.seller.first_name, listing.seller.last_name].filter(Boolean).join(' ') || listing.seller.username}
                                 </Text>
                                 <View style={styles.sellerStatusRow}>
-                                    <View style={[styles.statusDot, { backgroundColor: listing.seller.is_verified ? '#10B981' : '#F59E0B' }]} />
-                                    <Text style={[styles.sellerStatusText, { color: listing.seller.is_verified ? '#10B981' : '#F59E0B' }]}>
+                                    <View style={[styles.statusDot, { backgroundColor: listing.seller.is_verified ? colors.success : colors.warning }]} />
+                                    <Text style={[styles.sellerStatusText, { color: listing.seller.is_verified ? colors.success : colors.warning }]}>
                                         {listing.seller.is_verified ? 'Verified seller' : 'Unverified seller'}
                                     </Text>
                                 </View>
@@ -261,7 +264,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                                     contactIsOnline: listing.seller.is_online,
                                 })}
                             >
-                                <MessageCircle size={16} color="#111" style={{ marginRight: 6 }} />
+                                <MessageCircle size={16} color={colors.text} style={{ marginRight: 6 }} />
                                 <Text style={styles.messageBtnText}>Message</Text>
                             </TouchableOpacity>
                         </View>
@@ -271,7 +274,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                         stays with the listing rather than hiding in a menu. */}
                     {!isOwner && listing.seller && (
                         <TouchableOpacity style={styles.reportLink} onPress={() => setReportVisible(true)}>
-                            <Flag size={14} color="#9CA3AF" />
+                            <Flag size={14} color={colors.textMuted} />
                             <Text style={styles.reportLinkText}>Report this listing</Text>
                         </TouchableOpacity>
                     )}
@@ -301,18 +304,18 @@ export default function ListingDetailScreen({ route, navigation }) {
                                                 <Image source={{ uri: resolveImageUrl(item.image) }} style={styles.similarImage} resizeMode="cover" />
                                             ) : (
                                                 <View style={styles.placeholderImg}>
-                                                    <Package size={24} color="#E0E0E0" />
+                                                    <Package size={24} color={colors.border} />
                                                 </View>
                                             )}
                                             <TouchableOpacity style={styles.floatingHeart}>
-                                                <Heart size={14} color={item.is_liked ? '#EF4444' : '#111'} fill={item.is_liked ? '#EF4444' : 'transparent'} />
+                                                <Heart size={14} color={item.is_liked ? colors.danger : colors.text} fill={item.is_liked ? colors.danger : 'transparent'} />
                                             </TouchableOpacity>
                                         </View>
                                         <View style={styles.similarDetails}>
                                             <Text style={styles.similarTitle} numberOfLines={1}>{item.title}</Text>
                                             <Text style={styles.similarPrice}>₵ {item.price}</Text>
                                             <View style={styles.similarLocRow}>
-                                                <MapPin size={12} color="#059669" />
+                                                <MapPin size={12} color={colors.accent} />
                                                 <Text style={styles.similarLoc} numberOfLines={1}>{item.location}</Text>
                                             </View>
                                         </View>
@@ -329,16 +332,16 @@ export default function ListingDetailScreen({ route, navigation }) {
             <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom, 20) }]}>
                 {isOwner ? (
                     <View style={styles.disposerActionRow}>
-                        <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: '#E5E7EB' }]} onPress={() => navigation.navigate('CreateListing', { editListing: listing })}>
-                            <Pencil size={18} color="#374151" style={{ marginRight: 6 }} />
-                            <Text style={[styles.outlineActionBtnText, { color: '#374151' }]}>Edit</Text>
+                        <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: colors.border }]} onPress={() => navigation.navigate('CreateListing', { editListing: listing })}>
+                            <Pencil size={18} color={colors.text} style={{ marginRight: 6 }} />
+                            <Text style={[styles.outlineActionBtnText, { color: colors.text }]}>Edit</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: '#FECACA' }]} onPress={handleDelete}>
-                            <Trash size={18} color="#EF4444" style={{ marginRight: 6 }} />
-                            <Text style={[styles.outlineActionBtnText, { color: '#EF4444' }]}>Delete</Text>
+                        <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: colors.danger }]} onPress={handleDelete}>
+                            <Trash size={18} color={colors.danger} style={{ marginRight: 6 }} />
+                            <Text style={[styles.outlineActionBtnText, { color: colors.danger }]}>Delete</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.solidPrimaryBtn} onPress={handleAcceptJob}>
-                            <Briefcase size={20} color="#fff" style={{ marginRight: 8 }} />
+                            <Briefcase size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
                             <Text style={styles.solidPrimaryBtnText}>Request Pickup</Text>
                         </TouchableOpacity>
                     </View>
@@ -346,12 +349,12 @@ export default function ListingDetailScreen({ route, navigation }) {
                     <View style={styles.collectorActionCol}>
                         <View style={styles.actionTopRow}>
                             <TouchableOpacity style={styles.outlineActionBtn}>
-                                <Pencil size={18} color="#059669" style={{ marginRight: 6 }} />
+                                <Pencil size={18} color={colors.accent} style={{ marginRight: 6 }} />
                                 <Text style={styles.outlineActionBtnText}>Make an offer</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: '#D1D5DB' }]}>
-                                <Info size={18} color="#111" style={{ marginRight: 6 }} />
-                                <Text style={[styles.outlineActionBtnText, { color: '#111' }]}>Ask a question</Text>
+                            <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: colors.border }]}>
+                                <Info size={18} color={colors.text} style={{ marginRight: 6 }} />
+                                <Text style={[styles.outlineActionBtnText, { color: colors.text }]}>Ask a question</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.actionBottomRow}>
@@ -364,10 +367,10 @@ export default function ListingDetailScreen({ route, navigation }) {
                                     contactIsOnline: listing.seller.is_online,
                                 })}
                             >
-                                <MessageCircle size={24} color="#111" />
+                                <MessageCircle size={24} color={colors.text} />
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.solidPrimaryBtn, { flex: 1 }]} onPress={handleAcceptJob}>
-                                <Briefcase size={20} color="#fff" style={{ marginRight: 8 }} />
+                                <Briefcase size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
                                 <Text style={styles.solidPrimaryBtnText}>Accept Job</Text>
                             </TouchableOpacity>
                         </View>
@@ -386,7 +389,7 @@ export default function ListingDetailScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     reportLink: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -395,15 +398,15 @@ const styles = StyleSheet.create({
         paddingVertical: 14,
         marginTop: 4,
     },
-    reportLinkText: { fontSize: 13, color: '#9CA3AF', fontWeight: '600' },
-    container: { flex: 1, backgroundColor: '#fff' },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' },
-    errorText: { fontSize: 16, color: '#111', marginBottom: 12 },
-    backButtonFallback: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#F3F4F6', borderRadius: 20 },
-    backButtonText: { color: '#111', fontWeight: '600' },
+    reportLinkText: { fontSize: 13, color: c.textMuted, fontWeight: '600' },
+    container: { flex: 1, backgroundColor: c.surface },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: c.surface },
+    errorText: { fontSize: 16, color: c.text, marginBottom: 12 },
+    backButtonFallback: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: c.surfaceSunken, borderRadius: 20 },
+    backButtonText: { color: c.text, fontWeight: '600' },
     
-    headerToolbar: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff' },
-    headerTitle: { fontSize: 18, fontWeight: '800', color: '#111', flex: 1, marginLeft: 16 },
+    headerToolbar: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: c.surface },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: c.text, flex: 1, marginLeft: 16 },
     headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     iconButton: { padding: 8 },
 
@@ -411,59 +414,59 @@ const styles = StyleSheet.create({
     
     heroSection: { width: width, height: 280, position: 'relative' },
     heroImage: { width: '100%', height: '100%' },
-    heroPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' },
+    heroPlaceholder: { justifyContent: 'center', alignItems: 'center', backgroundColor: c.bg },
     
-    detailsContainer: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 24, paddingHorizontal: 20 },
+    detailsContainer: { backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 24, paddingHorizontal: 20 },
     
     badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-    catBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ECFDF5', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
-    catBadgeText: { color: '#059669', fontSize: 13, fontWeight: '700' },
-    dateBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB', gap: 6 },
-    dateBadgeText: { color: '#6B7280', fontSize: 13, fontWeight: '600' },
+    catBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.accentSoft, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, gap: 6 },
+    catBadgeText: { color: c.accent, fontSize: 13, fontWeight: '700' },
+    dateBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: c.border, gap: 6 },
+    dateBadgeText: { color: c.textSecondary, fontSize: 13, fontWeight: '600' },
     
-    title: { fontSize: 28, fontWeight: '800', color: '#111', marginBottom: 4, lineHeight: 34 },
-    price: { fontSize: 32, fontWeight: '900', color: '#111', marginBottom: 24 },
+    title: { fontSize: 28, fontWeight: '800', color: c.text, marginBottom: 4, lineHeight: 34 },
+    price: { fontSize: 32, fontWeight: '900', color: c.text, marginBottom: 24 },
     
-    statsCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6', paddingVertical: 16, marginBottom: 32, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
+    statsCard: { flexDirection: 'row', backgroundColor: c.surface, borderRadius: 16, borderWidth: 1, borderColor: c.borderSubtle, paddingVertical: 16, marginBottom: 32, shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 8, elevation: 1 },
     statColumn: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    statDivider: { width: 1, backgroundColor: '#F3F4F6' },
+    statDivider: { width: 1, backgroundColor: c.surfaceSunken },
     statIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-    statValue: { fontSize: 14, fontWeight: '700', color: '#111', marginBottom: 2, textAlign: 'center' },
-    statLabel: { fontSize: 12, color: '#6B7280', fontWeight: '500', textAlign: 'center' },
+    statValue: { fontSize: 14, fontWeight: '700', color: c.text, marginBottom: 2, textAlign: 'center' },
+    statLabel: { fontSize: 12, color: c.textSecondary, fontWeight: '500', textAlign: 'center' },
     
-    sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111', marginBottom: 12 },
-    descriptionText: { fontSize: 15, color: '#4B5563', lineHeight: 24 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: c.text, marginBottom: 12 },
+    descriptionText: { fontSize: 15, color: c.textSecondary, lineHeight: 24 },
     showMoreBtn: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 4 },
-    showMoreText: { fontSize: 14, color: '#059669', fontWeight: '700' },
+    showMoreText: { fontSize: 14, color: c.accent, fontWeight: '700' },
     
-    sellerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#F3F4F6', padding: 16, marginTop: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
-    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#D1FAE5', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-    sellerAvatarText: { fontSize: 20, fontWeight: '800', color: '#059669' },
+    sellerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: 16, borderWidth: 1, borderColor: c.borderSubtle, padding: 16, marginTop: 24, shadowColor: c.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
+    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: c.accentSoft, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+    sellerAvatarText: { fontSize: 20, fontWeight: '800', color: c.accent },
     sellerInfo: { flex: 1 },
-    sellerName: { fontSize: 15, fontWeight: '800', color: '#111', marginBottom: 2 },
+    sellerName: { fontSize: 15, fontWeight: '800', color: c.text, marginBottom: 2 },
     sellerStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
     statusDot: { width: 8, height: 8, borderRadius: 4 },
     sellerStatusText: { fontSize: 12, fontWeight: '600' },
-    sellerMetaText: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
-    messageBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-    messageBtnText: { fontSize: 13, fontWeight: '700', color: '#111' },
+    sellerMetaText: { fontSize: 12, color: c.textMuted, fontWeight: '500' },
+    messageBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: c.border },
+    messageBtnText: { fontSize: 13, fontWeight: '700', color: c.text },
 
-    similarSection: { marginTop: 32, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 24 },
+    similarSection: { marginTop: 32, borderTopWidth: 1, borderTopColor: c.borderSubtle, paddingTop: 24 },
     similarHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    similarSectionTitle: { fontSize: 18, fontWeight: '800', color: '#111' },
-    seeAllText: { fontSize: 14, color: '#059669', fontWeight: '700' },
-    similarCard: { width: 160, marginRight: 16, backgroundColor: '#F9FAFB', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#F3F4F6' },
-    imageBox: { width: '100%', height: 110, backgroundColor: '#F3F4F6', position: 'relative' },
+    similarSectionTitle: { fontSize: 18, fontWeight: '800', color: c.text },
+    seeAllText: { fontSize: 14, color: c.accent, fontWeight: '700' },
+    similarCard: { width: 160, marginRight: 16, backgroundColor: c.surfaceAlt, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: c.borderSubtle },
+    imageBox: { width: '100%', height: 110, backgroundColor: c.surfaceSunken, position: 'relative' },
     similarImage: { width: '100%', height: '100%' },
     placeholderImg: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    floatingHeart: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
+    floatingHeart: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
     similarDetails: { padding: 12 },
-    similarTitle: { fontSize: 13, fontWeight: '800', color: '#111', marginBottom: 4 },
-    similarPrice: { fontSize: 14, fontWeight: '900', color: '#111', marginBottom: 6 },
+    similarTitle: { fontSize: 13, fontWeight: '800', color: c.text, marginBottom: 4 },
+    similarPrice: { fontSize: 14, fontWeight: '900', color: c.text, marginBottom: 6 },
     similarLocRow: { flexDirection: 'row', alignItems: 'center' },
-    similarLoc: { fontSize: 11, color: '#6B7280', marginLeft: 4, flex: 1, fontWeight: '500' },
+    similarLoc: { fontSize: 11, color: c.textSecondary, marginLeft: 4, flex: 1, fontWeight: '500' },
     
-    bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F3F4F6', shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.03, shadowRadius: 16, elevation: 15 },
+    bottomActions: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: c.surface, paddingHorizontal: 20, paddingTop: 16, borderTopWidth: 1, borderTopColor: c.borderSubtle, shadowColor: c.shadow, shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.03, shadowRadius: 16, elevation: 15 },
     
     disposerActionRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     
@@ -471,11 +474,11 @@ const styles = StyleSheet.create({
     actionTopRow: { flexDirection: 'row', gap: 12 },
     actionBottomRow: { flexDirection: 'row', gap: 12 },
     
-    outlineActionBtn: { flex: 0.8, flexDirection: 'row', height: 52, borderRadius: 12, borderWidth: 1, borderColor: '#059669', justifyContent: 'center', alignItems: 'center' },
-    outlineActionBtnText: { color: '#059669', fontSize: 13, fontWeight: '700' },
+    outlineActionBtn: { flex: 0.8, flexDirection: 'row', height: 52, borderRadius: 12, borderWidth: 1, borderColor: c.accent, justifyContent: 'center', alignItems: 'center' },
+    outlineActionBtnText: { color: c.accent, fontSize: 13, fontWeight: '700' },
     
-    squareIconBtn: { width: 56, height: 56, borderRadius: 16, borderWidth: 1, borderColor: '#D1D5DB', justifyContent: 'center', alignItems: 'center' },
+    squareIconBtn: { width: 56, height: 56, borderRadius: 16, borderWidth: 1, borderColor: c.border, justifyContent: 'center', alignItems: 'center' },
     
-    solidPrimaryBtn: { flex: 1.6, backgroundColor: '#111', flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 52, borderRadius: 12 },
-    solidPrimaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' }
-});
+    solidPrimaryBtn: { flex: 1.6, backgroundColor: c.primary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', height: 52, borderRadius: 12 },
+    solidPrimaryBtnText: { color: c.onPrimary, fontSize: 14, fontWeight: '800' }
+}));

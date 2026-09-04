@@ -10,16 +10,20 @@ import { useAuth } from '../context/AuthContext';
 import { SkeletonWalletPage } from '../components/Skeleton';
 import { ChevronRight, HelpCircle, Clock, Plus, Banknote, ArrowLeft } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const PAYMENT_METHODS = [
     { id: 'ATL', name: 'AirtelTigo Money', icon: require('../../assets/airteltigo.jpg') },
     { id: 'MTN', name: 'MTN Mobile Money', icon: require('../../assets/mtn.jpg') },
     { id: 'TEL', name: 'Telecel cash', icon: require('../../assets/telecel.jpg') },
-    { id: 'CASH', name: 'Cash', icon: <Banknote size={20} color="#059669" /> },
+    // Icon built at render time - this list is module scope, where the theme isn't available.
+    { id: 'CASH', name: 'Cash', icon: null },
 ];
 
 export default function WalletScreen() {
     const { user } = useAuth();
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const navigation = useNavigation();
     const { data: wallet, isLoading } = useWallet();
     const [selectedMethod, setSelectedMethod] = useState('CASH');
@@ -41,12 +45,12 @@ export default function WalletScreen() {
 
     return (
         <SafeAreaView edges={['top']} style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
             
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-                    <ArrowLeft size={24} color="#111" />
+                    <ArrowLeft size={24} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Payment</Text>
             </View>
@@ -69,20 +73,20 @@ export default function WalletScreen() {
                 <View style={styles.linksContainer}>
                     <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('WhatIsRevestaBalance')}>
                         <View style={styles.linkLeft}>
-                            <HelpCircle size={20} color="#666" style={styles.linkIcon} />
+                            <HelpCircle size={20} color={colors.textSecondary} style={styles.linkIcon} />
                             <Text style={styles.linkText}>What is Revesta balance?</Text>
                         </View>
-                        <ChevronRight size={20} color="#999" />
+                        <ChevronRight size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                     
                     <View style={styles.linkDivider} />
                     
                     <TouchableOpacity style={styles.linkRow} onPress={() => navigation.navigate('TransactionHistory')}>
                         <View style={styles.linkLeft}>
-                            <Clock size={20} color="#666" style={styles.linkIcon} />
+                            <Clock size={20} color={colors.textSecondary} style={styles.linkIcon} />
                             <Text style={styles.linkText}>See Revesta balance transactions</Text>
                         </View>
-                        <ChevronRight size={20} color="#999" />
+                        <ChevronRight size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -90,7 +94,7 @@ export default function WalletScreen() {
                 {isCollector && (
                     <View style={styles.commissionSection}>
                         <Text style={styles.sectionTitle}>Commission</Text>
-                        <View style={[styles.balanceCard, { backgroundColor: '#FEF2F2' }]}>
+                        <View style={[styles.balanceCard, { backgroundColor: colors.dangerSoft }]}>
                             <Text style={styles.balanceLabel}>Pending Commission</Text>
                             <Text style={styles.balanceAmount}>GH₵{pendingEarnings.toFixed(2)}</Text>
                             
@@ -123,7 +127,7 @@ export default function WalletScreen() {
                                             ) : typeof method.icon === 'string' ? (
                                                 <Text style={styles.methodEmoji}>{method.icon}</Text>
                                             ) : (
-                                                method.icon
+                                                (method.icon || <Banknote size={20} color={colors.accent} />)
                                             )}
                                         </View>
                                         <Text style={styles.methodName}>{method.name}</Text>
@@ -138,10 +142,10 @@ export default function WalletScreen() {
                     {/* Add Card */}
                     <TouchableOpacity style={styles.addCardRow}>
                         <View style={styles.methodLeft}>
-                            <Plus size={20} color="#111" style={styles.addIcon} />
+                            <Plus size={20} color={colors.text} style={styles.addIcon} />
                             <Text style={styles.methodName}>Add debit/credit card</Text>
                         </View>
-                        <ChevronRight size={20} color="#999" />
+                        <ChevronRight size={20} color={colors.textMuted} />
                     </TouchableOpacity>
                 </View>
 
@@ -150,10 +154,10 @@ export default function WalletScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
     },
     header: {
         flexDirection: 'row',
@@ -167,13 +171,13 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
     },
     scrollContent: {
         paddingBottom: TAB_BAR_CLEARANCE + 20,
     },
     balanceCard: {
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 16,
         marginHorizontal: 20,
         padding: 20,
@@ -181,23 +185,23 @@ const styles = StyleSheet.create({
     },
     balanceLabel: {
         fontSize: 16,
-        color: '#666',
+        color: c.textSecondary,
         marginBottom: 8,
     },
     balanceAmount: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 16,
     },
     balanceDivider: {
         height: 1,
-        backgroundColor: '#E5E7EB',
+        backgroundColor: c.surfaceSunken,
         marginBottom: 16,
     },
     balanceNote: {
         fontSize: 14,
-        color: '#666',
+        color: c.textSecondary,
     },
     linksContainer: {
         marginHorizontal: 20,
@@ -218,24 +222,24 @@ const styles = StyleSheet.create({
     },
     linkText: {
         fontSize: 16,
-        color: '#111',
+        color: c.text,
     },
     linkDivider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginLeft: 36,
     },
     commissionSection: {
         marginTop: 30,
     },
     payBtn: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderRadius: 8,
         paddingVertical: 12,
         alignItems: 'center',
     },
     payBtnText: {
-        color: '#fff',
+        color: c.onPrimary,
         fontWeight: 'bold',
         fontSize: 15,
     },
@@ -246,7 +250,7 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: '#111',
+        color: c.text,
         marginBottom: 20,
     },
     methodsList: {
@@ -266,7 +270,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 8,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 16,
@@ -277,29 +281,29 @@ const styles = StyleSheet.create({
     },
     methodName: {
         fontSize: 16,
-        color: '#111',
+        color: c.text,
     },
     radioOuter: {
         width: 24,
         height: 24,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: '#D1D5DB',
+        borderColor: c.border,
         alignItems: 'center',
         justifyContent: 'center',
     },
     radioOuterSelected: {
-        borderColor: '#059669',
+        borderColor: c.accent,
     },
     radioInner: {
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#059669',
+        backgroundColor: c.accent,
     },
     methodDivider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginLeft: 48,
     },
     addCardRow: {
@@ -312,4 +316,4 @@ const styles = StyleSheet.create({
         marginRight: 16,
         marginLeft: 4,
     },
-});
+}));

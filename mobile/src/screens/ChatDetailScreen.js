@@ -12,10 +12,13 @@ import ReportSheet from '../components/ReportSheet';
 import { Send, User, ChevronLeft, MoreVertical, Flag, Ban } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import { useChatSocket } from '../hooks/useChatSocket';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ChatDetailScreen({ route, navigation }) {
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
     const insets = useSafeAreaInsets();
     const { contactId, contactName, contactImage, contactIsOnline } = route.params;
     const { user } = useAuth();
@@ -114,13 +117,13 @@ export default function ChatDetailScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             {/* Minimalist Premium Header */}
             <SafeAreaView edges={['top']} style={styles.header}>
                 <View style={styles.headerRow}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                        <ChevronLeft size={28} color="#1A1A1A" />
+                        <ChevronLeft size={28} color={colors.text} />
                     </TouchableOpacity>
 
                     <View style={styles.headerMain}>
@@ -129,7 +132,7 @@ export default function ChatDetailScreen({ route, navigation }) {
                                 <Image source={{ uri: contactImage }} style={styles.avatarImg} />
                             ) : (
                                 <View style={styles.avatarPlaceholder}>
-                                    <User size={18} color="#9CA3AF" />
+                                    <User size={18} color={colors.textMuted} />
                                 </View>
                             )}
                             {/* Presence was hardcoded here - a green dot and
@@ -150,7 +153,7 @@ export default function ChatDetailScreen({ route, navigation }) {
 
                     <View style={styles.headerActions}>
                         <TouchableOpacity onPress={() => setMenuVisible(true)} style={styles.menuBtn}>
-                            <MoreVertical size={22} color="#1A1A1A" />
+                            <MoreVertical size={22} color={colors.text} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -167,13 +170,13 @@ export default function ChatDetailScreen({ route, navigation }) {
                                 setReportTarget({ type: 'USER', id: contactId, label: contactName });
                             }}
                         >
-                            <Flag size={18} color="#111" />
+                            <Flag size={18} color={colors.text} />
                             <Text style={styles.menuItemText}>Report {contactName}</Text>
                         </TouchableOpacity>
                         <View style={styles.menuDivider} />
                         <TouchableOpacity style={styles.menuItem} onPress={confirmBlock}>
-                            <Ban size={18} color="#DC2626" />
-                            <Text style={[styles.menuItemText, { color: '#DC2626' }]}>Block {contactName}</Text>
+                            <Ban size={18} color={colors.danger} />
+                            <Text style={[styles.menuItemText, { color: colors.danger }]}>Block {contactName}</Text>
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
@@ -193,7 +196,7 @@ export default function ChatDetailScreen({ route, navigation }) {
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
             >
                 {loading ? (
-                    <View style={styles.center}><ActivityIndicator size="small" color="#111" /></View>
+                    <View style={styles.center}><ActivityIndicator size="small" color={colors.text} /></View>
                 ) : (
                     <FlatList
                         ref={flatListRef}
@@ -214,14 +217,14 @@ export default function ChatDetailScreen({ route, navigation }) {
                             value={newMessage}
                             onChangeText={setNewMessage}
                             multiline
-                            placeholderTextColor="#999"
+                            placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity
                             style={[styles.sendBtn, !newMessage.trim() && styles.sendBtnDisabled]}
                             onPress={handleSend}
                             disabled={!newMessage.trim()}
                         >
-                            <Send size={18} color="#fff" />
+                            <Send size={18} color={colors.onPrimary} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -230,13 +233,13 @@ export default function ChatDetailScreen({ route, navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F9FBFA' },
+const useStyles = makeStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.surfaceAlt },
     header: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F3F1',
-        shadowColor: '#000',
+        borderBottomColor: c.borderSubtle,
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
         shadowRadius: 5,
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: '#FAFAFA',
+        backgroundColor: c.bg,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -283,9 +286,9 @@ const styles = StyleSheet.create({
         width: 12,
         height: 12,
         borderRadius: 6,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderWidth: 2,
-        borderColor: '#fff',
+        borderColor: c.border,
     },
     headerText: {
         marginLeft: 12,
@@ -294,11 +297,11 @@ const styles = StyleSheet.create({
     contactName: {
         fontSize: 16,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: c.text,
     },
     statusText: {
         fontSize: 12,
-        color: '#111',
+        color: c.text,
         fontWeight: '500',
     },
     headerActions: {
@@ -321,11 +324,11 @@ const styles = StyleSheet.create({
         paddingRight: 16,
     },
     menuCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 16,
         paddingVertical: 6,
         minWidth: 220,
-        shadowColor: '#000',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 6 },
         shadowOpacity: 0.15,
         shadowRadius: 16,
@@ -338,8 +341,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 14,
     },
-    menuItemText: { fontSize: 15, fontWeight: '600', color: '#111', flexShrink: 1 },
-    menuDivider: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 12 },
+    menuItemText: { fontSize: 15, fontWeight: '600', color: c.text, flexShrink: 1 },
+    menuDivider: { height: 1, backgroundColor: c.surfaceSunken, marginHorizontal: 12 },
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
     messageList: { padding: 20, paddingBottom: 30 },
     messageRow: { marginBottom: 12, width: '100%' },
@@ -352,37 +355,37 @@ const styles = StyleSheet.create({
         borderRadius: 22
     },
     myBubble: {
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         borderBottomRightRadius: 4,
-        shadowColor: '#111',
+        shadowColor: c.shadow,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
     },
     theirBubble: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderBottomLeftRadius: 4,
         borderWidth: 1,
-        borderColor: '#F0F3F1'
+        borderColor: c.borderSubtle
     },
     messageText: { fontSize: 15, lineHeight: 20 },
-    myText: { color: '#fff' },
-    theirText: { color: '#1A1A1A' },
+    myText: { color: c.onPrimary },
+    theirText: { color: c.text },
     timeText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end', opacity: 0.6 },
-    myTime: { color: '#fff' },
-    theirTime: { color: '#999' },
+    myTime: { color: c.onPrimary },
+    theirTime: { color: c.textMuted },
     inputContainer: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         paddingHorizontal: 20,
         paddingTop: 12,
         borderTopWidth: 1,
-        borderTopColor: '#F0F3F1',
+        borderTopColor: c.borderSubtle,
     },
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         borderRadius: 25,
         paddingHorizontal: 15,
         minHeight: 50,
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
     input: {
         flex: 1,
         fontSize: 15,
-        color: '#1A1A1A',
+        color: c.text,
         paddingVertical: 10,
         marginRight: 10,
     },
@@ -399,11 +402,11 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 19,
-        backgroundColor: '#111',
+        backgroundColor: c.primary,
         justifyContent: 'center',
         alignItems: 'center',
     },
     sendBtnDisabled: {
-        backgroundColor: '#D1D5DB',
+        backgroundColor: c.border,
     },
-});
+}));
