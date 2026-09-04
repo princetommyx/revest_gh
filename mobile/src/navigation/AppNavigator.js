@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, ActivityIndicator, TouchableOpacity, Text, StyleSheet, Dimensions, Platform, LayoutAnimation, UIManager, Image, Animated, Easing } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '../theme/ThemeContext';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -76,7 +78,8 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
         }).start();
     }, [isFocused]);
 
-    const color = isFocused ? '#111111' : 'rgba(17,17,17,0.5)';
+    const { colors, isDark } = useTheme();
+    const color = isFocused ? colors.text : (isDark ? 'rgba(242,245,244,0.55)' : 'rgba(17,17,17,0.5)');
 
     return (
         <TouchableOpacity onPress={onPress} style={navStyles.tabButton} activeOpacity={0.7}>
@@ -85,6 +88,7 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
                     pointerEvents="none"
                     style={[
                         navStyles.activePill,
+                        { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)' },
                         {
                             opacity: anim,
                             transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }) }],
@@ -107,7 +111,10 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
                         </View>
                     )}
                 </View>
-                <Text style={[navStyles.tabLabel, isFocused && navStyles.tabLabelActive]} numberOfLines={1}>
+                <Text
+                    style={[navStyles.tabLabel, { color }, isFocused && navStyles.tabLabelActive, isFocused && { color }]}
+                    numberOfLines={1}
+                >
                     {label}
                 </Text>
             </View>
@@ -117,13 +124,20 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
 
 const CustomTabBar = ({ state, descriptors, navigation }) => {
     const { user } = useAuth();
+    const { colors, isDark } = useTheme();
     const avatarUri = resolveAvatar(user);
 
     return (
         <View style={navStyles.floatingShadow}>
             <View style={navStyles.floatingClip}>
-                <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
-                <View style={navStyles.tint} pointerEvents="none" />
+                <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+                <View
+                    style={[
+                        navStyles.tint,
+                        { backgroundColor: isDark ? 'rgba(20,26,25,0.92)' : 'rgba(255,255,255,0.92)' },
+                    ]}
+                    pointerEvents="none"
+                />
 
                 <View style={navStyles.row}>
                     {state.routes.map((route, index) => {
@@ -480,8 +494,26 @@ const CustomSplashScreen = ({ isAppReady, onFinish }) => {
 
 export default function AppNavigator() {
     const { user, loading: authLoading } = useAuth();
+    const { colors, isDark } = useTheme();
     const [isFirstLaunch, setIsFirstLaunch] = useState(null);
     const [showSplash, setShowSplash] = useState(true);
+
+    // Without this React Navigation paints its own white card behind every
+    // screen, which flashes on each transition in dark mode.
+    const navTheme = React.useMemo(() => {
+        const base = isDark ? DarkTheme : DefaultTheme;
+        return {
+            ...base,
+            colors: {
+                ...base.colors,
+                background: colors.bg,
+                card: colors.surface,
+                text: colors.text,
+                border: colors.border,
+                primary: colors.accent,
+            },
+        };
+    }, [isDark, colors]);
 
     useEffect(() => {
         async function checkFirstLaunch() {
@@ -502,7 +534,11 @@ export default function AppNavigator() {
     }
 
     return (
-        <NavigationContainer>
+        <>
+            {/* Follows the theme so the clock/battery stay legible against the
+                app's ground in both modes. */}
+            <StatusBar style={isDark ? 'light' : 'dark'} />
+            <NavigationContainer theme={navTheme}>
             <Stack.Navigator
                 screenOptions={{ 
                     headerShown: false,
@@ -541,6 +577,7 @@ export default function AppNavigator() {
                     </>
                 )}
             </Stack.Navigator>
-        </NavigationContainer>
+            </NavigationContainer>
+        </>
     );
 }

@@ -18,6 +18,8 @@ import {
     Recycle, UserX, Trash2, X, Ban
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
+import { useTheme, makeStyles } from '../theme/ThemeContext';
+import AppearanceToggle from '../components/AppearanceToggle';
 
 const resolveImageUrl = (path) => {
     if (!path) return null;
@@ -33,33 +35,43 @@ const ROLE_LABELS = {
     RECYCLER: 'Recycler',
 };
 
-const SectionHeader = ({ title }) => (
-    <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>
-);
+const SectionHeader = ({ title }) => {
+    const styles = useStyles();
+    return <Text style={styles.sectionHeader}>{title.toUpperCase()}</Text>;
+};
 
-const NavCard = ({ children }) => (
-    <View style={styles.navCard}>{children}</View>
-);
+const NavCard = ({ children }) => {
+    const styles = useStyles();
+    return <View style={styles.navCard}>{children}</View>;
+};
 
-const NavLink = ({ title, subtitle, subtitleColor = '#9CA3AF', icon: Icon, iconColor = '#111', iconBg = '#F3F4F6', onPress, isLast, danger }) => (
-    <TouchableOpacity
-        style={[styles.navLink, !isLast && styles.navLinkDivider]}
-        onPress={onPress}
-        activeOpacity={0.6}
-    >
-        <View style={[styles.navLinkIconBox, { backgroundColor: danger ? '#FEF2F2' : iconBg }]}>
-            <Icon size={18} color={danger ? '#EF4444' : iconColor} />
-        </View>
-        <View style={{ flex: 1 }}>
-            <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
-            {!!subtitle && <Text style={[styles.navLinkSubtitle, { color: subtitleColor }]}>{subtitle}</Text>}
-        </View>
-        {!danger && <ChevronRight size={18} color="#D1D5DB" />}
-    </TouchableOpacity>
-);
+// Icon colours default to theme tokens rather than fixed hex, so a caller that
+// doesn't pass one still reads correctly in both modes.
+const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, iconBg, onPress, isLast, danger }) => {
+    const styles = useStyles();
+    const { colors } = useTheme();
+    return (
+        <TouchableOpacity
+            style={[styles.navLink, !isLast && styles.navLinkDivider]}
+            onPress={onPress}
+            activeOpacity={0.6}
+        >
+            <View style={[styles.navLinkIconBox, { backgroundColor: danger ? colors.dangerSoft : (iconBg || colors.surfaceSunken) }]}>
+                <Icon size={18} color={danger ? colors.danger : (iconColor || colors.text)} />
+            </View>
+            <View style={{ flex: 1 }}>
+                <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
+                {!!subtitle && <Text style={[styles.navLinkSubtitle, { color: subtitleColor || colors.textMuted }]}>{subtitle}</Text>}
+            </View>
+            {!danger && <ChevronRight size={18} color={colors.textMuted} />}
+        </TouchableOpacity>
+    );
+};
 
 export default function ProfileScreen({ navigation }) {
     const { user, signOut, userRole } = useAuth();
+    const styles = useStyles();
+    const { colors, isDark } = useTheme();
 
     // 'deactivate' | 'delete' | null
     const [dangerModal, setDangerModal] = useState(null);
@@ -178,7 +190,7 @@ export default function ProfileScreen({ navigation }) {
 
     return (
         <SafeAreaView style={styles.container} edges={['top']}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
@@ -190,7 +202,7 @@ export default function ProfileScreen({ navigation }) {
                     />
                     <View style={styles.identityNameRow}>
                         <Text style={styles.identityName}>{user?.username || 'Guest User'}</Text>
-                        {user?.is_verified && <BadgeCheck size={18} color="#059669" style={{ marginLeft: 6 }} />}
+                        {user?.is_verified && <BadgeCheck size={18} color={colors.accent} style={{ marginLeft: 6 }} />}
                     </View>
                     <Text style={styles.identityHandle}>@{(user?.username || 'guest').toLowerCase().replace(/\s+/g, '')}</Text>
                     <View style={styles.roleBadge}>
@@ -209,7 +221,7 @@ export default function ProfileScreen({ navigation }) {
                                 <Text style={styles.completionTitle}>Complete your profile</Text>
                                 <Text style={styles.completionDesc}>Add a photo, phone number, city and get verified to build trust with the other side.</Text>
                             </View>
-                            <ChevronRight size={18} color="#9CA3AF" />
+                            <ChevronRight size={18} color={colors.textMuted} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -233,13 +245,13 @@ export default function ProfileScreen({ navigation }) {
                 {(activeJob || activeListing || loadingJobs) && (
                     <View style={styles.contextualContainer}>
                         {loadingJobs ? (
-                            <ActivityIndicator size="small" color="#111" />
+                            <ActivityIndicator size="small" color={colors.text} />
                         ) : activeJob ? (
                             <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Pickups' })} activeOpacity={0.8}>
                                 <Text style={styles.contextHeader}>UP NEXT</Text>
                                 <Text style={styles.contextTitle}>Pickup scheduled</Text>
                                 <View style={styles.contextRow}>
-                                    <MapPin size={14} color="#666" />
+                                    <MapPin size={14} color={colors.textSecondary} />
                                     <Text style={styles.contextDesc} numberOfLines={1}>
                                         {activeJob.pickup_address || 'Custom location'}
                                     </Text>
@@ -251,7 +263,7 @@ export default function ProfileScreen({ navigation }) {
                                 <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
                                 <Text style={styles.contextTitle}>{activeListing.quantity} {activeListing.material_type}</Text>
                                 <View style={styles.contextRow}>
-                                    <Box size={14} color="#666" />
+                                    <Box size={14} color={colors.textSecondary} />
                                     <Text style={styles.contextDesc}>Waiting for interested collectors</Text>
                                 </View>
                                 <Text style={styles.contextLink}>View listing</Text>
@@ -264,10 +276,10 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        <NavLink title="My Listings" icon={Box} iconColor="#3B82F6" iconBg="#EFF6FF" onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
-                        <NavLink title="Pickup History" icon={Truck} iconColor="#059669" iconBg="#ECFDF5" onPress={() => navigation.navigate('PickupHistory')} />
-                        <NavLink title="Transaction History" icon={Clock} iconColor="#8B5CF6" iconBg="#F5F3FF" onPress={() => navigation.navigate('TransactionHistory')} />
-                        <NavLink title="Saved Locations" icon={Bookmark} iconColor="#F59E0B" iconBg="#FFFBEB" onPress={() => navigation.navigate('SavedLocations')} isLast />
+                        <NavLink title="My Listings" icon={Box} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
+                        <NavLink title="Pickup History" icon={Truck} iconColor={colors.accent} iconBg={colors.accentSoft} onPress={() => navigation.navigate('PickupHistory')} />
+                        <NavLink title="Transaction History" icon={Clock} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('TransactionHistory')} />
+                        <NavLink title="Saved Locations" icon={Bookmark} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={() => navigation.navigate('SavedLocations')} isLast />
                     </NavCard>
                 </View>
 
@@ -276,13 +288,13 @@ export default function ProfileScreen({ navigation }) {
                     <View style={styles.navBlock}>
                         <TouchableOpacity style={styles.earnCard} onPress={() => navigation.navigate('SupportChat')} activeOpacity={0.85}>
                             <View style={styles.earnIconBox}>
-                                <Recycle size={22} color="#111" />
+                                <Recycle size={22} color={colors.text} />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.earnTitle}>Earn as a Collector</Text>
                                 <Text style={styles.earnDesc}>Pick up listed waste and get paid. Chat with our team to get set up.</Text>
                             </View>
-                            <ChevronRight size={18} color="#6B7280" />
+                            <ChevronRight size={18} color={colors.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -290,23 +302,23 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Account" />
                     <NavCard>
-                        <NavLink title="Profile Information" icon={UserCog} iconColor="#3B82F6" iconBg="#EFF6FF" onPress={() => navigation.navigate('EditProfile')} />
+                        <NavLink title="Profile Information" icon={UserCog} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('EditProfile')} />
                         <NavLink
                             title="Verification"
                             subtitle={kycLabel}
-                            subtitleColor={kycStatus === 'VERIFIED' ? '#059669' : kycStatus === 'REJECTED' ? '#EF4444' : '#9CA3AF'}
+                            subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
                             icon={ShieldCheck}
-                            iconColor="#059669"
-                            iconBg="#ECFDF5"
+                            iconColor={colors.accent}
+                            iconBg={colors.accentSoft}
                             onPress={() => navigation.navigate('KYCVerification')}
                         />
-                        <NavLink title="Security" icon={ShieldAlert} iconColor="#EF4444" iconBg="#FEF2F2" onPress={() => navigation.navigate('Security')} />
+                        <NavLink title="Security" icon={ShieldAlert} iconColor={colors.danger} iconBg={colors.dangerSoft} onPress={() => navigation.navigate('Security')} />
                         <NavLink
                             title="Blocked Accounts"
                             subtitle="People you've blocked from messaging you"
                             icon={Ban}
-                            iconColor="#6B7280"
-                            iconBg="#F3F4F6"
+                            iconColor={colors.textSecondary}
+                            iconBg={colors.surfaceSunken}
                             onPress={() => navigation.navigate('BlockedUsers')}
                             isLast
                         />
@@ -314,10 +326,20 @@ export default function ProfileScreen({ navigation }) {
                 </View>
 
                 <View style={styles.navBlock}>
+                    <SectionHeader title="Appearance" />
+                    <View style={styles.appearanceCard}>
+                        <AppearanceToggle />
+                        <Text style={styles.appearanceHint}>
+                            System follows your phone's display setting.
+                        </Text>
+                    </View>
+                </View>
+
+                <View style={styles.navBlock}>
                     <SectionHeader title="Support & Community" />
                     <NavCard>
-                        <NavLink title="Invite someone" icon={Share2} iconColor="#F59E0B" iconBg="#FFFBEB" onPress={handleInvite} />
-                        <NavLink title="Help & Support" icon={MessageCircleQuestion} iconColor="#8B5CF6" iconBg="#F5F3FF" onPress={() => navigation.navigate('SupportChat')} isLast />
+                        <NavLink title="Invite someone" icon={Share2} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={handleInvite} />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestion} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('SupportChat')} isLast />
                     </NavCard>
                 </View>
 
@@ -328,8 +350,8 @@ export default function ProfileScreen({ navigation }) {
                             title="Deactivate Account"
                             subtitle="Hide your account temporarily. Log back in anytime to reactivate."
                             icon={UserX}
-                            iconColor="#B45309"
-                            iconBg="#FFFBEB"
+                            iconColor={colors.warning}
+                            iconBg={colors.warningSoft}
                             onPress={() => setDangerModal('deactivate')}
                         />
                         <NavLink title="Delete Account" icon={Trash2} onPress={() => setDangerModal('delete')} danger />
@@ -355,7 +377,7 @@ export default function ProfileScreen({ navigation }) {
                                 {dangerModal === 'deactivate' ? 'Deactivate Account' : 'Delete Account'}
                             </Text>
                             <TouchableOpacity onPress={closeDangerModal}>
-                                <X size={22} color="#666" />
+                                <X size={22} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
@@ -369,7 +391,7 @@ export default function ProfileScreen({ navigation }) {
                             <TextInput
                                 style={styles.dangerPasswordInput}
                                 placeholder="Confirm your password"
-                                placeholderTextColor="#9CA3AF"
+                                placeholderTextColor={colors.textMuted}
                                 secureTextEntry
                                 value={dangerPassword}
                                 onChangeText={setDangerPassword}
@@ -389,7 +411,7 @@ export default function ProfileScreen({ navigation }) {
                                 disabled={dangerLoading || (needsPasswordConfirm && !dangerPassword.trim())}
                             >
                                 {dangerLoading ? (
-                                    <ActivityIndicator color="#fff" size="small" />
+                                    <ActivityIndicator color={colors.onPrimary} size="small" />
                                 ) : (
                                     <Text style={styles.dangerConfirmBtnText}>
                                         {dangerModal === 'deactivate' ? 'Deactivate' : 'Delete Account'}
@@ -404,10 +426,23 @@ export default function ProfileScreen({ navigation }) {
     );
 }
 
-const styles = StyleSheet.create({
+const useStyles = makeStyles((c) => ({
+    appearanceCard: {
+        backgroundColor: c.surface,
+        borderRadius: 16,
+        padding: 14,
+        borderWidth: 1,
+        borderColor: c.borderSubtle,
+    },
+    appearanceHint: {
+        fontSize: 12,
+        color: c.textMuted,
+        marginTop: 10,
+        textAlign: 'center',
+    },
     container: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
+        backgroundColor: c.surface,
     },
     scrollContent: {
         paddingTop: 32,
@@ -422,7 +457,7 @@ const styles = StyleSheet.create({
         width: 72,
         height: 72,
         borderRadius: 36,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         marginBottom: 16,
     },
     identityNameRow: {
@@ -432,25 +467,25 @@ const styles = StyleSheet.create({
     identityName: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         letterSpacing: -0.5,
     },
     identityHandle: {
         fontSize: 15,
-        color: '#6B7280',
+        color: c.textSecondary,
         marginTop: 4,
         marginBottom: 12,
     },
     roleBadge: {
         alignSelf: 'flex-start',
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         paddingHorizontal: 12,
         paddingVertical: 5,
         borderRadius: 20,
     },
     roleBadgeText: {
         fontSize: 13,
-        color: '#374151',
+        color: c.text,
         fontWeight: '600',
     },
     impactContainer: {
@@ -460,7 +495,7 @@ const styles = StyleSheet.create({
     sectionHeader: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#9CA3AF',
+        color: c.textMuted,
         letterSpacing: 1.2,
         marginBottom: 16,
     },
@@ -470,20 +505,20 @@ const styles = StyleSheet.create({
     },
     impactCard: {
         flex: 1,
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 18,
         padding: 18,
     },
     impactValue: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         letterSpacing: -1,
         marginBottom: 8,
     },
     impactLabel: {
         fontSize: 13,
-        color: '#6B7280',
+        color: c.textSecondary,
         lineHeight: 18,
     },
     contextualContainer: {
@@ -491,21 +526,21 @@ const styles = StyleSheet.create({
         marginBottom: 48,
     },
     contextCard: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         padding: 24,
         borderRadius: 18,
     },
     contextHeader: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#059669', // Subtle Revesta green
+        color: c.accent, // Subtle Revesta green
         letterSpacing: 1.2,
         marginBottom: 12,
     },
     contextTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
         marginBottom: 8,
     },
     contextRow: {
@@ -516,20 +551,20 @@ const styles = StyleSheet.create({
     },
     contextDesc: {
         fontSize: 14,
-        color: '#4B5563',
+        color: c.textSecondary,
         flex: 1,
     },
     contextLink: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     navBlock: {
         paddingHorizontal: 24,
         marginBottom: 32,
     },
     navCard: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 18,
         paddingHorizontal: 8,
         overflow: 'hidden',
@@ -542,7 +577,7 @@ const styles = StyleSheet.create({
     },
     navLinkDivider: {
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F1F2',
+        borderBottomColor: c.surfaceSunken,
     },
     navLinkIconBox: {
         width: 34,
@@ -554,7 +589,7 @@ const styles = StyleSheet.create({
     },
     navLinkText: {
         fontSize: 15,
-        color: '#111827',
+        color: c.text,
         fontWeight: '500',
     },
     navLinkSubtitle: {
@@ -562,7 +597,7 @@ const styles = StyleSheet.create({
         marginTop: 2,
     },
     navLinkTextDanger: {
-        color: '#EF4444',
+        color: c.danger,
     },
     completionContainer: {
         paddingHorizontal: 24,
@@ -571,7 +606,7 @@ const styles = StyleSheet.create({
     completionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#ECFDF5',
+        backgroundColor: c.accentSoft,
         borderRadius: 18,
         padding: 16,
         gap: 14,
@@ -581,30 +616,30 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 20,
         borderWidth: 2.5,
-        borderColor: '#059669',
+        borderColor: c.accent,
         alignItems: 'center',
         justifyContent: 'center',
     },
     completionRingText: {
         fontSize: 11,
         fontWeight: '700',
-        color: '#059669',
+        color: c.accent,
     },
     completionTitle: {
         fontSize: 14,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
         marginBottom: 3,
     },
     completionDesc: {
         fontSize: 12,
-        color: '#4B5563',
+        color: c.textSecondary,
         lineHeight: 17,
     },
     earnCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#111827',
+        backgroundColor: c.text,
         borderRadius: 18,
         padding: 18,
         gap: 14,
@@ -613,19 +648,19 @@ const styles = StyleSheet.create({
         width: 42,
         height: 42,
         borderRadius: 21,
-        backgroundColor: '#FBBF24',
+        backgroundColor: c.warning,
         alignItems: 'center',
         justifyContent: 'center',
     },
     earnTitle: {
         fontSize: 15,
         fontWeight: '700',
-        color: '#FFFFFF',
+        color: c.surface,
         marginBottom: 3,
     },
     earnDesc: {
         fontSize: 12,
-        color: '#D1D5DB',
+        color: c.textMuted,
         lineHeight: 17,
     },
     dangerOverlay: {
@@ -635,7 +670,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
     },
     dangerCard: {
-        backgroundColor: '#fff',
+        backgroundColor: c.surface,
         borderRadius: 24,
         padding: 24,
     },
@@ -648,28 +683,28 @@ const styles = StyleSheet.create({
     dangerCardTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: '#111827',
+        color: c.text,
     },
     dangerCardDesc: {
         fontSize: 14,
-        color: '#4B5563',
+        color: c.textSecondary,
         lineHeight: 20,
         marginBottom: 18,
     },
     dangerPasswordInput: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: c.surfaceAlt,
         borderWidth: 1,
-        borderColor: '#E5E7EB',
+        borderColor: c.border,
         borderRadius: 12,
         paddingHorizontal: 14,
         paddingVertical: 12,
         fontSize: 15,
-        color: '#111827',
+        color: c.text,
         marginBottom: 12,
     },
     dangerErrorText: {
         fontSize: 13,
-        color: '#EF4444',
+        color: c.danger,
         marginBottom: 12,
     },
     dangerActionsRow: {
@@ -681,19 +716,19 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingVertical: 14,
         borderRadius: 14,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
     },
     dangerCancelBtnText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#111827',
+        color: c.text,
     },
     dangerConfirmBtn: {
         flex: 1,
         paddingVertical: 14,
         borderRadius: 14,
-        backgroundColor: '#EF4444',
+        backgroundColor: c.danger,
         alignItems: 'center',
     },
     dangerConfirmBtnDisabled: {
@@ -702,6 +737,6 @@ const styles = StyleSheet.create({
     dangerConfirmBtnText: {
         fontSize: 15,
         fontWeight: '600',
-        color: '#fff',
+        color: c.surface,
     },
-});
+}));
