@@ -30,14 +30,17 @@ export class ErrorBoundary extends React.Component {
                         We encountered an unexpected error. Our team has been notified.
                     </Text>
 
-                    {/* Only show error detail in DEV mode */}
-                    {__DEV__ && (
-                        <View style={styles.debugBox}>
-                            <Text style={styles.debugText}>
-                                {this.state.error?.toString()}
-                            </Text>
-                        </View>
-                    )}
+                    {/* Shown regardless of build type while the app is still in
+                        internal testing and there's no crash-reporting service
+                        wired up yet - this is the only way to get a crash's
+                        actual message back from a tester's device at all.
+                        Revisit (gate behind __DEV__ again) once Sentry/Bugsnag
+                        or similar is integrated. */}
+                    <View style={styles.debugBox}>
+                        <Text style={styles.debugText}>
+                            {this.state.error?.toString()}
+                        </Text>
+                    </View>
 
                     <TouchableOpacity style={styles.btn} onPress={this.handleReset}>
                         <RefreshCcw size={20} color={'#FFFFFF'} />
