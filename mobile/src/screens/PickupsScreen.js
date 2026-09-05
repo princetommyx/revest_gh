@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView, StatusBar,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState, Image
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
 import { authApi } from '../api/auth';
