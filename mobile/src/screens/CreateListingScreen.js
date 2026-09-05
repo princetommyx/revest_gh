@@ -14,12 +14,14 @@ import Toast from 'react-native-toast-message';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
 export default function CreateListingScreen({ route, navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const editListing = route?.params?.editListing;
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
@@ -204,7 +206,7 @@ export default function CreateListingScreen({ route, navigation }) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a location' });
             return;
         }
-        if (formData.track_type === 'B' && (formData.price === '' || isNaN(parseFloat(formData.price)))) {
+        if (pricingEnabled && formData.track_type === 'B' && (formData.price === '' || isNaN(parseFloat(formData.price)))) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please set an asking price' });
             return;
         }
@@ -433,7 +435,7 @@ export default function CreateListingScreen({ route, navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {formData.track_type === 'B' ? (
+                        {formData.track_type === 'B' && pricingEnabled ? (
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Asking Price (GHS)</Text>
                                 <View style={styles.inputWrapper}>
@@ -454,6 +456,11 @@ export default function CreateListingScreen({ route, navigation }) {
                                 ) : (
                                     <Text style={styles.priceHint}>Add a photo or pick a material for a price suggestion, or just set your own.</Text>
                                 )}
+                            </View>
+                        ) : formData.track_type === 'B' ? (
+                            <View style={styles.freeNotice}>
+                                <Info size={16} color={colors.textSecondary} />
+                                <Text style={styles.freeNoticeText}>We're not setting prices yet - connect with a collector and agree on value directly.</Text>
                             </View>
                         ) : (
                             <View style={styles.freeNotice}>

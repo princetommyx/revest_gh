@@ -16,6 +16,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import * as Haptics from 'expo-haptics';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
@@ -44,6 +45,9 @@ const SORT_OPTIONS = [
 export default function MarketplaceScreen({ navigation, route }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
+    // Sorting by a price nobody can see would just be confusing.
+    const sortOptions = pricingEnabled ? SORT_OPTIONS : SORT_OPTIONS.filter(o => !o.id.startsWith('price_'));
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
     const [filter, setFilter] = useState('');
@@ -184,8 +188,10 @@ export default function MarketplaceScreen({ navigation, route }) {
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={styles.listingPrice} numberOfLines={1}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
-                    <View style={styles.viewDetailsBtn}>
+                    {pricingEnabled && (
+                        <Text style={styles.listingPrice} numberOfLines={1}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
+                    )}
+                    <View style={[styles.viewDetailsBtn, !pricingEnabled && { marginLeft: 'auto' }]}>
                         <ChevronRight size={16} color={colors.onAccent} />
                     </View>
                 </View>
@@ -266,7 +272,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                     </View>
                 )}
                 <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowSortModal(true)}>
-                    <Text style={styles.dropdownText}>{sortBy ? SORT_OPTIONS.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
+                    <Text style={styles.dropdownText}>{sortBy ? sortOptions.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
                     <ChevronDown size={14} color={colors.text} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
             </View>
@@ -359,7 +365,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                                 <Text style={styles.closeModalText}>Close</Text>
                             </TouchableOpacity>
                         </View>
-                        {SORT_OPTIONS.map((option) => (
+                        {sortOptions.map((option) => (
                             <TouchableOpacity
                                 key={option.id}
                                 style={[styles.modalOption, sortBy === option.id && styles.modalOptionActive]}

@@ -26,6 +26,7 @@ urlpatterns = [
     # System Metrics
     path('metrics/', views.SystemMetricsView.as_view(), name='admin_metrics'),
     path('system/config/', views.SystemConfigView.as_view(), name='system_config'),
+    path('system/config/public/', views.PublicAppConfigView.as_view(), name='public_system_config'),
     
     # Promo Cards
     path('promos/', views.PromoCardViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_promos_list'),

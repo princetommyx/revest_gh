@@ -47,7 +47,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Instant Transactions</Text>
                             <Text style={styles.featureDesc}>
-                                No more waiting for change. Payments and commissions are processed instantly and securely.
+                                No more waiting for change. Top-ups and withdrawals are processed instantly and securely.
                             </Text>
                         </View>
                     </View>

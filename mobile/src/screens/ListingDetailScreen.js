@@ -21,12 +21,14 @@ import ReportSheet from '../components/ReportSheet';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ListingDetailScreen({ route, navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const { listingId } = route.params;
     const { user, userRole } = useAuth();
     const insets = useSafeAreaInsets();
@@ -190,7 +192,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                     </View>
 
                     <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
-                    <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                    {pricingEnabled && (
+                        <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                    )}
 
                     {/* Stats Card */}
                     <View style={styles.statsCard}>
@@ -313,7 +317,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                                         </View>
                                         <View style={styles.similarDetails}>
                                             <Text style={styles.similarTitle} numberOfLines={1}>{item.title}</Text>
-                                            <Text style={styles.similarPrice}>₵ {item.price}</Text>
+                                            {pricingEnabled && (
+                                                <Text style={styles.similarPrice}>₵ {item.price}</Text>
+                                            )}
                                             <View style={styles.similarLocRow}>
                                                 <MapPin size={12} color={colors.accent} />
                                                 <Text style={styles.similarLoc} numberOfLines={1}>{item.location}</Text>

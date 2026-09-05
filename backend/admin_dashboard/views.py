@@ -485,6 +485,22 @@ class PublicOnboardingListView(generics.ListAPIView):
     pagination_class = None
     queryset = OnboardingScreen.objects.filter(is_active=True).order_by('order', 'created_at')
 
+
+class PublicAppConfigView(views.APIView):
+    """
+    GET /api/v1/admin/system/config/public/
+
+    A public, read-only subset of SystemConfig the mobile app needs to
+    decide what to show - right now just whether monetization is switched
+    on. Nothing sensitive lives here (that's SystemConfigView, restricted to
+    super admins) - only flags safe for any unauthenticated client to read.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from wallet.services import WalletService
+        return Response({'monetization_enabled': WalletService.monetization_enabled()})
+
 from users.models import IdentityVerification
 from .kyc_serializers import AdminKYCSerializer
 

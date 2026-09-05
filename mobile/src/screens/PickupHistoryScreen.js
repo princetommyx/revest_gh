@@ -13,6 +13,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import { getMaterialImage } from './HomeScreen';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const STATUS_CONFIG = {
     // Token names, not hex - this map is module scope, where the theme isn't
@@ -48,6 +49,7 @@ const TRACK_LABEL = { A: 'Disposal', B: 'Recyclables', C: 'Purchase' };
 export default function PickupHistoryScreen() {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const navigation = useNavigation();
     const { userRole } = useAuth();
     const [activeFilter, setActiveFilter] = useState('ALL');
@@ -118,8 +120,9 @@ export default function PickupHistoryScreen() {
 
                 <View style={styles.rowRight}>
                     {/* Track A is paid directly to the collector, not through the
-                        app - showing "₵0.00" here would read as "this was free". */}
-                    {item.track_type === 'A' ? (
+                        app - showing "₵0.00" here would read as "this was free".
+                        Same story for every track while pricing is off platform-wide. */}
+                    {item.track_type === 'A' || !pricingEnabled ? (
                         <Text style={styles.directPayLabel}>Direct pay</Text>
                     ) : (
                         <Text style={styles.amount}>₵{amount.toFixed(2)}</Text>

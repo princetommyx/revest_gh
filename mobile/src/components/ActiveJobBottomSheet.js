@@ -5,6 +5,7 @@ import AnimatedButton from './AnimatedButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 
 // The sheet is absolutely positioned at bottom:0 inside a parent with no fixed
@@ -49,6 +50,7 @@ const formatDate = (value) => {
 export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, onNavigate, onArrive, onComplete, onAccept, requestLoading, isCollapsed, onToggleCollapse }) {
     const styles = useStyles();
     const { colors } = useTheme();
+    const { pricingEnabled } = usePricing();
     const pulseAnim = useRef(new Animated.Value(0.5)).current;
     const isPending = job?.status === 'PENDING';
 
@@ -205,7 +207,7 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                             or collect a fee for it, so a Price/Fee/Total breakdown
                             here would just show a misleading GHS 0.00 all the way
                             down. Say what's actually true instead. */}
-                        {job.track_type === 'A' ? (
+                        {job.track_type === 'A' || !pricingEnabled ? (
                             <View style={styles.paymentSummary}>
                                 <Text style={styles.paymentTitle}>Payment</Text>
                                 <Text style={styles.cashNote}>Arranged directly with the disposer - no in-app charge for this job.</Text>

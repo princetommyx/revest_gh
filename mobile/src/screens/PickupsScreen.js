@@ -44,6 +44,7 @@ const ActiveMap = MapView;
 const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
@@ -268,6 +269,7 @@ const darkMapStyle = [
 export default function PickupsScreen({ route }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
 
@@ -1811,12 +1813,21 @@ export default function PickupsScreen({ route }) {
                                 <View style={styles.summaryDivider} />
 
                                 <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>
-                                        {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
-                                    </Text>
-                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? colors.text : colors.accent }]}>
-                                        ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
-                                    </Text>
+                                    {pricingEnabled ? (
+                                        <>
+                                            <Text style={styles.summaryLabel}>
+                                                {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
+                                            </Text>
+                                            <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? colors.text : colors.accent }]}>
+                                                ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
+                                            </Text>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Text style={styles.summaryLabel}>Payment</Text>
+                                            <Text style={styles.summaryPrice}>Arranged directly</Text>
+                                        </>
+                                    )}
                                 </View>
                             </View>
 

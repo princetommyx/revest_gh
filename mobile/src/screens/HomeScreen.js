@@ -26,6 +26,7 @@ import OnlineToggleCard from '../components/OnlineToggleCard';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
@@ -53,6 +54,7 @@ export const getMaterialImage = (materialType) => {
 export default function HomeScreen({ navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
     const [filter, setFilter] = useState('');
@@ -317,7 +319,9 @@ export default function HomeScreen({ navigation }) {
                     <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={styles.collCardSubtitle} numberOfLines={1}>{loc}</Text>
                 </View>
-                <Text style={styles.collCardPrice}>{isFree ? 'Free' : `GH₵ ${Number(price).toFixed(2)}`}</Text>
+                {pricingEnabled && (
+                    <Text style={styles.collCardPrice}>{isFree ? 'Free' : `GH₵ ${Number(price).toFixed(2)}`}</Text>
+                )}
                 
                 {!isRecommended && (
                     <TouchableOpacity style={styles.collCardBtn} onPress={() => navigation.navigate(navTarget, navParams)}>
