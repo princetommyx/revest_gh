@@ -65,6 +65,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             two_hours_ago = timezone.now() - timedelta(hours=2)
             pending_q = models.Q(status='PENDING', created_at__gte=two_hours_ago)
 
+            # A recycler/collector must never see their own posted request on
+            # the job board they accept jobs from - otherwise (as happened)
+            # they can accept their own job, becoming both provider and
+            # collector on the same record, which then renders confusingly
+            # everywhere a screen shows "the disposer" (it shows themselves).
+            pending_q &= ~models.Q(provider=user)
+
             # A blocked collector must not be able to pick up the blocker's
             # job and turn up at their address. Only applied to the open
             # board - a job already accepted stays visible to its collector so
@@ -170,7 +177,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request = self.get_object()
         if pickup_request.status != 'PENDING':
             return Response({'error': 'Job already taken or not pending'}, status=400)
-            
+
+        # Belt-and-suspenders alongside the job-board queryset excluding a
+        # user's own posted requests: a clear error here instead of relying
+        # solely on the board hiding it (which would otherwise 404).
+        if pickup_request.provider_id == request.user.id:
+            return Response({'error': "You can't accept your own pickup request"}, status=400)
+
         # Check wallet standing
         is_eligible, error_msg = WalletService.check_eligibility_for_job(request.user)
         if not is_eligible:
