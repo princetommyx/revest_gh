@@ -6,7 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, MessageSquare, Wallet, CarFront, User, Search } from 'lucide-react-native';
+import { House, MessageSquare, Wallet, CarFront, User, Search, Leaf } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -273,32 +273,27 @@ const navStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-    pingRing: {
+    splashRingPiece: {
         position: 'absolute',
-        width: 120,
-        height: 120,
-        borderRadius: 60,
-        backgroundColor: 'rgba(5, 150, 105, 0.12)',
+        top: 53,
+        left: 53,
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        borderWidth: 3,
     },
-    progressTrack: {
-        width: 120,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: '#E9EEEC',
-        overflow: 'hidden',
-        marginBottom: 16,
+    splashDotPiece: {
+        position: 'absolute',
+        bottom: 8,
+        right: 22,
+        width: 13,
+        height: 13,
+        borderRadius: 6.5,
     },
-    progressThumb: {
-        width: 44,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: BRAND_GREEN,
-    },
-    splashStatusText: {
-        fontSize: 13,
-        color: '#6B7280',
-        fontWeight: '500',
-        letterSpacing: 0.4,
+    splashWordmark: {
+        fontSize: 24,
+        fontWeight: '800',
+        letterSpacing: -0.4,
     },
 });
 
@@ -353,140 +348,120 @@ function MainTabs() {
     );
 }
 
-const BRAND_GREEN = '#059669';
-
+// A one-time brand reveal, not a loading spinner: three simple pieces echoing
+// the mark's own vocabulary (the leaf sprouting from its base, the loop
+// stroke, the closing dot) gather in and dissolve into the real icon, then
+// the wordmark settles underneath. No looping motion, no progress bar, no
+// "please wait" copy - once assembled it just holds, calm, until the app is
+// actually ready.
 const CustomSplashScreen = ({ isAppReady, onFinish }) => {
-    const scaleAnim = useRef(new Animated.Value(0.9)).current;
-    const opacityAnim = useRef(new Animated.Value(0)).current;
-    const bounceAnim = useRef(new Animated.Value(0)).current;
-    const ring1Scale = useRef(new Animated.Value(0.6)).current;
-    const ring1Opacity = useRef(new Animated.Value(0.4)).current;
-    const ring2Scale = useRef(new Animated.Value(0.6)).current;
-    const ring2Opacity = useRef(new Animated.Value(0.4)).current;
-    const barSweep = useRef(new Animated.Value(0)).current;
+    const { colors } = useTheme();
+
+    const leafAnim = useRef(new Animated.Value(0)).current;
+    const ringAnim = useRef(new Animated.Value(0)).current;
+    const dotAnim = useRef(new Animated.Value(0)).current;
+    const piecesOpacity = useRef(new Animated.Value(1)).current;
+    const logoOpacity = useRef(new Animated.Value(0)).current;
+    const logoScale = useRef(new Animated.Value(0.75)).current;
+    const wordmarkOpacity = useRef(new Animated.Value(0)).current;
+    const wordmarkTranslateY = useRef(new Animated.Value(12)).current;
     const exitOpacity = useRef(new Animated.Value(1)).current;
     const exitScale = useRef(new Animated.Value(1)).current;
 
-    const [statusText, setStatusText] = useState('Preparing your experience...');
-
     useEffect(() => {
-        // Entrance
-        Animated.parallel([
-            Animated.timing(opacityAnim, {
-                toValue: 1,
-                duration: 700,
-                easing: Easing.out(Easing.cubic),
-                useNativeDriver: true,
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                friction: 8,
-                tension: 40,
-                useNativeDriver: true,
-            })
+        // Stage 1 - the three pieces gather toward the centre, staggered.
+        Animated.stagger(120, [
+            Animated.timing(leafAnim, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(ringAnim, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(dotAnim, { toValue: 1, duration: 460, easing: Easing.out(Easing.back(1.6)), useNativeDriver: true }),
         ]).start();
 
-        // Logo bouncing loop
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(bounceAnim, { toValue: -25, duration: 450, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-                Animated.timing(bounceAnim, { toValue: 0, duration: 450, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-            ])
-        ).start();
+        // Stage 2 - once gathered, the abstract pieces dissolve as the real,
+        // authentic mark resolves into view in their place.
+        const t1 = setTimeout(() => {
+            Animated.timing(piecesOpacity, { toValue: 0, duration: 260, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start();
+            Animated.parallel([
+                Animated.timing(logoOpacity, { toValue: 1, duration: 320, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+                Animated.spring(logoScale, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+            ]).start();
+        }, 640);
 
-        // Radar-ping halo behind the logo, two rings staggered for a richer pulse
-        const startPing = (scaleV, opacityV, delay) => {
-            Animated.loop(
-                Animated.sequence([
-                    Animated.delay(delay),
-                    Animated.parallel([
-                        Animated.timing(scaleV, { toValue: 1.7, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-                        Animated.timing(opacityV, { toValue: 0, duration: 2200, easing: Easing.out(Easing.ease), useNativeDriver: true }),
-                    ]),
-                ])
-            ).start();
-        };
-        startPing(ring1Scale, ring1Opacity, 0);
-        startPing(ring2Scale, ring2Opacity, 1100);
+        // Stage 3 - the wordmark settles in underneath.
+        const t2 = setTimeout(() => {
+            Animated.parallel([
+                Animated.timing(wordmarkOpacity, { toValue: 1, duration: 340, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+                Animated.timing(wordmarkTranslateY, { toValue: 0, duration: 340, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            ]).start();
+        }, 950);
 
-        // Indeterminate progress sweep
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(barSweep, { toValue: 1, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-                Animated.timing(barSweep, { toValue: 0, duration: 950, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-            ])
-        ).start();
+        return () => { clearTimeout(t1); clearTimeout(t2); };
     }, []);
 
-    // Dynamic messaging
+    // Smooth exit transition - fade + gentle zoom past the camera. Gated well
+    // past the reveal's own ~1.3s runtime so a fast/cached load never cuts
+    // the brand moment short.
     useEffect(() => {
         if (isAppReady) {
-            setStatusText('Almost there');
-            return;
-        }
-        const t1 = setTimeout(() => setStatusText('Connecting you to Revesta'), 1000);
-        const t2 = setTimeout(() => setStatusText('Getting things ready'), 2500);
-        return () => { clearTimeout(t1); clearTimeout(t2); };
-    }, [isAppReady]);
-
-    // Smooth exit transition - fade + gentle zoom past the camera
-    useEffect(() => {
-        if (isAppReady) {
-            // Wait slightly so the animation doesn't cut off immediately if load is instant
-            setTimeout(() => {
+            const t = setTimeout(() => {
                 Animated.parallel([
-                    Animated.timing(exitOpacity, {
-                        toValue: 0,
-                        duration: 420,
-                        easing: Easing.in(Easing.cubic),
-                        useNativeDriver: true
-                    }),
-                    Animated.timing(exitScale, {
-                        toValue: 1.06,
-                        duration: 420,
-                        easing: Easing.in(Easing.cubic),
-                        useNativeDriver: true
-                    }),
-                ]).start(() => {
-                    onFinish();
-                });
-            }, 600);
+                    Animated.timing(exitOpacity, { toValue: 0, duration: 420, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+                    Animated.timing(exitScale, { toValue: 1.06, duration: 420, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+                ]).start(() => onFinish());
+            }, 1450);
+            return () => clearTimeout(t);
         }
     }, [isAppReady]);
 
-    const barTranslateX = barSweep.interpolate({ inputRange: [0, 1], outputRange: [0, 76] });
+    const leafTranslate = leafAnim.interpolate({ inputRange: [0, 1], outputRange: [-46, 0] });
+    const leafRotate = leafAnim.interpolate({ inputRange: [0, 1], outputRange: ['-18deg', '0deg'] });
+    const ringTranslate = ringAnim.interpolate({ inputRange: [0, 1], outputRange: [-46, 0] });
+    const dotTranslate = dotAnim.interpolate({ inputRange: [0, 1], outputRange: [30, 0] });
 
     return (
         <Animated.View style={{ flex: 1, opacity: exitOpacity, transform: [{ scale: exitScale }] }}>
-            <LinearGradient colors={['#FFFFFF', '#F4FBF8']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <View style={{ width: 220, height: 220, justifyContent: 'center', alignItems: 'center', marginBottom: 36 }}>
-                    <Animated.View style={[styles.pingRing, { opacity: ring1Opacity, transform: [{ scale: ring1Scale }] }]} />
-                    <Animated.View style={[styles.pingRing, { opacity: ring2Opacity, transform: [{ scale: ring2Scale }] }]} />
+            <LinearGradient colors={[colors.surface, colors.accentSoft]} style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ width: 140, height: 140, justifyContent: 'center', alignItems: 'center', marginBottom: 28 }}>
+                    {/* Stage 1 pieces - fade out together once the real mark takes over */}
+                    <Animated.View style={{ opacity: piecesOpacity, ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' }}>
+                        <Animated.View style={{
+                            position: 'absolute', top: 18, left: 34,
+                            opacity: leafAnim,
+                            transform: [{ translateY: leafTranslate }, { rotate: leafRotate }],
+                        }}>
+                            <Leaf size={30} color={colors.accent} strokeWidth={2.25} />
+                        </Animated.View>
+                        <Animated.View style={[styles.splashRingPiece, {
+                            borderColor: colors.accent,
+                            opacity: ringAnim,
+                            transform: [{ translateX: ringTranslate }],
+                        }]} />
+                        <Animated.View style={[styles.splashDotPiece, {
+                            backgroundColor: colors.text,
+                            opacity: dotAnim,
+                            transform: [{ translateY: dotTranslate }],
+                        }]} />
+                    </Animated.View>
+
+                    {/* Stage 2 - the authentic mark */}
                     <Animated.View style={{
-                        opacity: opacityAnim,
-                        transform: [
-                            { scale: scaleAnim },
-                            { translateY: bounceAnim }
-                        ],
-                        borderRadius: 56,
+                        opacity: logoOpacity,
+                        transform: [{ scale: logoScale }],
+                        borderRadius: 40,
                         overflow: 'hidden',
-                        backgroundColor: '#fff',
+                        backgroundColor: colors.surface,
                         elevation: 4,
-                        shadowColor: '#000',
+                        shadowColor: colors.shadow,
                         shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 8,
+                        shadowOpacity: 0.12,
+                        shadowRadius: 10,
                     }}>
-                        <Image source={require('../../assets/icon.png')} style={{ width: 112, height: 112 }} resizeMode="contain" />
+                        <Image source={require('../../assets/icon.png')} style={{ width: 92, height: 92 }} resizeMode="contain" />
                     </Animated.View>
                 </View>
 
-                {/* Indeterminate progress bar */}
-                <View style={styles.progressTrack}>
-                    <Animated.View style={[styles.progressThumb, { transform: [{ translateX: barTranslateX }] }]} />
-                </View>
-
-                <Text style={styles.splashStatusText}>{statusText}</Text>
+                <Animated.Text style={[styles.splashWordmark, { color: colors.text, opacity: wordmarkOpacity, transform: [{ translateY: wordmarkTranslateY }] }]}>
+                    Revesta
+                </Animated.Text>
             </LinearGradient>
         </Animated.View>
     );
