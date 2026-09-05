@@ -178,6 +178,12 @@ export default function CreateListingScreen({ route, navigation }) {
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.7,
+                // iOS can otherwise hand back the original HEIC file even
+                // through the edit/crop step - the backend only accepts
+                // JPEG/PNG/WebP (market/serializers.py ListingCreateSerializer),
+                // so a HEIC photo fails submission with no obvious reason
+                // from the picker step itself.
+                preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
             });
             if (!result.canceled) {
                 const asset = result.assets[0];
@@ -251,8 +257,31 @@ export default function CreateListingScreen({ route, navigation }) {
             queryClient.invalidateQueries(['listings']);
             navigation.goBack();
         } catch (error) {
-            console.error("Submission Error:", error.response?.data || error.message);
-            Toast.show({ type: 'error', text1: 'Submission failed', text2: editListing ? 'Failed to update listing' : 'Failed to create listing' });
+            const data = error.response?.data;
+            console.error("Submission Error:", data || error.message);
+
+            // Surface the actual validation reason instead of a generic
+            // "failed" message - a DRF error is either {"detail": "..."} or
+            // {"field_name": ["reason"]}, and the field-error form was
+            // previously swallowed entirely, leaving no way to tell a bad
+            // price from a missing location without reading server logs.
+            let reason;
+            if (typeof data?.detail === 'string') {
+                reason = data.detail;
+            } else if (data && typeof data === 'object') {
+                const firstKey = Object.keys(data)[0];
+                const firstValue = data[firstKey];
+                const firstMessage = Array.isArray(firstValue) ? firstValue[0] : firstValue;
+                if (firstMessage) {
+                    reason = firstKey === 'non_field_errors' ? String(firstMessage) : `${firstKey}: ${firstMessage}`;
+                }
+            }
+
+            Toast.show({
+                type: 'error',
+                text1: 'Submission failed',
+                text2: reason || (editListing ? 'Failed to update listing' : 'Failed to create listing'),
+            });
         } finally {
             setLoading(false);
         }
