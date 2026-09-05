@@ -262,6 +262,8 @@ export default function ForgotPasswordScreen() {
                             value={newPassword}
                             onChangeText={setNewPassword}
                             secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
@@ -279,6 +281,8 @@ export default function ForgotPasswordScreen() {
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
