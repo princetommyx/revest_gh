@@ -49,7 +49,22 @@ class EmailOrPhoneBackend(ModelBackend):
                 return user
             else:
                 print(f"DEBUG: User cannot authenticate (is_active=False?): {user.username}")
-        else:
-            print(f"DEBUG: Password verification FAILED for {user.username}")
-            
+            return None
+
+        # Self-heal accounts stuck on a password that was silently
+        # capitalized by a since-fixed RN bug: the login and reset-password
+        # screens used to auto-capitalize the first character before it
+        # ever reached the server, so some stored hashes don't match what
+        # the user actually types. If the capitalized form of what they just
+        # typed matches, log them in on their real password and re-save the
+        # hash so this fallback is never needed again for that account.
+        if password and password[:1].islower():
+            legacy_guess = password[0].upper() + password[1:]
+            if user.check_password(legacy_guess) and self.user_can_authenticate(user):
+                print(f"DEBUG: Healing capitalized legacy password for {user.username}")
+                user.set_password(password)
+                user.save(update_fields=["password"])
+                return user
+
+        print(f"DEBUG: Password verification FAILED for {user.username}")
         return None
