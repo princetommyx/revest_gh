@@ -3,7 +3,7 @@ import { GOOGLE_MAPS_API_KEY } from '../constants/googleMaps';
 
 export const placesApi = {
     /**
-     * Search for places/addresses in Ghana.
+     * Search for places/addresses.
      * @param {string} query Search term
      * @param {number} lat Optional current latitude, biases (not restricts) results toward nearby places
      * @param {number} lon Optional current longitude
@@ -11,47 +11,53 @@ export const placesApi = {
      */
     searchPlaces: async (query, lat, lon) => {
         try {
-            const params = {
-                query,
-                region: 'gh',
-                key: GOOGLE_MAPS_API_KEY,
+            // If we specifically want to restrict to Ghana, appending it helps if not already present
+            const searchQuery = query.toLowerCase().includes('ghana') ? query : `${query} Ghana`;
+
+            const data = {
+                textQuery: searchQuery,
             };
+
             if (lat && lon) {
-                params.location = `${lat},${lon}`;
-                params.radius = 50000; // 50km proximity bias, not a hard filter
+                data.locationBias = {
+                    circle: {
+                        center: {
+                            latitude: lat,
+                            longitude: lon
+                        },
+                        radius: 50000.0 // 50km proximity bias
+                    }
+                };
             }
 
-            const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', { params });
+            const response = await axios.post(
+                'https://places.googleapis.com/v1/places:searchText',
+                data,
+                {
+                    headers: {
+                        'X-Goog-Api-Key': GOOGLE_MAPS_API_KEY,
+                        'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.location',
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-            const { status, results, error_message } = response.data || {};
-            // Google's Places API answers with HTTP 200 even when the
-            // request itself failed (bad/restricted key, API not enabled on
-            // this project, billing not enabled, quota exhausted) - the real
-            // failure only shows up in this `status` field. Silently
-            // returning [] here made every one of those failures look
-            // identical to "no results for what you typed", for every
-            // single search, with nothing to tell the two apart.
-            if (status && status !== 'OK' && status !== 'ZERO_RESULTS') {
-                const reason = error_message || status;
-                console.warn('Places search failed:', status, error_message);
-                throw new Error(`Location search unavailable (${reason})`);
-            }
+            const places = response.data.places || [];
 
-            return (results || [])
-                .filter(r => r.geometry?.location)
-                .map(r => ({
-                    id: r.place_id,
-                    name: r.name,
-                    address: r.formatted_address || '',
-                    city: '',
-                    region: '',
-                    lat: r.geometry.location.lat,
-                    lon: r.geometry.location.lng,
-                    distance: 0,
-                }));
+            return places.map(p => ({
+                id: p.id,
+                name: p.displayName?.text || '',
+                address: p.formattedAddress || '',
+                city: '',
+                region: '',
+                lat: p.location?.latitude,
+                lon: p.location?.longitude,
+                distance: 0,
+            }));
         } catch (error) {
             console.error('Location Search Error:', error.response?.data || error.message);
-            throw error;
+            // The new API uses standard HTTP status codes for errors
+            throw new Error(`Location search unavailable (${error.message})`);
         }
     }
 };
