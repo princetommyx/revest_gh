@@ -2898,7 +2898,7 @@ const useStyles = makeStyles((c) => ({
         paddingHorizontal: 24,
         paddingTop: 24,
         paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        maxHeight: height * 0.9,
+        maxHeight: Dimensions.get('window').height * 0.9,
     },
     modalHeader: {
         flexDirection: 'row',
