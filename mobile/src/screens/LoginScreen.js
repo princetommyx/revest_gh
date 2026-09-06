@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal } from 'react-native';
 import { Eye, EyeOff, ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,7 +34,19 @@ export default function LoginScreen() {
     const [verifying, setVerifying] = useState(false);
     const [pendingUser, setPendingUser] = useState(null);
 
-    const { signIn, verifyLogin, googleSignIn } = useAuth();
+    const { signIn, verifyLogin, googleSignIn, pendingRegisterRole, setPendingRegisterRole } = useAuth();
+
+    // "Earn as a Collector" signs the user out and lands them here (the auth
+    // stack's default screen) with the role they want to register as stashed
+    // in context, since sign-out swaps the whole navigator and there's no
+    // Register screen mounted yet to hand a param to directly.
+    useEffect(() => {
+        if (pendingRegisterRole) {
+            const role = pendingRegisterRole;
+            setPendingRegisterRole(null);
+            navigation.replace('Register', { role });
+        }
+    }, [pendingRegisterRole]);
 
     const { promptAsync: promptGoogle } = useGoogleAuth({
         onToken: async (token) => {

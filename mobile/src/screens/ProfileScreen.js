@@ -69,7 +69,7 @@ const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, iconBg
 };
 
 export default function ProfileScreen({ navigation }) {
-    const { user, signOut, userRole } = useAuth();
+    const { user, signOut, userRole, setPendingRegisterRole } = useAuth();
     const styles = useStyles();
     const { colors, isDark } = useTheme();
 
@@ -124,6 +124,29 @@ export default function ProfileScreen({ navigation }) {
             [
                 { text: "Cancel", style: "cancel" },
                 { text: "Log Out", style: "destructive", onPress: () => signOut() }
+            ]
+        );
+    };
+
+    // A phone number and email are tied to one account, so a disposer
+    // wanting to also collect can't just flip their existing account to
+    // Collector - they need a second account under a different number/email.
+    // Sign out and drop them straight onto a Register screen with Collector
+    // pre-selected instead of routing them through a support chat for
+    // something they can already self-serve.
+    const handleBecomeCollector = () => {
+        Alert.alert(
+            "Sign up as a Collector",
+            "You'll need to sign out and create a new account with a different phone number and email - your current ones are already tied to your Disposer account.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Continue",
+                    onPress: async () => {
+                        setPendingRegisterRole('COLLECTOR');
+                        await signOut();
+                    }
+                }
             ]
         );
     };
@@ -286,13 +309,13 @@ export default function ProfileScreen({ navigation }) {
                 {/* Become a Collector cross-sell (Disposers only) */}
                 {userRole === 'SELLER' && (
                     <View style={styles.navBlock}>
-                        <TouchableOpacity style={styles.earnCard} onPress={() => navigation.navigate('SupportChat')} activeOpacity={0.85}>
+                        <TouchableOpacity style={styles.earnCard} onPress={handleBecomeCollector} activeOpacity={0.85}>
                             <View style={styles.earnIconBox}>
                                 <Recycle size={22} color={colors.text} />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.earnTitle}>Earn as a Collector</Text>
-                                <Text style={styles.earnDesc}>Pick up listed waste and get paid. Chat with our team to get set up.</Text>
+                                <Text style={styles.earnDesc}>Pick up listed waste and get paid. Sign up with a different number and email.</Text>
                             </View>
                             <ChevronRight size={18} color={colors.textSecondary} />
                         </TouchableOpacity>
