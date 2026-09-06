@@ -20,8 +20,11 @@ services:
         sync: false
 
   # Daily re-engagement push notifications for inactive users.
-  # NOTE: Render Cron Jobs are not on the free tier - pick a plan this
-  # will actually run on. DATABASE_URL must be set to the SAME database
+  # NOT currently active: Render Cron Jobs need a paid plan. For now,
+  # .github/workflows/daily-tasks.yml calls this same command for free via
+  # admin_dashboard.RunScheduledTasksView instead. Switch to this cron
+  # definition (and drop that workflow) once upgrading to a paid Render
+  # plan makes sense - it needs DATABASE_URL pointed at the SAME database
   # as revesta-backend above (not a new one), via the Render dashboard.
   - type: cron
     name: revesta-daily-reengagement
@@ -43,8 +46,8 @@ services:
         sync: false
 
   # Daily collector performance rollup - feeds intelligence.matching and the
-  # cached rate fields on User. Same free-tier caveat as the cron above:
-  # DATABASE_URL must point at the SAME database as revesta-backend.
+  # cached rate fields on User. Not currently active, same reason and same
+  # free-tier substitute as the cron above.
   - type: cron
     name: revesta-collector-rollup
     runtime: python
