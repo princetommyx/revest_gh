@@ -98,9 +98,13 @@ const useStyles = makeStyles((c) => ({
         color: c.onPrimary,
         marginBottom: 2,
     },
+    // Same c.primary-flips-in-dark-mode issue found elsewhere this session:
+    // the card (backgroundColor: c.primary) turns light in dark mode and
+    // title correctly follows via c.onPrimary, but this was hardcoded white
+    // regardless of theme, so it vanished on every toast shown in dark mode.
     subtext: {
         fontSize: 13,
-        color: 'rgba(255,255,255,0.7)',
+        color: c.isDark ? 'rgba(11,15,14,0.7)' : 'rgba(255,255,255,0.7)',
         lineHeight: 18,
     },
 }));
