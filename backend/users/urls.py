@@ -11,7 +11,7 @@ from .views import (
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
     TestSMSView, HubtelTestView, AdminSendPushView,
-    DeactivateAccountView
+    DeactivateAccountView, StorageDiagnosticView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
 from .kyc_views import KYCSubmitView, KYCStatusView
@@ -52,6 +52,7 @@ urlpatterns = [
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
     path('test-sms/', TestSMSView.as_view(), name='test_sms'),
     path('test-hubtel/', HubtelTestView.as_view(), name='test_hubtel'),
+    path('storage-diagnostic/', StorageDiagnosticView.as_view(), name='storage_diagnostic'),
     path('notifications/test-push/', AdminSendPushView.as_view(), name='test_push'),
     
     # Identity Verification (KYC)
