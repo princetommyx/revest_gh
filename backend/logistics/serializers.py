@@ -174,9 +174,16 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
             'pickup_address',
-            'destination_latitude', 'destination_longitude', 'destination_address'
+            'destination_latitude', 'destination_longitude', 'destination_address',
+            # Set server-side (see perform_create) when this request is a
+            # direct claim on someone else's listing rather than a fresh
+            # post - read-only here so the client can't set them, but
+            # exposed on the create response so the app can tell the two
+            # outcomes apart and toast the right message.
+            'status', 'collector',
         )
-    
+        read_only_fields = ('status', 'collector')
+
     def validate_latitude(self, value):
         if not -90 <= value <= 90:
             raise serializers.ValidationError("Latitude must be between -90 and 90.")
