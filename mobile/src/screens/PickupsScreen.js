@@ -880,9 +880,17 @@ export default function PickupsScreen({ route }) {
                 finalData.append('image', { uri, name, type });
             }
 
-            await logisticsApi.createPickupRequest(finalData);
+            const created = await logisticsApi.createPickupRequest(finalData);
 
-            Toast.show({ type: 'success', text1: 'Success', text2: 'Pickup request created!' });
+            // A collector claiming someone else's listing lands ACCEPTED
+            // immediately (see perform_create) rather than going out to the
+            // job board, so the toast should say so instead of "created".
+            const isDirectClaim = created?.status === 'ACCEPTED' && created?.collector;
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: isDirectClaim ? 'Job accepted! Head over to pick it up.' : 'Pickup request created!'
+            });
             setShowRequestModal(false);
             setUiState('IDLE');
             setCustomAddress('');

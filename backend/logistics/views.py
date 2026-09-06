@@ -130,14 +130,25 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         return PickupRequestDetailSerializer
 
     def perform_create(self, serializer):
-        provider = self.request.user
+        requester = self.request.user
         track_type = serializer.validated_data.get('track_type', 'A')
+        listing = serializer.validated_data.get('listing')
         waste_price = Decimal(str(serializer.validated_data.get('waste_price', 0) or 0))
         delivery_fee = Decimal(str(serializer.validated_data.get('delivery_fee', 0) or 0))
         payment_method = serializer.validated_data.get('payment_method', 'CASH')
 
         RECYCLER_COMMISSION = Decimal('5.00')
         total_amount = waste_price + delivery_fee
+
+        # A collector tapping "Accept Job" on someone else's marketplace
+        # listing used to POST here with themselves as `provider` - which
+        # made the job invisible to them forever (a collector's own job
+        # board excludes anything they're the provider on, to stop
+        # self-accept) and left the actual seller with nothing posted. Treat
+        # this as a direct claim instead: the seller is the provider, the
+        # tapping user is the collector, and it's ACCEPTED immediately.
+        is_direct_claim = listing is not None and listing.seller_id != requester.id
+        provider = listing.seller if is_direct_claim else requester
 
         provider_is_recycler = (provider.role == 'RECYCLER')
         monetized = WalletService.monetization_enabled()
@@ -146,7 +157,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             total_amount += RECYCLER_COMMISSION
 
         # 1. Save the request first
-        request = serializer.save(provider=provider, actual_price=total_amount)
+        save_kwargs = {'provider': provider, 'actual_price': total_amount}
+        if is_direct_claim:
+            save_kwargs['collector'] = requester
+            save_kwargs['status'] = 'ACCEPTED'
+        request = serializer.save(**save_kwargs)
 
         # 2. Handle Escrow/Payment
         # ONLY lock escrow if:
@@ -168,8 +183,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 request.save()
                 raise serializers.ValidationError({"detail": str(e), "code": "escrow_failed"})
 
-        # Logic to find nearby collectors
-        self.notify_nearby_collectors(request)
+        if is_direct_claim:
+            # Already claimed - tell the seller a collector is coming rather
+            # than broadcasting an already-taken job to the whole board.
+            self.notify_provider(request, 'job_accepted')
+        else:
+            # Logic to find nearby collectors
+            self.notify_nearby_collectors(request)
 
     @extend_schema(summary="Accept a pickup request")
     @action(detail=True, methods=['post'])
