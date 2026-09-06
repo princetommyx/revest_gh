@@ -86,6 +86,8 @@ INSTALLED_APPS = [
     'channels',
     'drf_spectacular',  # API documentation
     'django_filters',   # Advanced filtering
+    'cloudinary_storage',  # Media uploads - see DEFAULT_FILE_STORAGE below
+    'cloudinary',
     # Local apps
     'users',
     'market',
@@ -308,6 +310,18 @@ else:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Uploads (profile pictures, listing photos, KYC documents, pickup
+# verification photos) default to local disk above, which on Render's free
+# tier is small and doesn't survive a redeploy - a real production bug
+# (profile updates with a photo failing outright once the disk filled).
+# Cloudinary's free tier fixes both problems and needs no code changes
+# beyond this file: every ImageField/FileField save just goes there instead
+# once CLOUDINARY_URL is set. Until that env var exists, uploads keep using
+# local disk exactly as before - nothing breaks for anyone who hasn't set
+# this up yet (e.g. local development).
+if os.environ.get('CLOUDINARY_URL'):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 # Google Sign-In.
 # Every OAuth client that is allowed to authenticate against this backend. A

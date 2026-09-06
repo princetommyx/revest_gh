@@ -21,3 +21,5 @@ gunicorn
 exponent_server_sdk
 google-generativeai
 cryptography==46.0.3
+django-cloudinary-storage
+cloudinary
