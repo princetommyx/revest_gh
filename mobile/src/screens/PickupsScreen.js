@@ -45,7 +45,7 @@ const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
