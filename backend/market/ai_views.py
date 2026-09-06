@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.parsers import MultiPartParser, FormParser
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import json
 import traceback
@@ -32,7 +33,7 @@ class AnalyzeWasteView(APIView):
         
         try:
             # 3. Configure Gemini
-            genai.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
             
             # Two models, not three: each candidate is a real network round
             # trip to Google, and Render's free tier kills a request that
@@ -96,19 +97,18 @@ class AnalyzeWasteView(APIView):
             response = None
             for model_name in candidate_models:
                 try:
-                    model = genai.GenerativeModel(model_name)
                     # Without an explicit deadline, a stalled call to Google
                     # can hang well past Render's own platform request
                     # timeout, which kills the connection before this view
                     # ever gets to return the simulation fallback below - the
                     # client then sees a bare network error instead of the
                     # graceful "Estimated (offline mode)" response.
-                    response = model.generate_content(
-                        [
-                            {'mime_type': mime_type, 'data': image_content},
+                    response = client.models.generate_content(
+                        model=model_name,
+                        contents=[
+                            types.Part.from_bytes(data=image_content, mime_type=mime_type),
                             prompt
-                        ],
-                        request_options={'timeout': 20}
+                        ]
                     )
                     break # Success!
                 except Exception as e:
@@ -240,7 +240,7 @@ class SupportAIChatView(APIView):
             return Response({"error": "No message provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            genai.configure(api_key=api_key)
+            client = genai.Client(api_key=api_key)
             
             chat_context = """
             You are 'ReVesta AI', the official support assistant for ReVesta.
@@ -251,12 +251,13 @@ class SupportAIChatView(APIView):
             """
             
             # Using 2.5-flash as it's the confirmed functional model with available quota
-            model = genai.GenerativeModel(
-                model_name='gemini-flash-latest',
-                system_instruction=chat_context
+            response = client.models.generate_content(
+                model='gemini-flash-latest',
+                contents=user_message,
+                config=types.GenerateContentConfig(
+                    system_instruction=chat_context,
+                )
             )
-            
-            response = model.generate_content(user_message)
             ai_reply = response.text
             
             handoff_active = "[HANDOFF_TRIGGER]" in ai_reply

@@ -19,7 +19,7 @@ google-auth
 requests
 gunicorn
 exponent_server_sdk
-google-generativeai
+google-genai
 cryptography==46.0.3
 django-cloudinary-storage
 cloudinary
