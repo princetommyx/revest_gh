@@ -949,6 +949,14 @@ export default function PickupsScreen({ route }) {
                 if (isMounted) setSearchResults(results);
             } catch (err) {
                 console.log('Search Error', err);
+                // Distinguishes a real failure (bad API key, API not enabled,
+                // no billing) from a genuine zero-results search - both used
+                // to render as the same silent "No locations found", with no
+                // way to tell a broken search from an obscure address.
+                if (isMounted) {
+                    setSearchResults([]);
+                    Toast.show({ type: 'error', text1: 'Search unavailable', text2: err.message || 'Please try again' });
+                }
             } finally {
                 if (isMounted) setIsSearchingLocation(false);
             }

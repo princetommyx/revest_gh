@@ -24,9 +24,17 @@ export const placesApi = {
             const response = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', { params });
 
             const { status, results, error_message } = response.data || {};
+            // Google's Places API answers with HTTP 200 even when the
+            // request itself failed (bad/restricted key, API not enabled on
+            // this project, billing not enabled, quota exhausted) - the real
+            // failure only shows up in this `status` field. Silently
+            // returning [] here made every one of those failures look
+            // identical to "no results for what you typed", for every
+            // single search, with nothing to tell the two apart.
             if (status && status !== 'OK' && status !== 'ZERO_RESULTS') {
+                const reason = error_message || status;
                 console.warn('Places search failed:', status, error_message);
-                return [];
+                throw new Error(`Location search unavailable (${reason})`);
             }
 
             return (results || [])

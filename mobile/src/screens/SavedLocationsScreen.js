@@ -70,7 +70,7 @@ export default function SavedLocationsScreen({ navigation }) {
                 const found = await placesApi.searchPlaces(text.trim());
                 setResults(found);
             } catch (e) {
-                Toast.show({ type: 'error', text1: 'Search failed', text2: 'Check your connection and try again.' });
+                Toast.show({ type: 'error', text1: 'Search failed', text2: e.message || 'Check your connection and try again.' });
                 setResults([]);
             } finally {
                 setSearching(false);
