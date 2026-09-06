@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Truck, Trash, Recycle, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,8 +20,13 @@ export default function RegisterScreen() {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
     const navigation = useNavigation();
+    const route = useRoute();
     const { signUp, googleSignIn } = useAuth();
-    const [step, setStep] = useState(1);
+    // "Earn as a Collector" on Profile sends a signed-out user straight here
+    // with a role already chosen - skip the role-picker step entirely
+    // instead of making them pick it again.
+    const preselectedRole = ['COLLECTOR', 'SELLER'].includes(route.params?.role) ? route.params.role : '';
+    const [step, setStep] = useState(preselectedRole ? 2 : 1);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +39,7 @@ export default function RegisterScreen() {
         confirm_password: '',
         phone_number: '',
         city: 'Accra',
-        role: '',
+        role: preselectedRole,
         vehicle_type: '',
         license_plate: '',
         recycler_type: 'INDIVIDUAL',
