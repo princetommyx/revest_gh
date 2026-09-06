@@ -33,15 +33,16 @@ class AnalyzeWasteView(APIView):
             # 3. Configure Gemini
             genai.configure(api_key=api_key)
             
-            # IMPLEMENT ROBUST FALLBACK CHAIN
-            # We try models in order of preference: 
-            # 1. 2.5 Flash (Fastest/Standard for real-time)
-            # 2. 2.5 Pro (Higher accuracy if Flash fails)
-            # 3. 2.0 Flash (Legacy fallback)
+            # Two models, not three: each candidate is a real network round
+            # trip to Google, and Render's free tier kills a request that
+            # runs too long before our own try/except ever gets a chance to
+            # return the simulation fallback - a slow/failing third
+            # candidate (gemini-1.5-flash is on Google's older, increasingly
+            # unreliable track) was adding latency without adding a
+            # meaningfully different fallback.
             candidate_models = [
                 'gemini-flash-latest',
                 'gemini-2.0-flash',
-                'gemini-1.5-flash'
             ]
             
             active_model = None
@@ -95,15 +96,25 @@ class AnalyzeWasteView(APIView):
             for model_name in candidate_models:
                 try:
                     model = genai.GenerativeModel(model_name)
-                    response = model.generate_content([
-                        {'mime_type': mime_type, 'data': image_content},
-                        prompt
-                    ])
+                    # Without an explicit deadline, a stalled call to Google
+                    # can hang well past Render's own platform request
+                    # timeout, which kills the connection before this view
+                    # ever gets to return the simulation fallback below - the
+                    # client then sees a bare network error instead of the
+                    # graceful "Estimated (offline mode)" response.
+                    response = model.generate_content(
+                        [
+                            {'mime_type': mime_type, 'data': image_content},
+                            prompt
+                        ],
+                        request_options={'timeout': 20}
+                    )
                     break # Success!
                 except Exception as e:
+                    logger.warning(f"AI Analysis: model {model_name} failed: {e}")
                     last_error = e
                     continue # Try next model
-            
+
             if not response:
                 raise last_error or Exception("All AI models failed.")
 
@@ -136,8 +147,7 @@ class AnalyzeWasteView(APIView):
             return Response(data)
 
         except Exception as e:
-            logger.error(f"AI Analysis Failed: {str(e)}")
-            logger.warning(f"!!! DEBUG: AI Analysis Failed with error: {str(e)}")
+            logger.error(f"AI Analysis Failed: {str(e)}\n{traceback.format_exc()}")
             return self.simulation_fallback()
 
     def simulation_fallback(self):
