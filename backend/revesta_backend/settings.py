@@ -69,6 +69,11 @@ if not DEBUG:
 # Encryption Key for sensitive data (e.g. KYC ID numbers)
 FERNET_KEY = os.environ.get('FERNET_KEY', b'osLlL5AzQozSnG3c6TLOptUE1lAr_3kO3nyiOO88b38=')
 
+# Used server-side for real driving-time/distance estimates instead of a
+# straight-line haversine guess. Not set by default - without it,
+# estimate_price() falls back to the haversine calculation it always used.
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
 
 # Application definition
 
