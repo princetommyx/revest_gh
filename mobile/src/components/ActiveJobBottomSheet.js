@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Easing, Dimensions } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 
 // The sheet is absolutely positioned at bottom:0 inside a parent with no fixed
@@ -267,7 +268,13 @@ const useStyles = makeStyles((c) => ({
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 100 : 90,
+        // This sheet sits at bottom:0 behind the floating tab bar (see
+        // PickupsScreen's collectorBottomSheetUbride), so its own bottom
+        // padding is the only thing keeping the Arrived/Complete buttons -
+        // the very last thing in the ScrollView - from rendering underneath
+        // it. The old fixed 90/100 fell short of the tab bar's real height,
+        // hiding those buttons entirely on some devices.
+        paddingBottom: TAB_BAR_CLEARANCE + 8,
         shadowColor: c.shadow,
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,
