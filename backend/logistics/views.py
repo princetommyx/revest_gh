@@ -1,4 +1,6 @@
 import logging
+import requests
+from django.conf import settings
 from django.db import models
 from rest_framework import viewsets, permissions, filters, status, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -25,6 +27,40 @@ from datetime import timedelta
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def _fetch_driving_route(origin_lat, origin_lon, dest_lat, dest_lon):
+    """
+    Real road distance/duration (with live traffic where Google has it)
+    between two points, via the Distance Matrix API. Returns
+    (distance_km, duration_min), or None on any failure/misconfiguration -
+    callers fall back to the straight-line haversine estimate.
+    """
+    api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
+    if not api_key:
+        return None
+    try:
+        resp = requests.get(
+            'https://maps.googleapis.com/maps/api/distancematrix/json',
+            params={
+                'origins': f'{origin_lat},{origin_lon}',
+                'destinations': f'{dest_lat},{dest_lon}',
+                'departure_time': 'now',
+                'key': api_key,
+            },
+            timeout=3,
+        )
+        data = resp.json()
+        element = data['rows'][0]['elements'][0]
+        if element.get('status') != 'OK':
+            return None
+        duration_field = element.get('duration_in_traffic', element['duration'])
+        distance_km = element['distance']['value'] / 1000
+        duration_min = duration_field['value'] / 60
+        return distance_km, duration_min
+    except Exception:
+        logger.warning('Distance Matrix lookup failed, falling back to haversine estimate', exc_info=True)
+        return None
 
 @extend_schema(tags=['logistics'])
 @extend_schema_view(
@@ -739,10 +775,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         """
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
-        
+
         if not lat or not lon:
             return Response({'error': 'Latitude and Longitude required'}, status=400)
-            
+
         try:
             lat = float(lat)
             lon = float(lon)
@@ -751,33 +787,53 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
         # 1. Find nearest online collector (recyclers pick up Track A jobs too)
         online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
+        online_collector_count = online_collectors.count()
         nearest_collector = None
         min_dist = float('inf')
-        
+
         for collector in online_collectors:
             if collector.current_lat and collector.current_lon:
                 dist = haversine(lat, lon, collector.current_lat, collector.current_lon)
                 if dist < min_dist:
                     min_dist = dist
                     nearest_collector = collector
-        
+
         # Fallback if no collectors online: Use a default distance (e.g., from city center or 5km)
         if not nearest_collector:
             # For estimation purposes, assume a collector is ~5km away if none found
-            min_dist = 5.0 
-            
-        # 2. Estimate Duration (Assume 40km/h avg speed in city)
-        # Time = Distance / Speed * 60 min
+            min_dist = 5.0
+
+        # 2. Distance/duration - real road route (with live traffic) when we
+        # can reach Google, otherwise the straight-line/40km-h fallback.
+        # That fallback is what previously made every estimate look
+        # "hardcoded": with only one or two collectors online during testing,
+        # the same straight-line distance kept recurring.
+        distance_km = min_dist
         avg_speed_kmh = 40.0
         duration_min = (min_dist / avg_speed_kmh) * 60
-        
-        # 3. Calculate Price
+
+        if nearest_collector and nearest_collector.current_lat and nearest_collector.current_lon:
+            routed = _fetch_driving_route(
+                nearest_collector.current_lat, nearest_collector.current_lon, lat, lon
+            )
+            if routed:
+                distance_km, duration_min = routed
+
+        # 3. Demand adjustment - more pending jobs per online collector means
+        # a longer real-world wait than travel time alone predicts. Capped so
+        # a busy night can't blow the estimate up past 2x.
+        pending_jobs = PickupRequest.objects.filter(status='PENDING').count()
+        demand_ratio = pending_jobs / online_collector_count if online_collector_count else float(pending_jobs)
+        demand_multiplier = 1 + min(demand_ratio * 0.15, 1.0)
+        duration_min = duration_min * demand_multiplier
+
+        # 4. Calculate Price
         from .pricing import calculate_fare_estimate
-        price = calculate_fare_estimate(min_dist, duration_min)
-        
+        price = calculate_fare_estimate(distance_km, duration_min)
+
         return Response({
             'estimated_price': price,
-            'distance_km': round(min_dist, 2),
+            'distance_km': round(distance_km, 2),
             'duration_min': round(duration_min, 0),
             'currency': 'GHS'
         })
