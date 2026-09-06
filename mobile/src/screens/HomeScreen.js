@@ -188,7 +188,7 @@ export default function HomeScreen({ navigation }) {
                         </AnimatedButton>
                     </View>
                     {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
-                        <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                        <Truck size={80} color={isDark ? 'rgba(11,15,14,0.3)' : 'rgba(255,255,255,0.3)'} style={{ position: 'absolute', right: 10, bottom: 10 }} />
                     ) : (
                         <Image source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} style={styles.heroImage} contentFit="cover" />
                     )}
@@ -229,7 +229,7 @@ export default function HomeScreen({ navigation }) {
                             {promo.image || promo.image_url ? (
                                 <Image source={{ uri: promo.image ? resolveImageUrl(promo.image) : promo.image_url }} style={styles.heroImage} contentFit="cover" />
                             ) : (
-                                <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                                <Truck size={80} color={isDark ? 'rgba(11,15,14,0.3)' : 'rgba(255,255,255,0.3)'} style={{ position: 'absolute', right: 10, bottom: 10 }} />
                             )}
                         </View>
                     ))}
@@ -667,7 +667,12 @@ const useStyles = makeStyles((c) => ({
         overflow: 'hidden',
     },
     requestPickupTitle: { fontSize: 15, fontWeight: '700', color: c.onPrimary, marginBottom: 2 },
-    requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+    // Hardcoded white-on-dark assumed the card (backgroundColor: c.primary)
+    // stays dark - c.primary deliberately flips to a light colour in dark
+    // mode (see tokens.js), so the card itself turns white there and this
+    // text vanished. Mirrors onPrimary's own light/dark values instead of
+    // a literal, at reduced opacity for the same subdued weight as before.
+    requestPickupSubtitle: { fontSize: 12, color: c.isDark ? 'rgba(11,15,14,0.75)' : 'rgba(255,255,255,0.75)' },
 
     recentChipsRow: { gap: 8, paddingBottom: 16 },
     recentChip: {
@@ -692,7 +697,11 @@ const useStyles = makeStyles((c) => ({
     heroBanner: { backgroundColor: c.primary, borderRadius: 24, padding: 20, flexDirection: 'row', height: 160, overflow: 'hidden', marginBottom: 12 },
     heroContent: { flex: 1, justifyContent: 'center', zIndex: 2 },
     heroTitle: { color: c.onPrimary, fontSize: 22, fontWeight: '800', marginBottom: 6 },
-    heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 16, lineHeight: 18 },
+    // Same c.primary-flips-in-dark-mode issue as requestPickupSubtitle above -
+    // only actually visible when this banner uses c.primary as its background
+    // (the Seller/Disposer branch below), but harmless either way since accent
+    // (the other background this banner can use) doesn't invert between themes.
+    heroSubtitle: { color: c.isDark ? 'rgba(11,15,14,0.8)' : 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 16, lineHeight: 18 },
     heroBtn: { backgroundColor: c.surface, alignSelf: 'flex-start', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
     heroBtnText: { color: c.text, fontWeight: 'bold', fontSize: 13 },
     heroImage: { position: 'absolute', right: -20, bottom: -20, width: 140, height: 140, borderRadius: 70, opacity: 0.8 },
