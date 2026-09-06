@@ -175,11 +175,14 @@ export default function ProfileScreen({ navigation }) {
         queryFn: () => marketApi.getMyListings(),
     });
 
-    // Fetch KYC status (used for the verification status subtitle + completion nudge)
+    // Fetch KYC status (used for the verification status subtitle + completion
+    // nudge) - Disposers never need to verify identity, only Collectors and
+    // Recyclers do, so skip the call entirely for them.
     const { data: kycData } = useQuery({
         queryKey: ['kycStatus'],
         queryFn: () => authApi.getKycStatus(),
         staleTime: 60000,
+        enabled: userRole !== 'SELLER',
     });
     const kycStatus = kycData?.status || 'UNVERIFIED';
     const kycLabel = kycStatus === 'VERIFIED' ? 'Verified' : kycStatus === 'PENDING' ? 'Pending review' : kycStatus === 'REJECTED' ? 'Resubmission needed' : 'Not verified';
@@ -200,12 +203,14 @@ export default function ProfileScreen({ navigation }) {
 
     const avatarUri = resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
 
-    // Profile completion nudge - only counts fields that genuinely exist on the User model
+    // Profile completion nudge - only counts fields that genuinely exist on
+    // the User model. KYC only counts for Collectors/Recyclers - Disposers
+    // are never asked to verify, so it shouldn't hold their profile "incomplete".
     const completionChecks = [
         !!(user?.profile_picture_url || user?.profile_picture),
         !!user?.phone_number,
         !!user?.city,
-        kycStatus === 'VERIFIED',
+        ...(userRole !== 'SELLER' ? [kycStatus === 'VERIFIED'] : []),
     ];
     const completionDone = completionChecks.filter(Boolean).length;
     const completionTotal = completionChecks.length;
@@ -242,7 +247,11 @@ export default function ProfileScreen({ navigation }) {
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.completionTitle}>Complete your profile</Text>
-                                <Text style={styles.completionDesc}>Add a photo, phone number, city and get verified to build trust with the other side.</Text>
+                                <Text style={styles.completionDesc}>
+                                    {userRole === 'SELLER'
+                                        ? 'Add a photo, phone number and city to build trust with the other side.'
+                                        : 'Add a photo, phone number, city and get verified to build trust with the other side.'}
+                                </Text>
                             </View>
                             <ChevronRight size={18} color={colors.textMuted} />
                         </TouchableOpacity>
@@ -326,15 +335,17 @@ export default function ProfileScreen({ navigation }) {
                     <SectionHeader title="Account" />
                     <NavCard>
                         <NavLink title="Profile Information" icon={UserCog} onPress={() => navigation.navigate('EditProfile')} />
-                        <NavLink
-                            title="Verification"
-                            subtitle={kycLabel}
-                            subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
-                            icon={ShieldCheck}
-                            iconColor={kycStatus === 'VERIFIED' ? colors.accent : colors.text}
-                            iconBg={kycStatus === 'VERIFIED' ? colors.accentSoft : colors.surfaceSunken}
-                            onPress={() => navigation.navigate('KYCVerification')}
-                        />
+                        {userRole !== 'SELLER' && (
+                            <NavLink
+                                title="Verification"
+                                subtitle={kycLabel}
+                                subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
+                                icon={ShieldCheck}
+                                iconColor={kycStatus === 'VERIFIED' ? colors.accent : colors.text}
+                                iconBg={kycStatus === 'VERIFIED' ? colors.accentSoft : colors.surfaceSunken}
+                                onPress={() => navigation.navigate('KYCVerification')}
+                            />
+                        )}
                         <NavLink title="Security" icon={ShieldAlert} onPress={() => navigation.navigate('Security')} />
                         <NavLink
                             title="Blocked Accounts"
