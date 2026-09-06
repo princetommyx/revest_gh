@@ -96,6 +96,7 @@ INSTALLED_APPS = [
     'admin_dashboard',  # Admin dashboard system
     'wallet',  # Enabled for mobile app
     'moderation',  # User blocking + content reporting
+    'intelligence',  # AI prediction logging - see intelligence/models.py
 ]
 
 MIDDLEWARE = [

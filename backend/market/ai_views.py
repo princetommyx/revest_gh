@@ -9,6 +9,7 @@ import traceback
 from datetime import datetime
 from django.conf import settings
 import logging
+from intelligence.services import record_prediction
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +22,7 @@ class AnalyzeWasteView(APIView):
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             logger.warning("GEMINI_API_KEY not found. Using simulation fallback.")
-            return self.simulation_fallback()
+            return self.simulation_fallback(request=request, image_file=request.FILES.get('image'))
 
         # 2. Get Image
         if 'image' not in request.FILES:
@@ -144,13 +145,21 @@ class AnalyzeWasteView(APIView):
                 data['min_price'] = float(min_price)
                 data['max_price'] = float(max_price)
 
+            record_prediction(
+                task='waste_analysis',
+                model_version=model_name,
+                output=data,
+                user=request.user,
+                input_ref=image_file.name,
+                confidence=data.get('confidence'),
+            )
             return Response(data)
 
         except Exception as e:
             logger.error(f"AI Analysis Failed: {str(e)}\n{traceback.format_exc()}")
-            return self.simulation_fallback()
+            return self.simulation_fallback(request=request, image_file=image_file)
 
-    def simulation_fallback(self):
+    def simulation_fallback(self, request=None, image_file=None):
         """Returns a simulated successful response if AI unavailable"""
         import random
         import time
@@ -166,7 +175,7 @@ class AnalyzeWasteView(APIView):
             category = 'General'
             estimated = calculate_track_a_fee(category=category, bag_size=bag_size)
             min_price, max_price = price_guardrail(estimated)
-            return Response({
+            data = {
                 "track_type": "A",
                 "material_type": category,
                 "quantity_estimate": f"1 {bag_size.title()} Bag",
@@ -179,13 +188,13 @@ class AnalyzeWasteView(APIView):
                 "description": "Simulation: Household trash identified.",
                 "confidence": 0.85,
                 "simulated": True
-            })
+            }
         else:
             material = random.choice(['PET', 'Aluminum', 'Electronics'])
             weight = random.uniform(5.0, 25.0)
             estimated = calculate_track_b_earnings(material.upper(), weight)
             min_price, max_price = price_guardrail(estimated)
-            return Response({
+            data = {
                 "track_type": "B",
                 "material_type": material,
                 "quantity_estimate": f"{weight:.1f}kg of {material}",
@@ -198,7 +207,17 @@ class AnalyzeWasteView(APIView):
                 "description": f"Simulation: {material} recyclables detected.",
                 "confidence": 0.92,
                 "simulated": True
-            })
+            }
+
+        record_prediction(
+            task='waste_analysis',
+            model_version='simulation-fallback',
+            output=data,
+            user=request.user if request else None,
+            input_ref=image_file.name if image_file else '',
+            confidence=data.get('confidence'),
+        )
+        return Response(data)
 
 from chat.models import SupportSession
 from users.models import Notification
