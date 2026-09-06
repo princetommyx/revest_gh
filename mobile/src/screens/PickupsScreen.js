@@ -1484,7 +1484,7 @@ export default function PickupsScreen({ route }) {
                                     style={styles.continueBtnUbride}
                                 >
                                     {requestLoading ? (
-                                        <ActivityIndicator color={colors.onPrimary} />
+                                        <ActivityIndicator color="#FFFFFF" />
                                     ) : (
                                         <>
                                             <Text style={styles.continueBtnTextUbride}>Continue to Book</Text>
@@ -2311,7 +2311,12 @@ const useStyles = makeStyles((c) => ({
         elevation: 6,
     },
     continueBtnUbride: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
-    continueBtnTextUbride: { color: c.onPrimary, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
+    // Fixed white, not c.onPrimary - this button's own gradient below is
+    // always dark charcoal/black in both themes (it doesn't use c.primary,
+    // which is what onPrimary is paired against and flips to a light colour
+    // in dark mode). Following onPrimary here put dark text on a dark
+    // button whenever the app was in dark mode.
+    continueBtnTextUbride: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
     continueBtnIconBubble: { position: 'absolute', right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
 
     destinationPin: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.accent, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: c.border, shadowColor: c.shadow, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
