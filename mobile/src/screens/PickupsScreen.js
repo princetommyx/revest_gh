@@ -45,7 +45,7 @@ const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
 const QUANTITIES = ['1-2 Bags', '3-5 Bags', 'Tricycle Load', 'Pickup Truck Load'];
@@ -1614,7 +1614,7 @@ export default function PickupsScreen({ route }) {
                             <View style={styles.confirmHandle} />
                         </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                        <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
                             <View style={styles.confirmTitleRow}>
                                 <View style={styles.confirmLogoBox}>
                                     <Leaf size={22} color={BRAND_GREEN} />
@@ -2377,7 +2377,7 @@ const useStyles = makeStyles((c) => ({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: '#0D0D0F',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         paddingHorizontal: 20,
@@ -2385,37 +2385,37 @@ const useStyles = makeStyles((c) => ({
         paddingBottom: Platform.OS === 'ios' ? 34 : 24,
         maxHeight: Dimensions.get('window').height * 0.78,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.08)',
+        borderTopColor: c.border,
     },
     confirmHandleWrap: { alignItems: 'center', paddingVertical: 8 },
-    confirmHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.22)' },
+    confirmHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: c.border },
     confirmTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 8 },
     confirmLogoBox: {
         width: 42,
         height: 42,
         borderRadius: 12,
-        backgroundColor: 'rgba(52,211,153,0.14)',
+        backgroundColor: c.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    confirmTitle: { fontSize: 24, fontWeight: '800', color: '#F7F7F8', letterSpacing: -0.3 },
-    confirmSubtitle: { fontSize: 14.5, color: '#9BA1A6', marginBottom: 18, lineHeight: 20 },
+    confirmTitle: { fontSize: 24, fontWeight: '800', color: c.text, letterSpacing: -0.3 },
+    confirmSubtitle: { fontSize: 14.5, color: c.textSecondary, marginBottom: 18, lineHeight: 20 },
     confirmCard: {
-        backgroundColor: '#17181B',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderColor: c.borderSubtle,
         paddingHorizontal: 14,
         paddingVertical: 14,
         marginBottom: 12,
     },
     confirmCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    confirmCardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+    confirmCardDivider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 14 },
     confirmIconBoxGreen: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(52,211,153,0.14)',
+        backgroundColor: c.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -2423,26 +2423,26 @@ const useStyles = makeStyles((c) => ({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     confirmCardTextCol: { flex: 1 },
-    confirmCardLabel: { fontSize: 12.5, color: '#8B9096', marginBottom: 3 },
-    confirmCardValue: { fontSize: 16, fontWeight: '700', color: '#F2F3F4', marginBottom: 2 },
-    confirmCardSub: { fontSize: 13, color: '#7C8288' },
+    confirmCardLabel: { fontSize: 12.5, color: c.textMuted, marginBottom: 3 },
+    confirmCardValue: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 2 },
+    confirmCardSub: { fontSize: 13, color: c.textMuted },
     confirmChangeBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
-        backgroundColor: 'rgba(52,211,153,0.10)',
+        backgroundColor: c.accentSoft,
         paddingHorizontal: 10,
         paddingVertical: 8,
         borderRadius: 10,
     },
     confirmChangeText: { fontSize: 13.5, fontWeight: '600', color: BRAND_GREEN },
-    confirmInfoTitle: { fontSize: 15.5, fontWeight: '700', color: '#F2F3F4', marginBottom: 5 },
-    confirmInfoBody: { fontSize: 13.5, color: '#9BA1A6', lineHeight: 19.5 },
+    confirmInfoTitle: { fontSize: 15.5, fontWeight: '700', color: c.text, marginBottom: 5 },
+    confirmInfoBody: { fontSize: 13.5, color: c.textSecondary, lineHeight: 19.5 },
     confirmCtaBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -2528,7 +2528,13 @@ const useStyles = makeStyles((c) => ({
     jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
 
     container: { flex: 1 },
-    map: { width: width, height: height },
+    // Was { width, height } from a module-level Dimensions.get('window')
+    // snapshot taken once at import time - when that snapshot came back
+    // wrong (or just stale after a rotation/resize), the map rendered at
+    // whatever undersized dimensions it had captured, with the screen's
+    // own background showing through everywhere below it. Filling the
+    // flex:1 parent directly means there's nothing to get stale.
+    map: { ...StyleSheet.absoluteFillObject },
 
     header: {
         position: 'absolute',
