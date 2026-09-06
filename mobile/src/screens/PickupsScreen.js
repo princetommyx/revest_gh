@@ -2501,7 +2501,7 @@ const useStyles = makeStyles((c) => ({
         backgroundColor: c.primary,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: c.isDark ? 'rgba(11,15,14,0.1)' : 'rgba(255,255,255,0.1)',
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
@@ -2517,14 +2517,16 @@ const useStyles = makeStyles((c) => ({
         width: 42,
         height: 42,
         borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: c.isDark ? 'rgba(11,15,14,0.1)' : 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     kycBannerText: { flex: 1 },
     kycBannerTitle: { fontSize: 14, fontWeight: '700', color: c.onPrimary, marginBottom: 2 },
-    kycBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+    // Same c.primary-inversion issue as requestPickupSubtitle/heroSubtitle/
+    // ToastConfig's subtext - this banner turns light in dark mode too.
+    kycBannerSub: { fontSize: 12, color: c.isDark ? 'rgba(11,15,14,0.6)' : 'rgba(255,255,255,0.6)' },
     jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
 
     container: { flex: 1 },

@@ -43,7 +43,12 @@ const useStyles = makeStyles((c) => ({
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 16,
-        backgroundColor: 'rgba(255,255,255,0.7)',
+        // Was a fixed translucent white - fine in light mode, but every
+        // text color inside this row (txnTitle/txnSubtitle/txnTime) already
+        // follows the theme, so in dark mode that's light text sitting on a
+        // card that stayed nearly white. c.surface matches every other card
+        // in the app instead of a one-off translucency effect.
+        backgroundColor: c.surface,
         borderRadius: 20,
         paddingHorizontal: 16,
         marginBottom: 12,
