@@ -41,3 +41,25 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+
+  # Daily collector performance rollup - feeds intelligence.matching and the
+  # cached rate fields on User. Same free-tier caveat as the cron above:
+  # DATABASE_URL must point at the SAME database as revesta-backend.
+  - type: cron
+    name: revesta-collector-rollup
+    runtime: python
+    rootDir: backend
+    plan: starter
+    region: frankfurt
+    schedule: "30 23 * * *" # 23:30 UTC daily - after most of the day's jobs are done
+    buildCommand: bash build.sh
+    startCommand: python manage.py rollup_collector_performance
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.5
+      - key: DEBUG
+        value: 'False'
+      - key: SECRET_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

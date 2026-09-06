@@ -1277,9 +1277,12 @@ export default function PickupsScreen({ route }) {
 
     const handleRatingSubmit = async (rating, feedback) => {
         try {
-            // await logisticsApi.submitRating(jobToRate.id, rating, feedback);
+            await logisticsApi.submitRating(jobToRate.id, rating, feedback);
             Toast.show({ type: 'success', text1: 'Thank you!', text2: 'Your feedback has been submitted.' });
-            // Ideally we should refetch or update local state to mark as rated
+            // is_rated only flips once the job list refetches - without this
+            // the effect above sees the same completed-and-still-unrated job
+            // on its next run and pops the modal right back open.
+            refetch();
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit rating' });
         }

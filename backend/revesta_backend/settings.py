@@ -97,6 +97,7 @@ INSTALLED_APPS = [
     'wallet',  # Enabled for mobile app
     'moderation',  # User blocking + content reporting
     'intelligence',  # AI prediction logging - see intelligence/models.py
+    'ratings',  # Provider/collector ratings on completed pickups
 ]
 
 MIDDLEWARE = [

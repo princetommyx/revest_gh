@@ -15,6 +15,7 @@ from .serializers import (
     PickupRequestUpdateSerializer
 )
 from wallet.services import WalletService
+from intelligence.matching import match_score
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -101,17 +102,40 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                     # Strict Haversine filter (Python side since we are dealing with a small subset)
                     # For a truly scalable solution, GeoDjango/PostGIS would be used.
                     all_candidates = queryset.filter(active_q | pending_q)
-                    nearby_ids = []
+                    active_ids = []
+                    scored_pending = []
                     for job in all_candidates:
                         if job.status != 'PENDING' or job.collector == user:
-                            nearby_ids.append(job.id)
+                            active_ids.append(job.id)
                             continue
-                            
+
                         dist = haversine(lat_f, lon_f, float(job.latitude), float(job.longitude))
                         if dist <= 20: # 20km radius
-                            nearby_ids.append(job.id)
-                    
-                    return PickupRequest.objects.filter(id__in=nearby_ids).order_by('-created_at')
+                            scored_pending.append((job.id, match_score(
+                                distance_km=dist,
+                                acceptance_rate=user.acceptance_rate,
+                                completion_rate=user.completion_rate,
+                                avg_rating=user.avg_rating,
+                            )))
+
+                    # Own active job(s) first (nothing else needs attention
+                    # more than a pickup already in progress), then nearby
+                    # PENDING jobs best-match first. Everyone's acceptance/
+                    # completion/rating is the same constant for every job on
+                    # THEIR OWN board, so today this is equivalent to sorting
+                    # by distance alone - match_score is used anyway so this
+                    # stays correct once a per-job factor (material affinity,
+                    # urgency) is added and actually varies the ranking.
+                    scored_pending.sort(key=lambda pair: pair[1], reverse=True)
+                    ordered_ids = active_ids + [job_id for job_id, _ in scored_pending]
+                    if not ordered_ids:
+                        return PickupRequest.objects.none()
+
+                    preserved_order = models.Case(
+                        *[models.When(id=pk, then=pos) for pos, pk in enumerate(ordered_ids)],
+                        output_field=models.IntegerField(),
+                    )
+                    return PickupRequest.objects.filter(id__in=ordered_ids).order_by(preserved_order)
                     
                 except (ValueError, TypeError):
                     pass
@@ -161,6 +185,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         if is_direct_claim:
             save_kwargs['collector'] = requester
             save_kwargs['status'] = 'ACCEPTED'
+            save_kwargs['accepted_at'] = timezone.now()
         request = serializer.save(**save_kwargs)
 
         # 2. Handle Escrow/Payment
@@ -223,8 +248,9 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
         pickup_request.status = 'ACCEPTED'
         pickup_request.collector = request.user
+        pickup_request.accepted_at = timezone.now()
         pickup_request.save()
-        
+
         self.notify_provider(pickup_request, 'job_accepted')
         return Response({'status': 'job accepted'})
 
@@ -238,6 +264,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             return Response({'error': 'You are not the collector for this job'}, status=403)
             
         pickup_request.status = 'ARRIVED'
+        pickup_request.arrived_at = timezone.now()
         pickup_request.save()
 
         # Early Payout for Sellers (Track B & C).
@@ -320,6 +347,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             pass
 
         pickup_request.status = 'COMPLETED'
+        pickup_request.completed_at = timezone.now()
         pickup_request.save()
         
         # Process Payouts based on Track Type - only when monetization is on.
@@ -339,6 +367,57 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         
         self.notify_provider(pickup_request, 'job_completed')
         return Response({'status': 'job completed'})
+
+    @extend_schema(summary="Rate the other party on a completed pickup")
+    @action(detail=True, methods=['post'])
+    def rate(self, request, pk=None):
+        # Deliberately not self.get_object() - get_queryset() is scoped to
+        # what belongs on a collector's job board or a provider's own jobs,
+        # which excludes COMPLETED jobs for a collector entirely. The
+        # participant check below is the real permission check either way.
+        from django.shortcuts import get_object_or_404
+        pickup_request = get_object_or_404(PickupRequest, pk=pk)
+
+        if pickup_request.status != 'COMPLETED':
+            return Response({'error': 'Can only rate a completed job'}, status=400)
+
+        if request.user == pickup_request.provider:
+            ratee = pickup_request.collector
+        elif request.user == pickup_request.collector:
+            ratee = pickup_request.provider
+        else:
+            return Response({'error': 'You are not a participant on this job'}, status=403)
+
+        if not ratee:
+            return Response({'error': 'Nothing to rate on this job'}, status=400)
+
+        try:
+            score = int(request.data.get('score'))
+        except (TypeError, ValueError):
+            score = None
+        if score is None or not (1 <= score <= 5):
+            return Response({'error': 'score must be an integer from 1 to 5'}, status=400)
+
+        from django.db import IntegrityError
+        from django.db.models import Avg
+        from ratings.models import Rating
+
+        try:
+            Rating.objects.create(
+                pickup_request=pickup_request,
+                rater=request.user,
+                ratee=ratee,
+                score=score,
+                comment=request.data.get('comment', '') or '',
+            )
+        except IntegrityError:
+            return Response({'error': 'You already rated this job'}, status=400)
+
+        avg = Rating.objects.filter(ratee=ratee).aggregate(avg=Avg('score'))['avg']
+        ratee.avg_rating = round(avg, 2) if avg is not None else None
+        ratee.save(update_fields=['avg_rating'])
+
+        return Response({'status': 'rating_saved', 'ratee_avg_rating': ratee.avg_rating})
 
     @extend_schema(summary="Cancel pickup")
     @action(detail=True, methods=['post'])

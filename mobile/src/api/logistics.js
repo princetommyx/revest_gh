@@ -66,5 +66,10 @@ export const logisticsApi = {
     verifyWeight: async (id, formData) => {
         const response = await apiClient.post(`logistics/pickups/${id}/verify_weight/`, formData);
         return response.data;
+    },
+
+    submitRating: async (id, score, comment) => {
+        const response = await apiClient.post(`logistics/pickups/${id}/rate/`, { score, comment });
+        return response.data;
     }
 };

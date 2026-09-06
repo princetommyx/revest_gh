@@ -26,6 +26,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     distance_km = serializers.SerializerMethodField()
     duration_min = serializers.SerializerMethodField()
     collector_eta_min = serializers.SerializerMethodField()
+    is_rated = serializers.SerializerMethodField()
 
     class Meta:
         model = PickupRequest
@@ -40,9 +41,17 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
-            'is_verified'
+            'is_verified', 'is_rated'
         )
         read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
+
+    def get_is_rated(self, obj):
+        """Has the requesting user already rated this job? Drives whether
+        the mobile app's post-completion rating prompt shows again."""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        return obj.ratings.filter(rater=request.user).exists()
 
     def get_distance_km(self, obj):
         request = self.context.get('request')
