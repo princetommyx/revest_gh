@@ -288,7 +288,7 @@ export default function ListingDetailScreen({ route, navigation }) {
                         <View style={styles.similarSection}>
                             <View style={styles.similarHeader}>
                                 <Text style={styles.similarSectionTitle}>Similar Waste</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })}>
+                                <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}>
                                     <Text style={styles.seeAllText}>See all</Text>
                                 </TouchableOpacity>
                             </View>

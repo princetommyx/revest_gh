@@ -291,7 +291,7 @@ export default function ProfileScreen({ navigation }) {
                                 <Text style={styles.contextLink}>View details</Text>
                             </TouchableOpacity>
                         ) : activeListing ? (
-                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} activeOpacity={0.8}>
+                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Marketplace')} activeOpacity={0.8}>
                                 <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
                                 <Text style={styles.contextTitle}>{activeListing.quantity} {activeListing.material_type}</Text>
                                 <View style={styles.contextRow}>
@@ -308,7 +308,7 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
+                        <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Marketplace')} />
                         <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
                         <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
                         <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />
