@@ -65,6 +65,15 @@ const resolveAvatar = (user) => {
 };
 
 const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) => {
+    // Falls back to the generic person icon if the photo URL 404s or
+    // otherwise fails to load (e.g. it was uploaded before media storage
+    // moved to Cloudinary and no longer exists on disk) - without this, a
+    // failed load just left the tab's empty circular background visible
+    // with nothing inside it, worst in dark mode where that circle reads
+    // as a plain grey blob instead of blending into a lighter bar.
+    const [imageFailed, setImageFailed] = useState(false);
+    useEffect(() => { setImageFailed(false); }, [avatarUri]);
+
     // Each button owns its animation so the active pill can grow/fade in
     // rather than snapping between tabs.
     const anim = useRef(new Animated.Value(isFocused ? 1 : 0)).current;
@@ -96,10 +105,18 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
                     ]}
                 />
                 <View style={navStyles.iconWrapper}>
-                    {avatarUri ? (
+                    {avatarUri && !imageFailed ? (
                         <Image
                             source={{ uri: avatarUri }}
-                            style={[navStyles.avatar, isFocused && navStyles.avatarActive]}
+                            style={[
+                                navStyles.avatar,
+                                isFocused && navStyles.avatarActive,
+                                // avatarActive's border is a fixed near-black,
+                                // near-invisible against the dark tab bar -
+                                // colors.text gives real contrast in both.
+                                isFocused && { borderColor: colors.text },
+                            ]}
+                            onError={() => setImageFailed(true)}
                         />
                     ) : IconComp ? (
                         <IconComp size={22} color={color} strokeWidth={isFocused ? 2.6 : 2} fill={isFocused && IconComp === House ? color : 'transparent'} />
