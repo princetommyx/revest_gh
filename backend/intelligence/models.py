@@ -49,3 +49,32 @@ class Prediction(models.Model):
 
     def __str__(self):
         return f"{self.task} ({self.model_version}) @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class CollectorPerformanceSnapshot(models.Model):
+    """
+    One row per collector per day, written by
+    intelligence.rollup_collector_performance. A pre-aggregated rollup so a
+    future matching model can train on daily activity without recomputing
+    it from raw PickupRequest rows every time - and so trends over time
+    (is this collector's completion rate improving or slipping?) are
+    actually queryable instead of only ever knowing "right now."
+    """
+
+    date = models.DateField(db_index=True)
+    collector = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='performance_snapshots'
+    )
+    jobs_accepted = models.PositiveIntegerField(default=0)
+    jobs_completed = models.PositiveIntegerField(default=0)
+    jobs_cancelled = models.PositiveIntegerField(default=0)
+    avg_rating = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['date', 'collector'], name='one_snapshot_per_collector_per_day')
+        ]
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.collector_id} @ {self.date}: {self.jobs_completed} completed"

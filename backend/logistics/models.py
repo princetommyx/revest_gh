@@ -49,6 +49,13 @@ class PickupRequest(models.Model):
     longitude = models.FloatField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     created_at = models.DateTimeField(auto_now_add=True)
+    # Only created_at existed before - there was no way to compute how long
+    # a job sat PENDING before being accepted, or how long a pickup actually
+    # took, without these. Needed for collector performance rollups and any
+    # future matching/pricing model.
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    arrived_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     
     # For live tracking (simplified)
     current_lat = models.FloatField(null=True, blank=True)

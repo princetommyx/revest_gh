@@ -65,7 +65,19 @@ class User(AbstractUser):
     # flag automatically (see VerifyLoginOTPView), the same "log back in to
     # reactivate" pattern most consumer apps use.
     is_deactivated = models.BooleanField(default=False)
-    
+
+    # Cached collector performance stats - refreshed by
+    # intelligence.rollup_collector_performance, not computed on every read.
+    # completion_rate/cancellation_rate are real (COMPLETED vs CANCELLED
+    # jobs assigned as collector). acceptance_rate is left null for now:
+    # computing it honestly needs a record of which jobs were actually
+    # offered/visible to this collector, which nothing logs yet - a flat
+    # guess would be worse than admitting we don't know.
+    acceptance_rate = models.FloatField(null=True, blank=True)
+    completion_rate = models.FloatField(null=True, blank=True)
+    cancellation_rate = models.FloatField(null=True, blank=True)
+    avg_rating = models.FloatField(null=True, blank=True)
+
     def __str__(self):
         return self.username
 
