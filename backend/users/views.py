@@ -195,6 +195,24 @@ class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
     def get_object(self):
         return self.request.user
 
+    def update(self, request, *args, **kwargs):
+        # An unhandled exception here (e.g. the local media disk being full -
+        # uploads have no cloud storage behind them, see StorageDiagnosticView)
+        # falls through to Django's default error handling, which in
+        # production returns an HTML page instead of JSON - the client's
+        # error parsing expects a dict and silently falls back to a bare
+        # "Please try again" with nothing to go on. Logging the real
+        # exception here at least makes the next one diagnosable.
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            logger.error(f"Profile update failed for user {request.user.id}: {e}\n{traceback.format_exc()}")
+            return Response(
+                {"detail": "Could not update profile. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
     def destroy(self, request, *args, **kwargs):
         try:
             return super().destroy(request, *args, **kwargs)
@@ -1423,3 +1441,60 @@ class HubtelTestView(views.APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class StorageDiagnosticView(views.APIView):
+    """
+    Uploads (profile pictures, listing photos, KYC documents) all land on
+    MEDIA_ROOT - local disk, not cloud storage - and Render's free-tier disk
+    is small. A profile/listing update that includes an image failing with a
+    generic 500 while text-only edits keep working is the signature of that
+    disk being full rather than a code bug. This has no dashboard/SSH
+    equivalent on Render's free tier, so it's the only way to check from
+    outside without one.
+    """
+
+    permission_classes = (permissions.IsAdminUser,)
+
+    def get(self, request):
+        import shutil
+
+        media_root = settings.MEDIA_ROOT
+        try:
+            usage = shutil.disk_usage(media_root)
+        except Exception as e:
+            return Response(
+                {"error": f"Could not read disk usage for {media_root}: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        def _du(path):
+            total = 0
+            file_count = 0
+            for root, dirs, files in os.walk(path):
+                for f in files:
+                    try:
+                        total += os.path.getsize(os.path.join(root, f))
+                        file_count += 1
+                    except OSError:
+                        pass
+            return total, file_count
+
+        media_bytes, media_file_count = (0, 0)
+        if os.path.isdir(media_root):
+            media_bytes, media_file_count = _du(media_root)
+
+        def _mb(n):
+            return round(n / (1024 * 1024), 1)
+
+        return Response(
+            {
+                "media_root": media_root,
+                "disk_total_mb": _mb(usage.total),
+                "disk_used_mb": _mb(usage.total - usage.free),
+                "disk_free_mb": _mb(usage.free),
+                "disk_percent_used": round((usage.total - usage.free) / usage.total * 100, 1) if usage.total else None,
+                "media_dir_size_mb": _mb(media_bytes),
+                "media_file_count": media_file_count,
+            }
+        )
