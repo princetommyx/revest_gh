@@ -155,7 +155,10 @@ export default function ListingDetailScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            {/* container's background (c.surface) goes dark in dark mode -
+                a status bar stuck on dark-content went invisible against it,
+                unlike every other screen in the app which already follows isDark. */}
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Header Overlay */}
             <View style={[styles.headerToolbar, { paddingTop: Math.max(insets.top, 20) }]}>

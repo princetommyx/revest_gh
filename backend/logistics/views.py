@@ -181,6 +181,22 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
         return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # Only the 'list' action's serializer (PickupRequestListSerializer)
+        # renders is_rated, and get_queryset() above has several return
+        # points built around delicate haversine-ordering logic - easier and
+        # safer to attach this here, after all of them, than to thread a
+        # prefetch through each branch. Without it, is_rated ran one
+        # `ratings.filter(...).exists()` query per row in the response.
+        if self.action == 'list' and self.request.user.is_authenticated:
+            from django.db.models import Prefetch
+            from ratings.models import Rating
+            queryset = queryset.prefetch_related(
+                Prefetch('ratings', queryset=Rating.objects.filter(rater=self.request.user), to_attr='user_ratings')
+            )
+        return queryset
+
     def get_serializer_class(self):
         if self.action == 'list':
             return PickupRequestListSerializer
@@ -481,24 +497,30 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'CANCELLED'
         pickup_request.save()
         
-        # Refund Logic (If paid via Digital Wallet)
-        if pickup_request.payment_method == 'DIGITAL_WALLET':
-             from wallet.models import Wallet, Transaction
+        # Refund Logic - 'DIGITAL' is the only real payment_method value this
+        # app ever writes (see PickupRequest.PAYMENT_METHOD_CHOICES);
+        # 'DIGITAL_WALLET' here could never match, so every digitally-paid
+        # cancellation used to skip the refund entirely and leave the escrow
+        # HELD forever.
+        if pickup_request.payment_method == 'DIGITAL':
+             from wallet.models import Wallet, Transaction, Escrow
              from django.db import transaction
              from decimal import Decimal
-             
-             # Calculate refundable amount (Escrowed amount)
-             # We can't easily track exactly what was debited without a link, but we can reconstruct or check existing transactions
-             # detailed_amount = pickup_request.actual_price or (pickup_request.waste_price + pickup_request.delivery_fee)
-             # Simpler: If we debited actual_price, we refund actual_price
-             refund_amount = pickup_request.actual_price
-             
+
+             escrow = Escrow.objects.filter(pickup=pickup_request, status='HELD').first()
+             # Refund exactly what was debited into escrow when it exists -
+             # that's the authoritative record of what left the payer's
+             # wallet. actual_price is only a fallback for the (shouldn't
+             # happen under the current flow, but cheap to guard) case where
+             # a digital payment was taken without ever creating an escrow row.
+             refund_amount = escrow.amount if escrow else pickup_request.actual_price
+
              if refund_amount and refund_amount > 0:
                  with transaction.atomic():
                      provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=pickup_request.provider)
                      provider_wallet.balance += refund_amount
                      provider_wallet.save()
-                     
+
                      Transaction.objects.create(
                          wallet=provider_wallet,
                          pickup=pickup_request,
@@ -507,6 +529,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                          status='COMPLETED',
                          description=f"Refund for Cancelled Job #{pickup_request.id}"
                      )
+
+                     if escrow:
+                         escrow.status = 'REFUNDED'
+                         escrow.save(update_fields=['status'])
 
         # Notify other party
         if request.user == pickup_request.provider and pickup_request.collector:
