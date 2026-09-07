@@ -44,6 +44,7 @@ const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
@@ -2376,7 +2377,14 @@ const useStyles = makeStyles((c) => ({
     },
     confirmSheet: {
         position: 'absolute',
-        bottom: 0,
+        // The other two sheets in this same flow (bottomSheetUbride,
+        // bottomSheetUbrideVehicles) sit at bottom:120 to clear the floating
+        // tab bar - this one was left at bottom:0, so its own small
+        // paddingBottom was the only thing between the "Confirm Request"
+        // button and the tab bar, and on devices with on-screen system nav
+        // buttons underneath that too, the button ended up rendered behind
+        // both, invisible and untappable.
+        bottom: TAB_BAR_CLEARANCE,
         left: 0,
         right: 0,
         backgroundColor: c.surface,
