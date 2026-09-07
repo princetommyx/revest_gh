@@ -51,6 +51,12 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request or not request.user or not request.user.is_authenticated:
             return False
+        # The list view prefetches this per-user filtered queryset onto
+        # `user_ratings` (see PickupRequestViewSet.filter_queryset) so this
+        # doesn't run one query per row - fall back to a direct query for
+        # any other call site that builds this serializer without it.
+        if hasattr(obj, 'user_ratings'):
+            return len(obj.user_ratings) > 0
         return obj.ratings.filter(rater=request.user).exists()
 
     def get_distance_km(self, obj):

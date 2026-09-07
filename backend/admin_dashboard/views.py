@@ -1,6 +1,8 @@
+from decimal import Decimal
 from rest_framework import generics, status, permissions, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, action
+from django.core.mail import send_mail
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from datetime import timedelta
