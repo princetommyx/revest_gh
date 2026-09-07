@@ -34,10 +34,11 @@ const { width } = Dimensions.get('window');
 // the plain stroke icons around them in the category row.
 const PAPER_ICON = require('../../assets/paper-icon.png');
 const METALS_ICON = require('../../assets/metals-icon.png');
+const PLASTICS_ICON = require('../../assets/plastics-icon.png');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
-    { id: 'Plastics', name: 'Plastics', icon: Droplet },
+    { id: 'Plastics', name: 'Plastics', image: PLASTICS_ICON },
     { id: 'Metals', name: 'Metals', image: METALS_ICON },
     { id: 'Paper', name: 'Paper', image: PAPER_ICON },
     { id: 'Glass', name: 'Glass', icon: Droplet },
