@@ -125,3 +125,60 @@ class MarketSurveyResponse(models.Model):
 
     def __str__(self):
         return f"{self.role or 'response'} in {self.area or '?'} @ {self.submitted_at:%Y-%m-%d}"
+
+
+class PriceQuote(models.Model):
+    """
+    One row per estimate_price() call - the training data Bolt/Uber-style
+    dynamic pricing depends on and this app never captured. The formula
+    that sets the price today is still the plain rule-based one in
+    logistics/pricing.py; this table exists so that once enough real
+    quotes have piled up, a future model has (distance, demand, route
+    quality) -> (quoted price, whether it turned into a booking) to
+    actually learn from, instead of every quote vanishing the moment the
+    response left the server.
+
+    pickup_request is left null at quote time (nothing to link to yet) and
+    filled in on a best-effort basis if that same user creates a request
+    shortly after - see logistics/views.py::PickupRequestViewSet.
+    perform_create. Once linked, a training query joins through it for the
+    real outcome (status, actual_price) rather than this table trying to
+    duplicate and keep that in sync itself.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='price_quotes',
+    )
+
+    pickup_lat = models.FloatField()
+    pickup_lon = models.FloatField()
+    distance_km = models.FloatField(null=True, blank=True)
+    duration_min = models.FloatField(null=True, blank=True)
+    used_real_route = models.BooleanField(default=False)  # Google Distance Matrix vs haversine/40km-h fallback
+
+    online_collector_count = models.PositiveIntegerField(default=0)
+    pending_job_count = models.PositiveIntegerField(default=0)
+    demand_multiplier = models.FloatField(default=1.0)
+
+    quoted_price = models.DecimalField(max_digits=10, decimal_places=2)
+
+    pickup_request = models.ForeignKey(
+        'logistics.PickupRequest',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='price_quotes',
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        booked = 'booked' if self.pickup_request_id else 'unbooked'
+        return f"GHS {self.quoted_price} ({booked}) @ {self.created_at:%Y-%m-%d %H:%M}"
