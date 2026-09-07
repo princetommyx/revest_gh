@@ -55,11 +55,23 @@ class AnalyzeWasteView(APIView):
             mime_type = image_file.content_type or 'image/jpeg'
 
             # 5. Define Prompt (Once)
+            #
+            # Deliberately no GHS figures in here. This prompt used to hardcode
+            # a pricing table ("PURE_WATER_RUBBERS: 30 GH₵...") that only ever
+            # matched logistics/pricing.py by coincidence - it was never read
+            # from there, so the two silently drifted, and Gemini would echo
+            # its own stale number into the "description" field while the
+            # actual estimated_cost/estimated_earnings below it (correctly
+            # computed from calculate_track_a_fee/calculate_track_b_earnings)
+            # showed something different. The model doesn't need to know
+            # prices to classify material and estimate weight - it's told
+            # explicitly not to guess at them, and the real number is filled
+            # in server-side, from the one place pricing actually lives.
             prompt = """
             You are an expert, high-precision waste auditing AI for 'Revesta'.
             Analyze this image with EXTREME ATTENTION TO DETAIL.
-            
-            OBJECTIVE: 
+
+            OBJECTIVE:
             1. Identify the item and classify it into Track A or Track B.
             2. Extract material details and estimate metrics.
 
@@ -67,19 +79,30 @@ class AnalyzeWasteView(APIView):
             - **Track A (Paid Disposal):** Organic waste, diapers, food scraps, mixed household trash that cannot be easily recycled.
             - **Track B (Value Buyback):** High-value recyclables like PET (bottles), HDPE (containers), Aluminum (cans), Paper/Cardboard, Electronics, or Scrap Metal.
 
-            PRICING SYSTEM:
-            - PURE_WATER_RUBBERS: 30 GH₵ (Standard bag/loose)
-            - PLASTIC_BOTTLES: 30 GH₵ (Standard bag/loose)
-            - PURE_WATER_RUBBERS_BALE: 60 GH₵ (Compressed large bale)
-            - PLASTIC_BOTTLES_BALE: 60 GH₵ (Compressed large bale)
-            - Others: Price calculated per KG based on weight estimate.
-
             Allowed Material Types: 'PET', 'HDPE', 'ALUMINUM', 'PAPER', 'ELECTRONICS', 'METALS', 'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE', 'MIXED', 'ORGANIC', 'OTHER'
 
             NOTE: If you see large compressed/bundled bales of pure water sachets or bottles, classify as the 'BALE' version.
             Otherwise use 'PURE_WATER_RUBBERS' or 'PLASTIC_BOTTLES'.
 
-            Return ONLY valid JSON:
+            PRICING: Do not invent or state a price anywhere in your answer, including
+            in "description" and "reasoning". Revesta computes the real price
+            separately from your material_type/weight/bag_size output - a price you
+            state yourself will not match it and will only mislead the person reading it.
+
+            EXAMPLE (for format only - your actual material_type/weight must come from the image):
+            {
+                "track_type": "B",
+                "reasoning": "Clear PET bottles, no cap contamination visible, loosely piled rather than baled.",
+                "material_type": "PET",
+                "quantity_estimate": "1 Large Bag",
+                "suggested_bag_size": null,
+                "suggested_weight_kg": 8.5,
+                "title_suggestion": "PET Bottles",
+                "description": "A large bag of clear plastic bottles, mostly beverage containers, no visible contamination.",
+                "confidence": 0.9
+            }
+
+            Return ONLY valid JSON matching that shape:
             {
                 "track_type": "A" or "B",
                 "reasoning": "String (Why you chose this track and category)",
@@ -88,7 +111,7 @@ class AnalyzeWasteView(APIView):
                 "suggested_bag_size": "SMALL", "MEDIUM", "LARGE", or "XLARGE" (Track A only, otherwise null),
                 "suggested_weight_kg": number (Track B only, estimated weight in KG, otherwise null),
                 "title_suggestion": "String (e.g. 'Pure Water Rubbers')",
-                "description": "String (Brief assessment including the price if Track B)",
+                "description": "String (Brief assessment, no prices)",
                 "confidence": number (0.0-1.0)
             }
             """
@@ -108,7 +131,12 @@ class AnalyzeWasteView(APIView):
                         contents=[
                             types.Part.from_bytes(data=image_content, mime_type=mime_type),
                             prompt
-                        ]
+                        ],
+                        # Guarantees a bare JSON body instead of relying on the
+                        # model choosing not to wrap it in a ```json fence -
+                        # the markdown-stripping below stays as a defensive
+                        # fallback, not the primary way this gets parsed.
+                        config=types.GenerateContentConfig(response_mime_type='application/json'),
                     )
                     break # Success!
                 except Exception as e:
@@ -219,9 +247,16 @@ class AnalyzeWasteView(APIView):
         )
         return Response(data)
 
-from chat.models import SupportSession
+from chat.models import SupportSession, SupportAIMessage
 from users.models import Notification
 from admin_dashboard.models import AdminNotification
+
+# How many past turns (user + model messages combined) to replay to Gemini
+# as context. The client only ever sends the latest message - it has no way
+# to hand back prior turns itself - so this is the only memory the bot has
+# across a conversation. Capped rather than unbounded so a long-running
+# session doesn't grow the request payload/cost without limit.
+SUPPORT_CHAT_HISTORY_TURNS = 10
 
 class SupportAIChatView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -229,7 +264,7 @@ class SupportAIChatView(APIView):
     def post(self, request, *args, **kwargs):
         user_message = request.data.get('message')
         api_key = os.environ.get("GEMINI_API_KEY")
-        
+
         if not api_key:
             return Response({
                 "reply": "I'm currently working in offline mode, but I can still answer basic questions! How can I help?",
@@ -241,7 +276,7 @@ class SupportAIChatView(APIView):
 
         try:
             client = genai.Client(api_key=api_key)
-            
+
             chat_context = """
             You are 'ReVesta AI', the official support assistant for ReVesta.
             Help users with basic queries concisely. Detect if the user needs human support.
@@ -249,20 +284,36 @@ class SupportAIChatView(APIView):
             Speak like a helpful, modern Ghanaian assistant.
             Do not use any markdown formatting like asterisks (**) or bold text.
             """
-            
+
+            # Replay recent turns so the model has actual conversation memory -
+            # without this every message started from a blank slate and
+            # couldn't resolve something as basic as "when will it arrive"
+            # referring back to what "it" was two messages ago.
+            history = SupportAIMessage.objects.filter(user=request.user).order_by('-created_at')[:SUPPORT_CHAT_HISTORY_TURNS]
+            contents = [
+                types.Content(role=msg.role, parts=[types.Part.from_text(text=msg.content)])
+                for msg in reversed(history)
+            ]
+            contents.append(types.Content(role='user', parts=[types.Part.from_text(text=user_message)]))
+
             # Using 2.5-flash as it's the confirmed functional model with available quota
             response = client.models.generate_content(
                 model='gemini-flash-latest',
-                contents=user_message,
+                contents=contents,
                 config=types.GenerateContentConfig(
                     system_instruction=chat_context,
                 )
             )
             ai_reply = response.text
-            
+
             handoff_active = "[HANDOFF_TRIGGER]" in ai_reply
             clean_reply = ai_reply.replace("[HANDOFF_TRIGGER]", "").strip()
             session_id = None
+
+            SupportAIMessage.objects.bulk_create([
+                SupportAIMessage(user=request.user, role=SupportAIMessage.Role.USER, content=user_message),
+                SupportAIMessage(user=request.user, role=SupportAIMessage.Role.MODEL, content=clean_reply),
+            ])
             
             if handoff_active:
                 # Create Support Session
