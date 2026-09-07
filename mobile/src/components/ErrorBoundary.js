@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { RefreshCcw } from 'lucide-react-native';
 
 export class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
-        this.state = { hasError: false, error: null };
+        this.state = { hasError: false, error: null, componentStack: null };
     }
 
     static getDerivedStateFromError(error) {
@@ -13,8 +13,12 @@ export class ErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        // You can log the error to an error reporting service here
+        // No crash-reporting service wired up (see note below), so
+        // componentStack - the one thing that actually names the crashing
+        // component - only ever reached the console before. Surfacing it in
+        // the debug box is currently the only way anyone can get it back.
         console.error("Uncaught Error:", error, errorInfo);
+        this.setState({ componentStack: errorInfo?.componentStack || null });
     }
 
     handleReset = () => {
@@ -36,11 +40,12 @@ export class ErrorBoundary extends React.Component {
                         actual message back from a tester's device at all.
                         Revisit (gate behind __DEV__ again) once Sentry/Bugsnag
                         or similar is integrated. */}
-                    <View style={styles.debugBox}>
+                    <ScrollView style={styles.debugBox}>
                         <Text style={styles.debugText}>
                             {this.state.error?.toString()}
+                            {this.state.componentStack ? `\n${this.state.componentStack}` : ''}
                         </Text>
-                    </View>
+                    </ScrollView>
 
                     <TouchableOpacity style={styles.btn} onPress={this.handleReset}>
                         <RefreshCcw size={20} color={'#FFFFFF'} />
