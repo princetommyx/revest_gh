@@ -18,6 +18,7 @@ from .serializers import (
 )
 from wallet.services import WalletService
 from intelligence.matching import match_score
+from intelligence.services import record_price_quote, link_price_quote_to_request
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -223,6 +224,14 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             save_kwargs['status'] = 'ACCEPTED'
             save_kwargs['accepted_at'] = timezone.now()
         request = serializer.save(**save_kwargs)
+
+        # Best-effort link back to the estimate_price() quote that led here,
+        # so a future pricing model can eventually learn which quotes turn
+        # into real bookings. Only meaningful when the requester themselves
+        # got the quote - a collector direct-claiming someone else's listing
+        # never called estimate_price for it.
+        if not is_direct_claim:
+            link_price_quote_to_request(requester, request)
 
         # 2. Handle Escrow/Payment
         # ONLY lock escrow if:
@@ -812,6 +821,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         avg_speed_kmh = 40.0
         duration_min = (min_dist / avg_speed_kmh) * 60
 
+        routed = None
         if nearest_collector and nearest_collector.current_lat and nearest_collector.current_lon:
             routed = _fetch_driving_route(
                 nearest_collector.current_lat, nearest_collector.current_lon, lat, lon
@@ -830,6 +840,19 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # 4. Calculate Price
         from .pricing import calculate_fare_estimate
         price = calculate_fare_estimate(distance_km, duration_min)
+
+        record_price_quote(
+            user=request.user if request.user.is_authenticated else None,
+            lat=lat,
+            lon=lon,
+            distance_km=distance_km,
+            duration_min=duration_min,
+            used_real_route=routed is not None,
+            online_collector_count=online_collector_count,
+            pending_job_count=pending_jobs,
+            demand_multiplier=demand_multiplier,
+            quoted_price=price,
+        )
 
         return Response({
             'estimated_price': price,
