@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
     Package, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
-    LayoutGrid, Droplet, Magnet, FileText, Blocks
+    LayoutGrid, Droplet, Magnet, Blocks
 } from 'lucide-react-native';
 import apiClient, { BASE_URL } from '../api/client';
 import { adminApi } from '../api/admin';
@@ -30,11 +30,15 @@ import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
+// A real rendered icon rather than the flat FileText outline - stands out
+// against the plain shape icons around it in the category row.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
     { id: 'Plastics', name: 'Plastics', icon: Droplet },
     { id: 'Metals', name: 'Metals', icon: Magnet },
-    { id: 'Paper', name: 'Paper', icon: FileText },
+    { id: 'Paper', name: 'Paper', image: PAPER_ICON },
     { id: 'Glass', name: 'Glass', icon: Droplet },
     { id: 'Electronics', name: 'E-Waste', icon: Blocks }
 ];
@@ -258,7 +262,11 @@ export default function HomeScreen({ navigation }) {
                 }}
             >
                 <View style={[styles.catCircle, isActive && styles.catCircleActive]}>
-                    <IconComp size={24} color={isActive ? colors.onPrimary : colors.text} />
+                    {item.image ? (
+                        <Image source={item.image} style={styles.catIconImage} contentFit="contain" />
+                    ) : (
+                        <IconComp size={24} color={isActive ? colors.onPrimary : colors.text} />
+                    )}
                 </View>
                 <Text style={[styles.catLabel, isActive && styles.catLabelActive]}>{item.name}</Text>
             </TouchableOpacity>
@@ -271,7 +279,11 @@ export default function HomeScreen({ navigation }) {
         return (
             <TouchableOpacity key={item.id} style={styles.collCatCard} onPress={() => navigation.navigate('Pickups', { category: item.id })}>
                 <View style={styles.collCatIconBox}>
-                    <IconComp size={24} color={colors.text} />
+                    {item.image ? (
+                        <Image source={item.image} style={styles.collCatIconImage} contentFit="contain" />
+                    ) : (
+                        <IconComp size={24} color={colors.text} />
+                    )}
                 </View>
                 <Text style={styles.collCatText}>{item.name}</Text>
             </TouchableOpacity>
@@ -718,6 +730,7 @@ const useStyles = makeStyles((c) => ({
     catWrap: { alignItems: 'center', flex: 1 },
     catCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
     catCircleActive: { backgroundColor: c.primary },
+    catIconImage: { width: 30, height: 30 },
     catLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
     catLabelActive: { color: c.text, fontWeight: 'bold' },
     
@@ -737,6 +750,7 @@ const useStyles = makeStyles((c) => ({
     // Collector specific styles
     collCatCard: { backgroundColor: c.surfaceSunken, borderRadius: 16, padding: 12, alignItems: 'center', width: 80, marginRight: 12 },
     collCatIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    collCatIconImage: { width: 26, height: 26 },
     collCatText: { fontSize: 12, fontWeight: '600', color: c.text },
     collCard: { width: 260, backgroundColor: c.surface, borderRadius: 20, padding: 12, marginRight: 16, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
     collCardImageBox: { width: '100%', height: 140, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
