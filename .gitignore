@@ -1,0 +1,3 @@
+# Local Claude Code session state - worktrees for background subagents,
+# not project source. Never meant to be committed.
+.claude/
