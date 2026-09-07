@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, Blocks
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 import { marketApi } from '../api/market';
@@ -21,11 +21,15 @@ import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const { width } = Dimensions.get('window');
 
+// A real rendered icon rather than the flat FileText outline - stands out
+// against the plain shape icons around it in the category row.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
     { id: 'Plastics', name: 'Plastics', icon: Droplet },
     { id: 'Metals', name: 'Metals', icon: Magnet },
-    { id: 'Paper', name: 'Paper', icon: FileText },
+    { id: 'Paper', name: 'Paper', image: PAPER_ICON },
     { id: 'Glass', name: 'Glass', icon: Droplet },
     { id: 'Electronics', name: 'E-Waste', icon: Blocks }
 ];
@@ -244,6 +248,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                             >
                                 {IconComp && isActive && item.id === '' && <IconComp size={16} color={colors.onPrimary} style={{ marginRight: 6 }} />}
                                 {IconComp && !isActive && <IconComp size={16} color={colors.text} style={{ marginRight: 6 }} />}
+                                {item.image && !isActive && <Image source={item.image} style={{ width: 18, height: 18, marginRight: 6 }} contentFit="contain" />}
                                 <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                                     {item.name}
                                 </Text>
