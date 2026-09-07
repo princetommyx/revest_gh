@@ -255,6 +255,15 @@ export default function HomeScreen({ navigation }) {
     const renderCategory = (item) => {
         const isActive = filter === item.id;
         const IconComp = item.icon;
+        // A stroke icon re-tints itself via onPrimary/text, so filling the
+        // whole circle with the theme's (dark-mode-inverting) primary color
+        // when active always keeps it readable. These rendered images can't
+        // re-tint - they're fixed light-gray objects - so on that same fill
+        // in dark mode (where primary flips to near-white) they'd wash out
+        // against a background close to their own color. Signal "active"
+        // with a border accent instead, the same way Create Listing's
+        // material cards already do, rather than inverting the fill under them.
+        const activeStyle = item.image ? styles.catCircleActiveOutline : styles.catCircleActive;
         return (
             <TouchableOpacity
                 key={item.id}
@@ -264,7 +273,7 @@ export default function HomeScreen({ navigation }) {
                     else setFilter(item.id);
                 }}
             >
-                <View style={[styles.catCircle, isActive && styles.catCircleActive]}>
+                <View style={[styles.catCircle, isActive && activeStyle]}>
                     {item.image ? (
                         <Image source={item.image} style={styles.catIconImage} contentFit="contain" />
                     ) : (
@@ -733,6 +742,9 @@ const useStyles = makeStyles((c) => ({
     catWrap: { alignItems: 'center', flex: 1 },
     catCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
     catCircleActive: { backgroundColor: c.primary },
+    // For image-backed categories - keeps the neutral (theme-safe) fill and
+    // marks "active" with a ring instead of inverting the background color.
+    catCircleActiveOutline: { borderWidth: 2, borderColor: c.primary },
     catIconImage: { width: 30, height: 30 },
     catLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
     catLabelActive: { color: c.text, fontWeight: 'bold' },
