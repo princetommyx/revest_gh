@@ -5,7 +5,7 @@ import {
     Platform, Dimensions, StatusBar, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft, Database, FileText, Wine, Monitor, Grid } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft, Wine, Monitor, Grid } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import AnimatedButton from '../components/AnimatedButton';
@@ -17,6 +17,13 @@ import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
+
+// Same real rendered icons as Home/Marketplace's category rows, in place of
+// the flat outline icons here - keeps the material picker visually
+// consistent with everywhere else a disposer picks a material.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+const METALS_ICON = require('../../assets/metals-icon.png');
+const PLASTICS_ICON = require('../../assets/plastics-icon.png');
 
 export default function CreateListingScreen({ route, navigation }) {
     const styles = useStyles();
@@ -342,7 +349,10 @@ export default function CreateListingScreen({ route, navigation }) {
                     {/* Form Fields */}
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>What are you selling?</Text>
+                            {/* Not "What are you selling?" - this same form also
+                                covers Track A, where the disposer is paying to have
+                                waste hauled away rather than selling anything. */}
+                            <Text style={styles.sectionTitle}>What type of waste is it?</Text>
                             {([
                                 'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
                                 'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
@@ -353,9 +363,9 @@ export default function CreateListingScreen({ route, navigation }) {
                             {[
                                 // Material hues are categorical identity, not theming -
                                 // each is mid-tone and legible on either ground.
-                                { id: 'Plastics', icon: Package, color: '#3B82F6' },
-                                { id: 'Metals', icon: Database, color: '#64748B' },
-                                { id: 'Paper', icon: FileText, color: '#EAB308' },
+                                { id: 'Plastics', image: PLASTICS_ICON, color: '#3B82F6' },
+                                { id: 'Metals', image: METALS_ICON, color: '#64748B' },
+                                { id: 'Paper', image: PAPER_ICON, color: '#EAB308' },
                                 { id: 'Glass', icon: Wine, color: '#10B981' },
                                 { id: 'Electronics', icon: Monitor, color: '#8B5CF6' },
                                 { id: 'Other', icon: Grid, color: '#F97316' }
@@ -383,7 +393,11 @@ export default function CreateListingScreen({ route, navigation }) {
                                         onPress={() => handleChange('material_type', cat.id)}
                                     >
                                         <View style={styles.categoryCardInner}>
-                                            <IconComp size={20} color={isActive ? colors.text : colors.textSecondary} />
+                                            {cat.image ? (
+                                                <Image source={cat.image} style={styles.categoryCardIconImage} resizeMode="contain" />
+                                            ) : (
+                                                <IconComp size={20} color={isActive ? colors.text : colors.textSecondary} />
+                                            )}
                                             <Text style={[styles.categoryCardText, isActive && styles.categoryCardTextActive]}>
                                                 {cat.id}
                                             </Text>
@@ -694,6 +708,10 @@ const useStyles = makeStyles((c) => ({
     categoryCardInner: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    categoryCardIconImage: {
+        width: 22,
+        height: 22,
     },
     categoryCardText: {
         fontSize: 14,
