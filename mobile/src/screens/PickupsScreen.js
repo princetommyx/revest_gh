@@ -616,12 +616,30 @@ export default function PickupsScreen({ route }) {
     // navigation UI. Was gated to 'COLLECTOR' only, so a recycler's accepted
     // job never started background tracking at all - the disposer would see
     // no live position for the entire job.
+    //
+    // `jobs` is a new array reference on every refetch (the 25s poll, every
+    // socket message, every screen focus - all of them, whether or not this
+    // collector's own job actually changed), so this effect used to re-fire
+    // and re-call startCollectorLocationTracking() every single time, which
+    // re-requests foreground *and* background location permission before it
+    // ever checks whether tracking is already running. If the collector
+    // hadn't granted "Allow all the time" yet, that meant the native
+    // background-location dialog kept reappearing every ~25s for as long as
+    // the job stayed active - indistinguishable from the app being frozen,
+    // since a fresh system dialog just kept replacing the one they'd been
+    // trying to dismiss. Only call start/stop when the active job actually
+    // changes.
+    const trackedJobIdRef = useRef(null);
     useEffect(() => {
         if (!isCollectorRole) return;
 
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
-        if (activeJob) {
-            startCollectorLocationTracking(activeJob.id);
+        const activeJobId = activeJob?.id ?? null;
+        if (activeJobId === trackedJobIdRef.current) return;
+
+        trackedJobIdRef.current = activeJobId;
+        if (activeJobId) {
+            startCollectorLocationTracking(activeJobId);
         } else {
             stopCollectorLocationTracking();
         }
