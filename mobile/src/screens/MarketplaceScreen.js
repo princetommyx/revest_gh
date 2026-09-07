@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const { width } = Dimensions.get('window');
 
@@ -707,7 +708,13 @@ const useStyles = makeStyles((c) => ({
     },
     fab: {
         position: 'absolute',
-        bottom: 30,
+        // This screen renders both as a tab (with the floating tab bar) and
+        // as a plain pushed stack screen (no tab bar, just the phone's own
+        // system nav) - the fixed bottom:30 cleared neither, so on Android
+        // this button ended up sitting under the on-screen nav buttons.
+        // TAB_BAR_CLEARANCE clears both cases the same way every other
+        // bottom-pinned control in the app already does.
+        bottom: TAB_BAR_CLEARANCE,
         alignSelf: 'center',
         backgroundColor: c.primary,
         paddingHorizontal: 24,
