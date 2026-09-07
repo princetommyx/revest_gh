@@ -226,8 +226,10 @@ class PromoCard(models.Model):
     # Navigation logic
     action_type = models.CharField(max_length=50, default='NAVIGATE', help_text="e.g., NAVIGATE, URL")
     action_value = models.CharField(max_length=100, help_text="e.g., Pickups, ListingDetail, https://google.com")
-    
-    is_active = models.BooleanField(default=True, db_index=True)
+
+    # Defaults to inactive so a newly created/test card isn't served to real
+    # users until someone reviews its copy and deliberately switches it on.
+    is_active = models.BooleanField(default=False, db_index=True)
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -248,7 +250,8 @@ class OnboardingScreen(models.Model):
     image_url = models.URLField(max_length=500, null=True, blank=True, help_text="Alternative to uploaded image")
     button_text = models.CharField(max_length=50, default="Next")
     order = models.PositiveIntegerField(default=0)
-    is_active = models.BooleanField(default=True, db_index=True)
+    # Same reasoning as PromoCard.is_active above.
+    is_active = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
