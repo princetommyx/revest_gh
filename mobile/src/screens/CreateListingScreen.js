@@ -5,7 +5,7 @@ import {
     Platform, Dimensions, StatusBar, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft, Wine, Monitor, Grid } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft, Wine, Grid } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import AnimatedButton from '../components/AnimatedButton';
@@ -24,6 +24,7 @@ const { width } = Dimensions.get('window');
 const PAPER_ICON = require('../../assets/paper-icon.png');
 const METALS_ICON = require('../../assets/metals-icon.png');
 const PLASTICS_ICON = require('../../assets/plastics-icon.png');
+const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
 
 export default function CreateListingScreen({ route, navigation }) {
     const styles = useStyles();
@@ -367,7 +368,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 { id: 'Metals', image: METALS_ICON, color: '#64748B' },
                                 { id: 'Paper', image: PAPER_ICON, color: '#EAB308' },
                                 { id: 'Glass', icon: Wine, color: '#10B981' },
-                                { id: 'Electronics', icon: Monitor, color: '#8B5CF6' },
+                                { id: 'Electronics', image: ELECTRONICS_ICON, color: '#8B5CF6' },
                                 { id: 'Other', icon: Grid, color: '#F97316' }
                             ].map(cat => {
                                 const isFixedItem = [
