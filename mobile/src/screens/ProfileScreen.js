@@ -14,7 +14,7 @@ import { BASE_URL } from '../api/client';
 import Toast from 'react-native-toast-message';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
-    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
+    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestionMark, LogOut,
     Recycle, UserX, Trash2, X, Ban
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
@@ -371,7 +371,7 @@ export default function ProfileScreen({ navigation }) {
                     <SectionHeader title="Support & Community" />
                     <NavCard>
                         <NavLink title="Invite someone" icon={Share2} onPress={handleInvite} />
-                        <NavLink title="Help & Support" icon={MessageCircleQuestion} onPress={() => navigation.navigate('SupportChat')} isLast />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestionMark} onPress={() => navigation.navigate('SupportChat')} isLast />
                     </NavCard>
                 </View>
 
