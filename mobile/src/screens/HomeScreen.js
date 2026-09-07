@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
     Package, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
-    LayoutGrid, Droplet, Magnet, Blocks
+    LayoutGrid, Droplet, Blocks
 } from 'lucide-react-native';
 import apiClient, { BASE_URL } from '../api/client';
 import { adminApi } from '../api/admin';
@@ -30,14 +30,15 @@ import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
-// A real rendered icon rather than the flat FileText outline - stands out
-// against the plain shape icons around it in the category row.
+// Real rendered icons rather than flat outline shapes - stand out against
+// the plain stroke icons around them in the category row.
 const PAPER_ICON = require('../../assets/paper-icon.png');
+const METALS_ICON = require('../../assets/metals-icon.png');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
     { id: 'Plastics', name: 'Plastics', icon: Droplet },
-    { id: 'Metals', name: 'Metals', icon: Magnet },
+    { id: 'Metals', name: 'Metals', image: METALS_ICON },
     { id: 'Paper', name: 'Paper', image: PAPER_ICON },
     { id: 'Glass', name: 'Glass', icon: Droplet },
     { id: 'Electronics', name: 'E-Waste', icon: Blocks }
