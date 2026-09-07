@@ -5,7 +5,7 @@ import {
     Platform, Dimensions, StatusBar, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft, Grid } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import AnimatedButton from '../components/AnimatedButton';
@@ -26,6 +26,7 @@ const METALS_ICON = require('../../assets/metals-icon.png');
 const PLASTICS_ICON = require('../../assets/plastics-icon.png');
 const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
 const GLASS_ICON = require('../../assets/glass-icon.png');
+const OTHER_ICON = require('../../assets/other-icon.png');
 
 export default function CreateListingScreen({ route, navigation }) {
     const styles = useStyles();
@@ -370,7 +371,7 @@ export default function CreateListingScreen({ route, navigation }) {
                                 { id: 'Paper', image: PAPER_ICON, color: '#EAB308' },
                                 { id: 'Glass', image: GLASS_ICON, color: '#10B981' },
                                 { id: 'Electronics', image: ELECTRONICS_ICON, color: '#8B5CF6' },
-                                { id: 'Other', icon: Grid, color: '#F97316' }
+                                { id: 'Other', image: OTHER_ICON, color: '#F97316' }
                             ].map(cat => {
                                 const isFixedItem = [
                                     'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
