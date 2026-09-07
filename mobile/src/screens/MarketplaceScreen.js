@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 import { marketApi } from '../api/market';
@@ -27,13 +27,14 @@ const PAPER_ICON = require('../../assets/paper-icon.png');
 const METALS_ICON = require('../../assets/metals-icon.png');
 const PLASTICS_ICON = require('../../assets/plastics-icon.png');
 const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
+const GLASS_ICON = require('../../assets/glass-icon.png');
 
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
     { id: 'Plastics', name: 'Plastics', image: PLASTICS_ICON },
     { id: 'Metals', name: 'Metals', image: METALS_ICON },
     { id: 'Paper', name: 'Paper', image: PAPER_ICON },
-    { id: 'Glass', name: 'Glass', icon: Droplet },
+    { id: 'Glass', name: 'Glass', image: GLASS_ICON },
     { id: 'Electronics', name: 'E-Waste', image: ELECTRONICS_ICON }
 ];
 
