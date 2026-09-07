@@ -127,8 +127,12 @@ const useStyles = makeStyles((c) => ({
         fontWeight: 'bold',
         marginBottom: 2,
     },
+    // Was hardcoded translucent white, matching `title` above it only in
+    // light mode - the container (backgroundColor: c.primary) flips to a
+    // light background in dark mode, so this went near-invisible on every
+    // active-pickup banner for a dark-mode disposer.
     subtitle: {
-        color: 'rgba(255, 255, 255, 0.7)',
+        color: c.isDark ? 'rgba(11,15,14,0.7)' : 'rgba(255, 255, 255, 0.7)',
         fontSize: 12,
     },
     actionIcon: {

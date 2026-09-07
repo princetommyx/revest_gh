@@ -1883,8 +1883,11 @@ export default function PickupsScreen({ route }) {
                 onRequestClose={() => setShowSearchModal(false)}
             >
                 <SafeAreaView style={{ flex: 1, backgroundColor: colors.onPrimary }}>
-                    <StatusBar barStyle="dark-content" />
-                    
+                    {/* colors.onPrimary flips to near-black in dark mode (it
+                        inverts opposite colors.primary), so a status bar
+                        stuck on dark-content here went invisible against it. */}
+                    <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
                     {/* Search Header */}
                     <View style={styles.searchHeader}>
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
