@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { GLView } from 'expo-gl';
 import { Renderer } from 'expo-three';
@@ -13,11 +13,20 @@ const ROTATE_RADIANS_PER_SECOND = 0.6;
  * recycler) — the same marks as the identity prototype, auto-rotating,
  * fills its container. No orbit/zoom interaction; this is a decorative
  * icon replacement, not the full stage.
+ *
+ * Fills whatever box it's placed in (pass a sized/aspect-ratio'd parent,
+ * not a `size` prop) and waits for that box's real, settled layout before
+ * mounting the GL surface. Mounting immediately - before a flex/aspectRatio
+ * parent has resolved its final size - is what left the mark rendered
+ * against a stale, wrong-sized surface on Android (expo-gl's surface is a
+ * native layer that doesn't always repaint in step with a still-settling
+ * JS layout, especially inside a ScrollView).
  */
-export default function RoleMarkBadge({ role, size = 48 }) {
+export default function RoleMarkBadge({ role }) {
   const rafRef = useRef(0);
   const markRef = useRef(null);
   const rendererRef = useRef(null);
+  const [layoutSize, setLayoutSize] = useState(null);
 
   useEffect(() => {
     return () => {
@@ -30,6 +39,13 @@ export default function RoleMarkBadge({ role, size = 48 }) {
       });
       rendererRef.current?.dispose();
     };
+  }, []);
+
+  const onLayout = useCallback((e) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width > 0 && height > 0) {
+      setLayoutSize((prev) => (prev && prev.width === width && prev.height === height ? prev : { width, height }));
+    }
   }, []);
 
   const onContextCreate = useCallback((gl) => {
@@ -86,8 +102,18 @@ export default function RoleMarkBadge({ role, size = 48 }) {
   }, [role]);
 
   return (
-    <View style={{ width: size, height: size, overflow: 'hidden' }}>
-      <GLView style={StyleSheet.absoluteFill} onContextCreate={onContextCreate} />
+    <View style={styles.fill} onLayout={onLayout}>
+      {layoutSize && (
+        <GLView
+          key={`${layoutSize.width}x${layoutSize.height}`}
+          style={StyleSheet.absoluteFill}
+          onContextCreate={onContextCreate}
+        />
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { width: '100%', height: '100%', overflow: 'hidden' },
+});

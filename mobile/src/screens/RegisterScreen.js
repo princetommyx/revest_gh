@@ -350,7 +350,7 @@ export default function RegisterScreen() {
                 style={[styles.roleGridCard, isSelected && styles.roleGridCardSelected]}
             >
                 <View style={styles.roleImageArea}>
-                    <RoleMarkBadge role={markRole} size={100} />
+                    <RoleMarkBadge role={markRole} />
                 </View>
                 <Text style={styles.roleGridTitle}>{title}</Text>
                 <Text style={styles.roleGridDesc}>{desc}</Text>
@@ -366,7 +366,7 @@ export default function RegisterScreen() {
     const RecyclerRow = () => (
         <TouchableOpacity onPress={() => selectRoleCard('RECYCLER')} activeOpacity={0.8} style={styles.recyclerRow}>
             <View style={styles.recyclerImageCircle}>
-                <RoleMarkBadge role="recycler" size={72} />
+                <RoleMarkBadge role="recycler" />
             </View>
             <View style={styles.recyclerInfo}>
                 <Text style={styles.recyclerTitle}>Recycler</Text>
