@@ -15,7 +15,9 @@ from google.oauth2 import id_token
 # `http_requests` above for actual HTTP calls.
 from google.auth.transport import requests
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, permissions, status, views, viewsets
+from rest_framework import permissions, status, views, generics, viewsets
+from rest_framework.throttling import AnonRateThrottle
+from .throttles import OTPIdentifierRateThrottle
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -406,6 +408,7 @@ def find_user_by_identifier(identifier):
 
 class PasswordResetRequestView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = [OTPIdentifierRateThrottle, AnonRateThrottle]
     throttle_scope = "anon"
 
     def post(self, request):
