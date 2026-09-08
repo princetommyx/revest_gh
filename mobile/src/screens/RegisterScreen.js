@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash, Recycle, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
+import { ArrowLeft, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
 import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import RoleMarkBadge from '../components/RoleMarkBadge';
 
 // Google's brand red - a brand mark keeps its colour in both themes.
 const GOOGLE_RED = '#DB4437';
@@ -329,7 +330,7 @@ export default function RegisterScreen() {
         });
     };
 
-    const RoleCard = ({ role, title, desc, icon: Icon, color, bgColor }) => {
+    const RoleCard = ({ role, title, desc, markRole, bgColor }) => {
         const isSelected = formData.role === role;
         return (
             <TouchableOpacity
@@ -340,7 +341,7 @@ export default function RegisterScreen() {
                 ]}
             >
                 <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-                    <Icon size={24} color={color} />
+                    <RoleMarkBadge role={markRole} size={48} />
                 </View>
                 <View style={styles.roleInfo}>
                     <Text style={styles.roleTitle}>{title}</Text>
@@ -382,24 +383,21 @@ export default function RegisterScreen() {
                             role="COLLECTOR"
                             title="Become a Collector"
                             desc="Pick up waste and earn money"
-                            icon={Truck}
-                            color={colors.text}
+                            markRole="collector"
                             bgColor={colors.surfaceSunken}
                         />
                         <RoleCard
                             role="SELLER"
                             title="Become a Disposer"
                             desc="Dispose of waste responsibly"
-                            icon={Trash}
-                            color={colors.text}
+                            markRole="disposer"
                             bgColor={colors.surfaceSunken}
                         />
                         <RoleCard
                             role="RECYCLER"
                             title="Become a Recycler"
                             desc="Buy and process recyclables"
-                            icon={Recycle}
-                            color={colors.text}
+                            markRole="recycler"
                             bgColor={colors.surfaceSunken}
                         />
                     </View>
@@ -894,6 +892,7 @@ const useStyles = makeStyles((c) => ({
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 15,
+        overflow: 'hidden',
     },
     roleInfo: {
         flex: 1,
