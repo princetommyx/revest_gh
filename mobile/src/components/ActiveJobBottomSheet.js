@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Easing, Dimensions } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
+import PremiumButton from './PremiumButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
@@ -236,25 +237,39 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                 {/* Actions */}
                 <View style={styles.actionContainer}>
                     {job.status === 'PENDING' && (
-                        <AnimatedButton style={styles.primaryBtn} onPress={() => onAccept(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Accept Job</Text>}
-                        </AnimatedButton>
+                        <PremiumButton
+                            title="Accept Job"
+                            leftIcon={UserCheck}
+                            variant="primary"
+                            onPress={() => onAccept(job.id)}
+                            loading={requestLoading}
+                        />
                     )}
                     {job.status === 'ACCEPTED' && (
-                        <View style={styles.dualActions}>
-                            <AnimatedButton style={[styles.primaryBtn, { flex: 1, backgroundColor: colors.surfaceSunken }]} onPress={() => onNavigate(job)}>
-                                <Navigation size={20} color={colors.text} style={{ marginRight: 8 }} />
-                                <Text style={[styles.primaryBtnText, { color: colors.text }]}>{isCollapsed ? 'Show Details' : 'Navigate'}</Text>
-                            </AnimatedButton>
-                            <AnimatedButton style={[styles.primaryBtn, { flex: 1 }]} onPress={() => onArrive(job.id)} disabled={requestLoading}>
-                                {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Arrived</Text>}
-                            </AnimatedButton>
+                        <View style={[styles.dualActions, { flexDirection: 'column', gap: 8 }]}>
+                            <PremiumButton
+                                title={isCollapsed ? 'Show Details' : 'Navigate'}
+                                leftIcon={Navigation}
+                                variant="secondary"
+                                onPress={() => onNavigate(job)}
+                            />
+                            <PremiumButton
+                                title="Arrived"
+                                leftIcon={MapPin}
+                                variant="primary"
+                                onPress={() => onArrive(job.id)}
+                                loading={requestLoading}
+                            />
                         </View>
                     )}
                     {job.status === 'ARRIVED' && (
-                        <AnimatedButton style={styles.primaryBtn} onPress={() => onComplete(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Complete Job</Text>}
-                        </AnimatedButton>
+                        <PremiumButton
+                            title="Complete Job"
+                            leftIcon={CheckCircle}
+                            variant="primary"
+                            onPress={() => onComplete(job.id)}
+                            loading={requestLoading}
+                        />
                     )}
                 </View>
             </ScrollView>
