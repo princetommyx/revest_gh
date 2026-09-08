@@ -341,7 +341,7 @@ export default function RegisterScreen() {
                 ]}
             >
                 <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-                    <RoleMarkBadge role={markRole} size={76} />
+                    <RoleMarkBadge role={markRole} size={104} />
                 </View>
                 <View style={styles.roleInfo}>
                     <Text style={styles.roleTitle}>{title}</Text>
@@ -879,16 +879,16 @@ const useStyles = makeStyles((c) => ({
     roleCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
+        padding: 16,
         borderWidth: 2,
         borderColor: c.border,
         borderRadius: 20,
         backgroundColor: c.surface,
     },
     iconCircle: {
-        width: 76,
-        height: 76,
-        borderRadius: 38,
+        width: 104,
+        height: 104,
+        borderRadius: 52,
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 15,

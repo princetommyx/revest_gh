@@ -67,7 +67,7 @@ export default function RoleMarkBadge({ role, size = 48 }) {
     // three roles read at a consistent size despite differing shapes.
     const box = new THREE.Box3().setFromObject(mark);
     const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const dist = (sphere.radius / Math.tan((camera.fov * Math.PI) / 360)) * 1.55;
+    const dist = (sphere.radius / Math.tan((camera.fov * Math.PI) / 360)) * 1.15;
     const dir = new THREE.Vector3(1, 0.55, 1.25).normalize();
     camera.position.copy(sphere.center).add(dir.multiplyScalar(dist));
     camera.lookAt(sphere.center);
