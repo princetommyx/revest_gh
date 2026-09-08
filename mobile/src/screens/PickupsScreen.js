@@ -1356,12 +1356,17 @@ export default function PickupsScreen({ route }) {
                 // its default (Apple Maps), which needs no extra key.
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                 style={styles.map}
-                initialRegion={location ? {
-                    latitude: location.coords?.latitude || location.latitude,
-                    longitude: location.coords?.longitude || location.longitude,
+                // initialRegion is captured once on mount and never reacts to
+                // later prop changes (unlike `region`) - so it must never be
+                // null, or the map has nothing to render and stays blank even
+                // after location resolves and the animateCamera effect below
+                // fires. Fall back to an Accra-level view until GPS is ready.
+                initialRegion={{
+                    latitude: location?.coords?.latitude ?? location?.latitude ?? 5.6037,
+                    longitude: location?.coords?.longitude ?? location?.longitude ?? -0.1870,
                     latitudeDelta: 0.0922,
                     longitudeDelta: 0.0421,
-                } : null}
+                }}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
                 followsUserLocation={!!navigatingJob && isCollectorRole}
