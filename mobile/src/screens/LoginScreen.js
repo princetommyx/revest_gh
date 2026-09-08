@@ -274,7 +274,7 @@ export default function LoginScreen() {
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="ethan_miller007@gmail.com"
+                                        placeholder="name@example.com"
                                         value={email}
                                         onChangeText={setEmail}
                                         autoCapitalize="none"

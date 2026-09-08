@@ -264,7 +264,7 @@ REST_FRAMEWORK = {
         'register': '5/minute', # Strict limit for registration
         'login': '10/minute',    # Strict limit for login (brute-force protection)
         'otp': '10/minute',      # OTP send/verify endpoints - resist code guessing
-        'otp_identifier': '3/hour', # Strict limit per phone/email to stop SMS spam
+        'otp_identifier': '30/hour', # Increased for testing (originally 3/hour)
         'wallet': '100/minute',   # Increased for usability
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',

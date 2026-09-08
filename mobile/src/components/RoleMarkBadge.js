@@ -63,14 +63,18 @@ export default function RoleMarkBadge({ role, size = 48 }) {
     markRef.current = mark;
     scene.add(mark);
 
-    // Frame the camera to the mark's bounds from a fixed angle, so all
-    // three roles read at a consistent size despite differing shapes.
-    const box = new THREE.Box3().setFromObject(mark);
-    const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const dist = (sphere.radius / Math.tan((camera.fov * Math.PI) / 360)) * 0.62;
+    // Use a fixed camera setup instead of dynamically tracking bounds.
+    // This guarantees that the base 'plinth' every mark stands on renders
+    // at the exact same size and screen position across all three badges,
+    // creating a consistent set.
+    // Height 0.35 centers the camera between the plinth and the tallest mark (disposer's bag).
+    // Distance 2.5 is enough to fit the widest mark (recycler) and tallest mark (disposer) within the 40deg FOV.
+    const target = new THREE.Vector3(0, 0.35, 0);
+    const dist = 2.5;
     const dir = new THREE.Vector3(1, 0.55, 1.25).normalize();
-    camera.position.copy(sphere.center).add(dir.multiplyScalar(dist));
-    camera.lookAt(sphere.center);
+    
+    camera.position.copy(target).add(dir.multiplyScalar(dist));
+    camera.lookAt(target);
 
     let last = Date.now();
     const tick = () => {

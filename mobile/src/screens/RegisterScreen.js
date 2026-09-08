@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
@@ -31,6 +31,7 @@ export default function RegisterScreen() {
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const otpInputRef = React.useRef(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -343,22 +344,53 @@ export default function RegisterScreen() {
 
     const RoleGridCard = ({ role, title, desc, markRole, pillLabel, pillVariant }) => {
         const isSelected = formData.role === role;
+        const animation = React.useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+        React.useEffect(() => {
+            Animated.spring(animation, {
+                toValue: isSelected ? 1 : 0,
+                useNativeDriver: false,
+                friction: 7,
+                tension: 40,
+            }).start();
+        }, [isSelected]);
+
+        const borderColor = animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [colors.border, colors.primary]
+        });
+
+        const scale = animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.02]
+        });
+
         return (
             <TouchableOpacity
                 onPress={() => selectRoleCard(role)}
-                activeOpacity={0.8}
-                style={[styles.roleGridCard, isSelected && styles.roleGridCardSelected]}
+                activeOpacity={0.9}
+                style={{ flex: 1 }}
             >
-                <View style={styles.roleImageArea}>
-                    <RoleMarkBadge role={markRole} size={100} />
-                </View>
-                <Text style={styles.roleGridTitle}>{title}</Text>
-                <Text style={styles.roleGridDesc}>{desc}</Text>
-                <View style={[styles.pill, pillVariant === 'success' ? styles.pillSuccess : styles.pillNeutral]}>
-                    <Text style={[styles.pillText, pillVariant === 'success' ? styles.pillTextSuccess : styles.pillTextNeutral]}>
-                        {pillLabel}
-                    </Text>
-                </View>
+                <Animated.View
+                    style={[
+                        styles.roleGridCard,
+                        {
+                            borderColor,
+                            transform: [{ scale }]
+                        }
+                    ]}
+                >
+                    <View style={styles.roleImageArea}>
+                        <RoleMarkBadge role={markRole} size={100} />
+                    </View>
+                    <Text style={styles.roleGridTitle}>{title}</Text>
+                    <Text style={styles.roleGridDesc}>{desc}</Text>
+                    <View style={[styles.pill, pillVariant === 'success' ? styles.pillSuccess : styles.pillNeutral]}>
+                        <Text style={[styles.pillText, pillVariant === 'success' ? styles.pillTextSuccess : styles.pillTextNeutral]}>
+                            {pillLabel}
+                        </Text>
+                    </View>
+                </Animated.View>
             </TouchableOpacity>
         );
     };
@@ -370,7 +402,7 @@ export default function RegisterScreen() {
             </View>
             <View style={styles.recyclerInfo}>
                 <Text style={styles.recyclerTitle}>Recycler</Text>
-                <Text style={styles.recyclerDesc}>Facility accounts open later this year — we'll email you.</Text>
+                <Text style={styles.recyclerDesc}>Facility accounts open later this year. We'll email you.</Text>
             </View>
             <View style={[styles.pill, styles.pillNeutral]}>
                 <Text style={[styles.pillText, styles.pillTextNeutral]}>SOON</Text>
@@ -416,7 +448,7 @@ export default function RegisterScreen() {
 
                     <Text style={styles.stepTitle}>How will you use Revesta?</Text>
                     <Text style={styles.stepSubtitle}>
-                        Pick a role — account details come next.{'\n'}You can add a second role later.
+                        Pick a role. Account details come next.{'\n'}You can add a second role later.
                     </Text>
 
                     <View style={styles.roleGrid}>
@@ -474,8 +506,9 @@ export default function RegisterScreen() {
                                 </Text>
                             </Text>
 
-                            <View style={styles.otpContainerCircles}>
+                            <Pressable style={styles.otpContainerCircles} onPress={() => otpInputRef.current?.focus()}>
                                 <TextInput
+                                    ref={otpInputRef}
                                     style={styles.hiddenOtpInput}
                                     value={verificationCode}
                                     onChangeText={setVerificationCode}
@@ -488,7 +521,7 @@ export default function RegisterScreen() {
                                         <Text style={styles.otpText}>{verificationCode[i] || ''}</Text>
                                     </View>
                                 ))}
-                            </View>
+                            </Pressable>
 
                             <View style={styles.spacer} />
 
@@ -529,7 +562,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="ethan_miller"
+                                    placeholder="johndoe"
                                     placeholderTextColor={colors.textMuted}
                                     value={formData.username}
                                     onChangeText={(val) => handleChange('username', val.toLowerCase().replace(/\s/g, ''))}
@@ -543,7 +576,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="ethan_miller007@gmail.com"
+                                    placeholder="name@example.com"
                                     placeholderTextColor={colors.textMuted}
                                     value={formData.email}
                                     onChangeText={(val) => handleChange('email', val)}
@@ -802,7 +835,6 @@ export default function RegisterScreen() {
                     </View>
                 </View>
             </Modal>
-            <Toast />
         </SafeAreaView>
     );
 }
