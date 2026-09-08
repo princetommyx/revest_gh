@@ -313,6 +313,10 @@ export default function HomeScreen({ navigation }) {
         const navTarget = 'ListingDetail';
         const navParams = { listingId: item.id };
         const materialObj = CATEGORIES.find(c => c.id.toLowerCase() === item.material_type?.toLowerCase()) || CATEGORIES[1];
+        // Every CATEGORIES entry except "All" carries `image` (a rendered
+        // PNG), not `icon` (a component) - MaterialIcon was undefined for
+        // every real material and rendered unconditionally below, crashing
+        // this card the instant it appeared.
         const MaterialIcon = materialObj.icon;
 
         return (
@@ -336,7 +340,11 @@ export default function HomeScreen({ navigation }) {
                 )}
                 <Text style={styles.collCardTitle} numberOfLines={1}>{title}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    {materialObj.image ? (
+                        <Image source={materialObj.image} style={{ width: 12, height: 12, marginRight: 4 }} contentFit="contain" />
+                    ) : MaterialIcon ? (
+                        <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    ) : null}
                     <Text style={styles.collCardSubtitle}>{materialObj.name}</Text>
                     <Text style={styles.collCardSubtitle}> • {qty}</Text>
                 </View>
