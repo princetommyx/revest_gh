@@ -37,7 +37,7 @@ import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
 import PageLoader from '../components/PageLoader';
 
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const ActiveMap = MapView;
 const ActiveMarker = Marker;
@@ -1349,6 +1349,7 @@ export default function PickupsScreen({ route }) {
         <View style={styles.container}>
             <ActiveMap
                 ref={mapRef}
+                provider={PROVIDER_GOOGLE}
                 style={styles.map}
                 initialRegion={location ? {
                     latitude: location.coords?.latitude || location.latitude,
