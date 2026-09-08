@@ -82,7 +82,8 @@
       ],
       "expo-font",
       "expo-image",
-      "expo-status-bar"
+      "expo-status-bar",
+      "expo-asset"
     ],
     "runtimeVersion": "1.0.0",
     "extra": {
