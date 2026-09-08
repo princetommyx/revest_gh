@@ -168,7 +168,7 @@ export default function RevestaTrackingMap({ pickupRequestId, pickupLocation, fa
                 >
                     <View style={styles.vehicleMarkerContainer}>
                         <Image 
-                            source={require('../../assets/pickup.png')} 
+                            source={require('../../assets/pickup.jpg')} 
                             style={{
                                 width: 40,
                                 height: 40,

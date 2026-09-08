@@ -4,8 +4,8 @@ import { Truck } from 'lucide-react-native';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const VEHICLE_IMAGES = {
-    tricycle: require('../../assets/tricycle.png'),
-    pickup: require('../../assets/pickup.png'),
+    tricycle: require('../../assets/tricycle.jpg'),
+    pickup: require('../../assets/pickup.jpg'),
 };
 
 const STATUS_MESSAGES = [
