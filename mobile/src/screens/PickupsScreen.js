@@ -1349,6 +1349,11 @@ export default function PickupsScreen({ route }) {
         <View style={styles.container}>
             <ActiveMap
                 ref={mapRef}
+                // Google Maps needs its own iOS SDK API key (app.json's
+                // ios.config.googleMapsApiKey) which isn't set - forcing it
+                // there renders a blank map. Android has that key
+                // configured, so only force it there; iOS falls back to
+                // its default (Apple Maps), which needs no extra key.
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                 style={styles.map}
                 initialRegion={location ? {
