@@ -88,7 +88,7 @@ const TabButton = ({ label, isFocused, onPress, IconComp, badge, avatarUri }) =>
     }, [isFocused]);
 
     const { colors, isDark } = useTheme();
-    const color = isFocused ? colors.text : (isDark ? 'rgba(242,245,244,0.55)' : 'rgba(17,17,17,0.5)');
+    const color = isFocused ? colors.text : (isDark ? 'rgba(242,245,244,0.65)' : 'rgba(17,17,17,0.65)');
 
     return (
         <TouchableOpacity onPress={onPress} style={navStyles.tabButton} activeOpacity={0.7}>
@@ -146,8 +146,14 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
 
     return (
         <View style={navStyles.floatingShadow}>
-            <View style={navStyles.floatingClip}>
-                <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+            <View style={[
+                navStyles.floatingClip, 
+                Platform.OS === 'android' && {
+                    borderWidth: 1,
+                    borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
+                }
+            ]}>
+                <BlurView intensity={Platform.OS === 'android' ? 60 : 40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 <View
                     style={[
                         navStyles.tint,
