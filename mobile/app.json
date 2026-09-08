@@ -4,7 +4,7 @@
     "name": "Revesta",
     "slug": "revesta-mobile",
     "scheme": "revesta",
-    "version": "1.0.14",
+    "version": "1.0.15",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,7 @@
       }
     },
     "android": {
-      "versionCode": 15,
+      "versionCode": 16,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
