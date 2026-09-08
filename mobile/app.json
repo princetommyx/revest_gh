@@ -18,6 +18,9 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Revesta shares your location with the disposer so they can track your pickup live, including while the app is in the background during an active job.",
         "NSLocationWhenInUseUsageDescription": "Revesta uses your location to find nearby pickups and show your position on the map.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyA1nWxJMGcBK7lFZBmy_8hVZNm3kqqGXZA"
       }
     },
     "android": {
@@ -30,7 +33,7 @@
       "googleServicesFile": "./google-services.json",
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDnGqFUYh4eMaJXbcj9eb-WmFi8LhuUAko"
+          "apiKey": "AIzaSyA1nWxJMGcBK7lFZBmy_8hVZNm3kqqGXZA"
         }
       },
       "permissions": [
