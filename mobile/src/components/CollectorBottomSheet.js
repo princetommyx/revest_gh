@@ -28,7 +28,7 @@ const formatDate = (value) => {
         + ' · ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-export default function CollectorBottomSheet({ collector, job, onChatPress, onCallPress, onCancel }) {
+export default function CollectorBottomSheet({ collector, job, onChatPress, onCallPress, onCancel, isCollapsed, onToggleCollapse }) {
     const styles = useStyles();
     const { colors } = useTheme();
     const entrance = useRef(new Animated.Value(0)).current;
@@ -67,6 +67,10 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                 translateY: entrance.interpolate({ inputRange: [0, 1], outputRange: [24, 0] })
             }]
         }]}>
+            <TouchableOpacity onPress={onToggleCollapse} style={{ alignItems: 'center', paddingBottom: 16 }}>
+                <View style={styles.dragHandle} />
+            </TouchableOpacity>
+
             <ScrollView showsVerticalScrollIndicator={false} bounces={false} contentContainerStyle={{ paddingBottom: 4 }}>
                 {/* Header: Collector Info & Quick Actions - mirrors ActiveJobBottomSheet
                     so both sides of a job get the same quality of "who's on the other
@@ -95,72 +99,76 @@ export default function CollectorBottomSheet({ collector, job, onChatPress, onCa
                     </View>
                 </View>
 
-                <Text style={styles.metaRow}>{jobRef(job.id)} · {formatDate(job.created_at)}</Text>
+                {!isCollapsed && (
+                    <>
+                        <Text style={styles.metaRow}>{jobRef(job.id)} · {formatDate(job.created_at)}</Text>
 
-                <View style={styles.timeRow}>
-                    <View style={styles.timeInfo}>
-                        <Clock size={16} color={colors.accent} />
-                        <Text style={styles.timeLabel}>Collector ETA</Text>
-                        <Text style={styles.timeValue}>{job.duration_min != null ? `~${Math.round(job.duration_min)} min` : '—'}</Text>
-                    </View>
-                    <Text style={styles.timeEst}>{job.distance_km != null ? `${job.distance_km} km` : '—'}</Text>
-                </View>
-
-                <View style={{ marginBottom: 8 }}>
-                    <PickupProgressRoadmap
-                        steps={ROADMAP_STEPS}
-                        currentIndex={currentStep}
-                        isComplete={job.status === 'COMPLETED'}
-                    />
-                </View>
-
-                <View style={styles.divider} />
-
-                {/* Route card - the same pickup (and dropoff, for Track A) summary
-                    the collector sees, so the disposer can confirm it's correct. */}
-                <View style={styles.routeCard}>
-                    <View style={styles.routeAddresses}>
-                        <View style={styles.routeRow}>
-                            <View style={styles.routeDotPickup} />
-                            <View style={styles.routeTextCol}>
-                                <Text style={styles.routeLabel}>PICKUP</Text>
-                                <Text style={styles.routeValue} numberOfLines={1}>
-                                    {job.pickup_address || 'Current location'}
-                                </Text>
+                        <View style={styles.timeRow}>
+                            <View style={styles.timeInfo}>
+                                <Clock size={16} color={colors.accent} />
+                                <Text style={styles.timeLabel}>Collector ETA</Text>
+                                <Text style={styles.timeValue}>{job.duration_min != null ? `~${Math.round(job.duration_min)} min` : '—'}</Text>
                             </View>
+                            <Text style={styles.timeEst}>{job.distance_km != null ? `${job.distance_km} km` : '—'}</Text>
                         </View>
-                        {hasDropoff && (
-                            <>
-                                <View style={styles.routeConnector} />
+
+                        <View style={{ marginBottom: 8 }}>
+                            <PickupProgressRoadmap
+                                steps={ROADMAP_STEPS}
+                                currentIndex={currentStep}
+                                isComplete={job.status === 'COMPLETED'}
+                            />
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        {/* Route card - the same pickup (and dropoff, for Track A) summary
+                            the collector sees, so the disposer can confirm it's correct. */}
+                        <View style={styles.routeCard}>
+                            <View style={styles.routeAddresses}>
                                 <View style={styles.routeRow}>
-                                    <View style={styles.routeDotDest} />
+                                    <View style={styles.routeDotPickup} />
                                     <View style={styles.routeTextCol}>
-                                        <Text style={styles.routeLabel}>DELIVER TO</Text>
+                                        <Text style={styles.routeLabel}>PICKUP</Text>
                                         <Text style={styles.routeValue} numberOfLines={1}>
-                                            {job.destination_address}
+                                            {job.pickup_address || 'Current location'}
                                         </Text>
                                     </View>
                                 </View>
-                            </>
-                        )}
-                    </View>
-                    <View style={styles.routeThumbBox}>
-                        {job.listing_image ? (
-                            <Image source={{ uri: job.listing_image }} style={styles.routeThumb} />
-                        ) : (
-                            <Package size={22} color={colors.textMuted} />
-                        )}
-                    </View>
-                </View>
+                                {hasDropoff && (
+                                    <>
+                                        <View style={styles.routeConnector} />
+                                        <View style={styles.routeRow}>
+                                            <View style={styles.routeDotDest} />
+                                            <View style={styles.routeTextCol}>
+                                                <Text style={styles.routeLabel}>DELIVER TO</Text>
+                                                <Text style={styles.routeValue} numberOfLines={1}>
+                                                    {job.destination_address}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    </>
+                                )}
+                            </View>
+                            <View style={styles.routeThumbBox}>
+                                {job.listing_image ? (
+                                    <Image source={{ uri: job.listing_image }} style={styles.routeThumb} />
+                                ) : (
+                                    <Package size={22} color={colors.textMuted} />
+                                )}
+                            </View>
+                        </View>
 
-                <Text style={styles.materialLine}>
-                    {job.material_type}{job.weight_kg ? ` · ${job.weight_kg}kg` : ''} · {job.quantity_estimate}
-                </Text>
+                        <Text style={styles.materialLine}>
+                            {job.material_type}{job.weight_kg ? ` · ${job.weight_kg}kg` : ''} · {job.quantity_estimate}
+                        </Text>
 
-                {canCancel && onCancel && (
-                    <TouchableOpacity style={styles.cancelLink} onPress={onCancel}>
-                        <Text style={styles.cancelLinkText}>Cancel Request</Text>
-                    </TouchableOpacity>
+                        {canCancel && onCancel && (
+                            <TouchableOpacity style={styles.cancelLink} onPress={onCancel}>
+                                <Text style={styles.cancelLinkText}>Cancel Request</Text>
+                            </TouchableOpacity>
+                        )}
+                    </>
                 )}
             </ScrollView>
         </Animated.View>
@@ -178,6 +186,14 @@ const useStyles = makeStyles((c) => ({
         shadowRadius: 20,
         elevation: 20,
         maxHeight: CARD_MAX_HEIGHT,
+    },
+    dragHandle: {
+        width: 40,
+        height: 5,
+        borderRadius: 3,
+        backgroundColor: c.surfaceSunken,
+        alignSelf: 'center',
+        marginBottom: 20,
     },
     header: {
         flexDirection: 'row',

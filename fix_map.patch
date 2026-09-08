@@ -1,0 +1,12 @@
+--- mobile/src/components/RevestaTrackingMap.jsx
++++ mobile/src/components/RevestaTrackingMap.jsx
+@@ -121,7 +121,12 @@
+     };
+ 
+     if (!pickupLocation || isNaN(pickupLocation.latitude) || isNaN(pickupLocation.longitude)) {
+-        return null;
++        console.log("RevestaTrackingMap missing valid location:", pickupLocation);
++        return <View style={styles.container}><Text>Waiting for location...</Text></View>;
+     }
+ 
+     return (

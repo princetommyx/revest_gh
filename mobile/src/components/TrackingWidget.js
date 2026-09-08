@@ -71,7 +71,7 @@ export default function TrackingWidget() {
         <TouchableOpacity 
             style={styles.container} 
             activeOpacity={0.9}
-            onPress={() => navigation.navigate('Pickups')}
+            onPress={() => navigation.navigate('Main', { screen: 'Pickups' })}
         >
             <View style={styles.content}>
                 <Animated.View style={[styles.pulseIcon, { opacity: pulseAnim }]}>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Image } from 'react-native';
 import { Truck, ChevronRight, Search } from 'lucide-react-native';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 
@@ -50,13 +50,17 @@ export default function ActivePickupBanner({ job, role, onPress }) {
 
     return (
         <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
-            <View style={styles.iconBox}>
+            <View style={[styles.iconBox, !isPending && { backgroundColor: '#FFFFFF' }]}>
                 {isPending ? (
                     <Animated.View style={{ opacity: pulseAnim }}>
                         <Search size={22} color={colors.onPrimary} />
                     </Animated.View>
                 ) : (
-                    <Truck size={22} color={colors.onPrimary} />
+                    <Image 
+                        source={require('../../assets/pickup.jpg')} 
+                        style={{ width: 34, height: 34, borderRadius: 17 }} 
+                        resizeMode="contain" 
+                    />
                 )}
             </View>
             <View style={styles.textBlock}>

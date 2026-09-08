@@ -145,22 +145,19 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
     const avatarUri = resolveAvatar(user);
 
     return (
-        <View style={[navStyles.floatingShadow, Platform.OS === 'android' && { zIndex: 999, elevation: 20 }]}>
+        <View style={navStyles.floatingShadow}>
             <View style={[
                 navStyles.floatingClip, 
                 Platform.OS === 'android' && {
-                    backgroundColor: isDark ? '#141A19' : '#FFFFFF',
                     borderWidth: 1,
                     borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.12)'
                 }
             ]}>
-                {Platform.OS === 'ios' && (
-                    <BlurView intensity={40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-                )}
+                <BlurView intensity={Platform.OS === 'android' ? 60 : 40} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
                 <View
                     style={[
                         navStyles.tint,
-                        { backgroundColor: Platform.OS === 'ios' ? (isDark ? 'rgba(20,26,25,0.92)' : 'rgba(255,255,255,0.92)') : 'transparent' },
+                        { backgroundColor: isDark ? 'rgba(20,26,25,0.92)' : 'rgba(255,255,255,0.92)' },
                     ]}
                     pointerEvents="none"
                 />

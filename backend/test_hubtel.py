@@ -1,42 +1,18 @@
-import requests
-from requests.auth import HTTPBasicAuth
 import os
 import django
 import sys
 
-# Setup Django environment
-sys.path.append(os.getcwd())
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'revesta_backend.settings')
 django.setup()
 
-from django.conf import settings
+from users.sms_service import HubtelSMSService
 
-def probe():
-    client_id = getattr(settings, 'HUBTEL_CLIENT_ID', None)
-    client_secret = getattr(settings, 'HUBTEL_CLIENT_SECRET', None)
-    sender = getattr(settings, 'HUBTEL_FROM', 'Revesta')
-    phone = "233208842410" # Use the number from the screenshot
-    
-    auth = HTTPBasicAuth(client_id, client_secret)
-    url = "https://api-otp.hubtel.com/v1/otp/send"
-    
-    # Try different field names
-    payloads = [
-        {"SenderId": sender, "PhoneNumber": phone},
-        {"senderId": sender, "phoneNumber": phone},
-        {"Sender": sender, "PhoneNumber": phone},
-        {"sender": sender, "to": phone}
-    ]
-    
-    for p in payloads:
-        print(f"Testing Payload: {p}")
-        try:
-            r = requests.post(url, json=p, auth=auth, timeout=10)
-            print(f"  Status: {r.status_code}")
-            print(f"  Response: {r.text}")
-        except Exception as e:
-            print(f"  Error: {e}")
-        print("-" * 30)
+service = HubtelSMSService()
+# Test with a dummy number, or just print the credentials configuration
+print(f"Client ID Configured: {bool(service.client_id)}")
+print(f"Client Secret Configured: {bool(service.client_secret)}")
 
-if __name__ == "__main__":
-    probe()
+# We can also attempt a quick network request to see what Hubtel returns 
+# (we don't want to actually send an SMS, so we'll test with a malformed number to get an API response)
+response = service.request_otp('0201234567')
+print(f"OTP Request Response: {response}")
