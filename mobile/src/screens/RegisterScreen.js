@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
+import { ArrowLeft, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -40,7 +40,7 @@ export default function RegisterScreen() {
         confirm_password: '',
         phone_number: '',
         city: 'Accra',
-        role: preselectedRole,
+        role: preselectedRole || 'SELLER',
         vehicle_type: '',
         license_plate: '',
         recycler_type: 'INDIVIDUAL',
@@ -95,7 +95,8 @@ export default function RegisterScreen() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleRoleSelect = (role) => {
+    // Tapping a role card only selects it - Continue advances to step 2.
+    const selectRoleCard = (role) => {
         if (role === 'RECYCLER') {
             Toast.show({
                 type: 'info',
@@ -105,7 +106,17 @@ export default function RegisterScreen() {
             return;
         }
         handleChange('role', role);
-        setTimeout(() => setStep(2), 200);
+    };
+
+    const continueFromRoleStep = () => setStep(2);
+
+    const getRoleLabel = (role) => {
+        switch (role) {
+            case 'SELLER': return 'Disposer';
+            case 'COLLECTOR': return 'Collector';
+            case 'RECYCLER': return 'Recycler';
+            default: return 'User';
+        }
     };
 
     const completeRegistration = async () => {
@@ -330,27 +341,42 @@ export default function RegisterScreen() {
         });
     };
 
-    const RoleCard = ({ role, title, desc, markRole, bgColor }) => {
+    const RoleGridCard = ({ role, title, desc, markRole, pillLabel, pillVariant }) => {
         const isSelected = formData.role === role;
         return (
             <TouchableOpacity
-                onPress={() => handleRoleSelect(role)}
-                style={[
-                    styles.roleCard,
-                    isSelected && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }
-                ]}
+                onPress={() => selectRoleCard(role)}
+                activeOpacity={0.8}
+                style={[styles.roleGridCard, isSelected && styles.roleGridCardSelected]}
             >
-                <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-                    <RoleMarkBadge role={markRole} size={128} />
+                <View style={styles.roleImageArea}>
+                    <RoleMarkBadge role={markRole} size={100} />
                 </View>
-                <View style={styles.roleInfo}>
-                    <Text style={styles.roleTitle}>{title}</Text>
-                    <Text style={styles.roleDesc}>{desc}</Text>
+                <Text style={styles.roleGridTitle}>{title}</Text>
+                <Text style={styles.roleGridDesc}>{desc}</Text>
+                <View style={[styles.pill, pillVariant === 'success' ? styles.pillSuccess : styles.pillNeutral]}>
+                    <Text style={[styles.pillText, pillVariant === 'success' ? styles.pillTextSuccess : styles.pillTextNeutral]}>
+                        {pillLabel}
+                    </Text>
                 </View>
-                {isSelected && <Check size={20} color={colors.text} />}
             </TouchableOpacity>
         );
     };
+
+    const RecyclerRow = () => (
+        <TouchableOpacity onPress={() => selectRoleCard('RECYCLER')} activeOpacity={0.8} style={styles.recyclerRow}>
+            <View style={styles.recyclerImageCircle}>
+                <RoleMarkBadge role="recycler" size={72} />
+            </View>
+            <View style={styles.recyclerInfo}>
+                <Text style={styles.recyclerTitle}>Recycler</Text>
+                <Text style={styles.recyclerDesc}>Facility accounts open later this year — we'll email you.</Text>
+            </View>
+            <View style={[styles.pill, styles.pillNeutral]}>
+                <Text style={[styles.pillText, styles.pillTextNeutral]}>SOON</Text>
+            </View>
+        </TouchableOpacity>
+    );
 
     const handleBack = () => {
         if (step === 2) {
@@ -376,31 +402,53 @@ export default function RegisterScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    {renderHeader()}
-                    <Text style={styles.cardTitle}>Choose your role</Text>
-                    <View style={styles.rolesContainer}>
-                        <RoleCard
-                            role="COLLECTOR"
-                            title="Become a Collector"
-                            desc="Pick up waste and earn money"
-                            markRole="collector"
-                            bgColor={colors.surfaceSunken}
-                        />
-                        <RoleCard
+                    <View style={styles.progressRow}>
+                        <TouchableOpacity onPress={handleBack} style={styles.backButtonRound}>
+                            <ArrowLeft size={20} color={colors.text} />
+                        </TouchableOpacity>
+                        <View style={styles.progressBars}>
+                            <View style={[styles.progressBar, styles.progressBarActive]} />
+                            <View style={styles.progressBar} />
+                            <View style={styles.progressBar} />
+                        </View>
+                        <Text style={styles.progressLabel}>1 of 3</Text>
+                    </View>
+
+                    <Text style={styles.stepTitle}>How will you use Revesta?</Text>
+                    <Text style={styles.stepSubtitle}>
+                        Pick a role — account details come next.{'\n'}You can add a second role later.
+                    </Text>
+
+                    <View style={styles.roleGrid}>
+                        <RoleGridCard
                             role="SELLER"
-                            title="Become a Disposer"
-                            desc="Dispose of waste responsibly"
+                            title="Disposer"
+                            desc="Hand over sorted waste and get paid."
                             markRole="disposer"
-                            bgColor={colors.surfaceSunken}
+                            pillLabel="FREE TO JOIN"
+                            pillVariant="success"
                         />
-                        <RoleCard
-                            role="RECYCLER"
-                            title="Become a Recycler"
-                            desc="Buy and process recyclables"
-                            markRole="recycler"
-                            bgColor={colors.surfaceSunken}
+                        <RoleGridCard
+                            role="COLLECTOR"
+                            title="Collector"
+                            desc="Take pickup jobs near you and earn."
+                            markRole="collector"
+                            pillLabel="VERIFIED ROLE"
+                            pillVariant="neutral"
                         />
                     </View>
+
+                    <RecyclerRow />
+
+                    <TouchableOpacity style={styles.registerButton} onPress={continueFromRoleStep}>
+                        <Text style={styles.registerButtonText}>Continue as {getRoleLabel(formData.role)}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.footerLink}>
+                        <Text style={styles.footerText}>
+                            Already have an account? <Text style={styles.footerLinkBold}>Sign In</Text>
+                        </Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </SafeAreaView>
         );
@@ -858,54 +906,148 @@ const useStyles = makeStyles((c) => ({
         color: c.textMuted,
         fontSize: 14,
     },
-    cardTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: c.text,
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    roleLabel: {
-        fontSize: 14,
-        color: c.textMuted,
-        marginBottom: 25,
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    rolesContainer: {
-        gap: 15,
-        paddingBottom: 20,
-    },
-    roleCard: {
+    // Step 1 - role picker
+    progressRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderWidth: 2,
-        borderColor: c.border,
-        borderRadius: 20,
-        backgroundColor: c.surface,
+        gap: 12,
+        marginBottom: 28,
     },
-    iconCircle: {
-        width: 128,
-        height: 128,
-        borderRadius: 64,
+    backButtonRound: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: c.surface,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 15,
+        borderWidth: 1,
+        borderColor: c.borderSubtle,
+    },
+    progressBars: {
+        flex: 1,
+        flexDirection: 'row',
+        gap: 6,
+    },
+    progressBar: {
+        flex: 1,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: c.surfaceSunken,
+    },
+    progressBarActive: {
+        backgroundColor: c.accent,
+    },
+    progressLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: c.textMuted,
+    },
+    stepTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: c.text,
+        marginBottom: 10,
+    },
+    stepSubtitle: {
+        fontSize: 14,
+        color: c.textSecondary,
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    roleGrid: {
+        flexDirection: 'row',
+        gap: 14,
+        marginBottom: 14,
+    },
+    roleGridCard: {
+        flex: 1,
+        borderWidth: 2,
+        borderColor: c.border,
+        borderRadius: 24,
+        padding: 14,
+        backgroundColor: c.surface,
+    },
+    roleGridCardSelected: {
+        borderColor: c.primary,
+    },
+    roleImageArea: {
+        width: '100%',
+        aspectRatio: 1.15,
+        backgroundColor: c.surfaceSunken,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
         overflow: 'hidden',
     },
-    roleInfo: {
-        flex: 1,
+    roleGridTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: c.text,
+        marginBottom: 6,
     },
-    roleTitle: {
+    roleGridDesc: {
+        fontSize: 13,
+        color: c.textSecondary,
+        lineHeight: 18,
+        marginBottom: 12,
+    },
+    pill: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+    },
+    pillSuccess: {
+        backgroundColor: c.successSoft,
+    },
+    pillNeutral: {
+        backgroundColor: c.surfaceSunken,
+    },
+    pillText: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+    },
+    pillTextSuccess: {
+        color: c.accent,
+    },
+    pillTextNeutral: {
+        color: c.textSecondary,
+    },
+    recyclerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: c.borderSubtle,
+        borderRadius: 20,
+        padding: 14,
+        marginBottom: 32,
+    },
+    recyclerImageCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: c.surfaceSunken,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+        overflow: 'hidden',
+    },
+    recyclerInfo: {
+        flex: 1,
+        marginRight: 10,
+    },
+    recyclerTitle: {
         fontSize: 16,
         fontWeight: 'bold',
         color: c.text,
         marginBottom: 4,
     },
-    roleDesc: {
+    recyclerDesc: {
         fontSize: 13,
-        color: c.textSecondary,
+        color: c.textMuted,
+        lineHeight: 18,
     },
     formFields: {
         marginBottom: 20,
