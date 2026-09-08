@@ -1371,7 +1371,12 @@ export default function PickupsScreen({ route }) {
                 showsMyLocationButton={false}
                 followsUserLocation={!!navigatingJob && isCollectorRole}
                 userInterfaceStyle="dark"
-                customMapStyle={darkMapStyle}
+                // darkMapStyle is Google-Maps-JSON styling - only meaningful
+                // (and only safe) on the Google provider. Applying it to
+                // Apple Maps alongside userInterfaceStyle="dark" is a known
+                // react-native-maps conflict that blacks out the whole map
+                // on iOS; Apple's own dark mode above already covers it there.
+                customMapStyle={Platform.OS === 'android' ? darkMapStyle : undefined}
             >
                 {memoizedMarkers}
 
