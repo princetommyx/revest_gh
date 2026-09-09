@@ -10,6 +10,7 @@ import traceback
 from datetime import datetime
 from django.conf import settings
 import logging
+from intelligence.market_signal import pricing_basis, prompt_context
 from intelligence.services import record_prediction
 
 logger = logging.getLogger(__name__)
@@ -116,6 +117,19 @@ class AnalyzeWasteView(APIView):
             }
             """
 
+            # 5b. Ground the model in what Revesta's disposers actually put
+            # out. Without this the model classifies Ghanaian household
+            # waste on a generic prior - it has no way to know that sachet
+            # rubbers dominate, that loads arrive as sacks rather than
+            # industrial bales, or that a "worthless" dead phone is
+            # something people expect real money for. Appended rather than
+            # folded into the prompt above so that when there aren't enough
+            # survey responses yet, the prompt is byte-for-byte the one
+            # that has been running all along.
+            market_context = prompt_context()
+            if market_context:
+                prompt = f"{prompt}\n\n{market_context}\n"
+
             # 6. Iterate through models
             response = None
             for model_name in candidate_models:
@@ -173,6 +187,14 @@ class AnalyzeWasteView(APIView):
                 data['min_price'] = float(min_price)
                 data['max_price'] = float(max_price)
 
+            # What the price above was actually derived from. Sent back so
+            # the app can explain a payout ("GHS 30/sack, from 6 disposer
+            # responses") instead of quoting a number from nowhere, and
+            # logged with the prediction so a later look-back can tell which
+            # signal shaped which quote - a price that moved for a reason
+            # nobody recorded isn't training data, it's noise.
+            data['pricing_basis'] = pricing_basis(bool(market_context))
+
             record_prediction(
                 task='waste_analysis',
                 model_version=model_name,
@@ -215,7 +237,8 @@ class AnalyzeWasteView(APIView):
                 "title_suggestion": "General Waste Pickup",
                 "description": "Simulation: Household trash identified.",
                 "confidence": 0.85,
-                "simulated": True
+                "simulated": True,
+                "pricing_basis": pricing_basis(),
             }
         else:
             material = random.choice(['PET', 'Aluminum', 'Electronics'])
@@ -234,7 +257,8 @@ class AnalyzeWasteView(APIView):
                 "title_suggestion": f"{material} Recycling",
                 "description": f"Simulation: {material} recyclables detected.",
                 "confidence": 0.92,
-                "simulated": True
+                "simulated": True,
+                "pricing_basis": pricing_basis(),
             }
 
         record_prediction(

@@ -1,5 +1,6 @@
 from decimal import Decimal
 from .utils import haversine
+from intelligence.market_signal import clamp_to_shift, priced_signal
 from market.models import MaterialMarketPrice
 
 # Track A Constants (GHS)
@@ -15,6 +16,50 @@ BASE_RATE = Decimal('10.00')
 PER_KM_RATE = Decimal('2.50') 
 PER_MIN_RATE = Decimal('0.50')
 
+# The flat per-sack payout for pure water rubbers / plastic bottles, and
+# what a bale is worth in sacks. This used to be a bare 30.00 and 60.00
+# sitting inline in calculate_track_b_earnings; naming them lets the market
+# survey adjust the sack rate without the bale drifting away from it.
+SACK_FLAT_RATE = Decimal('30.00')
+BALE_SACK_EQUIVALENT = Decimal('2')
+
+
+def survey_adjusted_sack_rate():
+    """
+    The flat sack payout, nudged by what disposers told the "what should
+    your waste pay you?" survey about a GHS 30 sack.
+
+    Falls straight back to SACK_FLAT_RATE whenever there aren't enough
+    responses yet, or the signal can't be computed at all - the survey is
+    allowed to tune a price, never to be the only thing holding one up.
+    """
+    signal = priced_signal()
+    if not signal:
+        return SACK_FLAT_RATE
+    rate = clamp_to_shift(float(SACK_FLAT_RATE), signal.get('sack_rate_ghs'))
+    return Decimal(str(round(rate, 2)))
+
+
+def survey_adjusted_track_a_rate(bag_size='MEDIUM'):
+    """
+    A bag-size haulage rate, scaled by the survey's willingness to pay.
+
+    The survey asked about exactly one medium sack, so that answer is
+    compared against the MEDIUM rate and the resulting ratio is applied to
+    every bag size - a crowd that will only pay half of what a medium sack
+    costs today is telling us the whole ladder sits too high, not just its
+    middle rung.
+    """
+    base = BAG_SIZE_RATES.get(bag_size, Decimal('10.00'))
+    signal = priced_signal()
+    if not signal:
+        return base
+    medium = clamp_to_shift(
+        float(BAG_SIZE_RATES['MEDIUM']), signal.get('track_a_medium_fee_ghs')
+    )
+    ratio = Decimal(str(medium)) / BAG_SIZE_RATES['MEDIUM']
+    return (base * ratio).quantize(Decimal('0.01'))
+
 def calculate_track_a_fee(category='General', bag_size='MEDIUM', distance_km=0):
     """
     Calculate fee for non-recyclable waste disposal.
@@ -27,8 +72,11 @@ def calculate_track_a_fee(category='General', bag_size='MEDIUM', distance_km=0):
         fee_config = TrackAServiceFee.objects.get(category=category)
         base = fee_config.fee_per_unit
     except TrackAServiceFee.DoesNotExist:
-        # Priority 2: Bag-size based rate
-        base = BAG_SIZE_RATES.get(bag_size, Decimal('10.00'))
+        # Priority 2: Bag-size based rate, scaled by what disposers actually
+        # said they would pay. Only the fallback is scaled - a
+        # TrackAServiceFee row is an explicit decision someone made in the
+        # admin, and survey sentiment has no business quietly overriding it.
+        base = survey_adjusted_track_a_rate(bag_size)
     
     distance_surcharge = Decimal(str(distance_km)) * Decimal('0.50') if distance_km > 5 else Decimal('0')
     return (base + distance_surcharge).quantize(Decimal('0.01'))
@@ -40,9 +88,12 @@ def calculate_track_b_earnings(material_type, weight_kg):
     material_key = (material_type or '').upper()
 
     if material_key in ['PURE_WATER_RUBBERS', 'PLASTIC_BOTTLES']:
-        return Decimal('30.00')
+        return survey_adjusted_sack_rate()
     if material_key in ['PURE_WATER_RUBBERS_BALE', 'PLASTIC_BOTTLES_BALE']:
-        return Decimal('60.00')
+        # A bale has always been priced at two sacks; keeping it defined
+        # that way means the survey moves both together instead of the bale
+        # silently becoming worth less than the sacks that make it up.
+        return (survey_adjusted_sack_rate() * BALE_SACK_EQUIVALENT).quantize(Decimal('0.01'))
 
     try:
         market_price = MaterialMarketPrice.objects.get(material_type=material_key).price_per_kg
