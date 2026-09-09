@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # PyMySQL compatibility patch for XAMPP/MariaDB 10.4
 # Allows Django 6 to work with MariaDB < 10.6 by spoofing the version string
@@ -34,11 +35,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback only applies in local dev (DEBUG=True) - it used to
+# apply unconditionally, which meant a misconfigured production deploy would
+# silently sign JWTs (SIMPLE_JWT['SIGNING_KEY'] below) and sessions with a
+# key sitting in the git history instead of failing loudly. Render already
+# sets a real SECRET_KEY for every service (see render.yaml), so this never
+# fires there.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY environment variable must be set when DEBUG=False.')
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
