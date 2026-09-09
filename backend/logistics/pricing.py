@@ -1,6 +1,6 @@
 from decimal import Decimal
 from .utils import haversine
-from intelligence.buyback import derived_payout_per_kg
+from intelligence.buyback import quality_adjusted_payout_per_kg
 from intelligence.market_signal import clamp_to_shift, priced_signal
 from market.models import MaterialMarketPrice
 
@@ -23,6 +23,30 @@ PER_MIN_RATE = Decimal('0.50')
 # survey adjust the sack rate without the bale drifting away from it.
 SACK_FLAT_RATE = Decimal('30.00')
 BALE_SACK_EQUIVALENT = Decimal('2')
+
+# Per-kg rates used when no MaterialMarketPrice row exists - covering both
+# the AI's precise vocabulary and the mobile app's coarser manual-picker
+# categories. Module level rather than rebuilt inside the function on every
+# call, so `show_market_signal` can report what each one is doing against
+# the observed buyback band instead of duplicating the table to guess.
+#
+# None of these figures was ever derived from a market price, and every one
+# with an observed band behind it now reads as too low - see
+# intelligence.buyback.
+FALLBACK_RATES = {
+    'PET': Decimal('0.50'),
+    'HDPE': Decimal('0.60'),
+    'ALUMINUM': Decimal('2.00'),
+    'METALS': Decimal('1.50'),
+    'PAPER': Decimal('0.20'),
+    'ELECTRONICS': Decimal('8.00'),
+    'MIXED': Decimal('0.30'),
+    'ORGANIC': Decimal('0.10'),
+    # Coarse categories from the manual (no-photo) picker
+    'PLASTICS': Decimal('1.20'),
+    'GLASS': Decimal('0.50'),
+    'OTHER': Decimal('0.50'),
+}
 
 
 def survey_adjusted_sack_rate():
@@ -82,9 +106,16 @@ def calculate_track_a_fee(category='General', bag_size='MEDIUM', distance_km=0):
     distance_surcharge = Decimal(str(distance_km)) * Decimal('0.50') if distance_km > 5 else Decimal('0')
     return (base + distance_surcharge).quantize(Decimal('0.01'))
 
-def calculate_track_b_earnings(material_type, weight_kg):
+def calculate_track_b_earnings(material_type, weight_kg, condition=None):
     """
     Calculate estimated earnings for high-value recyclables.
+
+    `condition` is the waste-analysis model's observation of the load
+    (contamination, dryness, preparation). Recyclers quote a band rather
+    than a rate, and condition is what decides where in that band a load
+    sits, so passing it through is the difference between paying for the
+    material and paying for this particular sack of it. Omitting it prices
+    the load as unassessed, near the bottom of the band.
     """
     material_key = (material_type or '').upper()
 
@@ -99,22 +130,7 @@ def calculate_track_b_earnings(material_type, weight_kg):
     try:
         market_price = MaterialMarketPrice.objects.get(material_type=material_key).price_per_kg
     except MaterialMarketPrice.DoesNotExist:
-        # Fallback rates if not in DB - covers both the AI's precise
-        # vocabulary and the mobile app's coarser manual-picker categories.
-        fallback_rates = {
-            'PET': Decimal('0.50'),
-            'HDPE': Decimal('0.60'),
-            'ALUMINUM': Decimal('2.00'),
-            'METALS': Decimal('1.50'),
-            'PAPER': Decimal('0.20'),
-            'ELECTRONICS': Decimal('8.00'),
-            'MIXED': Decimal('0.30'),
-            'ORGANIC': Decimal('0.10'),
-            # Coarse categories from the manual (no-photo) picker
-            'PLASTICS': Decimal('1.20'),
-            'GLASS': Decimal('0.50'),
-            'OTHER': Decimal('0.50'),
-        }
+        fallback_rates = FALLBACK_RATES
         # Nudged toward what the material is actually worth at a Ghanaian
         # recycler's gate, less Revesta's collection margin. These fallback
         # rates were never derived from an observed price - several of them
@@ -122,8 +138,8 @@ def calculate_track_b_earnings(material_type, weight_kg):
         # behind it moves toward it by a bounded step rather than staying
         # wrong indefinitely. Only the fallbacks are adjusted: a
         # MaterialMarketPrice row above is a price someone set on purpose.
-        market_price = derived_payout_per_kg(
-            material_key, fallback_rates.get(material_key, Decimal('0.10'))
+        market_price = quality_adjusted_payout_per_kg(
+            material_key, fallback_rates.get(material_key, Decimal('0.10')), condition
         )
 
     weight = Decimal(str(weight_kg)) if weight_kg else Decimal('0')

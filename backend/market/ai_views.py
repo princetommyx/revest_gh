@@ -10,6 +10,7 @@ import traceback
 from datetime import datetime
 from django.conf import settings
 import logging
+from intelligence.buyback import preparation_tips
 from intelligence.market_signal import pricing_basis, prompt_context
 from intelligence.services import record_prediction
 
@@ -113,8 +114,25 @@ class AnalyzeWasteView(APIView):
                 "suggested_weight_kg": number (Track B only, estimated weight in KG, otherwise null),
                 "title_suggestion": "String (e.g. 'Pure Water Rubbers')",
                 "description": "String (Brief assessment, no prices)",
-                "confidence": number (0.0-1.0)
+                "confidence": number (0.0-1.0),
+                "condition": {
+                    "contamination": "none", "light", or "heavy",
+                    "dry": true or false (null if you cannot tell),
+                    "prepared": true or false (null if you cannot tell),
+                    "notes": "String (what you saw that decided this)"
+                }
             }
+
+            CONDITION - READ THIS CAREFULLY, IT SETS THE PRICE:
+            Recyclers pay a range, not a fixed rate, and condition decides
+            where in that range a load lands. Judge only what you can
+            actually see; use null rather than guessing.
+            - "contamination": is the load clean and single-material, or
+              mixed with food waste, liquid, dirt, or other materials?
+            - "dry": is there visible wet, damp, or water-stained material?
+              Say false if you can see moisture, true if it is clearly dry.
+            - "prepared": has it been made ready the way a buyer wants for
+              THIS material (see the preparation guidance below, if given)?
             """
 
             # 5b. Ground the model in what Revesta's disposers actually put
@@ -177,8 +195,20 @@ class AnalyzeWasteView(APIView):
             elif data.get('track_type') == 'B':
                 weight = data.get('suggested_weight_kg', 0)
                 material = data.get('material_type', 'PET')
-                estimated = calculate_track_b_earnings(material, weight)
+                # Priced from where this load sits in its band, not from the
+                # band's midpoint: the model has just looked at it, so there
+                # is no reason to pay it as though nobody had.
+                estimated = calculate_track_b_earnings(
+                    material, weight, condition=data.get('condition')
+                )
                 data['estimated_earnings'] = float(estimated)
+                tips = preparation_tips(material)
+                if tips:
+                    # A smaller number should always arrive with the reason
+                    # and the remedy. The survey asked what would make people
+                    # sell more of their waste; every free-text answer came
+                    # back some version of "knowing I'll get value for it".
+                    data['preparation_tips'] = tips
             else:
                 estimated = None
 

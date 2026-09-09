@@ -6,6 +6,14 @@ from django.test import TestCase
 
 from intelligence.buyback import (
     COLLECTION_MARGIN,
+    UNASSESSED_QUALITY,
+    gate_price_for_quality,
+    preparation_guidance,
+    preparation_tips,
+    price_band,
+    quality_adjusted_payout_per_kg,
+    quality_pricing_active,
+    quality_score,
     buyback_rates,
     derived_payout_per_kg,
     sack_economics,
@@ -453,3 +461,131 @@ class UnmappedMaterialTests(BuybackTestCase):
         self.assertEqual(tiers['ALUMINUM'], 'very high')
         self.assertEqual(tiers['PURE_WATER_RUBBERS'], 'low')
         self.assertGreater(len(set(tiers.values())), 2)
+
+
+class QualityPricingTests(BuybackTestCase):
+    def band(self, material='PET', low='1.50', high='2.50', note='Remove caps, crush, and ensure they are dry.'):
+        return MaterialBuybackPrice.objects.create(
+            material_type=material,
+            label=f'{material} band',
+            price_per_kg=(Decimal(low) + Decimal(high)) / 2,
+            price_per_kg_low=Decimal(low),
+            price_per_kg_high=Decimal(high),
+            preparation_note=note,
+            source='test',
+            captured_at=date(2026, 9, 9),
+        )
+
+    def test_an_unassessed_load_is_priced_near_the_bottom_of_the_band(self):
+        self.band()
+
+        gate = gate_price_for_quality('PET', None)
+        self.assertEqual(gate, Decimal('1.75'))  # 1.50 + 1.00 * 0.25
+        self.assertLess(gate, Decimal('2.00'))   # ... below the midpoint
+
+    def test_a_clean_prepared_load_reaches_the_top_of_the_band(self):
+        self.band()
+
+        gate = gate_price_for_quality(
+            'PET', {'contamination': 'none', 'dry': True, 'prepared': True}
+        )
+        self.assertEqual(gate, Decimal('2.50'))
+
+    def test_a_heavily_contaminated_load_falls_to_the_bottom(self):
+        self.band()
+
+        gate = gate_price_for_quality(
+            'PET', {'contamination': 'heavy', 'dry': False, 'prepared': False}
+        )
+        self.assertLess(gate, Decimal('1.75'))
+        self.assertGreaterEqual(gate, Decimal('1.50'))
+
+    def test_wet_material_is_penalised_because_the_market_says_it_is(self):
+        self.band('PAPER', '1.00', '2.50', 'Must be kept completely dry.')
+
+        dry = gate_price_for_quality('PAPER', {'contamination': 'none', 'dry': True})
+        wet = gate_price_for_quality('PAPER', {'contamination': 'none', 'dry': False})
+        self.assertGreater(dry, wet)
+
+    def test_a_partial_assessment_uses_only_what_was_observed(self):
+        self.band()
+
+        # Only contamination reported; dry/prepared unknown and simply don't vote.
+        only_clean = quality_score({'contamination': 'none', 'dry': None, 'prepared': None})
+        self.assertEqual(only_clean, Decimal('1.00'))
+
+    def test_an_unusable_assessment_never_reads_as_a_clean_load(self):
+        for junk in (None, {}, 'clean', {'contamination': 'spotless'}, []):
+            self.assertEqual(quality_score(junk), UNASSESSED_QUALITY)
+
+    def test_condition_changes_the_payout_once_the_base_rate_is_near_the_band(self):
+        # GLASS falls back to GHS 0.50/kg, so a band around that figure is
+        # one the +-25% bound does not saturate - which is the state every
+        # material reaches once its base rate is corrected.
+        self.band('GLASS', '0.40', '0.70', 'Keep it dry.')
+
+        clean = calculate_track_b_earnings(
+            'GLASS', 10, condition={'contamination': 'none', 'dry': True, 'prepared': True}
+        )
+        dirty = calculate_track_b_earnings(
+            'GLASS', 10, condition={'contamination': 'heavy', 'dry': False, 'prepared': False}
+        )
+        self.assertGreater(clean, dirty)
+
+    def test_condition_is_inert_while_the_base_rate_is_far_below_the_band(self):
+        """
+        Not the behaviour anyone wants, but the behaviour the bound produces
+        and the reason the report calls it out: PET pays GHS 0.50/kg against
+        a band starting at GHS 1.50, so even a filthy load's gate-derived
+        payout clears the +25% ceiling and every load clamps to the same
+        figure. Asserted so that raising the base rate is a visible,
+        deliberate change rather than something that silently switches
+        quality pricing on.
+        """
+        self.band()
+
+        clean = calculate_track_b_earnings(
+            'PET', 10, condition={'contamination': 'none', 'dry': True, 'prepared': True}
+        )
+        dirty = calculate_track_b_earnings(
+            'PET', 10, condition={'contamination': 'heavy', 'dry': False, 'prepared': False}
+        )
+        self.assertEqual(clean, dirty)
+
+        active, reason = quality_pricing_active('PET', Decimal('0.50'))
+        self.assertFalse(active)
+        self.assertIn('raise the base rate', reason)
+
+    def test_quality_pricing_reports_itself_active_when_it_is(self):
+        self.band('GLASS', '1.50', '2.50', 'Keep it dry.')
+
+        active, reason = quality_pricing_active('GLASS', Decimal('1.20'))
+        self.assertTrue(active)
+        self.assertIn('depending on condition', reason)
+
+    def test_the_bound_still_applies_however_good_the_load_is(self):
+        self.band('ALUMINUM', '15.00', '22.00', 'Crush them down.')
+        current = Decimal('2.00')  # the fallback rate for ALUMINUM
+
+        best = quality_adjusted_payout_per_kg(
+            'ALUMINUM', current, {'contamination': 'none', 'dry': True, 'prepared': True}
+        )
+        self.assertLessEqual(best, current * Decimal(str(1 + MAX_SHIFT)))
+
+    def test_a_material_with_no_band_prices_exactly_as_before(self):
+        self.assertIsNone(price_band('PET'))
+        self.assertEqual(quality_adjusted_payout_per_kg('PET', Decimal('0.50')), Decimal('0.50'))
+
+    def test_disposers_are_told_how_to_earn_the_top_of_the_band(self):
+        self.band()
+
+        self.assertIn('Remove caps', preparation_tips('PET'))
+        self.assertEqual(preparation_tips('GLASS'), '')
+
+    def test_prompt_guidance_names_the_rule_per_material(self):
+        self.band()
+        self.band('ALUMINUM', '15.00', '22.00', 'Crush them down to maximize bag capacity.')
+
+        guidance = preparation_guidance()
+        self.assertIn('PET: Remove caps', guidance)
+        self.assertIn('ALUMINUM: Crush them down', guidance)

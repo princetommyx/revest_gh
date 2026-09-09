@@ -266,3 +266,199 @@ def unmapped_materials():
     except Exception as e:
         logger.warning(f"Could not read unmapped buyback materials: {e}")
         return []
+
+
+# --- Quality-adjusted pricing ------------------------------------------
+#
+# The market quotes a band, not a price - 1.4x wide on copper, 2.5x on
+# paper - and where a load lands in that band is decided by its condition.
+# Stripped copper fetches GHS 75, copper still in its insulation fetches
+# GHS 55; dry cardboard is worth GHS 2.50, wet cardboard is worth, in the
+# source's own words, nothing.
+#
+# That was previously unusable information, because nothing assessed
+# condition. It is usable now for one reason: the waste-analysis model is
+# already looking at a photograph of the load, and every one of these
+# preparation rules describes something visible in a photograph. So the
+# model reports what it sees, and the payout follows.
+
+# Where an unassessed load is priced within its band. Deliberately near the
+# bottom rather than the middle: a load nobody has looked at is not an
+# average load, it is a load of unknown condition, and the band is wide
+# enough that assuming the middle overpays on roughly half of them. A
+# disposer who prepares their material gets the rest by way of the
+# assessment, which is the incentive the survey's open answers ("when I
+# know I will get value for it") were asking for.
+UNASSESSED_QUALITY = Decimal('0.25')
+
+CONTAMINATION_QUALITY = {
+    'none': Decimal('1.00'),
+    'light': Decimal('0.60'),
+    'heavy': Decimal('0.15'),
+}
+
+# How much of the score each observation carries. Contamination dominates
+# because it is the one that can take a load to zero - the source is explicit
+# that wet paper loses all value, and a sack of PET with drink still in the
+# bottles is not a sack of PET.
+CONTAMINATION_WEIGHT = Decimal('0.5')
+DRYNESS_WEIGHT = Decimal('0.3')
+PREPARATION_WEIGHT = Decimal('0.2')
+
+
+def quality_score(condition):
+    """
+    A 0..1 position within a material's price band, from what the model
+    reported seeing. Returns UNASSESSED_QUALITY when there is nothing usable
+    to go on - an absent assessment must never be read as a clean load.
+
+    `condition` is the waste-analysis model's own observation block:
+    {"contamination": "none"|"light"|"heavy", "dry": bool, "prepared": bool}.
+    Any subset works; each missing observation simply doesn't vote.
+    """
+    if not isinstance(condition, dict):
+        return UNASSESSED_QUALITY
+
+    scored = []
+    contamination = CONTAMINATION_QUALITY.get(condition.get('contamination'))
+    if contamination is not None:
+        scored.append((CONTAMINATION_WEIGHT, contamination))
+    if isinstance(condition.get('dry'), bool):
+        scored.append((DRYNESS_WEIGHT, Decimal('1') if condition['dry'] else Decimal('0.2')))
+    if isinstance(condition.get('prepared'), bool):
+        scored.append((PREPARATION_WEIGHT, Decimal('1') if condition['prepared'] else Decimal('0.4')))
+
+    if not scored:
+        return UNASSESSED_QUALITY
+
+    total_weight = sum(weight for weight, _ in scored)
+    return (sum(weight * value for weight, value in scored) / total_weight).quantize(Decimal('0.01'))
+
+
+def price_band(material_key):
+    """(low, high) for a material, or None when it has no captured band."""
+    try:
+        from .models import MaterialBuybackPrice
+
+        row = (
+            MaterialBuybackPrice.objects
+            .filter(material_type=(material_key or '').upper())
+            .exclude(price_per_kg_low=None)
+            .exclude(price_per_kg_high=None)
+            .order_by('-captured_at', 'price_per_kg_low')
+            .first()
+        )
+        return (row.price_per_kg_low, row.price_per_kg_high) if row else None
+    except Exception as e:
+        logger.warning(f"Could not read price band for {material_key}: {e}")
+        return None
+
+
+def gate_price_for_quality(material_key, condition=None):
+    """
+    The gate price this particular load would fetch: its band, interpolated
+    by what the model saw. Falls back to the flat captured price for a
+    material with no band.
+    """
+    band = price_band(material_key)
+    if band is None:
+        return buyback_rates().get((material_key or '').upper())
+    low, high = band
+    return (low + (high - low) * quality_score(condition)).quantize(Decimal('0.01'))
+
+
+def preparation_tips(material_key):
+    """
+    What this disposer could do to earn the top of the band, in the market's
+    own words. Returned to the app so a low assessment comes with a reason
+    and a remedy rather than just a smaller number.
+    """
+    try:
+        from .models import MaterialBuybackPrice
+
+        row = (
+            MaterialBuybackPrice.objects
+            .filter(material_type=(material_key or '').upper())
+            .exclude(preparation_note='')
+            .order_by('-captured_at')
+            .first()
+        )
+        return row.preparation_note if row else ''
+    except Exception as e:
+        logger.warning(f"Could not read preparation note for {material_key}: {e}")
+        return ''
+
+
+def quality_adjusted_payout_per_kg(material_key, current_rate, condition=None):
+    """
+    derived_payout_per_kg(), but priced from where this load actually sits
+    in its band rather than from the band's midpoint.
+
+    Still bounded by MAX_SHIFT against the rate in force: condition decides
+    which gate price is the target, never how far a single capture is
+    allowed to move a live payout in one step.
+    """
+    gate = gate_price_for_quality(material_key, condition)
+    if gate is None:
+        return current_rate
+    target = (gate * (1 - COLLECTION_MARGIN)).quantize(Decimal('0.01'))
+    try:
+        moved = clamp_to_shift(float(current_rate), float(target))
+    except (TypeError, ValueError, InvalidOperation):
+        return current_rate
+    return Decimal(str(round(moved, 2)))
+
+
+def preparation_guidance():
+    """
+    Every material's preparation rule, one line, for the waste-analysis
+    prompt. This is what lets the model judge "prepared" against the right
+    standard - crushed for cans, stripped for copper, capless and dry for
+    PET - instead of against a general sense of tidiness.
+    """
+    try:
+        from .models import MaterialBuybackPrice
+
+        seen = {}
+        for row in MaterialBuybackPrice.objects.exclude(preparation_note='').order_by('-captured_at'):
+            key = row.material_type or row.label
+            seen.setdefault(key, row.preparation_note)
+        return '; '.join(f"{key}: {note}" for key, note in seen.items())
+    except Exception as e:
+        logger.warning(f"Could not read preparation guidance: {e}")
+        return ''
+
+
+def quality_pricing_active(material_key, current_rate):
+    """
+    Whether condition can actually change this material's payout yet.
+
+    It cannot while the base rate sits so far below the band that even a
+    filthy load's gate-derived payout clears the MAX_SHIFT ceiling - both a
+    spotless and a contaminated load then clamp to the same bounded figure.
+    That is the bound working as intended (one capture may not move a live
+    payout far), but it means the assessment is being collected and not yet
+    spent, which is worth saying out loud rather than leaving to be
+    discovered.
+
+    Returns (active, reason).
+    """
+    band = price_band(material_key)
+    if band is None:
+        return False, 'no captured price band for this material'
+
+    worst = quality_adjusted_payout_per_kg(
+        material_key, current_rate,
+        {'contamination': 'heavy', 'dry': False, 'prepared': False},
+    )
+    best = quality_adjusted_payout_per_kg(
+        material_key, current_rate,
+        {'contamination': 'none', 'dry': True, 'prepared': True},
+    )
+    if worst == best:
+        return False, (
+            f"base rate GHS {current_rate}/kg is far enough below the band that "
+            f"every load clamps to GHS {best}/kg - raise the base rate before "
+            "condition can matter"
+        )
+    return True, f"GHS {worst}/kg to GHS {best}/kg depending on condition"

@@ -345,7 +345,7 @@ def prompt_context():
     # that changes its behaviour anyway - it says where careful
     # identification pays off (aluminium cans against steel tins) and where
     # it barely matters (paper grades).
-    from .buyback import value_tiers
+    from .buyback import preparation_guidance, value_tiers
 
     tiers = value_tiers()
     if tiers:
@@ -361,6 +361,13 @@ def prompt_context():
         lines.append(
             f"- {round(no_trust * 100)}% do not trust weighing at all, so a confident "
             "sack/bag count matters as much as your kilogram estimate."
+        )
+
+    guidance = preparation_guidance()
+    if guidance:
+        lines.append(
+            "- What buyers here pay extra for, by material - judge the "
+            f"\"prepared\" flag against the rule for the material you identify: {guidance}"
         )
 
     if not lines:

@@ -216,7 +216,21 @@ class MaterialBuybackPrice(models.Model):
     # What the market itself calls it, e.g. "Water Sachets (LDPE)".
     label = models.CharField(max_length=120)
 
+    # The band the market actually quotes, and its midpoint. price_per_kg
+    # stays the single figure for anything that just needs "what is this
+    # worth", but the band is what makes quality pricing possible: where a
+    # load lands between low and high is decided by its condition, and
+    # paying the midpoint for a load nobody has assessed overpays roughly
+    # half the time.
     price_per_kg = models.DecimalField(max_digits=10, decimal_places=2)
+    price_per_kg_low = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_per_kg_high = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # What a disposer must do to reach the top of that band - strip the
+    # insulation, keep the cardboard dry, take the caps off. Every one of
+    # these is something the waste-analysis model can see in a photo, which
+    # is what turns them from advice into a price input.
+    preparation_note = models.TextField(blank=True)
 
     source = models.CharField(max_length=120)  # where this figure came from
     source_note = models.TextField(blank=True)  # how much to trust it

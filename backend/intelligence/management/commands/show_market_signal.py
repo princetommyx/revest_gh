@@ -7,6 +7,8 @@ from intelligence.buyback import (
     FLAT_RATE_MATERIALS,
     buyback_rates,
     refresh_buyback_rates,
+    price_band,
+    quality_pricing_active,
     sack_economics,
     unbounded_payout_per_kg,
     unmapped_materials,
@@ -98,6 +100,22 @@ class Command(BaseCommand):
             # itself - those are not a tuning question, they are a rate
             # that was never right.
             self.stdout.write(self.style.ERROR(line) if gap > paying else line)
+
+        self.stdout.write(self.style.MIGRATE_HEADING("Condition-based pricing"))
+        from logistics.pricing import FALLBACK_RATES
+
+        for material in sorted(rates):
+            if material in FLAT_RATE_MATERIALS:
+                continue
+            current = FALLBACK_RATES.get(material)
+            if current is None:
+                continue
+            band = price_band(material)
+            band_text = f"GHS {band[0]}-{band[1]}/kg" if band else "no band"
+            active, reason = quality_pricing_active(material, current)
+            style = self.style.SUCCESS if active else self.style.WARNING
+            self.stdout.write(f"  {material:<20} band {band_text}")
+            self.stdout.write(style(f"    {'active' if active else 'INERT'}: {reason}"))
 
         unmapped = unmapped_materials()
         if unmapped:
