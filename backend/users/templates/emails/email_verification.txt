@@ -8,4 +8,4 @@ This code expires in {{ expires_in|default:"15 minutes" }}.
 
 Didn't create a ReVesta account? You can safely ignore this email.
 
-Need help? revesta3@gmail.com
+Need help? revestagh@gmail.com

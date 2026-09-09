@@ -136,6 +136,12 @@ def send_transactional_email(
         if hasattr(settings, 'CORS_ALLOWED_ORIGINS') and settings.CORS_ALLOWED_ORIGINS:
             app_url = settings.CORS_ALLOWED_ORIGINS[0]
         context.setdefault('app_url', app_url)
+
+        # Absolute URL for the logo mark shown in the email header - must be
+        # absolute (not relative) since email clients fetch it over HTTP,
+        # not from the site the email happens to be viewed on.
+        backend_url = getattr(settings, 'BACKEND_URL', 'https://revest-gh.onrender.com')
+        context.setdefault('logo_url', f'{backend_url}/static/users/emails/logo-mark-white.png')
         
         # Render templates
         html_content = render_to_string(template_name, context)

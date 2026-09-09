@@ -6,4 +6,4 @@ Hi {{ user_name }}, {{ message }}
 {% endfor %}{% endif %}
 {% if cta_url %}{{ cta_label|default:"Review now" }}: {{ cta_url }}{% endif %}
 
-Need help? revesta3@gmail.com
+Need help? revestagh@gmail.com

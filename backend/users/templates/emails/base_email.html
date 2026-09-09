@@ -4,39 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="color-scheme" content="light">
-    <meta name="supported-color-schemes" content="light">
+    <meta name="color-scheme" content="dark">
+    <meta name="supported-color-schemes" content="dark">
     <title>{% block title %}ReVesta{% endblock %}</title>
 </head>
 
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0b0f0e;">
     <!-- Preheader: the snippet inbox previews show next to the subject line. Hidden in the rendered body. -->
     <div style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;">
         {% block preheader %}{% endblock %}
     </div>
     <div style="display: none; max-height: 0; overflow: hidden;">&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
 
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse; background-color: #0b0f0e;">
         <tr>
             <td align="center" style="padding: 40px 16px;">
-                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(17, 17, 17, 0.06);">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width: 600px; max-width: 100%; border-collapse: collapse; background-color: #141a19; border: 1px solid #2c3634; border-radius: 16px; overflow: hidden;">
 
                     <!-- Header -->
                     <tr>
-                        <td style="padding: 36px 40px 28px 40px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                            <div style="font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em;">
-                                Re<span style="color: #d1fae5;">Vesta</span>
-                            </div>
-                            <div style="width: 64px; height: 64px; margin: 20px auto 0; background-color: rgba(255, 255, 255, 0.96); border-radius: 50%; text-align: center; line-height: 64px;">
-                                {% block header_icon %}
-                                <!--[if !mso]><!-->
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style="vertical-align: middle;">
-                                    <path d="M20 6L9 17l-5-5" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                                <!--<![endif]-->
-                                {% endblock %}
-                            </div>
-                            {% block kicker %}{% endblock %}
+                        <td style="padding: 32px 40px; text-align: center; background-color: #0b0f0e; border-bottom: 1px solid #2c3634;">
+                            <img src="{{ logo_url }}" width="44" height="44" alt="ReVesta" style="display: block; margin: 0 auto; width: 44px; height: 44px;">
                         </td>
                     </tr>
 
@@ -49,16 +37,16 @@
 
                     <!-- Footer -->
                     <tr>
-                        <td style="padding: 24px 40px 32px; background-color: #f9fafb; text-align: center;">
-                            <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 1.6; color: #9ca3af;">
+                        <td style="padding: 24px 40px 32px; background-color: #0f1413; border-top: 1px solid #2c3634; text-align: center;">
+                            <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 1.6; color: #7c8a87;">
                                 Need help? Reach us anytime at
-                                <a href="mailto:revesta3@gmail.com" style="color: #059669; text-decoration: none;">revesta3@gmail.com</a>
+                                <a href="mailto:revestagh@gmail.com" style="color: #10b981; text-decoration: none;">revestagh@gmail.com</a>
                             </p>
-                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #9ca3af;">
+                            <p style="margin: 0 0 4px 0; font-size: 12px; color: #7c8a87;">
                                 &copy; {{ current_year }} ReVesta &middot; Making recycling easier.
                             </p>
                             {% block footer_note %}
-                            <p style="margin: 0; font-size: 12px; color: #b5bcc4;">
+                            <p style="margin: 0; font-size: 12px; color: #4d5754;">
                                 You're receiving this because you have a ReVesta account.
                             </p>
                             {% endblock %}

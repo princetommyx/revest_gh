@@ -360,6 +360,11 @@ HUBTEL_FROM = os.environ.get('HUBTEL_FROM', 'Revesta')
 import logging
 email_logger = logging.getLogger('revesta.email')
 
+# Absolute base URL of this backend deployment - used to build absolute
+# asset URLs (e.g. the logo image in transactional emails) since email
+# clients fetch images over HTTP and can't resolve relative paths.
+BACKEND_URL = os.environ.get('BACKEND_URL', 'https://revest-gh.onrender.com')
+
 if os.environ.get('RESEND_API_KEY'):
     EMAIL_BACKEND = 'users.email_backend.ResendBackend'
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY')

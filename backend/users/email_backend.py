@@ -54,7 +54,7 @@ class ResendBackend(BaseEmailBackend):
                     "from": message.from_email or settings.DEFAULT_FROM_EMAIL,
                     "to": message.to,
                     "subject": message.subject,
-                    "reply_to": "revesta3@gmail.com",
+                    "reply_to": "revestagh@gmail.com",
                 }
 
                 # Add HTML or plain text body

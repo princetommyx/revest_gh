@@ -3,22 +3,16 @@
 {% block title %}New message on ReVesta{% endblock %}
 {% block preheader %}{{ sender_name }} sent you a message on ReVesta.{% endblock %}
 
-{% block header_icon %}
-<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <path d="M4 6h16v11a1 1 0 01-1 1H8l-4 3V6z" stroke="#059669" stroke-width="2" stroke-linejoin="round" />
-</svg>
-{% endblock %}
-
 {% block content %}
-<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #111111;">
+<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #f2f5f4;">
     New message from {{ sender_name }}
 </h2>
-<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+<p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #a6b2af;">
     Hi {{ user_name }}, you've got a new message on ReVesta:
 </p>
 
-<div style="background-color: #f9fafb; border-left: 4px solid #10b981; padding: 18px 20px; border-radius: 4px; margin-bottom: 28px;">
-    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #374151; font-style: italic;">
+<div style="background-color: #1b2322; border-left: 4px solid #10b981; padding: 18px 20px; border-radius: 4px; margin-bottom: 28px;">
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #d1d8d6; font-style: italic;">
         &ldquo;{{ message_content }}&rdquo;
     </p>
 </div>
@@ -26,7 +20,7 @@
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
     <tr>
         <td style="border-radius: 8px; background-color: #10b981;">
-            <a href="{{ app_url }}" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 700; color: #ffffff; text-decoration: none;">
+            <a href="{{ app_url }}" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 700; color: #04120d; text-decoration: none;">
                 Reply in ReVesta
             </a>
         </td>
@@ -35,7 +29,7 @@
 {% endblock %}
 
 {% block footer_note %}
-<p style="margin: 0; font-size: 12px; color: #b5bcc4;">
+<p style="margin: 0; font-size: 12px; color: #4d5754;">
     You're receiving this because you have message notifications enabled.
 </p>
 {% endblock %}

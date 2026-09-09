@@ -3,52 +3,45 @@
 {% block title %}New login to your ReVesta account{% endblock %}
 {% block preheader %}New login to your ReVesta account at {{ login_time }}.{% endblock %}
 
-{% block header_icon %}
-<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <rect x="5" y="11" width="14" height="9" rx="2" stroke="#059669" stroke-width="2" />
-    <path d="M8 11V8a4 4 0 118 0v3" stroke="#059669" stroke-width="2" stroke-linecap="round" />
-</svg>
-{% endblock %}
-
 {% block content %}
-<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #111111;">
+<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #f2f5f4;">
     New login detected
 </h2>
-<p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+<p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #a6b2af;">
     Hi {{ user_name }}, your ReVesta account was just signed into.
 </p>
 
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #1b2322; border: 1px solid #2c3634; border-radius: 8px; margin-bottom: 24px;">
     <tr>
         <td style="padding: 16px 20px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                    <td style="padding-bottom: 8px; color: #6b7280; font-size: 13px; width: 80px;">Time</td>
-                    <td style="padding-bottom: 8px; color: #111827; font-size: 13px; font-weight: 600;">{{ login_time }}</td>
+                    <td style="padding-bottom: 8px; color: #7c8a87; font-size: 13px; width: 80px;">Time</td>
+                    <td style="padding-bottom: 8px; color: #f2f5f4; font-size: 13px; font-weight: 600;">{{ login_time }}</td>
                 </tr>
                 <tr>
-                    <td style="color: #6b7280; font-size: 13px;">Account</td>
-                    <td style="color: #111827; font-size: 13px; font-weight: 600;">{{ user_email }}</td>
+                    <td style="color: #7c8a87; font-size: 13px;">Account</td>
+                    <td style="color: #f2f5f4; font-size: 13px; font-weight: 600;">{{ user_email }}</td>
                 </tr>
             </table>
         </td>
     </tr>
 </table>
 
-<p style="margin: 0 0 4px 0; font-size: 14px; line-height: 1.6; color: #4b5563;">
-    <strong>Was this you?</strong> No action needed.
+<p style="margin: 0 0 4px 0; font-size: 14px; line-height: 1.6; color: #a6b2af;">
+    <strong style="color: #f2f5f4;">Was this you?</strong> No action needed.
 </p>
 
-<div style="margin: 16px 0 24px 0; padding: 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
-    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #991b1b;">
+<div style="margin: 16px 0 24px 0; padding: 16px; background-color: #2a1616; border-left: 4px solid #f87171; border-radius: 4px;">
+    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #fca5a5;">
         <strong>Wasn't you?</strong> Reset your password right away to secure your account.
     </p>
 </div>
 
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
     <tr>
-        <td style="border-radius: 8px; background-color: #111111;">
-            <a href="{{ app_url }}/forgot-password" style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none;">
+        <td style="border-radius: 8px; background-color: #f2f5f4;">
+            <a href="{{ app_url }}/forgot-password" style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 700; color: #0b0f0e; text-decoration: none;">
                 Reset password
             </a>
         </td>
