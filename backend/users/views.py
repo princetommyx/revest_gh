@@ -872,7 +872,16 @@ class DebugEmailView(views.APIView):
 
 
 class EmailHealthCheckView(views.APIView):
+    """
+    Diagnostic endpoint: reports which email backend is active, and
+    optionally (?send_test=true&to=someone@example.com) actually sends a
+    test email so you can confirm real delivery, not just that the config
+    looks right. AllowAny so it's reachable without auth while debugging -
+    throttled (email_test scope) since sending is a spam-relay risk on an
+    open endpoint.
+    """
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = 'email_test'
 
     def get(self, request):
         status_data = {
@@ -887,6 +896,28 @@ class EmailHealthCheckView(views.APIView):
                 else "Not Set"
             ),
         }
+
+        if request.query_params.get("send_test") == "true":
+            to = request.query_params.get("to")
+            if not to:
+                status_data["test_email_sent"] = False
+                status_data["test_email_error"] = "Missing 'to' query parameter"
+            else:
+                try:
+                    send_mail(
+                        subject="ReVesta Email Test",
+                        message="If you see this, email is working!",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[to],
+                        fail_silently=False,
+                    )
+                    status_data["test_email_sent"] = True
+                    status_data["test_email_recipient"] = to
+                except Exception as e:
+                    logger.error(f"Email health check send_test failed: {e}")
+                    status_data["test_email_sent"] = False
+                    status_data["test_email_error"] = str(e)
+
         return Response(status_data)
 
 

@@ -283,6 +283,7 @@ REST_FRAMEWORK = {
         'otp': '10/minute',      # OTP send/verify endpoints - resist code guessing
         'otp_identifier': '30/hour', # Increased for testing (originally 3/hour)
         'wallet': '100/minute',   # Increased for usability
+        'email_test': '5/hour',  # EmailHealthCheckView's send_test - AllowAny, so capped to resist being used as a spam relay
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_RENDERER_CLASSES': [
