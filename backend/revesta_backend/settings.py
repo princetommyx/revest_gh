@@ -363,8 +363,13 @@ email_logger = logging.getLogger('revesta.email')
 if os.environ.get('RESEND_API_KEY'):
     EMAIL_BACKEND = 'users.email_backend.ResendBackend'
     RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-    DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Resend sandbox email
-    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)})")
+    # Resend's sandbox sender (onboarding@resend.dev) only delivers to the
+    # Resend account owner's own inbox - fine for testing, useless for real
+    # users. Once a domain is verified on Resend, set DEFAULT_FROM_EMAIL on
+    # Render (e.g. noreply@yourdomain.com) and it takes effect immediately -
+    # no code change needed.
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
+    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)}, from: {DEFAULT_FROM_EMAIL})")
 else:
     # Fallback to SMTP (for local development)
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

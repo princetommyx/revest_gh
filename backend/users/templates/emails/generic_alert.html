@@ -1,0 +1,57 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}{{ title|default:"Account alert" }} — ReVesta{% endblock %}
+{% block preheader %}{{ message }}{% endblock %}
+
+{% block header_icon %}
+<svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M12 9v4M12 17h.01" stroke="#059669" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M10.3 3.9L2.5 18a1.5 1.5 0 001.3 2.2h16.4a1.5 1.5 0 001.3-2.2L13.7 3.9a1.5 1.5 0 00-2.6 0z" stroke="#059669" stroke-width="2" stroke-linejoin="round" />
+</svg>
+{% endblock %}
+
+{% block content %}
+{% if severity == 'danger' %}
+<div style="display: inline-block; padding: 4px 10px; background-color: #fef2f2; color: #991b1b; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 20px; margin-bottom: 16px;">Action needed</div>
+{% elif severity == 'warning' %}
+<div style="display: inline-block; padding: 4px 10px; background-color: #fffbeb; color: #92400e; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 20px; margin-bottom: 16px;">Heads up</div>
+{% else %}
+<div style="display: inline-block; padding: 4px 10px; background-color: #eff6ff; color: #1e40af; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; border-radius: 20px; margin-bottom: 16px;">Notice</div>
+{% endif %}
+
+<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #111111;">
+    {{ title|default:"Account alert" }}
+</h2>
+<p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #4b5563;">
+    Hi {{ user_name }}, {{ message }}
+</p>
+
+{% if details %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 24px;">
+    <tr>
+        <td style="padding: 16px 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                {% for row in details %}
+                <tr>
+                    <td style="padding: {% if not forloop.last %}0 0 8px 0{% else %}0{% endif %}; color: #6b7280; font-size: 13px; width: 40%;">{{ row.label }}</td>
+                    <td style="padding: {% if not forloop.last %}0 0 8px 0{% else %}0{% endif %}; color: #111827; font-size: 13px; font-weight: 600; text-align: right;">{{ row.value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+{% if cta_url %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+    <tr>
+        <td style="border-radius: 8px; background-color: #111111;">
+            <a href="{{ cta_url }}" style="display: inline-block; padding: 12px 28px; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none;">
+                {{ cta_label|default:"Review now" }}
+            </a>
+        </td>
+    </tr>
+</table>
+{% endif %}
+{% endblock %}

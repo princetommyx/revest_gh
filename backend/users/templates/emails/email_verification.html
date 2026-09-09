@@ -1,22 +1,21 @@
 {% extends "emails/base_email.html" %}
 
-{% block title %}Reset your ReVesta password{% endblock %}
-{% block preheader %}Your password reset code is {{ otp_code }}. It expires in {{ expires_in|default:"15 minutes" }}.{% endblock %}
+{% block title %}Verify your email for ReVesta{% endblock %}
+{% block preheader %}Your ReVesta verification code is {{ otp_code }}. It expires in {{ expires_in|default:"15 minutes" }}.{% endblock %}
 
 {% block header_icon %}
 <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <rect x="5" y="11" width="14" height="9" rx="2" stroke="#059669" stroke-width="2" />
-    <path d="M8 11V8a4 4 0 118 0v3" stroke="#059669" stroke-width="2" stroke-linecap="round" />
-    <circle cx="12" cy="15.5" r="1.4" fill="#059669" />
+    <rect x="4" y="6" width="16" height="12" rx="2" stroke="#059669" stroke-width="2" />
+    <path d="M4.5 7l7.5 6 7.5-6" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 </svg>
 {% endblock %}
 
 {% block content %}
 <h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #111111; text-align: center;">
-    Reset your password
+    Verify your email
 </h2>
 <p style="margin: 0 0 28px 0; font-size: 15px; line-height: 1.6; color: #4b5563; text-align: center;">
-    Hi {{ user_name }}, use this code to set a new password for your account.
+    Hi {{ user_name }}, enter this code in the app to confirm <strong>{{ user_email }}</strong> is yours.
 </p>
 
 <div style="text-align: center; margin: 0 0 28px 0;">
@@ -28,10 +27,7 @@
 <p style="margin: 0 0 4px 0; font-size: 14px; line-height: 1.6; color: #6b7280; text-align: center;">
     This code expires in {{ expires_in|default:"15 minutes" }}.
 </p>
-
-<div style="margin: 28px 0 0 0; padding: 16px; background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px;">
-    <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #991b1b;">
-        <strong>Didn't request this?</strong> Someone may have entered your email by mistake. Your password is unchanged — no action needed unless you don't recognize this request.
-    </p>
-</div>
+<p style="margin: 24px 0 0 0; font-size: 13px; line-height: 1.6; color: #9ca3af; text-align: center;">
+    Didn't create a ReVesta account? You can safely ignore this email.
+</p>
 {% endblock %}

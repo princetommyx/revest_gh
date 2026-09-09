@@ -1,0 +1,11 @@
+Verify your email
+
+Hi {{ user_name }}, enter this code in the app to confirm {{ user_email }} is yours:
+
+    {{ otp_code }}
+
+This code expires in {{ expires_in|default:"15 minutes" }}.
+
+Didn't create a ReVesta account? You can safely ignore this email.
+
+Need help? revesta3@gmail.com

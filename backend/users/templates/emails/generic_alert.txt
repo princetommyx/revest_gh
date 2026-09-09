@@ -1,0 +1,9 @@
+{{ title|default:"Account alert" }}
+
+Hi {{ user_name }}, {{ message }}
+{% if details %}
+{% for row in details %}{{ row.label }}: {{ row.value }}
+{% endfor %}{% endif %}
+{% if cta_url %}{{ cta_label|default:"Review now" }}: {{ cta_url }}{% endif %}
+
+Need help? revesta3@gmail.com

@@ -40,7 +40,12 @@ from .serializers import (
     DeactivateAccountSerializer,
     DeleteAccountSerializer,
 )
-from .email_service import send_welcome_email, send_login_alert
+from .email_service import (
+    send_welcome_email,
+    send_login_alert,
+    send_login_otp_email,
+    send_password_reset_email,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -440,21 +445,7 @@ class PasswordResetRequestView(views.APIView):
             # 1. Email
             if user.email:
                 try:
-
-                    def _async_mail(email, otp):
-                        send_mail(
-                            "Revesta Password Reset",
-                            f"Your password reset verification code is: {otp}",
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                            fail_silently=True,
-                        )
-
-                    threading.Thread(
-                        target=_async_mail,
-                        args=(user.email, otp_code),
-                        daemon=True,
-                    ).start()
+                    send_password_reset_email(user, otp_code, expires_in="15 minutes")
                     sent_to.append("email")
                 except Exception as e:
                     logger.error(f"Failed to send reset email: {e}")
@@ -738,22 +729,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # 2. Try Email
         if user.email:
             try:
-
-                def _async_mail(email, otp):
-                    send_mail(
-                        "Revesta Login Verification",
-                        f"Your login verification code is: {otp}",
-                        settings.DEFAULT_FROM_EMAIL,
-                        [email],
-                        fail_silently=True,
-                    )
-
-                threading.Thread(
-                    target=_async_mail,
-                    args=(user.email, otp_code),
-                    daemon=True,
-                ).start()
-
+                send_login_otp_email(user, otp_code, expires_in="10 minutes")
                 sent_to.append(f"email {user.email}")
                 print(
                     f"DEBUG: Sent login OTP {otp_code} to {user.email} (Async)"

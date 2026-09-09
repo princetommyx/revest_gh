@@ -43,10 +43,15 @@ class ResendBackend(BaseEmailBackend):
             try:
                 logger.info(f"Processing email {idx + 1}/{len(email_messages)}: {message.subject} to {message.to}")
                 
-                # Resend expects a specific format
-                # Use Resend's sandbox email (works without domain verification)
+                # Resend expects a specific format. Honor whatever sender Django
+                # resolved (message.from_email, itself defaulting to
+                # DEFAULT_FROM_EMAIL) instead of hardcoding Resend's sandbox
+                # address - that address can only deliver to the Resend
+                # account owner's own inbox, never to real users. Once a
+                # domain is verified, DEFAULT_FROM_EMAIL just needs updating
+                # (env var on Render) - no code change needed here.
                 params = {
-                    "from": "onboarding@resend.dev",
+                    "from": message.from_email or settings.DEFAULT_FROM_EMAIL,
                     "to": message.to,
                     "subject": message.subject,
                     "reply_to": "revesta3@gmail.com",

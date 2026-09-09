@@ -1,0 +1,11 @@
+Confirm it's you
+
+Hi {{ user_name }}, use this code to finish signing in to ReVesta:
+
+    {{ otp_code }}
+
+This code expires in {{ expires_in|default:"10 minutes" }}.
+
+Didn't try to sign in? You can safely ignore this email — your account is still secure.
+
+Need help? revesta3@gmail.com

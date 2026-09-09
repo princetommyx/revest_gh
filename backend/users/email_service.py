@@ -296,39 +296,235 @@ def send_login_alert(user) -> None:
     logger.debug(f"Login alert task started for user {user_id}")
 
 
-def send_password_reset_email(user, reset_url: str) -> None:
+def send_password_reset_email(user, otp_code: str, expires_in: str = "15 minutes") -> None:
     """
-    Send password reset email with reset link.
-    Runs in background thread.
-    
+    Send the password reset verification code by email.
+    Runs in background thread - won't block the reset request.
+
     Args:
-        user: User model instance
-        reset_url: Full URL to password reset page with token
+        user: User model instance (or user ID)
+        otp_code: The one-time code the user enters to reset their password
+        expires_in: Human-readable expiry window shown in the email
     """
-    def _send_task(user_id: int, url: str):
+    def _send_task(user_id: int, code: str):
         try:
             user_obj = User.objects.get(pk=user_id)
-            
+
             context = {
                 'user_name': user_obj.username,
-                'reset_url': url,
+                'otp_code': code,
+                'expires_in': expires_in,
             }
-            
+
             success = send_transactional_email(
                 to=[user_obj.email],
                 subject='Reset Your Password - ReVesta',
                 template_name='emails/password_reset.html',
+                text_template_name='emails/password_reset.txt',
                 context=context,
             )
-            
+
             if success:
                 logger.info(f"Password reset email sent to {user_obj.email}")
-                
+            else:
+                logger.warning(f"Password reset email may have failed for {user_obj.email}")
+
         except Exception as e:
             logger.error(f"Error sending password reset email: {e}")
-    
+
     user_id = user.id if hasattr(user, 'id') else user
-    thread = threading.Thread(target=_send_task, args=(user_id, reset_url), daemon=True)
+    thread = threading.Thread(target=_send_task, args=(user_id, otp_code), daemon=True)
+    thread.start()
+
+
+def send_login_otp_email(user, otp_code: str, expires_in: str = "10 minutes") -> None:
+    """
+    Send the login verification code by email.
+    Runs in background thread - won't block the login request.
+
+    Args:
+        user: User model instance (or user ID)
+        otp_code: The one-time code the user enters to finish signing in
+        expires_in: Human-readable expiry window shown in the email
+    """
+    def _send_task(user_id: int, code: str):
+        try:
+            user_obj = User.objects.get(pk=user_id)
+
+            context = {
+                'user_name': user_obj.username,
+                'otp_code': code,
+                'expires_in': expires_in,
+            }
+
+            success = send_transactional_email(
+                to=[user_obj.email],
+                subject='Your ReVesta Login Code',
+                template_name='emails/login_otp.html',
+                text_template_name='emails/login_otp.txt',
+                context=context,
+            )
+
+            if success:
+                logger.info(f"Login OTP email sent to {user_obj.email}")
+            else:
+                logger.warning(f"Login OTP email may have failed for {user_obj.email}")
+
+        except Exception as e:
+            logger.error(f"Error sending login OTP email: {e}")
+
+    user_id = user.id if hasattr(user, 'id') else user
+    thread = threading.Thread(target=_send_task, args=(user_id, otp_code), daemon=True)
+    thread.start()
+
+
+def send_email_verification(user, otp_code: str, expires_in: str = "15 minutes") -> None:
+    """
+    Send an email-address verification code (e.g. after registering or
+    changing an email address). Runs in background thread.
+
+    Args:
+        user: User model instance (or user ID)
+        otp_code: The one-time code the user enters to verify their email
+        expires_in: Human-readable expiry window shown in the email
+    """
+    def _send_task(user_id: int, code: str):
+        try:
+            user_obj = User.objects.get(pk=user_id)
+
+            context = {
+                'user_name': user_obj.username,
+                'user_email': user_obj.email,
+                'otp_code': code,
+                'expires_in': expires_in,
+            }
+
+            success = send_transactional_email(
+                to=[user_obj.email],
+                subject='Verify Your Email - ReVesta',
+                template_name='emails/email_verification.html',
+                text_template_name='emails/email_verification.txt',
+                context=context,
+            )
+
+            if success:
+                logger.info(f"Verification email sent to {user_obj.email}")
+            else:
+                logger.warning(f"Verification email may have failed for {user_obj.email}")
+
+        except Exception as e:
+            logger.error(f"Error sending verification email: {e}")
+
+    user_id = user.id if hasattr(user, 'id') else user
+    thread = threading.Thread(target=_send_task, args=(user_id, otp_code), daemon=True)
+    thread.start()
+
+
+def send_success_email(
+    user,
+    title: str,
+    message: str,
+    details: Optional[List[Dict[str, str]]] = None,
+    cta_label: Optional[str] = None,
+    cta_url: Optional[str] = None,
+) -> None:
+    """
+    Send a generic "success" confirmation email - e.g. payment received, a
+    pickup completed, a payout sent. Runs in background thread.
+
+    Args:
+        user: User model instance (or user ID)
+        title: Short headline, e.g. "Payment received"
+        message: One-sentence summary, appended after "Hi {name}, "
+        details: Optional list of {'label': ..., 'value': ...} rows shown
+            as a summary table (e.g. amount, reference, date)
+        cta_label: Optional button text
+        cta_url: Optional button link - button only renders if this is set
+    """
+    def _send_task(user_id: int):
+        try:
+            user_obj = User.objects.get(pk=user_id)
+
+            context = {
+                'user_name': user_obj.username,
+                'title': title,
+                'message': message,
+                'details': details,
+                'cta_label': cta_label,
+                'cta_url': cta_url,
+            }
+
+            success = send_transactional_email(
+                to=[user_obj.email],
+                subject=f'{title} - ReVesta',
+                template_name='emails/generic_success.html',
+                text_template_name='emails/generic_success.txt',
+                context=context,
+            )
+
+            if success:
+                logger.info(f"Success email '{title}' sent to {user_obj.email}")
+
+        except Exception as e:
+            logger.error(f"Error sending success email '{title}': {e}")
+
+    user_id = user.id if hasattr(user, 'id') else user
+    thread = threading.Thread(target=_send_task, args=(user_id,), daemon=True)
+    thread.start()
+
+
+def send_alert_email(
+    user,
+    title: str,
+    message: str,
+    severity: str = "warning",
+    details: Optional[List[Dict[str, str]]] = None,
+    cta_label: Optional[str] = None,
+    cta_url: Optional[str] = None,
+) -> None:
+    """
+    Send a generic account alert email - e.g. suspicious activity, a
+    failed payout, a document rejected. Runs in background thread.
+
+    Args:
+        user: User model instance (or user ID)
+        title: Short headline, e.g. "Payout failed"
+        message: One-sentence summary, appended after "Hi {name}, "
+        severity: 'info' | 'warning' | 'danger' - controls the badge color
+        details: Optional list of {'label': ..., 'value': ...} rows
+        cta_label: Optional button text
+        cta_url: Optional button link - button only renders if this is set
+    """
+    def _send_task(user_id: int):
+        try:
+            user_obj = User.objects.get(pk=user_id)
+
+            context = {
+                'user_name': user_obj.username,
+                'title': title,
+                'message': message,
+                'severity': severity,
+                'details': details,
+                'cta_label': cta_label,
+                'cta_url': cta_url,
+            }
+
+            success = send_transactional_email(
+                to=[user_obj.email],
+                subject=f'{title} - ReVesta',
+                template_name='emails/generic_alert.html',
+                text_template_name='emails/generic_alert.txt',
+                context=context,
+            )
+
+            if success:
+                logger.info(f"Alert email '{title}' sent to {user_obj.email}")
+
+        except Exception as e:
+            logger.error(f"Error sending alert email '{title}': {e}")
+
+    user_id = user.id if hasattr(user, 'id') else user
+    thread = threading.Thread(target=_send_task, args=(user_id,), daemon=True)
     thread.start()
 
 
