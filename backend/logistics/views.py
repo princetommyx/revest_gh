@@ -19,6 +19,7 @@ from .serializers import (
 from wallet.services import WalletService
 from intelligence.matching import match_score
 from intelligence.services import record_price_quote, link_price_quote_to_request
+from intelligence.routing import travel_estimate
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -843,9 +844,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # That fallback is what previously made every estimate look
         # "hardcoded": with only one or two collectors online during testing,
         # the same straight-line distance kept recurring.
-        distance_km = min_dist
-        avg_speed_kmh = 40.0
-        duration_min = (min_dist / avg_speed_kmh) * 60
+        # The straight line is kept whatever happens: paired with a routed
+        # distance it is what makes road circuity measurable rather than
+        # assumed (see intelligence.routing).
+        straight_line_km = min_dist
+        distance_km, duration_min = travel_estimate(min_dist)
 
         routed = None
         if nearest_collector and nearest_collector.current_lat and nearest_collector.current_lon:
@@ -872,6 +875,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             lat=lat,
             lon=lon,
             distance_km=distance_km,
+            straight_line_km=straight_line_km,
             duration_min=duration_min,
             used_real_route=routed is not None,
             online_collector_count=online_collector_count,

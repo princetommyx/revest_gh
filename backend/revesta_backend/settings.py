@@ -86,6 +86,15 @@ FERNET_KEY = os.environ.get('FERNET_KEY', b'osLlL5AzQozSnG3c6TLOptUE1lAr_3kO3nyi
 # estimate_price() falls back to the haversine calculation it always used.
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
+# Assumed driving speed for the fallback travel estimate, used only when
+# Google can't be reached AND Revesta has too few completed pickups to have
+# measured its own (see intelligence.routing). Defaults to the 40 km/h that
+# was previously written into three separate call sites - almost certainly
+# too fast for Accra traffic, but changing it changes live fares, so it is
+# left as it was and `manage.py show_routing_calibration` prints what
+# Revesta's own pickups say the figure should be.
+FALLBACK_SPEED_KMH = float(os.environ.get('FALLBACK_SPEED_KMH', '40'))
+
 
 # Application definition
 

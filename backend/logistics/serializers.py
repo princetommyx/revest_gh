@@ -85,7 +85,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         mobile app never actually sends it on create, so it's always null,
         and even if populated it isn't "time until the collector gets here"
         anyway. This computes that instead, the same way distance_km does,
-        using the same average-speed assumption as estimate_price().
+        using the same calibrated travel estimate as estimate_price().
         """
         request = self.context.get('request')
         if not request or not request.query_params:
@@ -96,10 +96,10 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
 
         if lat and lon:
             try:
+                from intelligence.routing import eta_minutes
                 from .utils import haversine
                 dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
-                avg_speed_kmh = 40.0
-                return round((dist / avg_speed_kmh) * 60)
+                return eta_minutes(dist)
             except (ValueError, TypeError, ZeroDivisionError):
                 pass
         return None
@@ -116,10 +116,10 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         if obj.current_lat is None or obj.current_lon is None or not obj.latitude or not obj.longitude:
             return None
         try:
+            from intelligence.routing import eta_minutes
             from .utils import haversine
             dist = haversine(float(obj.current_lat), float(obj.current_lon), float(obj.latitude), float(obj.longitude))
-            avg_speed_kmh = 40.0
-            return round((dist / avg_speed_kmh) * 60)
+            return eta_minutes(dist)
         except (ValueError, TypeError, ZeroDivisionError):
             return None
 

@@ -30,7 +30,8 @@ def record_prediction(task, model_version, output, user=None, input_ref='', conf
 
 
 def record_price_quote(*, user, lat, lon, distance_km, duration_min, used_real_route,
-                        online_collector_count, pending_job_count, demand_multiplier, quoted_price):
+                        online_collector_count, pending_job_count, demand_multiplier, quoted_price,
+                        straight_line_km=None):
     """
     Write one PriceQuote row from estimate_price(). Same fire-and-forget,
     swallow-your-own-errors contract as record_prediction - a logging
@@ -42,6 +43,7 @@ def record_price_quote(*, user, lat, lon, distance_km, duration_min, used_real_r
             pickup_lat=lat,
             pickup_lon=lon,
             distance_km=distance_km,
+            straight_line_km=straight_line_km,
             duration_min=duration_min,
             used_real_route=used_real_route,
             online_collector_count=online_collector_count,

@@ -157,6 +157,11 @@ class PriceQuote(models.Model):
     pickup_lat = models.FloatField()
     pickup_lon = models.FloatField()
     distance_km = models.FloatField(null=True, blank=True)
+    # The straight-line distance, kept alongside distance_km even when a
+    # real route was fetched. With both, the ratio between them is the road
+    # circuity of Revesta's actual service area - measurable instead of
+    # assumed - and without it that ratio is unrecoverable after the fact.
+    straight_line_km = models.FloatField(null=True, blank=True)
     duration_min = models.FloatField(null=True, blank=True)
     used_real_route = models.BooleanField(default=False)  # Google Distance Matrix vs haversine/40km-h fallback
 
