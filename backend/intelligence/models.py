@@ -182,3 +182,56 @@ class PriceQuote(models.Model):
     def __str__(self):
         booked = 'booked' if self.pickup_request_id else 'unbooked'
         return f"GHS {self.quoted_price} ({booked}) @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class MaterialBuybackPrice(models.Model):
+    """
+    What recyclers and scrap dealers in Ghana actually pay, per kilogram,
+    for a given material. The supply side of every Track B price - and the
+    half the app never had.
+
+    MarketSurveyResponse records what disposers hope to be paid;
+    market.MaterialMarketPrice records what Revesta pays them. Neither says
+    what the material is worth at the gate, so nothing in the codebase could
+    answer "does this payout actually clear?" - the fallback rates in
+    logistics/pricing.py were picked without reference to any observed
+    market price at all.
+
+    Rows are observations with a provenance, not settings: `source` and
+    `captured_at` say where a figure came from and when, because a buyback
+    price from a screenshot last quarter should not silently keep pricing
+    payouts forever. Several market items can map onto one Revesta material
+    (white office paper and cardboard are both PAPER here), so resolution
+    deliberately takes the lowest price among them - overpaying on the
+    optimistic end of a bucket is how a buyback loses money on every load.
+    """
+
+    # The Revesta material key this maps onto - the vocabulary
+    # logistics/pricing.py and the waste-analysis model already speak.
+    # Blank when the market trades something Revesta has no category for
+    # yet (copper, at time of writing): still worth recording, because an
+    # unmapped high-value material is a missed line of business, not noise.
+    material_type = models.CharField(max_length=50, db_index=True, blank=True)
+
+    # What the market itself calls it, e.g. "Water Sachets (LDPE)".
+    label = models.CharField(max_length=120)
+
+    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2)
+
+    source = models.CharField(max_length=120)  # where this figure came from
+    source_note = models.TextField(blank=True)  # how much to trust it
+    captured_at = models.DateField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['label', 'source', 'captured_at'],
+                name='one_buyback_price_per_item_per_capture',
+            )
+        ]
+        ordering = ['-captured_at', '-price_per_kg']
+
+    def __str__(self):
+        return f"{self.label}: GHS {self.price_per_kg}/kg ({self.captured_at})"

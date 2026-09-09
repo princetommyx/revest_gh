@@ -340,6 +340,22 @@ def prompt_context():
             f"for your judgement of value only, never to be repeated as a price): {named}."
         )
 
+    # Where the money actually is, per kilogram. Ranked, never priced: the
+    # prompt forbids the model to state a price, and the ranking is the part
+    # that changes its behaviour anyway - it says where careful
+    # identification pays off (aluminium cans against steel tins) and where
+    # it barely matters (paper grades).
+    from .buyback import value_tiers
+
+    tiers = value_tiers()
+    if tiers:
+        named = ', '.join(f"{key} ({tier})" for key, tier in tiers)
+        lines.append(
+            f"- Value per kg at Ghanaian recyclers, highest first: {named}. "
+            "Spend your precision where the value is - telling aluminium from "
+            "other metals matters far more than grading paper."
+        )
+
     no_trust = signal.get('no_weighing_trust_rate')
     if no_trust is not None and no_trust > 0:
         lines.append(

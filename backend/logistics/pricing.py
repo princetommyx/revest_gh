@@ -1,5 +1,6 @@
 from decimal import Decimal
 from .utils import haversine
+from intelligence.buyback import derived_payout_per_kg
 from intelligence.market_signal import clamp_to_shift, priced_signal
 from market.models import MaterialMarketPrice
 
@@ -114,7 +115,16 @@ def calculate_track_b_earnings(material_type, weight_kg):
             'GLASS': Decimal('0.50'),
             'OTHER': Decimal('0.50'),
         }
-        market_price = fallback_rates.get(material_key, Decimal('0.10'))
+        # Nudged toward what the material is actually worth at a Ghanaian
+        # recycler's gate, less Revesta's collection margin. These fallback
+        # rates were never derived from an observed price - several of them
+        # sit well under one - so a material with a real buyback figure
+        # behind it moves toward it by a bounded step rather than staying
+        # wrong indefinitely. Only the fallbacks are adjusted: a
+        # MaterialMarketPrice row above is a price someone set on purpose.
+        market_price = derived_payout_per_kg(
+            material_key, fallback_rates.get(material_key, Decimal('0.10'))
+        )
 
     weight = Decimal(str(weight_kg)) if weight_kg else Decimal('0')
     return (weight * market_price).quantize(Decimal('0.01'))

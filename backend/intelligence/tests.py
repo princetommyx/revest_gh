@@ -1,8 +1,18 @@
+from datetime import date
 from decimal import Decimal
 
 from django.core.cache import cache
 from django.test import TestCase
 
+from intelligence.buyback import (
+    COLLECTION_MARGIN,
+    buyback_rates,
+    derived_payout_per_kg,
+    sack_economics,
+    unbounded_payout_per_kg,
+    unmapped_materials,
+    value_tiers,
+)
 from intelligence.formasty import normalize_submission, upsert_submission
 from intelligence.market_signal import (
     MIN_SAMPLE_SIZE,
@@ -14,7 +24,10 @@ from intelligence.market_signal import (
     pricing_basis,
     prompt_context,
 )
-from intelligence.models import MarketSurveyResponse
+from intelligence.models import MarketSurveyResponse, MaterialBuybackPrice
+from logistics.models import PickupRequest
+from market.models import MaterialMarketPrice
+from users.models import User
 from logistics.pricing import (
     BAG_SIZE_RATES,
     SACK_FLAT_RATE,
@@ -293,3 +306,150 @@ class PromptGroundingTests(SurveyDataTestCase):
         self.seed(MIN_SAMPLE_SIZE)
 
         self.assertNotIn('Money', str(pricing_basis()))
+
+
+class BuybackTestCase(TestCase):
+    """Starts from an empty buyback table for the same reason as SurveyDataTestCase."""
+
+    def setUp(self):
+        MaterialBuybackPrice.objects.all().delete()
+        cache.clear()
+
+    def capture(self, material_type, label, price, captured_at=date(2026, 9, 9)):
+        return MaterialBuybackPrice.objects.create(
+            material_type=material_type,
+            label=label,
+            price_per_kg=Decimal(price),
+            source='test',
+            captured_at=captured_at,
+        )
+
+
+class BuybackRateTests(BuybackTestCase):
+    def test_no_captures_means_no_rates_and_no_price_change(self):
+        self.assertEqual(buyback_rates(), {})
+        self.assertIsNone(unbounded_payout_per_kg('PET'))
+        self.assertEqual(derived_payout_per_kg('PET', Decimal('0.50')), Decimal('0.50'))
+
+    def test_payout_target_is_the_gate_price_less_the_collection_margin(self):
+        self.capture('PET', 'PET Bottles', '2.00')
+
+        self.assertEqual(
+            unbounded_payout_per_kg('PET'),
+            (Decimal('2.00') * (1 - COLLECTION_MARGIN)).quantize(Decimal('0.01')),
+        )
+
+    def test_the_cheapest_item_wins_when_several_map_to_one_material(self):
+        self.capture('PAPER', 'White Office Paper', '2.00')
+        self.capture('PAPER', 'Cardboard (OCC)', '1.40')
+
+        self.assertEqual(buyback_rates()['PAPER'], Decimal('1.40'))
+
+    def test_a_newer_capture_replaces_an_older_one_outright(self):
+        self.capture('PET', 'PET Bottles', '2.00', captured_at=date(2026, 1, 1))
+        self.capture('PET', 'PET Bottles', '5.00', captured_at=date(2026, 9, 9))
+
+        self.assertEqual(buyback_rates()['PET'], Decimal('5.00'))
+
+    def test_a_material_revesta_has_no_category_for_is_kept_but_never_priced(self):
+        self.capture('', 'Copper Wire / Brass', '65.00')
+
+        self.assertEqual(buyback_rates(), {})
+        self.assertEqual(MaterialBuybackPrice.objects.count(), 1)
+
+    def test_a_wrong_rate_is_corrected_by_a_bounded_step_not_all_at_once(self):
+        self.capture('PET', 'PET Bottles', '2.00')
+        current = Decimal('0.50')
+
+        moved = derived_payout_per_kg('PET', current)
+        self.assertGreater(moved, current)
+        self.assertLessEqual(moved, current * Decimal(str(1 + MAX_SHIFT)))
+        # ... and the gap it did not close stays visible.
+        self.assertGreater(unbounded_payout_per_kg('PET'), moved)
+
+    def test_track_b_earnings_use_the_corrected_rate(self):
+        self.capture('PET', 'PET Bottles', '2.00')
+
+        self.assertEqual(
+            calculate_track_b_earnings('PET', 10),
+            (derived_payout_per_kg('PET', Decimal('0.50')) * 10).quantize(Decimal('0.01')),
+        )
+
+    def test_an_explicit_market_price_row_is_never_overridden(self):
+        self.capture('PET', 'PET Bottles', '2.00')
+        MaterialMarketPrice.objects.create(material_type='PET', price_per_kg=Decimal('0.40'))
+
+        self.assertEqual(calculate_track_b_earnings('PET', 10), Decimal('4.00'))
+
+    def test_value_tiers_rank_materials_without_quoting_a_price(self):
+        self.capture('ALUMINUM', 'Aluminum Cans', '18.50')
+        self.capture('PET', 'PET Bottles', '2.00')
+        self.capture('PURE_WATER_RUBBERS', 'Water Sachets (LDPE)', '0.85')
+
+        tiers = value_tiers()
+        self.assertEqual([key for key, _ in tiers], ['ALUMINUM', 'PET', 'PURE_WATER_RUBBERS'])
+        self.assertEqual(dict(tiers)['ALUMINUM'], 'very high')
+        for _, tier in tiers:
+            self.assertNotIn('GHS', tier)
+
+
+class SackEconomicsTests(BuybackTestCase):
+    def test_a_sack_payout_above_its_gate_value_is_reported_as_a_loss(self):
+        self.capture('PURE_WATER_RUBBERS', 'Water Sachets (LDPE)', '0.85')
+
+        economics = sack_economics(Decimal('30.00'))['PURE_WATER_RUBBERS']
+        self.assertFalse(economics['clears'])
+        self.assertEqual(economics['break_even_kg'], Decimal('35.29'))
+        self.assertEqual(economics['sack_kg_source'], 'assumed')
+        self.assertLess(economics['margin_ghs'], 0)
+
+    def test_a_sack_payout_the_gate_covers_is_reported_as_clearing(self):
+        self.capture('PURE_WATER_RUBBERS', 'Water Sachets (LDPE)', '5.00')
+
+        economics = sack_economics(Decimal('30.00'))['PURE_WATER_RUBBERS']
+        self.assertTrue(economics['clears'])
+        self.assertGreater(economics['margin_ghs'], 0)
+
+    def test_a_real_weighed_pickup_replaces_the_assumed_sack_weight(self):
+        self.capture('PURE_WATER_RUBBERS', 'Water Sachets (LDPE)', '0.85')
+        user = User.objects.create_user(
+            username='disposer-1', email='disposer-1@example.com', password='x'
+        )
+        for weight in ('10.00', '12.00', '14.00'):
+            PickupRequest.objects.create(
+                provider=user,
+                material_type='PURE_WATER_RUBBERS',
+                track_type='B',
+                status='COMPLETED',
+                quantity_estimate='1 sack',
+                latitude=5.66,
+                longitude=-0.19,
+                ai_verified_weight=Decimal(weight),
+            )
+
+        economics = sack_economics(Decimal('30.00'))['PURE_WATER_RUBBERS']
+        self.assertEqual(economics['sack_kg_source'], 'observed')
+        self.assertEqual(economics['sack_kg'], Decimal('12.00'))
+
+    def test_a_material_with_no_gate_price_is_left_out_entirely(self):
+        self.assertEqual(sack_economics(Decimal('30.00')), {})
+
+
+class UnmappedMaterialTests(BuybackTestCase):
+    def test_a_material_with_no_revesta_category_is_surfaced_not_lost(self):
+        self.capture('', 'Copper Wire / Brass', '65.00')
+        self.capture('PET', 'PET Bottles', '2.00')
+
+        self.assertEqual(unmapped_materials(), [('Copper Wire / Brass', Decimal('65.00'))])
+
+    def test_tiers_actually_separate_a_bimodal_market(self):
+        for material, price in (
+            ('ALUMINUM', '18.50'), ('METALS', '4.25'), ('PET', '2.00'),
+            ('PURE_WATER_RUBBERS', '0.85'),
+        ):
+            self.capture(material, material, price)
+
+        tiers = dict(value_tiers())
+        self.assertEqual(tiers['ALUMINUM'], 'very high')
+        self.assertEqual(tiers['PURE_WATER_RUBBERS'], 'low')
+        self.assertGreater(len(set(tiers.values())), 2)

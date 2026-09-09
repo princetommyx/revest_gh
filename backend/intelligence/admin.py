@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import CollectorPerformanceSnapshot, MarketSurveyResponse, Prediction, PriceQuote
+from .models import (
+    CollectorPerformanceSnapshot,
+    MaterialBuybackPrice,
+    MarketSurveyResponse,
+    Prediction,
+    PriceQuote,
+)
 
 
 @admin.register(Prediction)
@@ -35,4 +41,12 @@ class PriceQuoteAdmin(admin.ModelAdmin):
         'used_real_route', 'pickup_request', 'created_at',
     )
     list_filter = ('used_real_route', 'created_at')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(MaterialBuybackPrice)
+class MaterialBuybackPriceAdmin(admin.ModelAdmin):
+    list_display = ('label', 'material_type', 'price_per_kg', 'captured_at', 'source')
+    list_filter = ('source', 'captured_at', 'material_type')
+    search_fields = ('label', 'material_type', 'source_note')
     readonly_fields = ('created_at',)
