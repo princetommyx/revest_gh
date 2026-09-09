@@ -382,31 +382,41 @@ email_logger = logging.getLogger('revesta.email')
 # clients fetch images over HTTP and can't resolve relative paths.
 BACKEND_URL = os.environ.get('BACKEND_URL', 'https://revest-gh.onrender.com')
 
-if os.environ.get('RESEND_API_KEY'):
-    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
-    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-    # Resend's sandbox sender (onboarding@resend.dev) only delivers to the
-    # Resend account owner's own inbox - fine for testing, useless for real
-    # users. Once a domain is verified on Resend, set DEFAULT_FROM_EMAIL on
-    # Render (e.g. noreply@yourdomain.com) and it takes effect immediately -
-    # no code change needed.
-    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
-    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)}, from: {DEFAULT_FROM_EMAIL})")
-else:
-    # Fallback to SMTP (for local development)
+# Gmail SMTP takes priority over Resend when both are configured: Resend's
+# sandbox sender (onboarding@resend.dev) only delivers to the Resend
+# account owner's own inbox until a domain is verified, so it can't reach
+# real users on its own. Gmail SMTP can send to anyone right away (capped
+# at ~500/day) - a working bridge until a domain is verified, at which
+# point removing EMAIL_HOST_USER/EMAIL_HOST_PASSWORD from Render falls
+# back to Resend automatically, no code change needed either way.
+_email_host_user = os.environ.get('EMAIL_HOST_USER', '')
+_email_host_password = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+if _email_host_user and _email_host_password:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
-    
-    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-        email_logger.info(f"✓ Email configured with SMTP ({EMAIL_HOST}:{EMAIL_PORT})")
-    else:
-        email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or SMTP credentials")
+    EMAIL_HOST_USER = _email_host_user
+    EMAIL_HOST_PASSWORD = _email_host_password
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', _email_host_user)
+    email_logger.info(f"✓ Email configured with Gmail SMTP ({EMAIL_HOST}:{EMAIL_PORT}, from: {DEFAULT_FROM_EMAIL})")
+elif os.environ.get('RESEND_API_KEY'):
+    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
+    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)}, from: {DEFAULT_FROM_EMAIL})")
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+    EMAIL_HOST_USER = ''
+    EMAIL_HOST_PASSWORD = ''
+    DEFAULT_FROM_EMAIL = 'noreply@revesta.com'
+    email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or Gmail SMTP credentials")
 
 EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
 
