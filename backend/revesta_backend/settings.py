@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # PyMySQL compatibility patch for XAMPP/MariaDB 10.4
 # Allows Django 6 to work with MariaDB < 10.6 by spoofing the version string
@@ -34,11 +35,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback only applies in local dev (DEBUG=True) - it used to
+# apply unconditionally, which meant a misconfigured production deploy would
+# silently sign JWTs (SIMPLE_JWT['SIGNING_KEY'] below) and sessions with a
+# key sitting in the git history instead of failing loudly. Render already
+# sets a real SECRET_KEY for every service (see render.yaml), so this never
+# fires there.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY environment variable must be set when DEBUG=False.')
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
@@ -214,24 +226,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # CORS configuration
-CORS_ALLOW_ALL_ORIGINS = True
-if not CORS_ALLOW_ALL_ORIGINS:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://localhost:5174",
-    ]
-    if os.environ.get('CORS_ALLOWED_ORIGINS'):
-        CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
-else:
-    # Warning for production
-    if not DEBUG:
-        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
+# Was unconditionally True, which - combined with CORS_ALLOW_CREDENTIALS
+# below - let django-cors-headers reflect any site's Origin header instead
+# of restricting to an allowlist, so any website could make credentialed
+# requests against this API using a logged-in user's browser. Only allow
+# everything in local dev now; production uses the explicit allowlist below.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+    # Admin dashboard (admin/, deployed on Vercel).
+    "https://revest-gh-zh89.vercel.app",
+]
+if os.environ.get('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+
+if CORS_ALLOW_ALL_ORIGINS and not DEBUG:
+    print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000", "https://revest-gh-zh89.vercel.app"]
 if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
 if RAILWAY_STATIC_URL:
