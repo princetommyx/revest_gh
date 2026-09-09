@@ -226,24 +226,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # CORS configuration
-CORS_ALLOW_ALL_ORIGINS = True
-if not CORS_ALLOW_ALL_ORIGINS:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://localhost:5174",
-    ]
-    if os.environ.get('CORS_ALLOWED_ORIGINS'):
-        CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
-else:
-    # Warning for production
-    if not DEBUG:
-        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
+# Was unconditionally True, which - combined with CORS_ALLOW_CREDENTIALS
+# below - let django-cors-headers reflect any site's Origin header instead
+# of restricting to an allowlist, so any website could make credentialed
+# requests against this API using a logged-in user's browser. Only allow
+# everything in local dev now; production uses the explicit allowlist below.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+    # Admin dashboard (admin/, deployed on Vercel).
+    "https://revest-gh-zh89.vercel.app",
+]
+if os.environ.get('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+
+if CORS_ALLOW_ALL_ORIGINS and not DEBUG:
+    print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000", "https://revest-gh-zh89.vercel.app"]
 if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
 if RAILWAY_STATIC_URL:
