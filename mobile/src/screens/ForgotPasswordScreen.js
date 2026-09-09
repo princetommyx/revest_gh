@@ -121,7 +121,13 @@ export default function ForgotPasswordScreen() {
 
     const handleDone = () => {
         setShowSuccessModal(false);
-        navigation.navigate('Login');
+        // When reached from the Security screen (authenticated stack), 'Login'
+        // doesn't exist — just go back to where they came from.
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('Login');
+        }
     };
 
     const renderHeader = () => (
@@ -531,6 +537,7 @@ const useStyles = makeStyles((c) => ({
         width: '100%',
         height: '100%',
         opacity: 0,
+        color: 'transparent',
         zIndex: 10,
     },
     resendBtn: {

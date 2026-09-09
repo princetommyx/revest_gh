@@ -255,6 +255,12 @@ class ChangePasswordSerializer(serializers.Serializer):
     
     def validate_old_password(self, value):
         user = self.context['request'].user
+        # Google-auth users were created with set_unusable_password() and have
+        # no old password to verify. Being authenticated (JWT) is sufficient
+        # proof of identity in that case - same logic used by the account
+        # deactivation / deletion serializers.
+        if not user.has_usable_password():
+            return value
         if not user.check_password(value):
             raise serializers.ValidationError("Old password is incorrect.")
         return value

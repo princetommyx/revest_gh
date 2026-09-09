@@ -333,7 +333,7 @@ export default function MarketplaceScreen({ navigation, route }) {
             </View>
 
             {/* Request Pickup FAB for Disposers */}
-            {userRole !== 'RECYCLER' && (
+            {userRole === 'SELLER' && (
                 <TouchableOpacity 
                     style={styles.fab} 
                     onPress={() => navigation.navigate('CreateListing')}

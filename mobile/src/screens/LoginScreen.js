@@ -657,5 +657,6 @@ const useStyles = makeStyles((c) => ({
         shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 2,
+        color: c.text,
     }
 }));

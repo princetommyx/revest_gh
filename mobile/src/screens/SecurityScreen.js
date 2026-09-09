@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
-    TextInput, ActivityIndicator, StatusBar, ScrollView
+    TextInput, ActivityIndicator, StatusBar, ScrollView,
+    KeyboardAvoidingView, Platform
 } from 'react-native';
 import { Lock, ShieldCheck, ShieldAlert, Key, Eye, EyeOff } from 'lucide-react-native';
 import { authApi } from '../api/auth';
@@ -67,7 +68,18 @@ export default function SecurityScreen({ navigation }) {
             Toast.show({ type: 'success', text1: 'Password updated!' });
             navigation.goBack();
         } catch (error) {
-            const msg = error.response?.data?.new_password?.[0] || error.response?.data?.detail || "Update failed";
+            const data = error.response?.data;
+            let msg = 'Update failed';
+            if (data) {
+                // Serializer returns errors keyed by field name, e.g.
+                // { old_password: ["Old password is incorrect."], new_password: [...] }
+                const firstError = data.detail
+                    || data.old_password?.[0]
+                    || data.new_password?.[0]
+                    || data.new_password2?.[0]
+                    || data.non_field_errors?.[0];
+                if (firstError) msg = firstError;
+            }
             Toast.show({ type: 'error', text1: 'Update failed', text2: msg });
         } finally {
             setLoading(false);
@@ -80,8 +92,12 @@ export default function SecurityScreen({ navigation }) {
 
             <ScreenHeader title="Account Security" onBack={() => navigation.goBack()} />
 
-            <View style={styles.contentWrap}>
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding}>
+            <KeyboardAvoidingView
+                style={styles.contentWrap}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+            >
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollPadding} keyboardShouldPersistTaps="handled">
 
                     <View style={styles.heroSection}>
                         <View style={styles.shieldWrap}>
@@ -99,6 +115,9 @@ export default function SecurityScreen({ navigation }) {
                             onChangeText={(val) => handleChange('old_password', val)}
                             placeholder="Enter current password"
                         />
+                        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={styles.forgotLink}>
+                            <Text style={styles.forgotText}>Forgot your password?</Text>
+                        </TouchableOpacity>
                         <PasswordField
                             label="New Password"
                             icon={Key}
@@ -125,7 +144,7 @@ export default function SecurityScreen({ navigation }) {
                     </View>
 
                 </ScrollView>
-            </View>
+            </KeyboardAvoidingView>
         </View>
     );
 }
@@ -147,5 +166,7 @@ const useStyles = makeStyles((c) => ({
     updateBtn: { backgroundColor: c.primary, height: 60, borderRadius: 20, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 6 },
     updateBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: 'bold' },
     protectionNote: { flexDirection: 'row', gap: 10, marginTop: 25, paddingHorizontal: 15 },
-    protectionText: { fontSize: 12, color: c.textMuted, flex: 1, lineHeight: 18 }
+    protectionText: { fontSize: 12, color: c.textMuted, flex: 1, lineHeight: 18 },
+    forgotLink: { alignSelf: 'flex-end', marginTop: -8 },
+    forgotText: { fontSize: 13, color: c.accent, fontWeight: '600' }
 }));
