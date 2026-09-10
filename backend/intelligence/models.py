@@ -42,6 +42,19 @@ class Prediction(models.Model):
     output = models.JSONField()
     confidence = models.FloatField(null=True, blank=True)
 
+    # Filled in on a best-effort basis when the same user creates a request
+    # shortly after an analysis - the same pattern, and the same reasons, as
+    # PriceQuote.pickup_request. Without it a predicted weight and the scale
+    # weight recorded against that pickup can never be compared, which is
+    # the whole error signal for the waste-analysis model.
+    pickup_request = models.ForeignKey(
+        'logistics.PickupRequest',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='predictions',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -262,3 +275,58 @@ class MaterialBuybackPrice(models.Model):
 
     def __str__(self):
         return f"{self.label}: GHS {self.price_per_kg}/kg ({self.captured_at})"
+
+
+class PredictionFeedback(models.Model):
+    """
+    What a prediction turned out to actually be. The other half of
+    Prediction, which has said since it was written that this belonged here
+    "once something in the app actually verifies a prediction against
+    reality - a collector confirming a scale weight, a recycler grading
+    material". Both of those now happen; neither was being written down.
+
+    Without this the waste-analysis model has no error signal at all. It
+    estimates a weight, a collector puts the load on a scale ten minutes
+    later, and the two numbers never meet - so a model that is
+    systematically 40% light stays 40% light forever, and every payout
+    computed from its weight is wrong by the same margin in the same
+    direction.
+
+    One row per observation, not per prediction: a single analysis can be
+    corrected on material at request time and on weight at verification
+    time, and those are different evidence arriving from different people.
+    """
+
+    SOURCE_CHOICES = (
+        ('scale', 'Collector scale verification'),
+        ('user_override', 'Disposer changed the material before submitting'),
+        ('recycler_grade', 'Recycler graded the material on intake'),
+    )
+
+    prediction = models.ForeignKey(
+        Prediction, on_delete=models.CASCADE, related_name='feedback'
+    )
+
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, db_index=True)
+
+    predicted_material = models.CharField(max_length=50, blank=True)
+    actual_material = models.CharField(max_length=50, blank=True)
+
+    predicted_weight_kg = models.FloatField(null=True, blank=True)
+    actual_weight_kg = models.FloatField(null=True, blank=True)
+
+    # Agreement is much weaker evidence than disagreement. A disposer who
+    # leaves the AI's material as-is may have checked it or may simply not
+    # have looked; a disposer who changes it has actively said the model was
+    # wrong. Stored so accuracy can be measured on corrections alone rather
+    # than being flattered by silence.
+    is_correction = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['source', 'created_at'])]
+
+    def __str__(self):
+        return f"{self.source} on prediction {self.prediction_id}"

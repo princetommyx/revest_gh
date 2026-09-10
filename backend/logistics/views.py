@@ -18,7 +18,12 @@ from .serializers import (
 )
 from wallet.services import WalletService
 from intelligence.matching import match_score
-from intelligence.services import record_price_quote, link_price_quote_to_request
+from intelligence.services import (
+    link_prediction_to_request,
+    link_price_quote_to_request,
+    record_price_quote,
+    record_weight_feedback,
+)
 from intelligence.routing import travel_estimate
 from .utils import haversine
 from django.contrib.auth import get_user_model
@@ -249,6 +254,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # never called estimate_price for it.
         if not is_direct_claim:
             link_price_quote_to_request(requester, request)
+            # Same idea for the waste analysis that produced the material and
+            # weight on this request - without the link, a predicted weight
+            # and the scale weight recorded against this same pickup can
+            # never be compared.
+            link_prediction_to_request(requester, request)
 
         # 2. Handle Escrow/Payment
         # ONLY lock escrow if:
@@ -384,7 +394,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 "verified_at": timezone.now().isoformat()
             }
             pickup_request.save()
-            
+
+            # The one moment in the app where a model's weight estimate meets
+            # an actual scale. Recorded fire-and-forget: a feedback write must
+            # never cost a collector their verification.
+            record_weight_feedback(pickup_request, manual_weight)
+
             return Response({
                 'is_verified': is_verified,
                 'ai_weight_estimate': ai_weight,

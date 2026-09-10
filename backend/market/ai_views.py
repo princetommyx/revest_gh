@@ -12,6 +12,7 @@ from django.conf import settings
 import logging
 from intelligence.buyback import preparation_tips
 from intelligence.market_signal import pricing_basis, prompt_context
+from intelligence.vision import corrected_weight_kg, prompt_context as vision_prompt_context
 from intelligence.services import record_prediction
 
 logger = logging.getLogger(__name__)
@@ -148,6 +149,15 @@ class AnalyzeWasteView(APIView):
             if market_context:
                 prompt = f"{prompt}\n\n{market_context}\n"
 
+            # And what this model has actually been corrected on. Every other
+            # input to this prompt is somebody else's data; this is the only
+            # one that is the model's own track record, and a named blind
+            # spot ("you have called PET when it was HDPE 4 times") is
+            # something it can act on in a way that "be accurate" is not.
+            track_record = vision_prompt_context()
+            if track_record:
+                prompt = f"{prompt}\n\n{track_record}\n"
+
             # 6. Iterate through models
             response = None
             for model_name in candidate_models:
@@ -193,8 +203,16 @@ class AnalyzeWasteView(APIView):
                 estimated = calculate_track_a_fee(category=category, bag_size=bag_size)
                 data['estimated_cost'] = float(estimated)
             elif data.get('track_type') == 'B':
-                weight = data.get('suggested_weight_kg', 0)
                 material = data.get('material_type', 'PET')
+                # Corrected for the bias measured against real scale weights
+                # before it becomes money. A model that reads consistently
+                # light makes every payout light by the same margin, and no
+                # amount of correct pricing downstream recovers that.
+                raw_weight = data.get('suggested_weight_kg', 0)
+                weight = corrected_weight_kg(raw_weight, material)
+                if weight != raw_weight:
+                    data['suggested_weight_kg'] = weight
+                    data['raw_weight_estimate_kg'] = raw_weight
                 # Priced from where this load sits in its band, not from the
                 # band's midpoint: the model has just looked at it, so there
                 # is no reason to pay it as though nobody had.
