@@ -455,8 +455,12 @@ class PasswordResetRequestView(views.APIView):
                 try:
                     from .sms_service import send_otp_sms
 
-                    send_otp_sms(user.phone_number, otp_code)
-                    sent_to.append("SMS")
+                    # Only claim SMS if it was actually dispatched. It used
+                    # to be appended unconditionally, so a deployment with no
+                    # Hubtel credentials still told the user to check their
+                    # phone for a code that was never sent.
+                    if send_otp_sms(user.phone_number, otp_code):
+                        sent_to.append("SMS")
                 except Exception as e:
                     logger.error(f"Failed to send reset SMS: {e}")
 
@@ -718,11 +722,16 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             try:
                 from .sms_service import send_otp_sms
 
-                send_otp_sms(user.phone_number, otp_code)
-                sent_to.append(f"phone {user.phone_number}")
-                print(
-                    f"DEBUG: Sent login OTP {otp_code} to {user.phone_number}"
-                )
+                if send_otp_sms(user.phone_number, otp_code):
+                    sent_to.append(f"phone {user.phone_number}")
+                    print(
+                        f"DEBUG: Sent login OTP {otp_code} to {user.phone_number}"
+                    )
+                else:
+                    logger.error(
+                        "Login OTP not sent by SMS - this deployment has no "
+                        "Hubtel credentials configured."
+                    )
             except Exception as e:
                 logger.error(f"Failed to send SMS OTP: {e}")
 
@@ -1215,8 +1224,13 @@ class SendOTPView(views.APIView):
         try:
             from .sms_service import send_otp_sms
 
-            send_otp_sms(phone_number, otp_code)
-            sent_methods.append("SMS")
+            if send_otp_sms(phone_number, otp_code):
+                sent_methods.append("SMS")
+            else:
+                logger.error(
+                    "Registration OTP not sent by SMS - this deployment has no "
+                    "Hubtel credentials configured."
+                )
 
             return Response(
                 {
@@ -1401,6 +1415,50 @@ class TestSMSView(views.APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class SmsHealthCheckView(views.APIView):
+    """
+    Diagnostic endpoint: does THIS deployment have working SMS?
+
+    The counterpart to EmailHealthCheckView, and added for a concrete
+    reason: SMS worked from the Play Store build and not from an Expo dev
+    client, and there was no way to ask a backend whether it was even
+    configured to send. Since the two builds can point at different API
+    URLs, "which backend am I talking to, and can it send SMS?" is the first
+    question to answer, and it needed an endpoint.
+
+    Never returns the credentials themselves - only whether they are
+    present. AllowAny so it is reachable while debugging an auth flow you
+    cannot complete, which is exactly when it is needed; it sends nothing,
+    so there is no spam-relay risk in that.
+    """
+
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        from .sms_service import HubtelSMSService
+
+        service = HubtelSMSService()
+        return Response(
+            {
+                "sms_configured": service.is_configured,
+                "has_client_id": bool(service.client_id),
+                "has_client_secret": bool(service.client_secret),
+                "sender_id": service.sender,
+                # So a client can confirm which backend answered - the whole
+                # point when the same app build behaves differently in two
+                # environments.
+                "host": request.get_host(),
+                "debug": settings.DEBUG,
+                "hint": (
+                    "SMS will not be delivered from this deployment: set "
+                    "HUBTEL_CLIENT_ID and HUBTEL_CLIENT_SECRET in its environment."
+                    if not service.is_configured
+                    else "Hubtel credentials present on this deployment."
+                ),
+            }
+        )
 
 
 class HubtelTestView(views.APIView):
