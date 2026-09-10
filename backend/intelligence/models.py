@@ -42,6 +42,19 @@ class Prediction(models.Model):
     output = models.JSONField()
     confidence = models.FloatField(null=True, blank=True)
 
+    # Filled in on a best-effort basis when the same user creates a request
+    # shortly after an analysis - the same pattern, and the same reasons, as
+    # PriceQuote.pickup_request. Without it a predicted weight and the scale
+    # weight recorded against that pickup can never be compared, which is
+    # the whole error signal for the waste-analysis model.
+    pickup_request = models.ForeignKey(
+        'logistics.PickupRequest',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='predictions',
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -117,6 +130,14 @@ class MarketSurveyResponse(models.Model):
 
     raw_answers = models.JSONField(default=dict)  # full column values from the source, for anything not modeled above
 
+    # Formasty's own scoring of the respondent, which it started sending
+    # part-way through this form's life - so early responses have neither.
+    # Captured because it costs nothing and cannot be recovered later, and
+    # because "do the respondents Formasty rates highly answer differently?"
+    # is a question worth being able to ask once there are enough of them.
+    quiz_score = models.IntegerField(null=True, blank=True)
+    lead_tier = models.CharField(max_length=30, blank=True)
+
     submitted_at = models.DateTimeField()
     imported_at = models.DateTimeField(auto_now_add=True)
 
@@ -157,6 +178,11 @@ class PriceQuote(models.Model):
     pickup_lat = models.FloatField()
     pickup_lon = models.FloatField()
     distance_km = models.FloatField(null=True, blank=True)
+    # The straight-line distance, kept alongside distance_km even when a
+    # real route was fetched. With both, the ratio between them is the road
+    # circuity of Revesta's actual service area - measurable instead of
+    # assumed - and without it that ratio is unrecoverable after the fact.
+    straight_line_km = models.FloatField(null=True, blank=True)
     duration_min = models.FloatField(null=True, blank=True)
     used_real_route = models.BooleanField(default=False)  # Google Distance Matrix vs haversine/40km-h fallback
 
@@ -182,3 +208,125 @@ class PriceQuote(models.Model):
     def __str__(self):
         booked = 'booked' if self.pickup_request_id else 'unbooked'
         return f"GHS {self.quoted_price} ({booked}) @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class MaterialBuybackPrice(models.Model):
+    """
+    What recyclers and scrap dealers in Ghana actually pay, per kilogram,
+    for a given material. The supply side of every Track B price - and the
+    half the app never had.
+
+    MarketSurveyResponse records what disposers hope to be paid;
+    market.MaterialMarketPrice records what Revesta pays them. Neither says
+    what the material is worth at the gate, so nothing in the codebase could
+    answer "does this payout actually clear?" - the fallback rates in
+    logistics/pricing.py were picked without reference to any observed
+    market price at all.
+
+    Rows are observations with a provenance, not settings: `source` and
+    `captured_at` say where a figure came from and when, because a buyback
+    price from a screenshot last quarter should not silently keep pricing
+    payouts forever. Several market items can map onto one Revesta material
+    (white office paper and cardboard are both PAPER here), so resolution
+    deliberately takes the lowest price among them - overpaying on the
+    optimistic end of a bucket is how a buyback loses money on every load.
+    """
+
+    # The Revesta material key this maps onto - the vocabulary
+    # logistics/pricing.py and the waste-analysis model already speak.
+    # Blank when the market trades something Revesta has no category for
+    # yet (copper, at time of writing): still worth recording, because an
+    # unmapped high-value material is a missed line of business, not noise.
+    material_type = models.CharField(max_length=50, db_index=True, blank=True)
+
+    # What the market itself calls it, e.g. "Water Sachets (LDPE)".
+    label = models.CharField(max_length=120)
+
+    # The band the market actually quotes, and its midpoint. price_per_kg
+    # stays the single figure for anything that just needs "what is this
+    # worth", but the band is what makes quality pricing possible: where a
+    # load lands between low and high is decided by its condition, and
+    # paying the midpoint for a load nobody has assessed overpays roughly
+    # half the time.
+    price_per_kg = models.DecimalField(max_digits=10, decimal_places=2)
+    price_per_kg_low = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    price_per_kg_high = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # What a disposer must do to reach the top of that band - strip the
+    # insulation, keep the cardboard dry, take the caps off. Every one of
+    # these is something the waste-analysis model can see in a photo, which
+    # is what turns them from advice into a price input.
+    preparation_note = models.TextField(blank=True)
+
+    source = models.CharField(max_length=120)  # where this figure came from
+    source_note = models.TextField(blank=True)  # how much to trust it
+    captured_at = models.DateField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['label', 'source', 'captured_at'],
+                name='one_buyback_price_per_item_per_capture',
+            )
+        ]
+        ordering = ['-captured_at', '-price_per_kg']
+
+    def __str__(self):
+        return f"{self.label}: GHS {self.price_per_kg}/kg ({self.captured_at})"
+
+
+class PredictionFeedback(models.Model):
+    """
+    What a prediction turned out to actually be. The other half of
+    Prediction, which has said since it was written that this belonged here
+    "once something in the app actually verifies a prediction against
+    reality - a collector confirming a scale weight, a recycler grading
+    material". Both of those now happen; neither was being written down.
+
+    Without this the waste-analysis model has no error signal at all. It
+    estimates a weight, a collector puts the load on a scale ten minutes
+    later, and the two numbers never meet - so a model that is
+    systematically 40% light stays 40% light forever, and every payout
+    computed from its weight is wrong by the same margin in the same
+    direction.
+
+    One row per observation, not per prediction: a single analysis can be
+    corrected on material at request time and on weight at verification
+    time, and those are different evidence arriving from different people.
+    """
+
+    SOURCE_CHOICES = (
+        ('scale', 'Collector scale verification'),
+        ('user_override', 'Disposer changed the material before submitting'),
+        ('recycler_grade', 'Recycler graded the material on intake'),
+    )
+
+    prediction = models.ForeignKey(
+        Prediction, on_delete=models.CASCADE, related_name='feedback'
+    )
+
+    source = models.CharField(max_length=30, choices=SOURCE_CHOICES, db_index=True)
+
+    predicted_material = models.CharField(max_length=50, blank=True)
+    actual_material = models.CharField(max_length=50, blank=True)
+
+    predicted_weight_kg = models.FloatField(null=True, blank=True)
+    actual_weight_kg = models.FloatField(null=True, blank=True)
+
+    # Agreement is much weaker evidence than disagreement. A disposer who
+    # leaves the AI's material as-is may have checked it or may simply not
+    # have looked; a disposer who changes it has actively said the model was
+    # wrong. Stored so accuracy can be measured on corrections alone rather
+    # than being flattered by silence.
+    is_correction = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [models.Index(fields=['source', 'created_at'])]
+
+    def __str__(self):
+        return f"{self.source} on prediction {self.prediction_id}"

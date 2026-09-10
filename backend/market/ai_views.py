@@ -10,6 +10,9 @@ import traceback
 from datetime import datetime
 from django.conf import settings
 import logging
+from intelligence.buyback import preparation_tips
+from intelligence.market_signal import pricing_basis, prompt_context
+from intelligence.vision import corrected_weight_kg, prompt_context as vision_prompt_context
 from intelligence.services import record_prediction
 
 logger = logging.getLogger(__name__)
@@ -112,9 +115,48 @@ class AnalyzeWasteView(APIView):
                 "suggested_weight_kg": number (Track B only, estimated weight in KG, otherwise null),
                 "title_suggestion": "String (e.g. 'Pure Water Rubbers')",
                 "description": "String (Brief assessment, no prices)",
-                "confidence": number (0.0-1.0)
+                "confidence": number (0.0-1.0),
+                "condition": {
+                    "contamination": "none", "light", or "heavy",
+                    "dry": true or false (null if you cannot tell),
+                    "prepared": true or false (null if you cannot tell),
+                    "notes": "String (what you saw that decided this)"
+                }
             }
+
+            CONDITION - READ THIS CAREFULLY, IT SETS THE PRICE:
+            Recyclers pay a range, not a fixed rate, and condition decides
+            where in that range a load lands. Judge only what you can
+            actually see; use null rather than guessing.
+            - "contamination": is the load clean and single-material, or
+              mixed with food waste, liquid, dirt, or other materials?
+            - "dry": is there visible wet, damp, or water-stained material?
+              Say false if you can see moisture, true if it is clearly dry.
+            - "prepared": has it been made ready the way a buyer wants for
+              THIS material (see the preparation guidance below, if given)?
             """
+
+            # 5b. Ground the model in what Revesta's disposers actually put
+            # out. Without this the model classifies Ghanaian household
+            # waste on a generic prior - it has no way to know that sachet
+            # rubbers dominate, that loads arrive as sacks rather than
+            # industrial bales, or that a "worthless" dead phone is
+            # something people expect real money for. Appended rather than
+            # folded into the prompt above so that when there aren't enough
+            # survey responses yet, the prompt is byte-for-byte the one
+            # that has been running all along.
+            market_context = prompt_context()
+            if market_context:
+                prompt = f"{prompt}\n\n{market_context}\n"
+
+            # And what this model has actually been corrected on. Every other
+            # input to this prompt is somebody else's data; this is the only
+            # one that is the model's own track record, and a named blind
+            # spot ("you have called PET when it was HDPE 4 times") is
+            # something it can act on in a way that "be accurate" is not.
+            track_record = vision_prompt_context()
+            if track_record:
+                prompt = f"{prompt}\n\n{track_record}\n"
 
             # 6. Iterate through models
             response = None
@@ -161,10 +203,30 @@ class AnalyzeWasteView(APIView):
                 estimated = calculate_track_a_fee(category=category, bag_size=bag_size)
                 data['estimated_cost'] = float(estimated)
             elif data.get('track_type') == 'B':
-                weight = data.get('suggested_weight_kg', 0)
                 material = data.get('material_type', 'PET')
-                estimated = calculate_track_b_earnings(material, weight)
+                # Corrected for the bias measured against real scale weights
+                # before it becomes money. A model that reads consistently
+                # light makes every payout light by the same margin, and no
+                # amount of correct pricing downstream recovers that.
+                raw_weight = data.get('suggested_weight_kg', 0)
+                weight = corrected_weight_kg(raw_weight, material)
+                if weight != raw_weight:
+                    data['suggested_weight_kg'] = weight
+                    data['raw_weight_estimate_kg'] = raw_weight
+                # Priced from where this load sits in its band, not from the
+                # band's midpoint: the model has just looked at it, so there
+                # is no reason to pay it as though nobody had.
+                estimated = calculate_track_b_earnings(
+                    material, weight, condition=data.get('condition')
+                )
                 data['estimated_earnings'] = float(estimated)
+                tips = preparation_tips(material)
+                if tips:
+                    # A smaller number should always arrive with the reason
+                    # and the remedy. The survey asked what would make people
+                    # sell more of their waste; every free-text answer came
+                    # back some version of "knowing I'll get value for it".
+                    data['preparation_tips'] = tips
             else:
                 estimated = None
 
@@ -172,6 +234,14 @@ class AnalyzeWasteView(APIView):
                 min_price, max_price = price_guardrail(estimated)
                 data['min_price'] = float(min_price)
                 data['max_price'] = float(max_price)
+
+            # What the price above was actually derived from. Sent back so
+            # the app can explain a payout ("GHS 30/sack, from 6 disposer
+            # responses") instead of quoting a number from nowhere, and
+            # logged with the prediction so a later look-back can tell which
+            # signal shaped which quote - a price that moved for a reason
+            # nobody recorded isn't training data, it's noise.
+            data['pricing_basis'] = pricing_basis(bool(market_context))
 
             record_prediction(
                 task='waste_analysis',
@@ -215,7 +285,8 @@ class AnalyzeWasteView(APIView):
                 "title_suggestion": "General Waste Pickup",
                 "description": "Simulation: Household trash identified.",
                 "confidence": 0.85,
-                "simulated": True
+                "simulated": True,
+                "pricing_basis": pricing_basis(),
             }
         else:
             material = random.choice(['PET', 'Aluminum', 'Electronics'])
@@ -234,7 +305,8 @@ class AnalyzeWasteView(APIView):
                 "title_suggestion": f"{material} Recycling",
                 "description": f"Simulation: {material} recyclables detected.",
                 "confidence": 0.92,
-                "simulated": True
+                "simulated": True,
+                "pricing_basis": pricing_basis(),
             }
 
         record_prediction(

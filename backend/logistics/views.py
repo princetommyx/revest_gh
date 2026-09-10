@@ -18,7 +18,13 @@ from .serializers import (
 )
 from wallet.services import WalletService
 from intelligence.matching import match_score
-from intelligence.services import record_price_quote, link_price_quote_to_request
+from intelligence.services import (
+    link_prediction_to_request,
+    link_price_quote_to_request,
+    record_price_quote,
+    record_weight_feedback,
+)
+from intelligence.routing import travel_estimate
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -248,6 +254,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # never called estimate_price for it.
         if not is_direct_claim:
             link_price_quote_to_request(requester, request)
+            # Same idea for the waste analysis that produced the material and
+            # weight on this request - without the link, a predicted weight
+            # and the scale weight recorded against this same pickup can
+            # never be compared.
+            link_prediction_to_request(requester, request)
 
         # 2. Handle Escrow/Payment
         # ONLY lock escrow if:
@@ -383,7 +394,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 "verified_at": timezone.now().isoformat()
             }
             pickup_request.save()
-            
+
+            # The one moment in the app where a model's weight estimate meets
+            # an actual scale. Recorded fire-and-forget: a feedback write must
+            # never cost a collector their verification.
+            record_weight_feedback(pickup_request, manual_weight)
+
             return Response({
                 'is_verified': is_verified,
                 'ai_weight_estimate': ai_weight,
@@ -843,9 +859,11 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         # That fallback is what previously made every estimate look
         # "hardcoded": with only one or two collectors online during testing,
         # the same straight-line distance kept recurring.
-        distance_km = min_dist
-        avg_speed_kmh = 40.0
-        duration_min = (min_dist / avg_speed_kmh) * 60
+        # The straight line is kept whatever happens: paired with a routed
+        # distance it is what makes road circuity measurable rather than
+        # assumed (see intelligence.routing).
+        straight_line_km = min_dist
+        distance_km, duration_min = travel_estimate(min_dist)
 
         routed = None
         if nearest_collector and nearest_collector.current_lat and nearest_collector.current_lon:
@@ -872,6 +890,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             lat=lat,
             lon=lon,
             distance_km=distance_km,
+            straight_line_km=straight_line_km,
             duration_min=duration_min,
             used_real_route=routed is not None,
             online_collector_count=online_collector_count,

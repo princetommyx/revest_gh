@@ -55,6 +55,6 @@ Based on the current scripts, artifacts, and configuration stubs, several areas 
 
 - **EAS / Mobile Builds**: The mobile application has recent `.easignore` footprints, build scripts, and dependencies indicating recent or ongoing Android APK generation cycles.
 - **Email & Domain Configurations**: Multiple troubleshooting files (`EMAIL_TROUBLESHOOTING.md`, `RESEND_DOMAIN_SETUP.md`, `GMAIL_SETUP.md`) indicate current active tuning of Resend/SMTP email deliveries.
-- **Location Filtering Bugs**: Diagnostic scripts (`test_filter_bug.py`, `test_location_filtering.py`) highlight active refinement and debugging of coordinate-based filtering.
+- **Location Filtering Bugs**: Diagnostic scripts (`backend/scripts/check_filter_bug.py`, `backend/scripts/check_location_filtering.py`) highlight active refinement and debugging of coordinate-based filtering.
 - **Payment Hooks**: Stub files (`debug_paystack.py`) and wallet scripts suggest active testing of withdrawal flows and real-money deposits via Paystack.
 - **Deployment Migration**: Recent setup artifacts (`render.yaml`, `RENDER_MIGRATION_GUIDE.md`) signal an active shift or recent deployment to the Render platform.
