@@ -17,6 +17,19 @@ class HubtelSMSService:
         self.otp_send_url = "https://api-otp.hubtel.com/v1/otp/send"
         self.otp_verify_url = "https://api-otp.hubtel.com/v1/otp/verify"
 
+    @property
+    def is_configured(self):
+        """
+        Whether this backend could send an SMS at all.
+
+        Checked separately from sending because it is the single most common
+        reason no message arrives - a deployment simply has no Hubtel
+        credentials - and it is knowable instantly, without a network call.
+        That matters: sending is asynchronous, so by the time Hubtel says no
+        the response has long gone.
+        """
+        return bool(self.client_id and self.client_secret)
+
     def send(self, to, content):
         """
         Send SMS to a specific number using Hubtel Quick SMS GET API.
@@ -143,14 +156,28 @@ class HubtelSMSService:
 
 def send_sms_async(to, content):
     """
-    Send SMS in a background thread.
+    Send SMS in a background thread. Returns whether it was dispatched at
+    all - False when this deployment has no Hubtel credentials.
+
+    That return value is the point. Delivery itself is genuinely
+    asynchronous and cannot be confirmed inside the request, but "we are not
+    configured to send SMS here" is knowable immediately, and callers were
+    previously telling users "check your phone" in exactly that case.
     """
+    service = HubtelSMSService()
+    if not service.is_configured:
+        logger.error(
+            "Hubtel credentials not configured - no SMS will be sent from this "
+            "deployment. Set HUBTEL_CLIENT_ID and HUBTEL_CLIENT_SECRET."
+        )
+        return False
+
     def _send():
-        service = HubtelSMSService()
         service.send(to, content)
 
     thread = threading.Thread(target=_send, daemon=True)
     thread.start()
+    return True
 
 # --- Helper Functions ---
 
@@ -159,18 +186,21 @@ def send_otp_sms(phone_number, otp):
     Send OTP verification SMS.
     """
     content = f"Your Revesta verification code is: {otp}. Valid for 2 minutes."
-    send_sms_async(phone_number, content)
+    return send_sms_async(phone_number, content)
+
 
 def send_login_sms(phone_number, username):
     """
     Send login alert SMS.
     """
     content = f"Hello {username}, a new login was detected on your Revesta account. If this wasn't you, please secure your account."
-    send_sms_async(phone_number, content)
+    return send_sms_async(phone_number, content)
+
 
 def send_withdrawal_sms(phone_number, amount, currency='GHS'):
     """
     Send withdrawal request SMS.
     """
     content = f"Withdrawal request of {currency} {amount} initiated from your Revesta wallet. If this wasn't you, contact support immediately."
-    send_sms_async(phone_number, content)
+    return send_sms_async(phone_number, content)
+

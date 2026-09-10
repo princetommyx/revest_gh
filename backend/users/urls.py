@@ -10,7 +10,7 @@ from .views import (
     VerifyLoginOTPView, SubmitFeedbackView,
     DebugEmailView, EmailHealthCheckView, GoogleLoginView,
     NotificationViewSet, DeviceTokenView, SendOTPView, VerifyOTPView,
-    TestSMSView, HubtelTestView, AdminSendPushView,
+    TestSMSView, HubtelTestView, SmsHealthCheckView, AdminSendPushView,
     DeactivateAccountView, StorageDiagnosticView
 )
 from .admin_stats import admin_dashboard_stats, recent_users
@@ -51,6 +51,7 @@ urlpatterns = [
     path('email-health/', EmailHealthCheckView.as_view(), name='email_health'),
     path('debug-email/', DebugEmailView.as_view(), name='debug_email'),
     path('test-sms/', TestSMSView.as_view(), name='test_sms'),
+    path('sms-health/', SmsHealthCheckView.as_view(), name='sms_health'),
     path('test-hubtel/', HubtelTestView.as_view(), name='test_hubtel'),
     path('storage-diagnostic/', StorageDiagnosticView.as_view(), name='storage_diagnostic'),
     path('notifications/test-push/', AdminSendPushView.as_view(), name='test_push'),
