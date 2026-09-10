@@ -211,7 +211,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleRequestOTP}
                     disabled={loading || !isFilled}
                 >
-                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Continue</Text>}
                 </TouchableOpacity>
             </View>
         );
@@ -253,7 +253,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleVerifyOTP}
                     disabled={!isFilled || loading}
                 >
-                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={[styles.btnText, (!isFilled || loading) && styles.btnTextDisabled]}>Continue</Text>}
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleRequestOTP} style={styles.resendBtn} disabled={loading}>
@@ -318,10 +318,10 @@ export default function ForgotPasswordScreen() {
                     {loading ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <ActivityIndicator color={colors.onPrimary} style={{ marginRight: 10 }} />
-                            <Text style={styles.btnText}>Submitting...</Text>
+                            <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Submitting...</Text>
                         </View>
                     ) : (
-                        <Text style={styles.btnText}>Continue</Text>
+                        <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Continue</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -499,6 +499,9 @@ const useStyles = makeStyles((c) => ({
     },
     btnDisabled: {
         backgroundColor: c.surfaceSunken,
+    },
+    btnTextDisabled: {
+        color: c.textMuted,
     },
     btnText: {
         fontSize: 16,
