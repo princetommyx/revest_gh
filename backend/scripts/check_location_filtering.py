@@ -1,3 +1,11 @@
+# Running this file directly puts scripts/ on sys.path rather than backend/,
+# so the project package would not be importable. Fixed here rather than by
+# expecting everyone to remember to set PYTHONPATH first.
+import os as _os
+import sys as _sys
+
+_sys.path.insert(0, _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))))
+
 import os
 import django
 from decimal import Decimal
