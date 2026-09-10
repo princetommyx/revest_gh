@@ -19,7 +19,7 @@ const getLocalURL = () => {
     return Platform.OS === 'android' ? `http://${EMULATOR_IP}:8000/api/v1/` : `http://${LOCAL_IP}:8000/api/v1/`;
 };
 
-const PROD_API_URL = 'https://revesta-backend.onrender.com/api/v1/';
+const PROD_API_URL = 'https://revest-gh.onrender.com/api/v1/';
 const IS_PROD = !__DEV__;
 
 // Use explicit environment variable if set, otherwise default to Production URL for APK testing
