@@ -330,7 +330,7 @@ export default function HomeScreen({ navigation }) {
                         </View>
                     )}
                     <View style={styles.collCardHeart}>
-                        <Heart size={16} color={colors.text} />
+                        <Heart size={16} color="#374151" />
                     </View>
                 </View>
                 {!isRecommended && (

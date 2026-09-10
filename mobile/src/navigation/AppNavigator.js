@@ -575,6 +575,7 @@ export default function AppNavigator() {
                         <Stack.Screen name="TopUp" component={require('../screens/TopUpScreen').default} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="PaystackWebView" component={require('../screens/PaystackWebView').default} options={{ headerShown: false, presentation: 'modal' }} />
                         <Stack.Screen name="WhatIsRevestaBalance" component={WhatIsRevestaBalanceScreen} options={{ headerShown: false, presentation: 'modal' }} />
+                        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} options={{ headerShown: false }} />
                     </>
                 )}
             </Stack.Navigator>

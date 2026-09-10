@@ -1431,6 +1431,7 @@ const useStyles = makeStyles((c) => ({
         width: '100%',
         height: '100%',
         opacity: 0,
+        color: 'transparent',
         zIndex: 10,
     },
     phoneDisplayRow: {

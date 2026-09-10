@@ -192,8 +192,8 @@ export default function ChatDetailScreen({ route, navigation }) {
 
             <KeyboardAvoidingView
                 style={{ flex: 1 }}
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 30 : 0}
             >
                 {loading ? (
                     <View style={styles.center}><ActivityIndicator size="small" color={colors.text} /></View>

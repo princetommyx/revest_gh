@@ -137,7 +137,7 @@ export default function ListingDetailScreen({ route, navigation }) {
         });
     };
 
-    if (loading) return <PageLoader label="Loading listing..." />;
+    if (loading) return <PageLoader label="Previewing waste..." />;
 
     if (!listing) {
         return (
@@ -357,11 +357,22 @@ export default function ListingDetailScreen({ route, navigation }) {
                 ) : (
                     <View style={styles.collectorActionCol}>
                         <View style={styles.actionTopRow}>
-                            <TouchableOpacity style={styles.outlineActionBtn}>
+                            <TouchableOpacity 
+                                style={styles.outlineActionBtn}
+                                onPress={() => navigation.navigate('ChatDetail', {
+                                    contactId: listing.seller.id,
+                                    contactName: [listing.seller.first_name, listing.seller.last_name].filter(Boolean).join(' ') || listing.seller.username,
+                                    contactImage: listing.seller.profile_picture_url ? resolveImageUrl(listing.seller.profile_picture_url) : null,
+                                    contactIsOnline: listing.seller.is_online,
+                                })}
+                            >
                                 <Pencil size={18} color={colors.accent} style={{ marginRight: 6 }} />
                                 <Text style={styles.outlineActionBtnText}>Make an offer</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: colors.border }]}>
+                            <TouchableOpacity 
+                                style={[styles.outlineActionBtn, { borderColor: colors.border }]}
+                                onPress={() => navigation.navigate('SupportChat')}
+                            >
                                 <Info size={18} color={colors.text} style={{ marginRight: 6 }} />
                                 <Text style={[styles.outlineActionBtnText, { color: colors.text }]}>Ask a question</Text>
                             </TouchableOpacity>
