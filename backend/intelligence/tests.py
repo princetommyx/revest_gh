@@ -23,6 +23,7 @@ from intelligence.buyback import (
 )
 from intelligence.formasty import normalize_submission, upsert_submission
 from intelligence.market_signal import (
+    MATERIAL_LABELS,
     MIN_SAMPLE_SIZE,
     MAX_SHIFT,
     SACK_ANCHOR_GHS,
@@ -31,6 +32,7 @@ from intelligence.market_signal import (
     market_signal,
     pricing_basis,
     prompt_context,
+    unknown_answers,
 )
 from intelligence.models import MarketSurveyResponse, MaterialBuybackPrice
 from logistics.models import PickupRequest
@@ -589,3 +591,72 @@ class QualityPricingTests(BuybackTestCase):
         guidance = preparation_guidance()
         self.assertIn('PET: Remove caps', guidance)
         self.assertIn('ALUMINUM: Crush them down', guidance)
+
+
+class VocabularyDriftTests(SurveyDataTestCase):
+    """
+    The form keeps collecting, so its options keep changing. An answer no
+    bucket map recognises is dropped from every average that uses it, and
+    looks exactly like an unanswered question once it has been - which is
+    how the 'none' volume bucket went unnoticed while quietly biasing every
+    volume figure upward.
+    """
+
+    def test_a_zero_volume_answer_counts_as_zero_not_as_missing(self):
+        self.seed(2, f_volume={'rubbers': 'none', 'bottles': '1', 'other': '1'})
+        self.seed(2, f_volume={'rubbers': '1', 'bottles': '1', 'other': '1'})
+        self.seed(MIN_SAMPLE_SIZE, f_volume={'rubbers': '1', 'bottles': '1', 'other': '1'})
+
+        # Two households have no rubbers at all; the average must reflect them.
+        self.assertLess(compute_market_signal()['weekly_sacks']['rubbers'], 1.0)
+
+    def test_an_unmapped_answer_is_reported_rather_than_silently_dropped(self):
+        self.seed(1, f_volume={'rubbers': 'a_bucket_nobody_mapped', 'bottles': '1', 'other': '1'})
+
+        self.assertEqual(
+            unknown_answers()['volume.rubbers'], {'a_bucket_nobody_mapped': 1}
+        )
+
+    def test_an_unmapped_material_is_reported(self):
+        self.seed(1, f_materials=['rubbers', 'something_new'])
+
+        self.assertEqual(unknown_answers()['materials'], {'something_new': 1})
+
+    def test_an_unmapped_coded_answer_is_reported(self):
+        self.seed(1, f_anchor30='wildly_enthusiastic')
+
+        self.assertEqual(unknown_answers()['anchor30_reaction'], {'wildly_enthusiastic': 1})
+
+    def test_a_fully_mapped_survey_reports_no_drift(self):
+        self.seed(MIN_SAMPLE_SIZE)
+
+        self.assertEqual(unknown_answers(), {})
+
+    def test_already_pay_is_a_known_omission_not_drift(self):
+        # It carries no GHS figure by design, so it is deliberately absent
+        # from TRACK_A_FEE_GHS and must not be reported every single run.
+        self.seed(MIN_SAMPLE_SIZE, f_track_a='already_pay')
+
+        self.assertEqual(unknown_answers(), {})
+
+    def test_every_material_the_survey_offers_has_a_label(self):
+        for material in ('rubbers', 'bottles', 'paper', 'cans', 'glass', 'metal', 'mixed', 'ewaste'):
+            self.assertIn(material, MATERIAL_LABELS)
+
+    def test_scoring_is_captured_when_formasty_sends_it(self):
+        upsert_submission(MarketSurveyResponse, {
+            **make_submission(0),
+            'quizScore': 3,
+            'leadTier': 'qualified',
+        })
+
+        row = MarketSurveyResponse.objects.get()
+        self.assertEqual(row.quiz_score, 3)
+        self.assertEqual(row.lead_tier, 'qualified')
+
+    def test_a_submission_without_scoring_is_still_imported(self):
+        upsert_submission(MarketSurveyResponse, make_submission(0))
+
+        row = MarketSurveyResponse.objects.get()
+        self.assertIsNone(row.quiz_score)
+        self.assertEqual(row.lead_tier, '')

@@ -93,6 +93,11 @@ EWASTE_GHS = {
 }
 
 VOLUME_SACKS_PER_WEEK = {
+    # "I don't have this" is a real zero, not a missing answer. Leaving it
+    # out of this map dropped it from the average entirely, so a household
+    # with no bottles at all quietly failed to pull the bottle average down
+    # and every volume read higher than it should have.
+    'none': 0.0,
     'lt1': 0.5,
     '1': 1.0,
     '2to3': 2.5,
@@ -269,6 +274,7 @@ MATERIAL_LABELS = {
     'paper': 'paper and cardboard',
     'cans': 'tins and aluminium cans',
     'glass': 'glass bottles',
+    'metal': 'scrap metal',
     'mixed': 'mixed household rubbish, nothing sorted',
     'ewaste': 'old electronics - phones, TVs, cables, fans',
 }
@@ -330,7 +336,12 @@ def prompt_context():
         # Semicolons, not commas: respondents type areas like "Tema, comm 25"
         # themselves, and a comma-joined list of those reads as twice as many
         # places as there are.
-        lines.append(f"- Collected mostly around: {'; '.join(areas)} (Greater Accra).")
+        #
+        # No longer says "Greater Accra". Responses now arrive from Navrongo
+        # in the Upper East, some 700km north, and a prompt that asserts a
+        # region the data has outgrown is worse than one that names no region
+        # at all.
+        lines.append(f"- Collected mostly around: {'; '.join(areas)}.")
 
     ewaste = signal.get('ewaste_expectations_ghs') or {}
     if ewaste:
@@ -401,3 +412,60 @@ def pricing_basis(prompt_grounded=False):
         'sack_rate_ghs': signal['sack_rate_ghs'] if signal['sufficient'] else SACK_ANCHOR_GHS,
         'max_shift': MAX_SHIFT,
     }
+
+
+# Every coded field, paired with the map that turns its answers into
+# numbers. Used to detect answers no map recognises.
+CODED_FIELDS = {
+    'anchor30_reaction': ANCHOR30_SCORE,
+    'min_payout_range': MIN_PAYOUT_GHS,
+    'track_a_fee_range': TRACK_A_FEE_GHS,
+}
+CODED_DICT_FIELDS = {
+    'volume': VOLUME_SACKS_PER_WEEK,
+    'ewaste_expectations': EWASTE_GHS,
+}
+# 'already_pay' is a deliberate omission from TRACK_A_FEE_GHS, not a gap -
+# it carries no number. Listing it here keeps it from being reported as
+# drift on every single run.
+EXPECTED_UNMAPPED = {
+    'track_a_fee_range': {'already_pay'},
+}
+
+
+def unknown_answers():
+    """
+    Survey answers that no bucket map recognises, per field.
+
+    This exists because of how the 'none' volume bucket ("I don't have
+    this") was found: it had been arriving, matching nothing, and being
+    dropped from the mean - so every volume average read slightly high and
+    nothing anywhere said so. A form that keeps collecting is a form whose
+    options keep changing, and an unmapped answer is indistinguishable from
+    an unanswered one once it has been silently skipped.
+
+    Reported rather than guessed at: a new bucket's numeric value is a
+    judgement about what respondents meant, which is not something to
+    infer automatically.
+    """
+    from .models import MarketSurveyResponse
+
+    unknown = defaultdict(Counter)
+    try:
+        for response in MarketSurveyResponse.objects.all():
+            for field, mapping in CODED_FIELDS.items():
+                value = getattr(response, field, None)
+                if value and value not in mapping and value not in EXPECTED_UNMAPPED.get(field, ()):
+                    unknown[field][value] += 1
+            for field, mapping in CODED_DICT_FIELDS.items():
+                for key, value in (getattr(response, field, None) or {}).items():
+                    if value and value not in mapping:
+                        unknown[f'{field}.{key}'][value] += 1
+            for material in (response.materials or []):
+                if material not in MATERIAL_LABELS:
+                    unknown['materials'][material] += 1
+    except Exception as e:
+        logger.warning(f"Could not scan for unknown survey answers: {e}")
+        return {}
+
+    return {field: dict(counts) for field, counts in unknown.items()}

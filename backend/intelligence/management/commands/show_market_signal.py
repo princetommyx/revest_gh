@@ -13,7 +13,7 @@ from intelligence.buyback import (
     unbounded_payout_per_kg,
     unmapped_materials,
 )
-from intelligence.market_signal import market_signal
+from intelligence.market_signal import market_signal, unknown_answers
 from logistics.pricing import (
     BAG_SIZE_RATES,
     SACK_FLAT_RATE,
@@ -64,6 +64,19 @@ class Command(BaseCommand):
         self.stdout.write(f"  weekly sacks       : {signal['weekly_sacks']}")
         self.stdout.write(f"  material mix       : {signal['material_mix']}")
         self.stdout.write(f"  areas              : {signal['top_areas']}")
+
+        unknown = unknown_answers()
+        if unknown:
+            self.stdout.write(self.style.MIGRATE_HEADING("Survey answers no bucket map recognises"))
+            for field, counts in sorted(unknown.items()):
+                for value, count in sorted(counts.items()):
+                    self.stdout.write(self.style.ERROR(
+                        f"  {field} = '{value}' ({count}x) - dropped from every average that uses it"
+                    ))
+            self.stdout.write(
+                "  Add each to its map in intelligence/market_signal.py; the right "
+                "number is a judgement about what respondents meant."
+            )
 
         self.stdout.write(self.style.MIGRATE_HEADING("Effect on live prices"))
         sack = survey_adjusted_sack_rate()

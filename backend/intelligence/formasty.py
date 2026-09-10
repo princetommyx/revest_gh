@@ -88,6 +88,13 @@ def normalize_submission(submission):
         'raw_answers': answers,
     }
 
+    # Scoring lives on the submission itself rather than among the answers,
+    # so raw_answers would not have preserved it.
+    if isinstance(submission.get('quizScore'), int):
+        values['quiz_score'] = submission['quizScore']
+    if submission.get('leadTier'):
+        values['lead_tier'] = str(submission['leadTier'])
+
     # Only answers actually present are written. A field the payload omits
     # is left alone rather than reset to a blank - on an update that would
     # quietly destroy an answer the respondent did give, and on a create the

@@ -117,6 +117,14 @@ class MarketSurveyResponse(models.Model):
 
     raw_answers = models.JSONField(default=dict)  # full column values from the source, for anything not modeled above
 
+    # Formasty's own scoring of the respondent, which it started sending
+    # part-way through this form's life - so early responses have neither.
+    # Captured because it costs nothing and cannot be recovered later, and
+    # because "do the respondents Formasty rates highly answer differently?"
+    # is a question worth being able to ask once there are enough of them.
+    quiz_score = models.IntegerField(null=True, blank=True)
+    lead_tier = models.CharField(max_length=30, blank=True)
+
     submitted_at = models.DateTimeField()
     imported_at = models.DateTimeField(auto_now_add=True)
 
