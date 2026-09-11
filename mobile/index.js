@@ -4,7 +4,12 @@ import { registerRootComponent } from 'expo';
 // Must be imported at the top level (not inside a component) so it runs
 // even when the OS relaunches the JS bundle headlessly to deliver a
 // background location update.
-import './src/tasks/collectorLocationTask';
+import { stopOrphanedLocationTasks } from './src/tasks/collectorLocationTask';
+
+// Devices that ran an earlier tracker still carry its OS-level registration,
+// so the system keeps asking for a task this bundle no longer defines. Swept
+// once per launch; failures here must never block startup.
+stopOrphanedLocationTasks();
 
 import App from './App';
 
