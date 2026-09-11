@@ -36,6 +36,7 @@ import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
 import PageLoader from '../components/PageLoader';
+import OnlineToggleCard from '../components/OnlineToggleCard';
 
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
@@ -275,6 +276,9 @@ export default function PickupsScreen({ route }) {
 
     // A profile photo that 404s would otherwise leave an empty white circle
     // on the map with nothing to indicate it is a button.
+    // null until the stored preference has been read - see sortedJobs, which
+    // must not hide requests during that first moment.
+    const [collectorIsOnline, setCollectorIsOnline] = useState(null);
     const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
     const mapAvatarUri = useMemo(() => {
         if (mapAvatarFailed) return null;
@@ -285,6 +289,9 @@ export default function PickupsScreen({ route }) {
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
     // map behaviour and a reversed route label on their own job.
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+    // Narrower than isCollectorRole: recyclers kept their Home tab, and with
+    // it the online toggle that lives there.
+    const isCollectorOnly = userRole === 'COLLECTOR';
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
@@ -655,8 +662,9 @@ export default function PickupsScreen({ route }) {
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
-    // Respects the online/offline toggle on Home - this just keeps the
-    // preference re-affirmed with a fresh position while the preference is on.
+    // Respects the online/offline toggle - which lives on this screen for
+    // collectors and on Home for recyclers. This just keeps the preference
+    // re-affirmed with a fresh position while the preference is on.
     // Was gated to 'COLLECTOR' only, so a RECYCLER's location/online status
     // never reached the backend at all - they'd never be found "nearby" for
     // a new request no matter how the matching query itself was scoped.
@@ -1278,8 +1286,20 @@ export default function PickupsScreen({ route }) {
         if (!isCollectorRole) return jobs;
         const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
         const pendingJobs = jobs.filter(j => j.status === 'PENDING');
-        return [...activeJobs, ...pendingJobs];
-    }, [jobs, userRole]);
+
+        // Offline means offline: new requests stop surfacing, which is what
+        // the toggle promises ("Go online to start receiving requests") and
+        // what it previously failed to do - jobs appeared either way, so the
+        // switch looked decorative.
+        //
+        // A job already accepted is never hidden. Going offline mid-run must
+        // not make the pickup someone is driving to disappear; it only stops
+        // new work arriving. Only applied to collectors: a recycler's toggle
+        // still lives on Home, so this screen does not know their state and
+        // must not guess at it.
+        const takingWork = !isCollectorOnly || collectorIsOnline !== false;
+        return takingWork ? [...activeJobs, ...pendingJobs] : activeJobs;
+    }, [jobs, userRole, isCollectorOnly, collectorIsOnline]);
 
     const activeSellerJob = useMemo(() => {
         if (userRole !== 'SELLER') return null;
@@ -1461,6 +1481,24 @@ export default function PickupsScreen({ route }) {
                             <LocateFixed size={20} color={colors.text} />
                         </TouchableOpacity>
                     )}
+                </View>
+            )}
+
+            {/* Going online is what makes a collector discoverable, and this
+                was the only control for it - it used to live on Home, which
+                collectors no longer have, so removing that tab left them no
+                way to go online at all.
+
+                Sits under the top bar rather than at the bottom because the
+                job pager owns the bottom edge: down there it would either
+                collide with incoming requests or have to hide whenever any
+                arrived, and "go offline" has to stay reachable precisely
+                when work is coming in. Collector-only - recyclers still have
+                Home, and a second copy there would be two switches for one
+                setting. */}
+            {isCollectorOnly && !isSelectingLocation && !navigatingJob && uiState !== 'VEHICLE_SELECT' && (
+                <View style={styles.onlineTogglePane} pointerEvents="box-none">
+                    <OnlineToggleCard location={location} onChange={setCollectorIsOnline} />
                 </View>
             )}
 
@@ -2337,6 +2375,9 @@ const useStyles = makeStyles((c) => ({
         fontWeight: '500',
     },
     // Ubride Styles
+    // Clears floatingTopBarUbride (its top, plus the 44pt button row, plus
+    // a gap) so the two never overlap on either platform.
+    onlineTogglePane: { position: 'absolute', top: Platform.OS === 'ios' ? 116 : 96, left: 16, right: 16, zIndex: 9 },
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
     menuBtnAvatar: { width: 44, height: 44, borderRadius: 22 },
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
