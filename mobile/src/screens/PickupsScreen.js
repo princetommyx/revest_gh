@@ -1461,7 +1461,10 @@ export default function PickupsScreen({ route }) {
                 // Apple Maps alongside userInterfaceStyle="dark" is a known
                 // react-native-maps conflict that blacks out the whole map
                 // on iOS; Apple's own dark mode above already covers it there.
-                customMapStyle={Platform.OS === 'android' ? darkMapStyle : undefined}
+                // Follows the theme rather than being forced on always:
+                // darkMapStyle paints the base #212121, so in light mode it
+                // was handing Android a night map under a light UI.
+                customMapStyle={Platform.OS === 'android' && isDark ? darkMapStyle : undefined}
                 // Nothing observed whether the map ever came up, so a failure
                 // looked identical to an empty city: a blank rectangle with
                 // the overlays floating on it and no way to tell which.
