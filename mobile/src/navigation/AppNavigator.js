@@ -47,6 +47,8 @@ const Tab = createBottomTabNavigator();
 
 const TAB_ICONS = {
     Home: House,
+    // 'Pickups' is the live map for a collector and a job list for everyone
+    // else; the vehicle mark reads correctly for both.
     Pickups: CarFront,
     Discover: Search,
     Chat: MessageSquare,
@@ -327,16 +329,29 @@ const styles = StyleSheet.create({
 function MainTabs() {
     const { userRole } = useAuth();
     const { unreadCount } = useNotifications();
+    const isCollector = userRole === 'COLLECTOR';
 
     return (
         <View style={{ flex: 1 }}>
             <Tab.Navigator
                 tabBar={props => <CustomTabBar {...props} />}
                 screenOptions={{ headerShown: false }}
+                // With no Home tab, a collector must open on the map rather
+                // than on whatever happens to be declared first.
+                initialRouteName={isCollector ? 'Pickups' : 'Home'}
             >
-                <Tab.Screen name="Home" component={HomeScreen} />
+                {/* Collectors have no Home tab: the map IS their home. They
+                    go online, nearby requests surface on the map, they accept
+                    and tracking starts - the Bolt model. A separate Home with
+                    listings and category tiles was a second place to look for
+                    work, competing with the one screen that actually has it. */}
+                {!isCollector && <Tab.Screen name="Home" component={HomeScreen} />}
 
-                {(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
+                {/* The marketplace belongs to recyclers now. They sort for the
+                    waste they want here, and request a collector when they
+                    need one moved. A collector never browses it - they work
+                    the map. */}
+                {userRole === 'RECYCLER' && (
                     <Tab.Screen
                         name="Discover"
                         component={MarketplaceScreen}
@@ -348,7 +363,10 @@ function MainTabs() {
                     name="Pickups"
                     component={PickupsScreen}
                     options={{
-                        tabBarLabel: 'Pickups'
+                        // For a collector this is the whole job: the live map
+                        // of nearby requests, so it is named for what it is
+                        // rather than for a list they no longer have.
+                        tabBarLabel: isCollector ? 'Map' : 'Pickups'
                     }}
                 />
 
