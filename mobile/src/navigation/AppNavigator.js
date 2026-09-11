@@ -6,7 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { House, MessageSquare, Wallet, CarFront, User, Search, Leaf } from 'lucide-react-native';
+import { House, MessageSquare, Wallet, CarFront, User, Search, Leaf, Clock } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,6 +52,10 @@ const TAB_ICONS = {
     Pickups: CarFront,
     Discover: Search,
     Chat: MessageSquare,
+    // Clock rather than lucide's History mark: it is already used for
+    // history elsewhere in the app, so it is known to exist in the version
+    // pinned here, and it stays distinct from the Map tab's vehicle.
+    History: Clock,
     Wallet: Wallet,
     // Fallback for the avatar tab when the user hasn't set a photo.
     You: User,
@@ -379,6 +383,19 @@ function MainTabs() {
                         }}
                     />
                 )}
+                {/* Collectors lost Home, and with it the only place their
+                    completed work was visible at a glance. A tab puts it one
+                    tap from the map instead of two taps inside Profile. Only
+                    for collectors: every other role still has Home, and a
+                    sixth tab would crowd the bar. */}
+                {isCollector && (
+                    <Tab.Screen
+                        name="History"
+                        component={PickupHistoryScreen}
+                        options={{ tabBarLabel: 'History' }}
+                    />
+                )}
+
                 <Tab.Screen name="Wallet" component={WalletScreen} />
 
                 {/* WhatsApp-style "You" tab - shows the user's own avatar

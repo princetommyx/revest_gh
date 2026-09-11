@@ -316,7 +316,12 @@ export default function ProfileScreen({ navigation }) {
                         {userRole !== 'COLLECTOR' && (
                             <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Marketplace')} />
                         )}
-                        <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        {/* Collectors reach this from their History tab now;
+                            keeping it here too would be two routes to one
+                            screen. Every other role still needs the link. */}
+                        {userRole !== 'COLLECTOR' && (
+                            <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        )}
                         <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
                         <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />
                     </NavCard>
