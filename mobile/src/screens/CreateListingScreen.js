@@ -119,14 +119,23 @@ export default function CreateListingScreen({ route, navigation }) {
     // ... Get Location on Mount ...
     React.useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            let location = await Location.getCurrentPositionAsync({});
-            setFormData(prev => ({
-                ...prev,
-                latitude: parseFloat(location.coords.latitude.toFixed(6)),
-                longitude: parseFloat(location.coords.longitude.toFixed(6))
-            }));
+            // getCurrentPositionAsync rejects with "Current location is
+            // unavailable" whenever location services are off or no fix has
+            // been acquired yet - granted permission is not a promise of a
+            // position. Uncaught, that crashed the screen on open; the form
+            // is perfectly usable without coordinates.
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                let location = await Location.getCurrentPositionAsync({});
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: parseFloat(location.coords.latitude.toFixed(6)),
+                    longitude: parseFloat(location.coords.longitude.toFixed(6))
+                }));
+            } catch (e) {
+                console.warn('[CreateListing] Could not read location:', e?.message);
+            }
         })();
     }, []);
 

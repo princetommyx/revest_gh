@@ -39,7 +39,15 @@ import TrackingWidget from '../components/TrackingWidget';
 import { BASE_URL } from '../api/client';
 import { TAB_BAR_HEIGHT, TAB_BAR_BOTTOM } from '../constants/layout';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+// Only meaningful on the old architecture. Under Fabric the method still
+// exists but is a documented no-op, and calling it logs a warning on every
+// launch - so the guard checks for the New Architecture rather than just for
+// the method's presence.
+if (
+    Platform.OS === 'android' &&
+    !global?.nativeFabricUIManager &&
+    UIManager.setLayoutAnimationEnabledExperimental
+) {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 const Stack = createNativeStackNavigator();

@@ -423,8 +423,20 @@ export default function PickupsScreen({ route }) {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.getForegroundPermissionsAsync();
-            if (status === 'granted') {
+            // Permission granted is not the same as a fix being available:
+            // with location services switched off at the OS level, or indoors
+            // before the first fix, getCurrentPositionAsync rejects with
+            // "Current location is unavailable". Uncaught, that surfaced as a
+            // red "Uncaught (in promise)" screen on launch and left the rest
+            // of this effect unrun. The map already falls back to an
+            // Accra-level region, so the screen works without a fix - it just
+            // cannot centre on the user.
+            try {
+                let { status } = await Location.getForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    setHasLocationPermission(false);
+                    return;
+                }
                 setHasLocationPermission(true);
                 let loc = await Location.getCurrentPositionAsync({});
                 deviceLocationRef.current = loc.coords;
@@ -435,15 +447,23 @@ export default function PickupsScreen({ route }) {
                     latitudeDelta: 0.005,
                     longitudeDelta: 0.005,
                 });
-            } else {
-                setHasLocationPermission(false);
+            } catch (e) {
+                console.warn('[Pickups] Could not read initial location:', e?.message);
+                setErrorMsg('Location unavailable. Turn on location services to see jobs near you.');
             }
         })();
     }, []);
 
     const requestLocationAccess = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
+        // Same failure mode as the effect above, and the same reason to
+        // catch it: this runs from a button, so an unhandled rejection here
+        // is a crash the user triggered by asking for the thing to work.
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
             setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
             deviceLocationRef.current = loc.coords;
@@ -454,8 +474,9 @@ export default function PickupsScreen({ route }) {
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
             });
-        } else {
-            setErrorMsg('Permission to access location was denied');
+        } catch (e) {
+            console.warn('[Pickups] Could not read location after permission:', e?.message);
+            setErrorMsg('Location unavailable. Check that location services are on.');
         }
     };
 
