@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView, StatusBar,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState, Image
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState, Image,
+    useWindowDimensions
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
 import { authApi } from '../api/auth';
@@ -277,11 +278,18 @@ export default function PickupsScreen({ route }) {
     // null until the stored preference has been read - see sortedJobs, which
     // must not hide requests during that first moment.
     const [collectorIsOnline, setCollectorIsOnline] = useState(null);
+    // The map is sized explicitly from here rather than stretched by
+    // absoluteFill. onLayout reported 384x0 - full width, no height - because
+    // absoluteFill takes its height from an ancestor that never resolves one,
+    // and a view with no height draws nothing while still firing onMapReady.
+    //
+    // useWindowDimensions rather than the module-level Dimensions.get()
+    // snapshot this file used to use: that one was captured once at import
+    // and went stale on rotation, which is the bug the comment on styles.map
+    // records. This hook re-renders on every size change.
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
     const [mapReady, setMapReady] = useState(false);
     const [mapTimedOut, setMapTimedOut] = useState(false);
-    // Nudges the map's layout by one pixel once it reports ready. See the
-    // effect below for why.
-    const [mapLayoutNudge, setMapLayoutNudge] = useState(0);
     // A profile photo that 404s would otherwise leave an empty white circle
     // on the map with nothing to indicate it is a button.
     const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
@@ -289,23 +297,6 @@ export default function PickupsScreen({ route }) {
         if (mapAvatarFailed) return null;
         return resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
     }, [user?.profile_picture_url, user?.profile_picture, mapAvatarFailed]);
-
-    // The map reports ready and then paints nothing: the surface takes the
-    // theme colour (black in dark, white in light) with no tiles, no
-    // attribution and no user dot. That is the long-standing
-    // react-native-maps case where the native view is mounted but never
-    // measured, so it has no size to draw into - and it is not fixed by
-    // keys, billing or provider, which is why none of those changed
-    // anything here.
-    //
-    // The remedy is to make the layout change once, after the view exists,
-    // which forces a re-measure. One pixel of inset is the smallest change
-    // that does it and is invisible behind the floating overlays.
-    useEffect(() => {
-        if (!mapReady || mapLayoutNudge !== 0) return;
-        const timer = setTimeout(() => setMapLayoutNudge(1), 120);
-        return () => clearTimeout(timer);
-    }, [mapReady, mapLayoutNudge]);
 
     // If onMapReady has not fired by now the map is not coming up, and the
     // screen should say so rather than leave a blank rectangle that looks
@@ -1445,7 +1436,7 @@ export default function PickupsScreen({ route }) {
                 // build - in Expo Go the map surface renders nothing while
                 // every JS overlay above it draws normally.
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                style={[styles.map, { bottom: mapLayoutNudge }]}
+                style={[styles.map, { width: windowWidth, height: windowHeight }]}
                 // initialRegion is captured once on mount and never reacts to
                 // later prop changes (unlike `region`) - so it must never be
                 // null, or the map has nothing to render and stays blank even
@@ -1475,14 +1466,15 @@ export default function PickupsScreen({ route }) {
                 // looked identical to an empty city: a blank rectangle with
                 // the overlays floating on it and no way to tell which.
                 onMapReady={() => setMapReady(true)}
-                // Reports the size the native map was actually given. A
-                // ready-but-blank map is almost always a measured size of
-                // 0 - and if this logs full-screen dimensions instead, the
-                // re-measure theory above is wrong and the problem is paint,
-                // not layout. Cheap, and it settles the question in one run.
+                // Silent when the map has a size, loud when it does not.
+                // A zero dimension here is the difference between a blank
+                // map and a working one, and it is otherwise invisible -
+                // the view still mounts, still fires onMapReady, and still
+                // draws the theme colour.
                 onLayout={(e) => {
                     const { width: w, height: h } = e.nativeEvent.layout;
-                    console.warn(`[Map] native layout ${Math.round(w)}x${Math.round(h)}`);
+                    if (w > 0 && h > 0) return;
+                    console.warn(`[Map] no drawable size: ${Math.round(w)}x${Math.round(h)} - the map will render blank.`);
                 }}
             >
                 {memoizedMarkers}
@@ -2739,7 +2731,13 @@ const useStyles = makeStyles((c) => ({
     // whatever undersized dimensions it had captured, with the screen's
     // own background showing through everywhere below it. Filling the
     // flex:1 parent directly means there's nothing to get stale.
-    map: { ...StyleSheet.absoluteFillObject },
+    // Anchored top-left and sized explicitly by the component from
+    // useWindowDimensions. Deliberately not absoluteFillObject any more:
+    // that sets right/bottom to 0 and derives the size from the ancestor,
+    // which is exactly what produced a 384x0 map - full width, no height,
+    // and so nothing drawn. Pairing insets with an explicit width/height
+    // would also leave two competing definitions of the same edges.
+    map: { position: 'absolute', top: 0, left: 0 },
 
     header: {
         position: 'absolute',
