@@ -286,8 +286,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </TouchableOpacity>
                     )}
 
-                    {/* Similar Waste */}
-                    {similarListings.length > 0 && (
+                    {/* Similar Waste - hidden for collectors, whose "see all"
+                        would land them in a marketplace they no longer have. */}
+                    {similarListings.length > 0 && userRole !== 'COLLECTOR' && (
                         <View style={styles.similarSection}>
                             <View style={styles.similarHeader}>
                                 <Text style={styles.similarSectionTitle}>Similar Waste</Text>

@@ -290,7 +290,7 @@ export default function ProfileScreen({ navigation }) {
                                 </View>
                                 <Text style={styles.contextLink}>View details</Text>
                             </TouchableOpacity>
-                        ) : activeListing ? (
+                        ) : (activeListing && userRole !== 'COLLECTOR') ? (
                             <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Marketplace')} activeOpacity={0.8}>
                                 <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
                                 <Text style={styles.contextTitle}>{activeListing.quantity} {activeListing.material_type}</Text>
@@ -308,7 +308,14 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Marketplace')} />
+                        {/* Collectors have no marketplace at all now - they
+                            work the map, and the waste listings belong to
+                            recyclers. Leaving this link would be the one
+                            remaining way for a collector to reach a screen
+                            they are no longer meant to have. */}
+                        {userRole !== 'COLLECTOR' && (
+                            <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Marketplace')} />
+                        )}
                         <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
                         <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
                         <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />

@@ -26,7 +26,7 @@ export default function RegisterScreen() {
     // "Earn as a Collector" on Profile sends a signed-out user straight here
     // with a role already chosen - skip the role-picker step entirely
     // instead of making them pick it again.
-    const preselectedRole = ['COLLECTOR', 'SELLER'].includes(route.params?.role) ? route.params.role : '';
+    const preselectedRole = ['COLLECTOR', 'SELLER', 'RECYCLER'].includes(route.params?.role) ? route.params.role : '';
     const [step, setStep] = useState(preselectedRole ? 2 : 1);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
@@ -97,15 +97,13 @@ export default function RegisterScreen() {
     };
 
     // Tapping a role card only selects it - Continue advances to step 2.
+    //
+    // Recycler used to be blocked here with a "Coming Soon" toast while the
+    // rest of its flow - the company/individual fields below, the
+    // certification upload, the serializer, the job board - was already
+    // built and working. Recyclers are the marketplace's users now, so the
+    // block was the only thing standing between them and an account.
     const selectRoleCard = (role) => {
-        if (role === 'RECYCLER') {
-            Toast.show({
-                type: 'info',
-                text1: 'Coming Soon',
-                text2: 'The Recycler role is currently under development.',
-            });
-            return;
-        }
         handleChange('role', role);
     };
 
@@ -395,20 +393,36 @@ export default function RegisterScreen() {
         );
     };
 
-    const RecyclerRow = () => (
-        <TouchableOpacity onPress={() => selectRoleCard('RECYCLER')} activeOpacity={0.8} style={styles.recyclerRow}>
-            <View style={styles.recyclerImageCircle}>
-                <RoleMarkBadge role="recycler" />
-            </View>
-            <View style={styles.recyclerInfo}>
-                <Text style={styles.recyclerTitle}>Recycler</Text>
-                <Text style={styles.recyclerDesc}>Facility accounts open later this year. We'll email you.</Text>
-            </View>
-            <View style={[styles.pill, styles.pillNeutral]}>
-                <Text style={[styles.pillText, styles.pillTextNeutral]}>SOON</Text>
-            </View>
-        </TouchableOpacity>
-    );
+    // Selectable like the two grid cards above it, and showing the same
+    // border feedback - it was previously a dead row with a SOON pill, so
+    // it had no selected state to show.
+    const RecyclerRow = () => {
+        const isSelected = formData.role === 'RECYCLER';
+
+        return (
+            <TouchableOpacity
+                onPress={() => selectRoleCard('RECYCLER')}
+                activeOpacity={0.8}
+                style={[
+                    styles.recyclerRow,
+                    isSelected && { borderColor: colors.primary, borderWidth: 2 },
+                ]}
+            >
+                <View style={styles.recyclerImageCircle}>
+                    <RoleMarkBadge role="recycler" />
+                </View>
+                <View style={styles.recyclerInfo}>
+                    <Text style={styles.recyclerTitle}>Recycler</Text>
+                    <Text style={styles.recyclerDesc}>Buy sorted waste from the marketplace and request a collector to move it.</Text>
+                </View>
+                <View style={[styles.pill, isSelected ? styles.pillSuccess : styles.pillNeutral]}>
+                    <Text style={[styles.pillText, isSelected ? styles.pillTextSuccess : styles.pillTextNeutral]}>
+                        {isSelected ? 'SELECTED' : 'OPEN'}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        );
+    };
 
     const handleBack = () => {
         if (step === 2) {
