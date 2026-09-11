@@ -1377,11 +1377,20 @@ export default function PickupsScreen({ route }) {
         <View style={styles.container}>
             <ActiveMap
                 ref={mapRef}
-                // Google Maps needs its own iOS SDK API key (app.json's
-                // ios.config.googleMapsApiKey) which isn't set - forcing it
-                // there renders a blank map. Android has that key
-                // configured, so only force it there; iOS falls back to
-                // its default (Apple Maps), which needs no extra key.
+                // iOS deliberately stays on Apple Maps. app.json now does
+                // set ios.config.googleMapsApiKey (it did not when this was
+                // written), so Google could be forced here - but Apple Maps
+                // needs no key, no Cloud project and no billing account,
+                // while Maps SDK for iOS needs all three. Android has no
+                // such free fallback, so it uses PROVIDER_GOOGLE and does
+                // depend on that key and on billing being enabled.
+                //
+                // Neither path explains a blank map in Expo Go:
+                // react-native-maps is native code, and Expo Go only ships
+                // the modules Expo bundles. This project depends on
+                // expo-dev-client precisely because it needs a development
+                // build - in Expo Go the map surface renders nothing while
+                // every JS overlay above it draws normally.
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
                 style={styles.map}
                 // initialRegion is captured once on mount and never reacts to
