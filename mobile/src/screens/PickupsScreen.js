@@ -18,7 +18,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
-    Truck, MapPin, Navigation, Menu, Bell,
+    Truck, MapPin, Navigation, Bell,
     CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, ArrowRight, Plus, Calendar,
     ChevronRight, Activity, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
     User, LocateFixed, ShieldCheck, Leaf
@@ -272,6 +272,14 @@ export default function PickupsScreen({ route }) {
     const { pricingEnabled } = usePricing();
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
+
+    // A profile photo that 404s would otherwise leave an empty white circle
+    // on the map with nothing to indicate it is a button.
+    const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
+    const mapAvatarUri = useMemo(() => {
+        if (mapAvatarFailed) return null;
+        return resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
+    }, [user?.profile_picture_url, user?.profile_picture, mapAvatarFailed]);
 
     // Recyclers run pickups exactly like collectors do, but most of this screen
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
@@ -1431,7 +1439,20 @@ export default function PickupsScreen({ route }) {
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
-                            <Menu size={20} color={colors.text} />
+                            {/* This has always opened Profile - a hamburger
+                                promised a drawer that does not exist. Shows
+                                the user's own photo where there is one, the
+                                same way the You tab does, and falls back to
+                                the person mark when there is not. */}
+                            {mapAvatarUri ? (
+                                <Image
+                                    source={{ uri: mapAvatarUri }}
+                                    style={styles.menuBtnAvatar}
+                                    onError={() => setMapAvatarFailed(true)}
+                                />
+                            ) : (
+                                <User size={20} color={colors.text} />
+                            )}
                         </TouchableOpacity>
                     )}
                     <View style={{ flex: 1 }} />
@@ -2317,6 +2338,7 @@ const useStyles = makeStyles((c) => ({
     },
     // Ubride Styles
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
+    menuBtnAvatar: { width: 44, height: 44, borderRadius: 22 },
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     
