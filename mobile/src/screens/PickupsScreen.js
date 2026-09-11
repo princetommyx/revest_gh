@@ -279,6 +279,9 @@ export default function PickupsScreen({ route }) {
     const [collectorIsOnline, setCollectorIsOnline] = useState(null);
     const [mapReady, setMapReady] = useState(false);
     const [mapTimedOut, setMapTimedOut] = useState(false);
+    // Nudges the map's layout by one pixel once it reports ready. See the
+    // effect below for why.
+    const [mapLayoutNudge, setMapLayoutNudge] = useState(0);
     // A profile photo that 404s would otherwise leave an empty white circle
     // on the map with nothing to indicate it is a button.
     const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
@@ -286,6 +289,23 @@ export default function PickupsScreen({ route }) {
         if (mapAvatarFailed) return null;
         return resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
     }, [user?.profile_picture_url, user?.profile_picture, mapAvatarFailed]);
+
+    // The map reports ready and then paints nothing: the surface takes the
+    // theme colour (black in dark, white in light) with no tiles, no
+    // attribution and no user dot. That is the long-standing
+    // react-native-maps case where the native view is mounted but never
+    // measured, so it has no size to draw into - and it is not fixed by
+    // keys, billing or provider, which is why none of those changed
+    // anything here.
+    //
+    // The remedy is to make the layout change once, after the view exists,
+    // which forces a re-measure. One pixel of inset is the smallest change
+    // that does it and is invisible behind the floating overlays.
+    useEffect(() => {
+        if (!mapReady || mapLayoutNudge !== 0) return;
+        const timer = setTimeout(() => setMapLayoutNudge(1), 120);
+        return () => clearTimeout(timer);
+    }, [mapReady, mapLayoutNudge]);
 
     // If onMapReady has not fired by now the map is not coming up, and the
     // screen should say so rather than leave a blank rectangle that looks
@@ -1425,7 +1445,7 @@ export default function PickupsScreen({ route }) {
                 // build - in Expo Go the map surface renders nothing while
                 // every JS overlay above it draws normally.
                 provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
-                style={styles.map}
+                style={[styles.map, { bottom: mapLayoutNudge }]}
                 // initialRegion is captured once on mount and never reacts to
                 // later prop changes (unlike `region`) - so it must never be
                 // null, or the map has nothing to render and stays blank even
@@ -1455,6 +1475,15 @@ export default function PickupsScreen({ route }) {
                 // looked identical to an empty city: a blank rectangle with
                 // the overlays floating on it and no way to tell which.
                 onMapReady={() => setMapReady(true)}
+                // Reports the size the native map was actually given. A
+                // ready-but-blank map is almost always a measured size of
+                // 0 - and if this logs full-screen dimensions instead, the
+                // re-measure theory above is wrong and the problem is paint,
+                // not layout. Cheap, and it settles the question in one run.
+                onLayout={(e) => {
+                    const { width: w, height: h } = e.nativeEvent.layout;
+                    console.warn(`[Map] native layout ${Math.round(w)}x${Math.round(h)}`);
+                }}
             >
                 {memoizedMarkers}
 
