@@ -5,7 +5,11 @@ class LogisticsConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.user = self.scope["user"]
         if self.user.is_anonymous:
-            await self.close()
+            # 4401 rather than a bare close(): a default close is code 1000,
+            # which a client cannot tell apart from a normal server-side
+            # hang-up. The app then retries forever against a token that will
+            # never be accepted, and logs nothing useful while it does.
+            await self.close(code=4401)
         else:
             # Create a group for this specific user
             self.group_name = f"user_{self.user.id}"

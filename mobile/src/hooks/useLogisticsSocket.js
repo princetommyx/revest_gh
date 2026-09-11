@@ -59,13 +59,39 @@ export function useLogisticsSocket(onMessage, { enabled = true } = {}) {
         };
 
         ws.onerror = (e) => {
-            console.warn('[LogisticsSocket] Error', e?.message);
+            // React Native's WebSocket error event carries no message, so
+            // this used to log a bare "[LogisticsSocket] Error" that said
+            // nothing at all. The close event below is where the diagnosis
+            // actually lives, so keep this quiet and report there.
+            if (__DEV__ && e?.message) console.warn('[LogisticsSocket] Error', e.message);
         };
 
-        ws.onclose = () => {
+        ws.onclose = (event) => {
+            // The close code is the whole diagnosis:
+            //   1006  never connected - wrong host, server asleep or no route
+            //   1000  server closed cleanly - which the backend does on a
+            //         rejected token, so it means "not authenticated"
+            //   4401  explicit auth rejection (newer backends)
+            const code = event?.code;
+            const reason = event?.reason || (
+                code === 1006 ? 'could not reach the server' :
+                code === 4401 || code === 1000 ? 'server rejected the connection (auth or token)' :
+                'closed'
+            );
+            console.warn(`[LogisticsSocket] closed ${code ?? '?'}: ${reason} (${buildSocketUrl('***').split('?')[0]})`);
+
             setIsConnected(false);
             wsRef.current = null;
             if (closedIntentionally.current) return;
+
+            // Retrying an explicitly rejected token just burns battery: it
+            // will not become valid by waiting. The effect below reconnects
+            // on its own when the user (and so the token) changes, or when
+            // the app next returns to the foreground.
+            if (code === 4401) {
+                console.warn('[LogisticsSocket] Not retrying - the server rejected this token.');
+                return;
+            }
 
             const attempt = reconnectAttempt.current + 1;
             reconnectAttempt.current = attempt;
