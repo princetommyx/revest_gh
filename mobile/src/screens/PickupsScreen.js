@@ -274,16 +274,28 @@ export default function PickupsScreen({ route }) {
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
 
-    // A profile photo that 404s would otherwise leave an empty white circle
-    // on the map with nothing to indicate it is a button.
     // null until the stored preference has been read - see sortedJobs, which
     // must not hide requests during that first moment.
     const [collectorIsOnline, setCollectorIsOnline] = useState(null);
+    const [mapReady, setMapReady] = useState(false);
+    const [mapTimedOut, setMapTimedOut] = useState(false);
+    // A profile photo that 404s would otherwise leave an empty white circle
+    // on the map with nothing to indicate it is a button.
     const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
     const mapAvatarUri = useMemo(() => {
         if (mapAvatarFailed) return null;
         return resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
     }, [user?.profile_picture_url, user?.profile_picture, mapAvatarFailed]);
+
+    // If onMapReady has not fired by now the map is not coming up, and the
+    // screen should say so rather than leave a blank rectangle that looks
+    // exactly like a map of nowhere. Generous, because a cold Apple/Google
+    // map on a slow connection can take a few seconds.
+    useEffect(() => {
+        if (mapReady) return;
+        const timer = setTimeout(() => setMapTimedOut(true), 8000);
+        return () => clearTimeout(timer);
+    }, [mapReady]);
 
     // Recyclers run pickups exactly like collectors do, but most of this screen
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
@@ -1407,13 +1419,21 @@ export default function PickupsScreen({ route }) {
                 showsUserLocation={true}
                 showsMyLocationButton={false}
                 followsUserLocation={!!navigatingJob && isCollectorRole}
-                userInterfaceStyle="dark"
+                // Follows the app theme instead of being pinned to "dark".
+                // Pinned, it asked Apple Maps for a dark surface under a light
+                // UI, and this is the very prop the note below flags as
+                // implicated in blanking the map on iOS.
+                userInterfaceStyle={isDark ? 'dark' : 'light'}
                 // darkMapStyle is Google-Maps-JSON styling - only meaningful
                 // (and only safe) on the Google provider. Applying it to
                 // Apple Maps alongside userInterfaceStyle="dark" is a known
                 // react-native-maps conflict that blacks out the whole map
                 // on iOS; Apple's own dark mode above already covers it there.
                 customMapStyle={Platform.OS === 'android' ? darkMapStyle : undefined}
+                // Nothing observed whether the map ever came up, so a failure
+                // looked identical to an empty city: a blank rectangle with
+                // the overlays floating on it and no way to tell which.
+                onMapReady={() => setMapReady(true)}
             >
                 {memoizedMarkers}
 
@@ -1490,6 +1510,17 @@ export default function PickupsScreen({ route }) {
                             <LocateFixed size={20} color={colors.text} />
                         </TouchableOpacity>
                     )}
+                </View>
+            )}
+
+            {mapTimedOut && !mapReady && (
+                <View style={styles.mapFallbackNotice} pointerEvents="none">
+                    <Text style={styles.mapFallbackTitle}>Map didn't load</Text>
+                    <Text style={styles.mapFallbackBody}>
+                        {Platform.OS === 'ios'
+                            ? "Everything else on this screen is working. iOS uses Apple Maps here, which needs no API key and no billing - so this is the map component itself, not your Google account. In Expo Go, maps need a development build (npx expo run:ios)."
+                            : "Everything else on this screen is working. Android draws this with Google Maps, which needs a valid key with the Maps SDK for Android enabled and billing active on the Cloud project. In Expo Go, maps also need a development build (npx expo run:android)."}
+                    </Text>
                 </View>
             )}
 
@@ -2386,6 +2417,9 @@ const useStyles = makeStyles((c) => ({
     // Ubride Styles
     // Clears floatingTopBarUbride (its top, plus the 44pt button row, plus
     // a gap) so the two never overlap on either platform.
+    mapFallbackNotice: { position: 'absolute', top: '38%', left: 32, right: 32, backgroundColor: c.surface, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: c.borderSubtle },
+    mapFallbackTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 6 },
+    mapFallbackBody: { fontSize: 13, lineHeight: 19, color: c.textSecondary },
     onlineTogglePane: { position: 'absolute', top: Platform.OS === 'ios' ? 116 : 96, left: 16, right: 16, zIndex: 9 },
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
     menuBtnAvatar: { width: 44, height: 44, borderRadius: 22 },
