@@ -1328,8 +1328,12 @@ export default function PickupsScreen({ route }) {
 
     const sortedJobs = useMemo(() => {
         if (!isCollectorRole) return jobs;
-        const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
-        const pendingJobs = jobs.filter(j => j.status === 'PENDING');
+        // A job this user raised is never work they can take. The backend
+        // returns it now so they can track it, which means the board has to
+        // filter it out here or a recycler would be offered their own pickup.
+        const boardJobs = jobs.filter(j => j.provider?.id !== user?.id);
+        const activeJobs = boardJobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+        const pendingJobs = boardJobs.filter(j => j.status === 'PENDING');
 
         // Offline means offline: new requests stop surfacing, which is what
         // the toggle promises ("Go online to start receiving requests") and
@@ -1343,12 +1347,20 @@ export default function PickupsScreen({ route }) {
         // must not guess at it.
         const takingWork = !isCollectorOnly || collectorIsOnline !== false;
         return takingWork ? [...activeJobs, ...pendingJobs] : activeJobs;
-    }, [jobs, userRole, isCollectorOnly, collectorIsOnline]);
+    }, [jobs, userRole, isCollectorOnly, collectorIsOnline, user?.id]);
 
+    // The job THIS user raised, whatever their role - not "the seller's job".
+    // A recycler who requests a collector is the provider on that job, and
+    // gating this on SELLER meant they got no tracking card for a pickup they
+    // had paid for: the collector_location events arrived over the socket and
+    // nothing on screen consumed them.
     const activeSellerJob = useMemo(() => {
-        if (userRole !== 'SELLER') return null;
-        return jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
-    }, [jobs, userRole]);
+        const mine = jobs.filter(j => (
+            ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status) &&
+            (userRole === 'SELLER' ? true : j.provider?.id === user?.id)
+        ));
+        return mine[0] ?? null;
+    }, [jobs, userRole, user?.id]);
 
     // Fallback "collector found" celebration in case the websocket push was
     // missed (reconnecting) - fires once per PENDING -> ACCEPTED transition
