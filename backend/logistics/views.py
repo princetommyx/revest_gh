@@ -104,6 +104,17 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
             # Active jobs for this collector
             active_q = models.Q(collector=user, status__in=['ACCEPTED', 'ARRIVED'])
+
+            # Jobs this user RAISED themselves. A recycler requesting a
+            # collector is a provider on that job, but their role sends them
+            # down this branch instead of the provider branch at the bottom -
+            # so their own request was returned by nothing, and they could
+            # neither see it nor track the collector coming to it. The board
+            # still refuses to let them accept it (see pending_q below); this
+            # only makes it visible to the person who asked for it.
+            raised_q = models.Q(
+                provider=user, status__in=['PENDING', 'ACCEPTED', 'ARRIVED']
+            )
             
             # Pending jobs nearby
             two_hours_ago = timezone.now() - timedelta(hours=2)
@@ -144,10 +155,17 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                     
                     # Strict Haversine filter (Python side since we are dealing with a small subset)
                     # For a truly scalable solution, GeoDjango/PostGIS would be used.
-                    all_candidates = queryset.filter(active_q | pending_q)
+                    all_candidates = queryset.filter(active_q | pending_q | raised_q)
                     active_ids = []
                     scored_pending = []
                     for job in all_candidates:
+                        # A job the user raised is theirs to watch, never
+                        # theirs to accept - so it skips proximity scoring
+                        # (their own pickup matters however far away it is)
+                        # and is never ranked as available work.
+                        if job.provider_id == user.id:
+                            active_ids.append(job.id)
+                            continue
                         if job.status != 'PENDING' or job.collector == user:
                             active_ids.append(job.id)
                             continue
@@ -183,7 +201,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 except (ValueError, TypeError):
                     pass
             
-            return queryset.filter(active_q | pending_q).order_by('-created_at')
+            return queryset.filter(active_q | pending_q | raised_q).order_by('-created_at')
             
         return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
 
