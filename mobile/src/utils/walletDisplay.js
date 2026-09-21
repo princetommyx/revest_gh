@@ -3,21 +3,23 @@ import {
     TriangleAlert, ArrowDownLeft, Lock, CircleCheck, ArrowLeftRight
 } from 'lucide-react-native';
 
-// Visual identity per transaction type - the backend already gives us the
-// exact type, so there's no reason every row should look the same.
+// One distinct glyph per transaction type. These used to carry a hue each
+// as well (green/red/amber/blue/purple), which read as decoration rather
+// than information - the row's amount is already green for money in and
+// red for money out, so the colour said nothing the amount didn't.
 const TXN_META = {
-    DEPOSIT: { Icon: ArrowDownToLine, color: '#10B981' },
-    WITHDRAWAL: { Icon: ArrowUpRight, color: '#EF4444' },
-    JOB_EARNING: { Icon: Banknote, color: '#10B981' },
-    SALE_EARNING: { Icon: Gift, color: '#10B981' },
-    COMMISSION_DEDUCTION: { Icon: PieChart, color: '#F59E0B' },
-    PENALTY: { Icon: TriangleAlert, color: '#EF4444' },
-    REFUND: { Icon: ArrowDownLeft, color: '#3B82F6' },
-    ESCROW_LOCK: { Icon: Lock, color: '#8B5CF6' },
-    ESCROW_RELEASE: { Icon: CircleCheck, color: '#10B981' },
-    SERVICE_FEE: { Icon: Banknote, color: '#F59E0B' },
+    DEPOSIT: { Icon: ArrowDownToLine },
+    WITHDRAWAL: { Icon: ArrowUpRight },
+    JOB_EARNING: { Icon: Banknote },
+    SALE_EARNING: { Icon: Gift },
+    COMMISSION_DEDUCTION: { Icon: PieChart },
+    PENALTY: { Icon: TriangleAlert },
+    REFUND: { Icon: ArrowDownLeft },
+    ESCROW_LOCK: { Icon: Lock },
+    ESCROW_RELEASE: { Icon: CircleCheck },
+    SERVICE_FEE: { Icon: Banknote },
 };
-const DEFAULT_META = { Icon: ArrowLeftRight, color: '#6B7280' };
+const DEFAULT_META = { Icon: ArrowLeftRight };
 
 export const getTxnMeta = (transactionType) => TXN_META[transactionType] || DEFAULT_META;
 

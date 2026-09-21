@@ -14,9 +14,12 @@ import { useTheme, makeStyles } from '../theme/ThemeContext';
 
 const KIND_META = {
     // Token names, not hex - this map is module scope, resolved at render.
-    HOME: { Icon: Home, tone: 'accent', softTone: 'accentSoft' },
-    WORK: { Icon: Briefcase, tone: 'info', softTone: 'infoSoft' },
-    OTHER: { Icon: MapPin, tone: 'warning', softTone: 'warningSoft' },
+    // All three share one neutral treatment on purpose: the glyph already
+    // says home/work/other, so tinting each a different hue added colour
+    // that carried no meaning.
+    HOME: { Icon: Home, tone: 'text', softTone: 'surfaceSunken' },
+    WORK: { Icon: Briefcase, tone: 'text', softTone: 'surfaceSunken' },
+    OTHER: { Icon: MapPin, tone: 'text', softTone: 'surfaceSunken' },
 };
 
 const LocationRow = ({ item, onDelete, isLast }) => {
@@ -152,16 +155,16 @@ export default function SavedLocationsScreen({ navigation }) {
                         <View style={styles.quickAddRow}>
                             {!hasHome && (
                                 <TouchableOpacity style={styles.quickAddCard} onPress={() => openPicker('HOME')} activeOpacity={0.8}>
-                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.accentSoft }]}>
-                                        <Home size={20} color={colors.accent} />
+                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.surfaceSunken }]}>
+                                        <Home size={20} color={colors.text} />
                                     </View>
                                     <Text style={styles.quickAddLabel}>Add Home</Text>
                                 </TouchableOpacity>
                             )}
                             {!hasWork && (
                                 <TouchableOpacity style={styles.quickAddCard} onPress={() => openPicker('WORK')} activeOpacity={0.8}>
-                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.infoSoft }]}>
-                                        <Briefcase size={20} color={colors.info} />
+                                    <View style={[styles.quickAddIcon, { backgroundColor: colors.surfaceSunken }]}>
+                                        <Briefcase size={20} color={colors.text} />
                                     </View>
                                     <Text style={styles.quickAddLabel}>Add Work</Text>
                                 </TouchableOpacity>

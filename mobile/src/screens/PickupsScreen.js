@@ -1449,7 +1449,7 @@ export default function PickupsScreen({ route }) {
                             didn't actually fit a "come collect my waste" service. */}
                         <TouchableOpacity style={styles.pickupFieldRow} onPress={() => { setShowSearchModal(true); }}>
                             <View style={styles.pickupIconBox}>
-                                <MapPin size={18} color={colors.accent} />
+                                <MapPin size={18} color={colors.text} />
                             </View>
                             <View style={styles.pickupFieldTextCol}>
                                 <Text style={styles.pickupFieldLabel}>Pickup from</Text>
@@ -1978,7 +1978,7 @@ export default function PickupsScreen({ route }) {
                                             setShowSearchModal(false);
                                         }}
                                     >
-                                        <View style={[styles.searchResultIcon, { backgroundColor: colors.accentSoft }]}>
+                                        <View style={styles.searchResultIcon}>
                                             <Navigation size={20} color={colors.accent} />
                                         </View>
                                         <View style={styles.searchResultText}>
@@ -2388,9 +2388,10 @@ const useStyles = makeStyles((c) => ({
         paddingHorizontal: 12,
         paddingVertical: 12,
     },
-    // Tinted icon box, matching the card-with-tinted-icon pattern used across
-    // the rest of the app (nav rows, job cards) instead of a bare dot.
-    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
+    // Neutral icon box. Every decorative icon container in the app shares
+    // this one surface - colour is reserved for state (status, danger,
+    // selection), not for decoration.
+    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: c.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
     pickupFieldTextCol: { flex: 1 },
     pickupFieldLabel: { fontSize: 11, fontWeight: '600', color: c.textMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
     pickupFieldValue: { fontSize: 15, fontWeight: '700', color: c.text },

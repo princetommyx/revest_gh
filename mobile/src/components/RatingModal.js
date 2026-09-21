@@ -156,7 +156,7 @@ const useStyles = makeStyles((c) => ({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: c.warningSoft,
+        backgroundColor: c.surfaceSunken,
         justifyContent: 'center',
         alignItems: 'center',
     },

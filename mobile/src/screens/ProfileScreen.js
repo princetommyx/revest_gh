@@ -294,8 +294,6 @@ export default function ProfileScreen({ navigation }) {
                                 title="All Waste"
                                 subtitle="Browse everything disposers have listed"
                                 icon={Recycle}
-                                iconColor={colors.accent}
-                                iconBg={colors.accentSoft}
                                 onPress={() => navigation.navigate('Main', { screen: 'Discover' })}
                             />
                         ) : (
@@ -303,14 +301,12 @@ export default function ProfileScreen({ navigation }) {
                                 title="My Listings"
                                 subtitle="Waste you've posted"
                                 icon={Recycle}
-                                iconColor={colors.accent}
-                                iconBg={colors.accentSoft}
                                 onPress={() => navigation.navigate('Marketplace')}
                             />
                         )}
-                        <NavLink title="Pickup History" icon={Truck} iconColor={colors.accent} iconBg={colors.accentSoft} onPress={() => navigation.navigate('PickupHistory')} />
-                        <NavLink title="Transaction History" icon={Clock} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('TransactionHistory')} />
-                        <NavLink title="Saved Locations" icon={Bookmark} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={() => navigation.navigate('SavedLocations')} isLast />
+                        <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
+                        <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />
                     </NavCard>
                 </View>
 
@@ -333,23 +329,19 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Account" />
                     <NavCard>
-                        <NavLink title="Profile Information" icon={UserCog} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('EditProfile')} />
+                        <NavLink title="Profile Information" icon={UserCog} onPress={() => navigation.navigate('EditProfile')} />
                         <NavLink
                             title="Verification"
                             subtitle={kycLabel}
                             subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
                             icon={ShieldCheck}
-                            iconColor={colors.accent}
-                            iconBg={colors.accentSoft}
                             onPress={() => navigation.navigate('KYCVerification')}
                         />
-                        <NavLink title="Security" icon={ShieldAlert} iconColor={colors.danger} iconBg={colors.dangerSoft} onPress={() => navigation.navigate('Security')} />
+                        <NavLink title="Security" icon={ShieldAlert} onPress={() => navigation.navigate('Security')} />
                         <NavLink
                             title="Blocked Accounts"
                             subtitle="People you've blocked from messaging you"
                             icon={Ban}
-                            iconColor={colors.textSecondary}
-                            iconBg={colors.surfaceSunken}
                             onPress={() => navigation.navigate('BlockedUsers')}
                             isLast
                         />
@@ -369,8 +361,8 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="Support & Community" />
                     <NavCard>
-                        <NavLink title="Invite someone" icon={Share2} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={handleInvite} />
-                        <NavLink title="Help & Support" icon={MessageCircleQuestion} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('SupportChat')} isLast />
+                        <NavLink title="Invite someone" icon={Share2} onPress={handleInvite} />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestion} onPress={() => navigation.navigate('SupportChat')} isLast />
                     </NavCard>
                 </View>
 
@@ -381,8 +373,6 @@ export default function ProfileScreen({ navigation }) {
                             title="Deactivate Account"
                             subtitle="Hide your account temporarily. Log back in anytime to reactivate."
                             icon={UserX}
-                            iconColor={colors.warning}
-                            iconBg={colors.warningSoft}
                             onPress={() => setDangerModal('deactivate')}
                         />
                         <NavLink title="Delete Account" icon={Trash2} onPress={() => setDangerModal('delete')} danger />
