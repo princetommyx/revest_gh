@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { pickupsApi } from '../api/pickups';
 import { Loader2, Truck, MapPin } from 'lucide-react';
@@ -44,7 +44,7 @@ export default function PickupsPage() {
             page_size: PICKUPS_PER_PAGE,
             status: statusFilter,
         }),
-        keepPreviousData: true,
+        placeholderData: keepPreviousData,
     });
 
     const handlePageChange = (page) => {

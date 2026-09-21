@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { usersApi } from '../api/users';
 import { Loader2, Shield, UserPlus, Mail, Calendar } from 'lucide-react';
@@ -23,7 +23,7 @@ export default function SystemUsersPage() {
             search: searchTerm,
             role: 'ADMIN', // Only fetch admins
         }),
-        keepPreviousData: true,
+        placeholderData: keepPreviousData,
     });
 
     const handlePageChange = (page) => {

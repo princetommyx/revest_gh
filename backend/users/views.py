@@ -619,13 +619,10 @@ class PasswordResetConfirmView(views.APIView):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        print(f"DEBUG: Validating credentials for: {attrs.get('username')}")
-        try:
-            data = super().validate(attrs)
-            print(f"DEBUG: Validation successful for {self.user.username}")
-        except Exception as e:
-            print(f"DEBUG: Validation FAILED: {e}")
-            raise e
+        # No debug prints here: this runs on every sign-in attempt, and it
+        # was writing the submitted username - and the raw failure reason -
+        # to stdout on a shared log.
+        data = super().validate(attrs)
 
         # Add extra data to response
         data["user"] = {

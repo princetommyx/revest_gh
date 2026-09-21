@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { walletApi } from '../api/wallet';
 import { Loader2, Wallet, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
@@ -70,7 +70,7 @@ export default function TransactionsPage() {
             transaction_type: typeFilter,
             status: statusFilter,
         }),
-        keepPreviousData: true,
+        placeholderData: keepPreviousData,
     });
 
     const handlePageChange = (page) => {
