@@ -10,10 +10,10 @@
 ../backend/**
 
 # Exclude mobile build artifacts
-.expo/**
-dist/**
-web-build/**
-node_modules/**
+.expo/
+dist/
+web-build/
+node_modules/
 
 # Exclude development files
 *.log
