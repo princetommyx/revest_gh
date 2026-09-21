@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing, Dimensions } from 'react-native';
-import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User } from 'lucide-react-native';
+import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User, Check } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
@@ -232,7 +232,15 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                 <View style={styles.actionContainer}>
                     {job.status === 'PENDING' && (
                         <AnimatedButton style={styles.primaryBtn} onPress={() => onAccept(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Accept Job</Text>}
+                            {requestLoading ? <Activity color={colors.onPrimary} /> : (
+                                <>
+                                    {/* Same accept affordance as the listing screen. */}
+                                    <View style={styles.acceptCheckBadge}>
+                                        <Check size={14} color={colors.primary} strokeWidth={3.5} />
+                                    </View>
+                                    <Text style={styles.primaryBtnText}>Accept Job</Text>
+                                </>
+                            )}
                         </AnimatedButton>
                     )}
                     {job.status === 'ACCEPTED' && (
@@ -258,6 +266,15 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
 }
 
 const useStyles = makeStyles((c) => ({
+    acceptCheckBadge: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: c.onPrimary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 9,
+    },
     container: {
         backgroundColor: c.surface,
         borderTopLeftRadius: 30,

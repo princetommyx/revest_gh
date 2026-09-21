@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
     ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, 
     Weight, MapPin, Trash, Pencil, MessageCircle, Package, 
-    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase, Flag
+    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase, Flag, Check
 } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
@@ -370,7 +370,14 @@ export default function ListingDetailScreen({ route, navigation }) {
                                 <MessageCircle size={24} color={colors.text} />
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.solidPrimaryBtn, { flex: 1 }]} onPress={handleAcceptJob}>
-                                <Briefcase size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
+                                {/* A filled check badge rather than a stroke icon: a
+                                    briefcase said "job" but nothing about accepting.
+                                    Drawn as a filled circle with a bold check rather
+                                    than lucide's CircleCheck, whose `fill` prop also
+                                    fills the check stroke - white on white. */}
+                                <View style={styles.acceptCheckBadge}>
+                                    <Check size={14} color={colors.primary} strokeWidth={3.5} />
+                                </View>
                                 <Text style={styles.solidPrimaryBtnText}>Accept Job</Text>
                             </TouchableOpacity>
                         </View>
@@ -390,6 +397,15 @@ export default function ListingDetailScreen({ route, navigation }) {
 }
 
 const useStyles = makeStyles((c) => ({
+    acceptCheckBadge: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: c.onPrimary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 9,
+    },
     reportLink: {
         flexDirection: 'row',
         alignItems: 'center',
