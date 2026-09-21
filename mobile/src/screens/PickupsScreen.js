@@ -44,6 +44,7 @@ const ActiveMap = MapView;
 const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { Image as ExpoImage } from 'expo-image';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
@@ -1772,60 +1773,97 @@ export default function PickupsScreen({ route }) {
                     style={styles.modalOverlay}
                 >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Confirm Request</Text>
-                            <TouchableOpacity onPress={() => setShowRequestModal(false)}>
-                                <X size={24} color={colors.textSecondary} />
+                        <View style={styles.reqHandleWrap}><View style={styles.reqHandle} /></View>
+
+                        <View style={styles.reqHeader}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.reqTitle}>Confirm request</Text>
+                                <Text style={styles.reqSubtitle}>Check the details before you send this.</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setShowRequestModal(false)} style={styles.reqCloseBtn}>
+                                <X size={18} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
 
-                            <View style={styles.summaryCard}>
-                                <View style={styles.summaryRow}>
-                                    <View style={styles.summaryIconBox}>
-                                        <Package size={16} color={colors.text} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.summaryLabel}>Material</Text>
-                                        <Text style={styles.summaryValue}>
-                                            {requestForm.material_type} · {requestForm.quantity_estimate}
+                            {/* Material, with the same thumbnail used across the app
+                                so the request is recognisable at a glance. */}
+                            <View style={styles.reqMaterialRow}>
+                                <View style={styles.reqThumbBox}>
+                                    <ExpoImage
+                                        source={{ uri: getMaterialImage(requestForm.material_type) }}
+                                        style={styles.reqThumb}
+                                        contentFit="cover"
+                                        transition={150}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.reqMaterialName}>{requestForm.material_type}</Text>
+                                    <Text style={styles.reqMaterialQty}>{requestForm.quantity_estimate}</Text>
+                                </View>
+                                {requestForm.distance_km != null && (
+                                    <View style={styles.reqDistanceChip}>
+                                        <Text style={styles.reqDistanceText}>
+                                            {parseFloat(requestForm.distance_km).toFixed(1)} km
                                         </Text>
                                     </View>
-                                </View>
+                                )}
+                            </View>
 
-                                <View style={styles.summaryDivider} />
-
-                                <View style={styles.summaryRow}>
-                                    <View style={styles.summaryIconBox}>
-                                        <MapPin size={16} color={colors.text} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.summaryLabel}>Pickup Location</Text>
-                                        <Text style={styles.summaryValue} numberOfLines={2}>
-                                            {customAddress || 'Seller location'}
-                                        </Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.summaryDivider} />
-
-                                <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>
-                                        {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
-                                    </Text>
-                                    <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? colors.text : colors.accent }]}>
-                                        ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
+                            {/* Single stop, drawn like a route row so it reads the
+                                same as the tracking cards elsewhere. */}
+                            <View style={styles.reqStopRow}>
+                                <View style={styles.reqStopDot} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.reqStopLabel}>PICKUP</Text>
+                                    <Text style={styles.reqStopValue} numberOfLines={2}>
+                                        {customAddress || 'Seller location'}
                                     </Text>
                                 </View>
+                                {requestForm.duration_min != null && (
+                                    <Text style={styles.reqEta}>~{Math.round(requestForm.duration_min)} min</Text>
+                                )}
+                            </View>
+
+                            {/* The amount is the decision here, so it leads rather
+                                than sitting in a list row. Revesta takes nothing and
+                                pays nothing while monetization is off, so the note
+                                says who actually settles it - promising an in-app
+                                payout the backend won't make would be a lie. */}
+                            <View style={styles.reqAmountCard}>
+                                <Text style={styles.reqAmountLabel}>
+                                    {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
+                                </Text>
+                                <Text style={styles.reqAmountValue}>
+                                    ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
+                                </Text>
+                                <Text style={styles.reqAmountNote}>
+                                    {requestForm.track_type === 'A'
+                                        ? 'Paid directly to your collector on pickup.'
+                                        : 'Settled directly with the disposer on pickup.'}
+                                </Text>
+                            </View>
+
+                            <View style={styles.reqNoteRow}>
+                                <ShieldCheck size={15} color={colors.textMuted} />
+                                <Text style={styles.reqNoteText}>
+                                    You can cancel any time before the pickup starts.
+                                </Text>
                             </View>
 
                             <AnimatedButton
                                 style={styles.modalConfirmBtn}
+                                haptic
                                 onPress={handleCreateRequest}
                                 disabled={requestLoading}
                             >
-                                {requestLoading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.modalConfirmText}>Confirm Request</Text>}
+                                {requestLoading ? <ActivityIndicator color={colors.onPrimary} /> : (
+                                    <>
+                                        <Text style={styles.modalConfirmText}>Confirm request</Text>
+                                        <ArrowRight size={19} color={colors.onPrimary} style={{ marginLeft: 8 }} />
+                                    </>
+                                )}
                             </AnimatedButton>
                         </ScrollView>
                     </View>
@@ -2158,6 +2196,77 @@ export default function PickupsScreen({ route }) {
 }
 
 const useStyles = makeStyles((c) => ({
+    // --- Confirm request sheet -------------------------------------------
+    reqHandleWrap: { alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
+    reqHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.border },
+    reqHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: 22,
+        paddingTop: 6,
+        paddingBottom: 18,
+    },
+    reqTitle: { fontSize: 23, fontWeight: '800', color: c.text, letterSpacing: -0.4 },
+    reqSubtitle: { fontSize: 13.5, color: c.textSecondary, marginTop: 3 },
+    reqCloseBtn: {
+        width: 32, height: 32, borderRadius: 16, backgroundColor: c.surfaceSunken,
+        alignItems: 'center', justifyContent: 'center', marginLeft: 12,
+    },
+    reqMaterialRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        backgroundColor: c.surfaceAlt,
+        borderRadius: 18,
+        padding: 14,
+        marginBottom: 12,
+    },
+    reqThumbBox: {
+        width: 52, height: 52, borderRadius: 14, overflow: 'hidden',
+        backgroundColor: c.surfaceSunken, alignItems: 'center', justifyContent: 'center',
+    },
+    reqThumb: { width: 52, height: 52 },
+    reqMaterialName: { fontSize: 16, fontWeight: '700', color: c.text },
+    reqMaterialQty: { fontSize: 13, color: c.textSecondary, marginTop: 2 },
+    reqDistanceChip: {
+        backgroundColor: c.surfaceSunken, borderRadius: 20,
+        paddingHorizontal: 11, paddingVertical: 6,
+    },
+    reqDistanceText: { fontSize: 12.5, fontWeight: '700', color: c.textSecondary },
+    reqStopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: c.surfaceAlt,
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 12,
+    },
+    reqStopDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.accent },
+    reqStopLabel: {
+        fontSize: 10.5, fontWeight: '700', color: c.textMuted,
+        letterSpacing: 0.6, marginBottom: 3,
+    },
+    reqStopValue: { fontSize: 15, fontWeight: '600', color: c.text },
+    reqEta: { fontSize: 13, fontWeight: '700', color: c.textSecondary },
+    reqAmountCard: {
+        backgroundColor: c.accentSoft,
+        borderRadius: 18,
+        paddingVertical: 18,
+        paddingHorizontal: 18,
+        marginBottom: 14,
+    },
+    reqAmountLabel: { fontSize: 13, fontWeight: '600', color: c.textSecondary },
+    reqAmountValue: {
+        fontSize: 34, fontWeight: '800', color: c.accent,
+        letterSpacing: -0.8, marginTop: 2,
+    },
+    reqAmountNote: { fontSize: 12.5, color: c.textSecondary, marginTop: 6, lineHeight: 17 },
+    reqNoteRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 2, marginBottom: 18,
+    },
+    reqNoteText: { fontSize: 12.5, color: c.textMuted, flex: 1 },
     searchHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -2867,13 +2976,6 @@ const useStyles = makeStyles((c) => ({
         paddingBottom: Platform.OS === 'ios' ? 40 : 24,
         maxHeight: height * 0.9,
     },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', color: c.text },
     modalBody: {},
     pickerContainer: {
         flexDirection: 'row',
@@ -2896,25 +2998,6 @@ const useStyles = makeStyles((c) => ({
     pickerItemText: { color: c.textSecondary, fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: c.onPrimary, fontWeight: 'bold' },
 
-    summaryCard: {
-        backgroundColor: c.surfaceAlt,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: c.borderSubtle,
-        padding: 16,
-        marginBottom: 20,
-        gap: 14,
-    },
-    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    summaryIconBox: {
-        width: 32, height: 32, borderRadius: 10,
-        backgroundColor: c.surface,
-        justifyContent: 'center', alignItems: 'center',
-    },
-    summaryLabel: { fontSize: 12, color: c.textMuted, fontWeight: '600', marginBottom: 2 },
-    summaryValue: { fontSize: 14, color: c.text, fontWeight: '600' },
-    summaryPrice: { fontSize: 20, fontWeight: '800' },
-    summaryDivider: { height: 1, backgroundColor: c.borderSubtle },
 
     estimateContainer: {
         marginBottom: 20,
@@ -2990,11 +3073,14 @@ const useStyles = makeStyles((c) => ({
     },
     modalConfirmBtn: {
         backgroundColor: c.primary,
-        paddingVertical: 16,
+        paddingVertical: 17,
         borderRadius: 16,
+        // Row so the trailing arrow sits inline with the label.
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 20,
+        marginTop: 4,
+        marginBottom: 8,
     },
     modalConfirmText: {
         color: c.onPrimary,
