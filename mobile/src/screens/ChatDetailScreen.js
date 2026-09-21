@@ -61,7 +61,14 @@ export default function ChatDetailScreen({ route, navigation }) {
 
     const handleIncomingMessage = useCallback((incoming) => {
         setMessages(prev => prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]);
-    }, []);
+        // It lands on an open thread, so it has been read. Without this it
+        // would sit unread in the inbox until the user left and came back.
+        // Only their messages - our own echo back over the same socket.
+        const senderId = incoming.sender?.id ?? incoming.sender;
+        if (String(senderId) === String(contactId)) {
+            chatApi.markRead(contactId).catch(() => {});
+        }
+    }, [contactId]);
 
     // Live push for the other person's messages; sending still goes
     // through REST below (fetchMessages() re-syncs our own send).

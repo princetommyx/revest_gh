@@ -2,3 +2,6 @@
 # not project source. Never meant to be committed. Project skills under
 # .claude/skills/ ARE meant to be committed, so this only excludes worktrees.
 .claude/worktrees/
+
+# Local test databases
+*.sqlite3

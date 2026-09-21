@@ -9,6 +9,15 @@ class Message(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
+    class Meta:
+        indexes = [
+            # The inbox counts unread per contact on every load:
+            # WHERE receiver = me AND is_read = false GROUP BY sender.
+            # The receiver FK index alone still scans every message that
+            # user has ever received.
+            models.Index(fields=['receiver', 'is_read'], name='msg_receiver_isread_idx'),
+        ]
+
     def __str__(self):
         return f"From {self.sender} to {self.receiver}"
 

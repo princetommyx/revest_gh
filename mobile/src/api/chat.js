@@ -12,6 +12,11 @@ export const chatApi = {
         return response.data;
     },
 
+    markRead: async (userId) => {
+        const response = await apiClient.post('chat/messages/mark-read/', { user_id: userId });
+        return response.data;
+    },
+
     sendMessage: async (receiverId, content) => {
         const response = await apiClient.post('chat/messages/', {
             receiver: receiverId,
