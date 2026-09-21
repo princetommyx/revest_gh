@@ -115,7 +115,7 @@ apiClient.interceptors.response.use(
                 return apiClient(originalRequest);
             } catch (refreshError) {
                 // Refresh failed, logout user
-                console.warn('[API] Token refresh failed:', refreshError.response?.data || refreshError.message);
+                console.warn('[API] Token refresh failed:', refreshError?.response?.data || refreshError?.message || refreshError);
                 await authStorage.clearSession();
                 console.warn('Session expired - Please login again');
             }
