@@ -27,5 +27,14 @@ export const adminApi = {
             console.error('Error fetching promo cards:', error);
             throw error;
         }
+    },
+
+    /**
+     * Public system flags the app needs at runtime - right now just
+     * whether monetization (pricing, fees, commission) is switched on.
+     */
+    getAppConfig: async () => {
+        const response = await apiClient.get('admin/system/config/public/');
+        return response.data;
     }
 };

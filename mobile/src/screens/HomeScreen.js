@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import {
     Search, Plus, MapPin, ArrowRight, Truck,
     Package, User, Bell, SlidersHorizontal, Heart, Star, ChevronDown, ArrowUpRight,
-    LayoutGrid, Droplet, Magnet, FileText, Blocks
+    LayoutGrid
 } from 'lucide-react-native';
 import apiClient, { BASE_URL } from '../api/client';
 import { adminApi } from '../api/admin';
@@ -28,16 +28,25 @@ import { reverseGeocodeShort } from '../utils/geo';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
 
+// Real rendered icons rather than flat outline shapes - stand out against
+// the plain stroke icons around them in the category row.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+const METALS_ICON = require('../../assets/metals-icon.png');
+const PLASTICS_ICON = require('../../assets/plastics-icon.png');
+const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
+const GLASS_ICON = require('../../assets/glass-icon.png');
+
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
-    { id: 'Plastics', name: 'Plastics', icon: Droplet },
-    { id: 'Metals', name: 'Metals', icon: Magnet },
-    { id: 'Paper', name: 'Paper', icon: FileText },
-    { id: 'Glass', name: 'Glass', icon: Droplet },
-    { id: 'Electronics', name: 'E-Waste', icon: Blocks }
+    { id: 'Plastics', name: 'Plastics', image: PLASTICS_ICON },
+    { id: 'Metals', name: 'Metals', image: METALS_ICON },
+    { id: 'Paper', name: 'Paper', image: PAPER_ICON },
+    { id: 'Glass', name: 'Glass', image: GLASS_ICON },
+    { id: 'Electronics', name: 'E-Waste', image: ELECTRONICS_ICON }
 ];
 
 export const getMaterialImage = (materialType) => {
@@ -55,6 +64,7 @@ export const getMaterialImage = (materialType) => {
 export default function HomeScreen({ navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
     const [filter, setFilter] = useState('');
@@ -228,7 +238,7 @@ export default function HomeScreen({ navigation }) {
                         </AnimatedButton>
                     </View>
                     {userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? (
-                        <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                        <Truck size={80} color={isDark ? 'rgba(11,15,14,0.3)' : 'rgba(255,255,255,0.3)'} style={{ position: 'absolute', right: 10, bottom: 10 }} />
                     ) : (
                         <Image source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} style={styles.heroImage} contentFit="cover" />
                     )}
@@ -269,7 +279,7 @@ export default function HomeScreen({ navigation }) {
                             {promo.image || promo.image_url ? (
                                 <Image source={{ uri: promo.image ? resolveImageUrl(promo.image) : promo.image_url }} style={styles.heroImage} contentFit="cover" />
                             ) : (
-                                <Truck size={80} color="rgba(255,255,255,0.3)" style={{ position: 'absolute', right: 10, bottom: 10 }} />
+                                <Truck size={80} color={isDark ? 'rgba(11,15,14,0.3)' : 'rgba(255,255,255,0.3)'} style={{ position: 'absolute', right: 10, bottom: 10 }} />
                             )}
                         </View>
                     ))}
@@ -288,6 +298,15 @@ export default function HomeScreen({ navigation }) {
     const renderCategory = (item) => {
         const isActive = filter === item.id;
         const IconComp = item.icon;
+        // A stroke icon re-tints itself via onPrimary/text, so filling the
+        // whole circle with the theme's (dark-mode-inverting) primary color
+        // when active always keeps it readable. These rendered images can't
+        // re-tint - they're fixed light-gray objects - so on that same fill
+        // in dark mode (where primary flips to near-white) they'd wash out
+        // against a background close to their own color. Signal "active"
+        // with a border accent instead, the same way Create Listing's
+        // material cards already do, rather than inverting the fill under them.
+        const activeStyle = item.image ? styles.catCircleActiveOutline : styles.catCircleActive;
         return (
             <TouchableOpacity
                 key={item.id}
@@ -297,8 +316,12 @@ export default function HomeScreen({ navigation }) {
                     else setFilter(item.id);
                 }}
             >
-                <View style={[styles.catCircle, isActive && styles.catCircleActive]}>
-                    <IconComp size={24} color={isActive ? colors.onPrimary : colors.text} />
+                <View style={[styles.catCircle, isActive && activeStyle]}>
+                    {item.image ? (
+                        <Image source={item.image} style={styles.catIconImage} contentFit="contain" />
+                    ) : (
+                        <IconComp size={24} color={isActive ? colors.onPrimary : colors.text} />
+                    )}
                 </View>
                 <Text style={[styles.catLabel, isActive && styles.catLabelActive]}>{item.name}</Text>
             </TouchableOpacity>
@@ -311,7 +334,11 @@ export default function HomeScreen({ navigation }) {
         return (
             <TouchableOpacity key={item.id} style={styles.collCatCard} onPress={() => navigation.navigate('Pickups', { category: item.id })}>
                 <View style={styles.collCatIconBox}>
-                    <IconComp size={24} color={colors.text} />
+                    {item.image ? (
+                        <Image source={item.image} style={styles.collCatIconImage} contentFit="contain" />
+                    ) : (
+                        <IconComp size={24} color={colors.text} />
+                    )}
                 </View>
                 <Text style={styles.collCatText}>{item.name}</Text>
             </TouchableOpacity>
@@ -328,6 +355,10 @@ export default function HomeScreen({ navigation }) {
         const navTarget = 'ListingDetail';
         const navParams = { listingId: item.id };
         const materialObj = CATEGORIES.find(c => c.id.toLowerCase() === item.material_type?.toLowerCase()) || CATEGORIES[1];
+        // Every CATEGORIES entry except "All" carries `image` (a rendered
+        // PNG), not `icon` (a component) - MaterialIcon was undefined for
+        // every real material and rendered unconditionally below, crashing
+        // this card the instant it appeared.
         const MaterialIcon = materialObj.icon;
 
         return (
@@ -341,7 +372,7 @@ export default function HomeScreen({ navigation }) {
                         </View>
                     )}
                     <View style={styles.collCardHeart}>
-                        <Heart size={16} color={colors.text} />
+                        <Heart size={16} color="#374151" />
                     </View>
                 </View>
                 {!isRecommended && (
@@ -351,7 +382,11 @@ export default function HomeScreen({ navigation }) {
                 )}
                 <Text style={styles.collCardTitle} numberOfLines={1}>{title}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                    <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    {materialObj.image ? (
+                        <Image source={materialObj.image} style={{ width: 12, height: 12, marginRight: 4 }} contentFit="contain" />
+                    ) : MaterialIcon ? (
+                        <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    ) : null}
                     <Text style={styles.collCardSubtitle}>{materialObj.name}</Text>
                     <Text style={styles.collCardSubtitle}> • {qty}</Text>
                 </View>
@@ -359,7 +394,9 @@ export default function HomeScreen({ navigation }) {
                     <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={styles.collCardSubtitle} numberOfLines={1}>{loc}</Text>
                 </View>
-                <Text style={styles.collCardPrice}>{isFree ? 'Free' : `GH₵ ${Number(price).toFixed(2)}`}</Text>
+                {pricingEnabled && (
+                    <Text style={styles.collCardPrice}>{isFree ? 'Free' : `GH₵ ${Number(price).toFixed(2)}`}</Text>
+                )}
                 
                 {!isRecommended && (
                     <TouchableOpacity style={styles.collCardBtn} onPress={() => navigation.navigate(navTarget, navParams)}>
@@ -753,7 +790,12 @@ const useStyles = makeStyles((c) => ({
         overflow: 'hidden',
     },
     requestPickupTitle: { fontSize: 15, fontWeight: '700', color: c.onPrimary, marginBottom: 2 },
-    requestPickupSubtitle: { fontSize: 12, color: 'rgba(255,255,255,0.75)' },
+    // Hardcoded white-on-dark assumed the card (backgroundColor: c.primary)
+    // stays dark - c.primary deliberately flips to a light colour in dark
+    // mode (see tokens.js), so the card itself turns white there and this
+    // text vanished. Mirrors onPrimary's own light/dark values instead of
+    // a literal, at reduced opacity for the same subdued weight as before.
+    requestPickupSubtitle: { fontSize: 12, color: c.isDark ? 'rgba(11,15,14,0.75)' : 'rgba(255,255,255,0.75)' },
 
     recentChipsRow: { gap: 8, paddingBottom: 16 },
     recentChip: {
@@ -778,7 +820,11 @@ const useStyles = makeStyles((c) => ({
     heroBanner: { backgroundColor: c.primary, borderRadius: 24, padding: 20, flexDirection: 'row', height: 160, overflow: 'hidden', marginBottom: 12 },
     heroContent: { flex: 1, justifyContent: 'center', zIndex: 2 },
     heroTitle: { color: c.onPrimary, fontSize: 22, fontWeight: '800', marginBottom: 6 },
-    heroSubtitle: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 16, lineHeight: 18 },
+    // Same c.primary-flips-in-dark-mode issue as requestPickupSubtitle above -
+    // only actually visible when this banner uses c.primary as its background
+    // (the Seller/Disposer branch below), but harmless either way since accent
+    // (the other background this banner can use) doesn't invert between themes.
+    heroSubtitle: { color: c.isDark ? 'rgba(11,15,14,0.8)' : 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 16, lineHeight: 18 },
     heroBtn: { backgroundColor: c.surface, alignSelf: 'flex-start', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20 },
     heroBtnText: { color: c.text, fontWeight: 'bold', fontSize: 13 },
     heroImage: { position: 'absolute', right: -20, bottom: -20, width: 140, height: 140, borderRadius: 70, opacity: 0.8 },
@@ -795,6 +841,10 @@ const useStyles = makeStyles((c) => ({
     catWrap: { alignItems: 'center', flex: 1 },
     catCircle: { width: 60, height: 60, borderRadius: 30, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginBottom: 8, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
     catCircleActive: { backgroundColor: c.primary },
+    // For image-backed categories - keeps the neutral (theme-safe) fill and
+    // marks "active" with a ring instead of inverting the background color.
+    catCircleActiveOutline: { borderWidth: 2, borderColor: c.primary },
+    catIconImage: { width: 30, height: 30 },
     catLabel: { fontSize: 13, color: c.textSecondary, fontWeight: '500' },
     catLabelActive: { color: c.text, fontWeight: 'bold' },
     
@@ -814,6 +864,7 @@ const useStyles = makeStyles((c) => ({
     // Collector specific styles
     collCatCard: { backgroundColor: c.surfaceSunken, borderRadius: 16, padding: 12, alignItems: 'center', width: 80, marginRight: 12 },
     collCatIconBox: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
+    collCatIconImage: { width: 26, height: 26 },
     collCatText: { fontSize: 12, fontWeight: '600', color: c.text },
     collCard: { width: 260, backgroundColor: c.surface, borderRadius: 20, padding: 12, marginRight: 16, shadowColor: c.shadow, shadowOffset: {width: 0, height: 2}, shadowOpacity: 0.05, shadowRadius: 5, elevation: 2 },
     collCardImageBox: { width: '100%', height: 140, borderRadius: 12, overflow: 'hidden', marginBottom: 12 },

@@ -31,7 +31,7 @@ const FAQS = [
     },
     {
         q: "Is there a fee for listing items?",
-        a: "Listing is free. Revesta only takes a small commission on completed sales."
+        a: "Listing is free, and right now Revesta doesn't take a cut of anything - we're focused on connecting disposers and collectors. Any price is agreed and settled directly between you."
     },
     {
         q: "How do I see my earnings?",

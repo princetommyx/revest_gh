@@ -1,0 +1,42 @@
+{% extends "emails/base_email.html" %}
+
+{% block title %}{{ title|default:"Success" }} — ReVesta{% endblock %}
+{% block preheader %}{{ message }}{% endblock %}
+
+{% block content %}
+<h2 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #f2f5f4; text-align: center;">
+    {{ title|default:"All set" }}
+</h2>
+<p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #a6b2af; text-align: center;">
+    Hi {{ user_name }}, {{ message }}
+</p>
+
+{% if details %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #1b2322; border: 1px solid #2c3634; border-radius: 8px; margin-bottom: 28px;">
+    <tr>
+        <td style="padding: 16px 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                {% for row in details %}
+                <tr>
+                    <td style="padding: {% if not forloop.last %}0 0 8px 0{% else %}0{% endif %}; color: #7c8a87; font-size: 13px; width: 40%;">{{ row.label }}</td>
+                    <td style="padding: {% if not forloop.last %}0 0 8px 0{% else %}0{% endif %}; color: #f2f5f4; font-size: 13px; font-weight: 600; text-align: right;">{{ row.value }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </td>
+    </tr>
+</table>
+{% endif %}
+
+{% if cta_url %}
+<table role="presentation" cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+    <tr>
+        <td style="border-radius: 8px; background-color: #10b981;">
+            <a href="{{ cta_url }}" style="display: inline-block; padding: 14px 32px; font-size: 16px; font-weight: 700; color: #04120d; text-decoration: none;">
+                {{ cta_label|default:"View in ReVesta" }}
+            </a>
+        </td>
+    </tr>
+</table>
+{% endif %}
+{% endblock %}

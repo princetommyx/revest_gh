@@ -1,4 +1,6 @@
 import logging
+import requests
+from django.conf import settings
 from django.db import models
 from rest_framework import viewsets, permissions, filters, status, serializers
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -15,6 +17,14 @@ from .serializers import (
     PickupRequestUpdateSerializer
 )
 from wallet.services import WalletService
+from intelligence.matching import match_score
+from intelligence.services import (
+    link_prediction_to_request,
+    link_price_quote_to_request,
+    record_price_quote,
+    record_weight_feedback,
+)
+from intelligence.routing import travel_estimate
 from .utils import haversine
 from django.contrib.auth import get_user_model
 from channels.layers import get_channel_layer
@@ -24,6 +34,40 @@ from datetime import timedelta
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def _fetch_driving_route(origin_lat, origin_lon, dest_lat, dest_lon):
+    """
+    Real road distance/duration (with live traffic where Google has it)
+    between two points, via the Distance Matrix API. Returns
+    (distance_km, duration_min), or None on any failure/misconfiguration -
+    callers fall back to the straight-line haversine estimate.
+    """
+    api_key = getattr(settings, 'GOOGLE_MAPS_API_KEY', None)
+    if not api_key:
+        return None
+    try:
+        resp = requests.get(
+            'https://maps.googleapis.com/maps/api/distancematrix/json',
+            params={
+                'origins': f'{origin_lat},{origin_lon}',
+                'destinations': f'{dest_lat},{dest_lon}',
+                'departure_time': 'now',
+                'key': api_key,
+            },
+            timeout=3,
+        )
+        data = resp.json()
+        element = data['rows'][0]['elements'][0]
+        if element.get('status') != 'OK':
+            return None
+        duration_field = element.get('duration_in_traffic', element['duration'])
+        distance_km = element['distance']['value'] / 1000
+        duration_min = duration_field['value'] / 60
+        return distance_km, duration_min
+    except Exception:
+        logger.warning('Distance Matrix lookup failed, falling back to haversine estimate', exc_info=True)
+        return None
 
 @extend_schema(tags=['logistics'])
 @extend_schema_view(
@@ -60,10 +104,28 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             
             # Active jobs for this collector
             active_q = models.Q(collector=user, status__in=['ACCEPTED', 'ARRIVED'])
+
+            # Jobs this user RAISED themselves. A recycler requesting a
+            # collector is a provider on that job, but their role sends them
+            # down this branch instead of the provider branch at the bottom -
+            # so their own request was returned by nothing, and they could
+            # neither see it nor track the collector coming to it. The board
+            # still refuses to let them accept it (see pending_q below); this
+            # only makes it visible to the person who asked for it.
+            raised_q = models.Q(
+                provider=user, status__in=['PENDING', 'ACCEPTED', 'ARRIVED']
+            )
             
             # Pending jobs nearby
             two_hours_ago = timezone.now() - timedelta(hours=2)
             pending_q = models.Q(status='PENDING', created_at__gte=two_hours_ago)
+
+            # A recycler/collector must never see their own posted request on
+            # the job board they accept jobs from - otherwise (as happened)
+            # they can accept their own job, becoming both provider and
+            # collector on the same record, which then renders confusingly
+            # everywhere a screen shows "the disposer" (it shows themselves).
+            pending_q &= ~models.Q(provider=user)
 
             # A blocked collector must not be able to pick up the blocker's
             # job and turn up at their address. Only applied to the open
@@ -93,25 +155,71 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                     
                     # Strict Haversine filter (Python side since we are dealing with a small subset)
                     # For a truly scalable solution, GeoDjango/PostGIS would be used.
-                    all_candidates = queryset.filter(active_q | pending_q)
-                    nearby_ids = []
+                    all_candidates = queryset.filter(active_q | pending_q | raised_q)
+                    active_ids = []
+                    scored_pending = []
                     for job in all_candidates:
-                        if job.status != 'PENDING' or job.collector == user:
-                            nearby_ids.append(job.id)
+                        # A job the user raised is theirs to watch, never
+                        # theirs to accept - so it skips proximity scoring
+                        # (their own pickup matters however far away it is)
+                        # and is never ranked as available work.
+                        if job.provider_id == user.id:
+                            active_ids.append(job.id)
                             continue
-                            
+                        if job.status != 'PENDING' or job.collector == user:
+                            active_ids.append(job.id)
+                            continue
+
                         dist = haversine(lat_f, lon_f, float(job.latitude), float(job.longitude))
                         if dist <= 20: # 20km radius
-                            nearby_ids.append(job.id)
-                    
-                    return PickupRequest.objects.filter(id__in=nearby_ids).order_by('-created_at')
+                            scored_pending.append((job.id, match_score(
+                                distance_km=dist,
+                                acceptance_rate=user.acceptance_rate,
+                                completion_rate=user.completion_rate,
+                                avg_rating=user.avg_rating,
+                            )))
+
+                    # Own active job(s) first (nothing else needs attention
+                    # more than a pickup already in progress), then nearby
+                    # PENDING jobs best-match first. Everyone's acceptance/
+                    # completion/rating is the same constant for every job on
+                    # THEIR OWN board, so today this is equivalent to sorting
+                    # by distance alone - match_score is used anyway so this
+                    # stays correct once a per-job factor (material affinity,
+                    # urgency) is added and actually varies the ranking.
+                    scored_pending.sort(key=lambda pair: pair[1], reverse=True)
+                    ordered_ids = active_ids + [job_id for job_id, _ in scored_pending]
+                    if not ordered_ids:
+                        return PickupRequest.objects.none()
+
+                    preserved_order = models.Case(
+                        *[models.When(id=pk, then=pos) for pos, pk in enumerate(ordered_ids)],
+                        output_field=models.IntegerField(),
+                    )
+                    return PickupRequest.objects.filter(id__in=ordered_ids).order_by(preserved_order)
                     
                 except (ValueError, TypeError):
                     pass
             
-            return queryset.filter(active_q | pending_q).order_by('-created_at')
+            return queryset.filter(active_q | pending_q | raised_q).order_by('-created_at')
             
         return PickupRequest.objects.select_related('provider', 'collector').filter(provider=user).order_by('-created_at')
+
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        # Only the 'list' action's serializer (PickupRequestListSerializer)
+        # renders is_rated, and get_queryset() above has several return
+        # points built around delicate haversine-ordering logic - easier and
+        # safer to attach this here, after all of them, than to thread a
+        # prefetch through each branch. Without it, is_rated ran one
+        # `ratings.filter(...).exists()` query per row in the response.
+        if self.action == 'list' and self.request.user.is_authenticated:
+            from django.db.models import Prefetch
+            from ratings.models import Rating
+            queryset = queryset.prefetch_related(
+                Prefetch('ratings', queryset=Rating.objects.filter(rater=self.request.user), to_attr='user_ratings')
+            )
+        return queryset
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -123,14 +231,25 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         return PickupRequestDetailSerializer
 
     def perform_create(self, serializer):
-        provider = self.request.user
+        requester = self.request.user
         track_type = serializer.validated_data.get('track_type', 'A')
+        listing = serializer.validated_data.get('listing')
         waste_price = Decimal(str(serializer.validated_data.get('waste_price', 0) or 0))
         delivery_fee = Decimal(str(serializer.validated_data.get('delivery_fee', 0) or 0))
         payment_method = serializer.validated_data.get('payment_method', 'CASH')
 
         RECYCLER_COMMISSION = Decimal('5.00')
         total_amount = waste_price + delivery_fee
+
+        # A collector tapping "Accept Job" on someone else's marketplace
+        # listing used to POST here with themselves as `provider` - which
+        # made the job invisible to them forever (a collector's own job
+        # board excludes anything they're the provider on, to stop
+        # self-accept) and left the actual seller with nothing posted. Treat
+        # this as a direct claim instead: the seller is the provider, the
+        # tapping user is the collector, and it's ACCEPTED immediately.
+        is_direct_claim = listing is not None and listing.seller_id != requester.id
+        provider = listing.seller if is_direct_claim else requester
 
         provider_is_recycler = (provider.role == 'RECYCLER')
         monetized = WalletService.monetization_enabled()
@@ -139,7 +258,25 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             total_amount += RECYCLER_COMMISSION
 
         # 1. Save the request first
-        request = serializer.save(provider=provider, actual_price=total_amount)
+        save_kwargs = {'provider': provider, 'actual_price': total_amount}
+        if is_direct_claim:
+            save_kwargs['collector'] = requester
+            save_kwargs['status'] = 'ACCEPTED'
+            save_kwargs['accepted_at'] = timezone.now()
+        request = serializer.save(**save_kwargs)
+
+        # Best-effort link back to the estimate_price() quote that led here,
+        # so a future pricing model can eventually learn which quotes turn
+        # into real bookings. Only meaningful when the requester themselves
+        # got the quote - a collector direct-claiming someone else's listing
+        # never called estimate_price for it.
+        if not is_direct_claim:
+            link_price_quote_to_request(requester, request)
+            # Same idea for the waste analysis that produced the material and
+            # weight on this request - without the link, a predicted weight
+            # and the scale weight recorded against this same pickup can
+            # never be compared.
+            link_prediction_to_request(requester, request)
 
         # 2. Handle Escrow/Payment
         # ONLY lock escrow if:
@@ -161,8 +298,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 request.save()
                 raise serializers.ValidationError({"detail": str(e), "code": "escrow_failed"})
 
-        # Logic to find nearby collectors
-        self.notify_nearby_collectors(request)
+        if is_direct_claim:
+            # Already claimed - tell the seller a collector is coming rather
+            # than broadcasting an already-taken job to the whole board.
+            self.notify_provider(request, 'job_accepted')
+        else:
+            # Logic to find nearby collectors
+            self.notify_nearby_collectors(request)
 
     @extend_schema(summary="Accept a pickup request")
     @action(detail=True, methods=['post'])
@@ -170,7 +312,13 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request = self.get_object()
         if pickup_request.status != 'PENDING':
             return Response({'error': 'Job already taken or not pending'}, status=400)
-            
+
+        # Belt-and-suspenders alongside the job-board queryset excluding a
+        # user's own posted requests: a clear error here instead of relying
+        # solely on the board hiding it (which would otherwise 404).
+        if pickup_request.provider_id == request.user.id:
+            return Response({'error': "You can't accept your own pickup request"}, status=400)
+
         # Check wallet standing
         is_eligible, error_msg = WalletService.check_eligibility_for_job(request.user)
         if not is_eligible:
@@ -190,8 +338,9 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
         pickup_request.status = 'ACCEPTED'
         pickup_request.collector = request.user
+        pickup_request.accepted_at = timezone.now()
         pickup_request.save()
-        
+
         self.notify_provider(pickup_request, 'job_accepted')
         return Response({'status': 'job accepted'})
 
@@ -205,6 +354,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             return Response({'error': 'You are not the collector for this job'}, status=403)
             
         pickup_request.status = 'ARRIVED'
+        pickup_request.arrived_at = timezone.now()
         pickup_request.save()
 
         # Early Payout for Sellers (Track B & C).
@@ -262,7 +412,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                 "verified_at": timezone.now().isoformat()
             }
             pickup_request.save()
-            
+
+            # The one moment in the app where a model's weight estimate meets
+            # an actual scale. Recorded fire-and-forget: a feedback write must
+            # never cost a collector their verification.
+            record_weight_feedback(pickup_request, manual_weight)
+
             return Response({
                 'is_verified': is_verified,
                 'ai_weight_estimate': ai_weight,
@@ -287,6 +442,7 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
             pass
 
         pickup_request.status = 'COMPLETED'
+        pickup_request.completed_at = timezone.now()
         pickup_request.save()
         
         # Process Payouts based on Track Type - only when monetization is on.
@@ -307,6 +463,57 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         self.notify_provider(pickup_request, 'job_completed')
         return Response({'status': 'job completed'})
 
+    @extend_schema(summary="Rate the other party on a completed pickup")
+    @action(detail=True, methods=['post'])
+    def rate(self, request, pk=None):
+        # Deliberately not self.get_object() - get_queryset() is scoped to
+        # what belongs on a collector's job board or a provider's own jobs,
+        # which excludes COMPLETED jobs for a collector entirely. The
+        # participant check below is the real permission check either way.
+        from django.shortcuts import get_object_or_404
+        pickup_request = get_object_or_404(PickupRequest, pk=pk)
+
+        if pickup_request.status != 'COMPLETED':
+            return Response({'error': 'Can only rate a completed job'}, status=400)
+
+        if request.user == pickup_request.provider:
+            ratee = pickup_request.collector
+        elif request.user == pickup_request.collector:
+            ratee = pickup_request.provider
+        else:
+            return Response({'error': 'You are not a participant on this job'}, status=403)
+
+        if not ratee:
+            return Response({'error': 'Nothing to rate on this job'}, status=400)
+
+        try:
+            score = int(request.data.get('score'))
+        except (TypeError, ValueError):
+            score = None
+        if score is None or not (1 <= score <= 5):
+            return Response({'error': 'score must be an integer from 1 to 5'}, status=400)
+
+        from django.db import IntegrityError
+        from django.db.models import Avg
+        from ratings.models import Rating
+
+        try:
+            Rating.objects.create(
+                pickup_request=pickup_request,
+                rater=request.user,
+                ratee=ratee,
+                score=score,
+                comment=request.data.get('comment', '') or '',
+            )
+        except IntegrityError:
+            return Response({'error': 'You already rated this job'}, status=400)
+
+        avg = Rating.objects.filter(ratee=ratee).aggregate(avg=Avg('score'))['avg']
+        ratee.avg_rating = round(avg, 2) if avg is not None else None
+        ratee.save(update_fields=['avg_rating'])
+
+        return Response({'status': 'rating_saved', 'ratee_avg_rating': ratee.avg_rating})
+
     @extend_schema(summary="Cancel pickup")
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
@@ -324,24 +531,30 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         pickup_request.status = 'CANCELLED'
         pickup_request.save()
         
-        # Refund Logic (If paid via Digital Wallet)
-        if pickup_request.payment_method == 'DIGITAL_WALLET':
-             from wallet.models import Wallet, Transaction
+        # Refund Logic - 'DIGITAL' is the only real payment_method value this
+        # app ever writes (see PickupRequest.PAYMENT_METHOD_CHOICES);
+        # 'DIGITAL_WALLET' here could never match, so every digitally-paid
+        # cancellation used to skip the refund entirely and leave the escrow
+        # HELD forever.
+        if pickup_request.payment_method == 'DIGITAL':
+             from wallet.models import Wallet, Transaction, Escrow
              from django.db import transaction
              from decimal import Decimal
-             
-             # Calculate refundable amount (Escrowed amount)
-             # We can't easily track exactly what was debited without a link, but we can reconstruct or check existing transactions
-             # detailed_amount = pickup_request.actual_price or (pickup_request.waste_price + pickup_request.delivery_fee)
-             # Simpler: If we debited actual_price, we refund actual_price
-             refund_amount = pickup_request.actual_price
-             
+
+             escrow = Escrow.objects.filter(pickup=pickup_request, status='HELD').first()
+             # Refund exactly what was debited into escrow when it exists -
+             # that's the authoritative record of what left the payer's
+             # wallet. actual_price is only a fallback for the (shouldn't
+             # happen under the current flow, but cheap to guard) case where
+             # a digital payment was taken without ever creating an escrow row.
+             refund_amount = escrow.amount if escrow else pickup_request.actual_price
+
              if refund_amount and refund_amount > 0:
                  with transaction.atomic():
                      provider_wallet, _ = Wallet.objects.select_for_update().get_or_create(user=pickup_request.provider)
                      provider_wallet.balance += refund_amount
                      provider_wallet.save()
-                     
+
                      Transaction.objects.create(
                          wallet=provider_wallet,
                          pickup=pickup_request,
@@ -350,6 +563,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
                          status='COMPLETED',
                          description=f"Refund for Cancelled Job #{pickup_request.id}"
                      )
+
+                     if escrow:
+                         escrow.status = 'REFUNDED'
+                         escrow.save(update_fields=['status'])
 
         # Notify other party
         if request.user == pickup_request.provider and pickup_request.collector:
@@ -629,10 +846,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         """
         lat = request.data.get('latitude')
         lon = request.data.get('longitude')
-        
+
         if not lat or not lon:
             return Response({'error': 'Latitude and Longitude required'}, status=400)
-            
+
         try:
             lat = float(lat)
             lon = float(lon)
@@ -641,35 +858,73 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
 
         # 1. Find nearest online collector. Recyclers are excluded for the
         # same reason as in notify_nearby_collectors - quoting off a recycler's
-        # position would price a trip nobody is going to make.
+        # position would price a trip nobody is going to make, and it would
+        # also inflate the supply side of the demand ratio below.
         online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
+        online_collector_count = online_collectors.count()
         nearest_collector = None
         min_dist = float('inf')
-        
+
         for collector in online_collectors:
             if collector.current_lat and collector.current_lon:
                 dist = haversine(lat, lon, collector.current_lat, collector.current_lon)
                 if dist < min_dist:
                     min_dist = dist
                     nearest_collector = collector
-        
+
         # Fallback if no collectors online: Use a default distance (e.g., from city center or 5km)
         if not nearest_collector:
             # For estimation purposes, assume a collector is ~5km away if none found
-            min_dist = 5.0 
-            
-        # 2. Estimate Duration (Assume 40km/h avg speed in city)
-        # Time = Distance / Speed * 60 min
-        avg_speed_kmh = 40.0
-        duration_min = (min_dist / avg_speed_kmh) * 60
-        
-        # 3. Calculate Price
+            min_dist = 5.0
+
+        # 2. Distance/duration - real road route (with live traffic) when we
+        # can reach Google, otherwise the straight-line/40km-h fallback.
+        # That fallback is what previously made every estimate look
+        # "hardcoded": with only one or two collectors online during testing,
+        # the same straight-line distance kept recurring.
+        # The straight line is kept whatever happens: paired with a routed
+        # distance it is what makes road circuity measurable rather than
+        # assumed (see intelligence.routing).
+        straight_line_km = min_dist
+        distance_km, duration_min = travel_estimate(min_dist)
+
+        routed = None
+        if nearest_collector and nearest_collector.current_lat and nearest_collector.current_lon:
+            routed = _fetch_driving_route(
+                nearest_collector.current_lat, nearest_collector.current_lon, lat, lon
+            )
+            if routed:
+                distance_km, duration_min = routed
+
+        # 3. Demand adjustment - more pending jobs per online collector means
+        # a longer real-world wait than travel time alone predicts. Capped so
+        # a busy night can't blow the estimate up past 2x.
+        pending_jobs = PickupRequest.objects.filter(status='PENDING').count()
+        demand_ratio = pending_jobs / online_collector_count if online_collector_count else float(pending_jobs)
+        demand_multiplier = 1 + min(demand_ratio * 0.15, 1.0)
+        duration_min = duration_min * demand_multiplier
+
+        # 4. Calculate Price
         from .pricing import calculate_fare_estimate
-        price = calculate_fare_estimate(min_dist, duration_min)
-        
+        price = calculate_fare_estimate(distance_km, duration_min)
+
+        record_price_quote(
+            user=request.user if request.user.is_authenticated else None,
+            lat=lat,
+            lon=lon,
+            distance_km=distance_km,
+            straight_line_km=straight_line_km,
+            duration_min=duration_min,
+            used_real_route=routed is not None,
+            online_collector_count=online_collector_count,
+            pending_job_count=pending_jobs,
+            demand_multiplier=demand_multiplier,
+            quoted_price=price,
+        )
+
         return Response({
             'estimated_price': price,
-            'distance_km': round(min_dist, 2),
+            'distance_km': round(distance_km, 2),
             'duration_min': round(duration_min, 0),
             'currency': 'GHS'
         })

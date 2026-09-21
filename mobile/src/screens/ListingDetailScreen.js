@@ -21,12 +21,14 @@ import ReportSheet from '../components/ReportSheet';
 import { formatRelativeTime } from '../utils/dateFormat';
 import { haversineDistanceKm } from '../utils/geo';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function ListingDetailScreen({ route, navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const { listingId } = route.params;
     const { user, userRole } = useAuth();
     const insets = useSafeAreaInsets();
@@ -135,7 +137,7 @@ export default function ListingDetailScreen({ route, navigation }) {
         });
     };
 
-    if (loading) return <PageLoader label="Loading listing..." />;
+    if (loading) return <PageLoader label="Previewing waste..." />;
 
     if (!listing) {
         return (
@@ -153,7 +155,10 @@ export default function ListingDetailScreen({ route, navigation }) {
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+            {/* container's background (c.surface) goes dark in dark mode -
+                a status bar stuck on dark-content went invisible against it,
+                unlike every other screen in the app which already follows isDark. */}
+            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
             
             {/* Header Overlay */}
             <View style={[styles.headerToolbar, { paddingTop: Math.max(insets.top, 20) }]}>
@@ -190,7 +195,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                     </View>
 
                     <Text style={styles.title} numberOfLines={2}>{listing.title}</Text>
-                    <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                    {pricingEnabled && (
+                        <Text style={styles.price}>{listing.is_free ? 'FREE' : `₵${listing.price}`}</Text>
+                    )}
 
                     {/* Stats Card */}
                     <View style={styles.statsCard}>
@@ -279,12 +286,13 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </TouchableOpacity>
                     )}
 
-                    {/* Similar Waste */}
-                    {similarListings.length > 0 && (
+                    {/* Similar Waste - hidden for collectors, whose "see all"
+                        would land them in a marketplace they no longer have. */}
+                    {similarListings.length > 0 && userRole !== 'COLLECTOR' && (
                         <View style={styles.similarSection}>
                             <View style={styles.similarHeader}>
                                 <Text style={styles.similarSectionTitle}>Similar Waste</Text>
-                                <TouchableOpacity onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })}>
+                                <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}>
                                     <Text style={styles.seeAllText}>See all</Text>
                                 </TouchableOpacity>
                             </View>
@@ -313,7 +321,9 @@ export default function ListingDetailScreen({ route, navigation }) {
                                         </View>
                                         <View style={styles.similarDetails}>
                                             <Text style={styles.similarTitle} numberOfLines={1}>{item.title}</Text>
-                                            <Text style={styles.similarPrice}>₵ {item.price}</Text>
+                                            {pricingEnabled && (
+                                                <Text style={styles.similarPrice}>₵ {item.price}</Text>
+                                            )}
                                             <View style={styles.similarLocRow}>
                                                 <MapPin size={12} color={colors.accent} />
                                                 <Text style={styles.similarLoc} numberOfLines={1}>{item.location}</Text>
@@ -348,11 +358,22 @@ export default function ListingDetailScreen({ route, navigation }) {
                 ) : (
                     <View style={styles.collectorActionCol}>
                         <View style={styles.actionTopRow}>
-                            <TouchableOpacity style={styles.outlineActionBtn}>
+                            <TouchableOpacity 
+                                style={styles.outlineActionBtn}
+                                onPress={() => navigation.navigate('ChatDetail', {
+                                    contactId: listing.seller.id,
+                                    contactName: [listing.seller.first_name, listing.seller.last_name].filter(Boolean).join(' ') || listing.seller.username,
+                                    contactImage: listing.seller.profile_picture_url ? resolveImageUrl(listing.seller.profile_picture_url) : null,
+                                    contactIsOnline: listing.seller.is_online,
+                                })}
+                            >
                                 <Pencil size={18} color={colors.accent} style={{ marginRight: 6 }} />
                                 <Text style={styles.outlineActionBtnText}>Make an offer</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.outlineActionBtn, { borderColor: colors.border }]}>
+                            <TouchableOpacity 
+                                style={[styles.outlineActionBtn, { borderColor: colors.border }]}
+                                onPress={() => navigation.navigate('SupportChat')}
+                            >
                                 <Info size={18} color={colors.text} style={{ marginRight: 6 }} />
                                 <Text style={[styles.outlineActionBtnText, { color: colors.text }]}>Ask a question</Text>
                             </TouchableOpacity>

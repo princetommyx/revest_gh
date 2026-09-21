@@ -1,6 +1,8 @@
+from decimal import Decimal
 from rest_framework import generics, status, permissions, views
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes, action
+from django.core.mail import send_mail
 from django.db.models import Q, Count, F
 from django.utils import timezone
 from datetime import timedelta
@@ -485,6 +487,22 @@ class PublicOnboardingListView(generics.ListAPIView):
     pagination_class = None
     queryset = OnboardingScreen.objects.filter(is_active=True).order_by('order', 'created_at')
 
+
+class PublicAppConfigView(views.APIView):
+    """
+    GET /api/v1/admin/system/config/public/
+
+    A public, read-only subset of SystemConfig the mobile app needs to
+    decide what to show - right now just whether monetization is switched
+    on. Nothing sensitive lives here (that's SystemConfigView, restricted to
+    super admins) - only flags safe for any unauthenticated client to read.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from wallet.services import WalletService
+        return Response({'monetization_enabled': WalletService.monetization_enabled()})
+
 from users.models import IdentityVerification
 from .kyc_serializers import AdminKYCSerializer
 
@@ -616,6 +634,51 @@ class RevestaWithdrawView(views.APIView):
                 )
                 
             return Response({'status': 'Withdrawal recorded successfully', 'new_balance': wallet.balance})
-            
+
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+
+class RunScheduledTasksView(views.APIView):
+    """
+    Runs the daily management commands that would otherwise need a Render
+    Cron Job - a paid-tier feature. Meant to be triggered by a free
+    external scheduler (a GitHub Actions workflow on a cron trigger,
+    hitting this URL with curl) instead: same effect, zero cost, and as a
+    side benefit it wakes this free-tier web service if it had spun down.
+
+    Not session-auth'd (an external scheduler has no user to log in as) -
+    a shared secret in the CRON_SECRET env var gates it instead. Without
+    that env var set, the endpoint refuses every request rather than
+    running unauthenticated, so a forgotten env var fails closed.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    # One per line so a single failing command doesn't stop the others,
+    # and each result is reported individually.
+    COMMANDS = [
+        'send_daily_reengagement_notifications',
+        'rollup_collector_performance',
+    ]
+
+    def post(self, request):
+        import hmac
+        import os
+
+        expected = os.environ.get('CRON_SECRET')
+        provided = request.headers.get('X-Cron-Secret', '')
+        if not expected or not hmac.compare_digest(provided, expected):
+            return Response({'error': 'Unauthorized'}, status=401)
+
+        from django.core.management import call_command
+
+        results = {}
+        for command_name in self.COMMANDS:
+            try:
+                call_command(command_name)
+                results[command_name] = 'ok'
+            except Exception as e:
+                logger.error(f"Scheduled task '{command_name}' failed: {e}")
+                results[command_name] = f'error: {e}'
+
+        return Response({'status': 'done', 'results': results})

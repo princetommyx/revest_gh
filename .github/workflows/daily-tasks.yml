@@ -1,0 +1,30 @@
+name: Daily scheduled tasks
+
+# Free stand-in for a Render Cron Job (a paid-tier feature). Hits the
+# backend's run-scheduled-tasks/ endpoint, which runs the daily management
+# commands (re-engagement notifications, collector performance rollup)
+# itself - this workflow's only job is to wake up and make the request on a
+# schedule. Also doubles as a daily keep-warm ping for the free-tier web
+# service, which spins down when idle.
+on:
+  schedule:
+    - cron: '0 18 * * *' # 18:00 UTC daily (Ghana is UTC+0, no DST)
+  workflow_dispatch: {} # lets you trigger a run manually from the Actions tab
+
+jobs:
+  run-daily-tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger scheduled tasks endpoint
+        run: |
+          response=$(curl -sS -w "\n%{http_code}" -X POST \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            --max-time 120 \
+            "https://revest-gh.onrender.com/api/v1/admin/run-scheduled-tasks/")
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | sed '$d')
+          echo "$body"
+          if [ "$http_code" -ge 400 ]; then
+            echo "Request failed with HTTP $http_code"
+            exit 1
+          fi

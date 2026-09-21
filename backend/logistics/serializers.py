@@ -26,6 +26,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
     distance_km = serializers.SerializerMethodField()
     duration_min = serializers.SerializerMethodField()
     collector_eta_min = serializers.SerializerMethodField()
+    is_rated = serializers.SerializerMethodField()
 
     class Meta:
         model = PickupRequest
@@ -40,9 +41,23 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
             'created_at', 'provider', 'collector', 'collector_name', 'provider_name',
             'estimated_price', 'actual_price', 'payment_method',
             'waste_price', 'delivery_fee', 'listing', 'listing_image',
-            'is_verified'
+            'is_verified', 'is_rated'
         )
         read_only_fields = ('provider', 'collector', 'created_at', 'collector_name')
+
+    def get_is_rated(self, obj):
+        """Has the requesting user already rated this job? Drives whether
+        the mobile app's post-completion rating prompt shows again."""
+        request = self.context.get('request')
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        # The list view prefetches this per-user filtered queryset onto
+        # `user_ratings` (see PickupRequestViewSet.filter_queryset) so this
+        # doesn't run one query per row - fall back to a direct query for
+        # any other call site that builds this serializer without it.
+        if hasattr(obj, 'user_ratings'):
+            return len(obj.user_ratings) > 0
+        return obj.ratings.filter(rater=request.user).exists()
 
     def get_distance_km(self, obj):
         request = self.context.get('request')
@@ -70,7 +85,7 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         mobile app never actually sends it on create, so it's always null,
         and even if populated it isn't "time until the collector gets here"
         anyway. This computes that instead, the same way distance_km does,
-        using the same average-speed assumption as estimate_price().
+        using the same calibrated travel estimate as estimate_price().
         """
         request = self.context.get('request')
         if not request or not request.query_params:
@@ -81,10 +96,10 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
 
         if lat and lon:
             try:
+                from intelligence.routing import eta_minutes
                 from .utils import haversine
                 dist = haversine(float(lat), float(lon), float(obj.latitude), float(obj.longitude))
-                avg_speed_kmh = 40.0
-                return round((dist / avg_speed_kmh) * 60)
+                return eta_minutes(dist)
             except (ValueError, TypeError, ZeroDivisionError):
                 pass
         return None
@@ -101,10 +116,10 @@ class PickupRequestListSerializer(serializers.ModelSerializer):
         if obj.current_lat is None or obj.current_lon is None or not obj.latitude or not obj.longitude:
             return None
         try:
+            from intelligence.routing import eta_minutes
             from .utils import haversine
             dist = haversine(float(obj.current_lat), float(obj.current_lon), float(obj.latitude), float(obj.longitude))
-            avg_speed_kmh = 40.0
-            return round((dist / avg_speed_kmh) * 60)
+            return eta_minutes(dist)
         except (ValueError, TypeError, ZeroDivisionError):
             return None
 
@@ -174,9 +189,16 @@ class PickupRequestCreateSerializer(serializers.ModelSerializer):
             'waste_price', 'delivery_fee', 'listing',
             'distance_km', 'duration_min', 'payment_method',
             'pickup_address',
-            'destination_latitude', 'destination_longitude', 'destination_address'
+            'destination_latitude', 'destination_longitude', 'destination_address',
+            # Set server-side (see perform_create) when this request is a
+            # direct claim on someone else's listing rather than a fresh
+            # post - read-only here so the client can't set them, but
+            # exposed on the create response so the app can tell the two
+            # outcomes apart and toast the right message.
+            'status', 'collector',
         )
-    
+        read_only_fields = ('status', 'collector')
+
     def validate_latitude(self, value):
         if not -90 <= value <= 90:
             raise serializers.ValidationError("Latitude must be between -90 and 90.")

@@ -5,7 +5,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils import timezone
 from .models import IdentityVerification
 from .kyc_utils import encrypt_id_number, decrypt_id_number
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import json
 import logging
@@ -85,8 +86,7 @@ class KYCSubmitView(APIView):
             return
 
         try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.5-flash')
+            client = genai.Client(api_key=api_key)
 
             # We need to read the file contents to send to Gemini
             kyc.id_front_image.seek(0)
@@ -115,11 +115,14 @@ class KYCSubmitView(APIView):
             }}
             """
 
-            response = model.generate_content([
-                {'mime_type': 'image/jpeg', 'data': front_content},
-                {'mime_type': 'image/jpeg', 'data': selfie_content},
-                prompt
-            ])
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=[
+                    types.Part.from_bytes(data=front_content, mime_type='image/jpeg'),
+                    types.Part.from_bytes(data=selfie_content, mime_type='image/jpeg'),
+                    prompt
+                ]
+            )
 
             response_text = response.text.strip().replace('```json', '').replace('```', '')
             analysis = json.loads(response_text)

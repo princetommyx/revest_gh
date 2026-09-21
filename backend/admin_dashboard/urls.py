@@ -23,9 +23,13 @@ urlpatterns = [
     path('notifications/<int:pk>/mark-read/', views.mark_notification_read, name='mark_notification_read'),
     path('notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
     
+    # Scheduled tasks (free-tier substitute for a Render Cron Job)
+    path('run-scheduled-tasks/', views.RunScheduledTasksView.as_view(), name='run_scheduled_tasks'),
+
     # System Metrics
     path('metrics/', views.SystemMetricsView.as_view(), name='admin_metrics'),
     path('system/config/', views.SystemConfigView.as_view(), name='system_config'),
+    path('system/config/public/', views.PublicAppConfigView.as_view(), name='public_system_config'),
     
     # Promo Cards
     path('promos/', views.PromoCardViewSet.as_view({'get': 'list', 'post': 'create'}), name='admin_promos_list'),

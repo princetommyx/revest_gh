@@ -1,4 +1,5 @@
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import os
 import json
 import logging
@@ -17,8 +18,7 @@ def verify_scale_photo(image_content, mime_type, manual_weight_kg):
         return True, 0, "AI Verification unavailable. Proceeding with manual weight."
 
     try:
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash-001') # Fast model for verification
+        client = genai.Client(api_key=api_key)
 
         prompt = f"""
         Analyze this SCALE PHOTO.
@@ -38,10 +38,13 @@ def verify_scale_photo(image_content, mime_type, manual_weight_kg):
         }}
         """
 
-        response = model.generate_content([
-            {'mime_type': mime_type, 'data': image_content},
-            prompt
-        ])
+        response = client.models.generate_content(
+            model='gemini-2.0-flash-001',
+            contents=[
+                types.Part.from_bytes(data=image_content, mime_type=mime_type),
+                prompt
+            ]
+        )
         
         json_str = response.text.replace('```json', '').replace('```', '').strip()
         data = json.loads(json_str)

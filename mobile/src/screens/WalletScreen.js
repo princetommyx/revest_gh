@@ -11,6 +11,7 @@ import { SkeletonWalletPage } from '../components/Skeleton';
 import { ChevronRight, HelpCircle, Clock, Plus, Banknote, ArrowLeft } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const PAYMENT_METHODS = [
     { id: 'ATL', name: 'AirtelTigo Money', icon: require('../../assets/airteltigo.jpg') },
@@ -24,6 +25,7 @@ export default function WalletScreen() {
     const { user } = useAuth();
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const navigation = useNavigation();
     const { data: wallet, isLoading, refetch } = useWallet();
 
@@ -95,11 +97,14 @@ export default function WalletScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Collector Commission Section */}
-                {isCollector && (
+                {/* Collector Commission Section - phase 2. Held back with pricing
+                    since it's live only for the disposer-listing-price flow this
+                    same flag gates elsewhere; collector commissions specifically
+                    turn on later, on top of this. */}
+                {isCollector && pricingEnabled && (
                     <View style={styles.commissionSection}>
                         <Text style={styles.sectionTitle}>Commission</Text>
-                        <View style={[styles.balanceCard, { backgroundColor: colors.dangerSoft }]}>
+                        <View style={[styles.balanceCard, styles.commissionCard, { backgroundColor: colors.dangerSoft }]}>
                             <Text style={styles.balanceLabel}>Pending Commission</Text>
                             <Text style={styles.balanceAmount}>GH₵{pendingEarnings.toFixed(2)}</Text>
                             
@@ -236,6 +241,18 @@ const useStyles = makeStyles((c) => ({
     },
     commissionSection: {
         marginTop: 30,
+        // Matches paymentMethodsSection. Without it the "Commission" heading
+        // sat hard against the screen edge while the card below it was inset
+        // by its own margin, so the two looked unrelated and the title read
+        // as clipped.
+        marginHorizontal: 20,
+    },
+    // balanceCard carries marginHorizontal: 20 for its use in the balance
+    // section, which has no inset of its own. Inside commissionSection that
+    // would stack with the section's margin and indent the card twice as far
+    // as every other card on the screen.
+    commissionCard: {
+        marginHorizontal: 0,
     },
     payBtn: {
         backgroundColor: c.primary,

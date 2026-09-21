@@ -15,7 +15,9 @@ from google.oauth2 import id_token
 # `http_requests` above for actual HTTP calls.
 from google.auth.transport import requests
 from drf_spectacular.utils import extend_schema
-from rest_framework import generics, permissions, status, views, viewsets
+from rest_framework import permissions, status, views, generics, viewsets
+from rest_framework.throttling import AnonRateThrottle
+from .throttles import OTPIdentifierRateThrottle
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -38,7 +40,12 @@ from .serializers import (
     DeactivateAccountSerializer,
     DeleteAccountSerializer,
 )
-from .email_service import send_welcome_email, send_login_alert
+from .email_service import (
+    send_welcome_email,
+    send_login_alert,
+    send_login_otp_email,
+    send_password_reset_email,
+)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -194,6 +201,24 @@ class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         return self.request.user
+
+    def update(self, request, *args, **kwargs):
+        # An unhandled exception here (e.g. the local media disk being full -
+        # uploads have no cloud storage behind them, see StorageDiagnosticView)
+        # falls through to Django's default error handling, which in
+        # production returns an HTML page instead of JSON - the client's
+        # error parsing expects a dict and silently falls back to a bare
+        # "Please try again" with nothing to go on. Logging the real
+        # exception here at least makes the next one diagnosable.
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            logger.error(f"Profile update failed for user {request.user.id}: {e}\n{traceback.format_exc()}")
+            return Response(
+                {"detail": "Could not update profile. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
     def destroy(self, request, *args, **kwargs):
         try:
@@ -388,6 +413,7 @@ def find_user_by_identifier(identifier):
 
 class PasswordResetRequestView(views.APIView):
     permission_classes = (permissions.AllowAny,)
+    throttle_classes = [OTPIdentifierRateThrottle, AnonRateThrottle]
     throttle_scope = "anon"
 
     def post(self, request):
@@ -419,21 +445,7 @@ class PasswordResetRequestView(views.APIView):
             # 1. Email
             if user.email:
                 try:
-
-                    def _async_mail(email, otp):
-                        send_mail(
-                            "Revesta Password Reset",
-                            f"Your password reset verification code is: {otp}",
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                            fail_silently=True,
-                        )
-
-                    threading.Thread(
-                        target=_async_mail,
-                        args=(user.email, otp_code),
-                        daemon=True,
-                    ).start()
+                    send_password_reset_email(user, otp_code, expires_in="15 minutes")
                     sent_to.append("email")
                 except Exception as e:
                     logger.error(f"Failed to send reset email: {e}")
@@ -443,8 +455,12 @@ class PasswordResetRequestView(views.APIView):
                 try:
                     from .sms_service import send_otp_sms
 
-                    send_otp_sms(user.phone_number, otp_code)
-                    sent_to.append("SMS")
+                    # Only claim SMS if it was actually dispatched. It used
+                    # to be appended unconditionally, so a deployment with no
+                    # Hubtel credentials still told the user to check their
+                    # phone for a code that was never sent.
+                    if send_otp_sms(user.phone_number, otp_code):
+                        sent_to.append("SMS")
                 except Exception as e:
                     logger.error(f"Failed to send reset SMS: {e}")
 
@@ -706,33 +722,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             try:
                 from .sms_service import send_otp_sms
 
-                send_otp_sms(user.phone_number, otp_code)
-                sent_to.append(f"phone {user.phone_number}")
-                print(
-                    f"DEBUG: Sent login OTP {otp_code} to {user.phone_number}"
-                )
+                if send_otp_sms(user.phone_number, otp_code):
+                    sent_to.append(f"phone {user.phone_number}")
+                    print(
+                        f"DEBUG: Sent login OTP {otp_code} to {user.phone_number}"
+                    )
+                else:
+                    logger.error(
+                        "Login OTP not sent by SMS - this deployment has no "
+                        "Hubtel credentials configured."
+                    )
             except Exception as e:
                 logger.error(f"Failed to send SMS OTP: {e}")
 
         # 2. Try Email
         if user.email:
             try:
-
-                def _async_mail(email, otp):
-                    send_mail(
-                        "Revesta Login Verification",
-                        f"Your login verification code is: {otp}",
-                        settings.DEFAULT_FROM_EMAIL,
-                        [email],
-                        fail_silently=True,
-                    )
-
-                threading.Thread(
-                    target=_async_mail,
-                    args=(user.email, otp_code),
-                    daemon=True,
-                ).start()
-
+                send_login_otp_email(user, otp_code, expires_in="10 minutes")
                 sent_to.append(f"email {user.email}")
                 print(
                     f"DEBUG: Sent login OTP {otp_code} to {user.email} (Async)"
@@ -875,7 +881,16 @@ class DebugEmailView(views.APIView):
 
 
 class EmailHealthCheckView(views.APIView):
+    """
+    Diagnostic endpoint: reports which email backend is active, and
+    optionally (?send_test=true&to=someone@example.com) actually sends a
+    test email so you can confirm real delivery, not just that the config
+    looks right. AllowAny so it's reachable without auth while debugging -
+    throttled (email_test scope) since sending is a spam-relay risk on an
+    open endpoint.
+    """
     permission_classes = (permissions.AllowAny,)
+    throttle_scope = 'email_test'
 
     def get(self, request):
         status_data = {
@@ -890,6 +905,28 @@ class EmailHealthCheckView(views.APIView):
                 else "Not Set"
             ),
         }
+
+        if request.query_params.get("send_test") == "true":
+            to = request.query_params.get("to")
+            if not to:
+                status_data["test_email_sent"] = False
+                status_data["test_email_error"] = "Missing 'to' query parameter"
+            else:
+                try:
+                    send_mail(
+                        subject="ReVesta Email Test",
+                        message="If you see this, email is working!",
+                        from_email=settings.DEFAULT_FROM_EMAIL,
+                        recipient_list=[to],
+                        fail_silently=False,
+                    )
+                    status_data["test_email_sent"] = True
+                    status_data["test_email_recipient"] = to
+                except Exception as e:
+                    logger.error(f"Email health check send_test failed: {e}")
+                    status_data["test_email_sent"] = False
+                    status_data["test_email_error"] = str(e)
+
         return Response(status_data)
 
 
@@ -1187,8 +1224,13 @@ class SendOTPView(views.APIView):
         try:
             from .sms_service import send_otp_sms
 
-            send_otp_sms(phone_number, otp_code)
-            sent_methods.append("SMS")
+            if send_otp_sms(phone_number, otp_code):
+                sent_methods.append("SMS")
+            else:
+                logger.error(
+                    "Registration OTP not sent by SMS - this deployment has no "
+                    "Hubtel credentials configured."
+                )
 
             return Response(
                 {
@@ -1375,6 +1417,50 @@ class TestSMSView(views.APIView):
             )
 
 
+class SmsHealthCheckView(views.APIView):
+    """
+    Diagnostic endpoint: does THIS deployment have working SMS?
+
+    The counterpart to EmailHealthCheckView, and added for a concrete
+    reason: SMS worked from the Play Store build and not from an Expo dev
+    client, and there was no way to ask a backend whether it was even
+    configured to send. Since the two builds can point at different API
+    URLs, "which backend am I talking to, and can it send SMS?" is the first
+    question to answer, and it needed an endpoint.
+
+    Never returns the credentials themselves - only whether they are
+    present. AllowAny so it is reachable while debugging an auth flow you
+    cannot complete, which is exactly when it is needed; it sends nothing,
+    so there is no spam-relay risk in that.
+    """
+
+    permission_classes = (permissions.AllowAny,)
+
+    def get(self, request):
+        from .sms_service import HubtelSMSService
+
+        service = HubtelSMSService()
+        return Response(
+            {
+                "sms_configured": service.is_configured,
+                "has_client_id": bool(service.client_id),
+                "has_client_secret": bool(service.client_secret),
+                "sender_id": service.sender,
+                # So a client can confirm which backend answered - the whole
+                # point when the same app build behaves differently in two
+                # environments.
+                "host": request.get_host(),
+                "debug": settings.DEBUG,
+                "hint": (
+                    "SMS will not be delivered from this deployment: set "
+                    "HUBTEL_CLIENT_ID and HUBTEL_CLIENT_SECRET in its environment."
+                    if not service.is_configured
+                    else "Hubtel credentials present on this deployment."
+                ),
+            }
+        )
+
+
 class HubtelTestView(views.APIView):
     """
     Dedicated endpoint to test Hubtel features directly.
@@ -1423,3 +1509,60 @@ class HubtelTestView(views.APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+
+
+class StorageDiagnosticView(views.APIView):
+    """
+    Uploads (profile pictures, listing photos, KYC documents) all land on
+    MEDIA_ROOT - local disk, not cloud storage - and Render's free-tier disk
+    is small. A profile/listing update that includes an image failing with a
+    generic 500 while text-only edits keep working is the signature of that
+    disk being full rather than a code bug. This has no dashboard/SSH
+    equivalent on Render's free tier, so it's the only way to check from
+    outside without one.
+    """
+
+    permission_classes = (permissions.IsAdminUser,)
+
+    def get(self, request):
+        import shutil
+
+        media_root = settings.MEDIA_ROOT
+        try:
+            usage = shutil.disk_usage(media_root)
+        except Exception as e:
+            return Response(
+                {"error": f"Could not read disk usage for {media_root}: {e}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        def _du(path):
+            total = 0
+            file_count = 0
+            for root, dirs, files in os.walk(path):
+                for f in files:
+                    try:
+                        total += os.path.getsize(os.path.join(root, f))
+                        file_count += 1
+                    except OSError:
+                        pass
+            return total, file_count
+
+        media_bytes, media_file_count = (0, 0)
+        if os.path.isdir(media_root):
+            media_bytes, media_file_count = _du(media_root)
+
+        def _mb(n):
+            return round(n / (1024 * 1024), 1)
+
+        return Response(
+            {
+                "media_root": media_root,
+                "disk_total_mb": _mb(usage.total),
+                "disk_used_mb": _mb(usage.total - usage.free),
+                "disk_free_mb": _mb(usage.free),
+                "disk_percent_used": round((usage.total - usage.free) / usage.total * 100, 1) if usage.total else None,
+                "media_dir_size_mb": _mb(media_bytes),
+                "media_file_count": media_file_count,
+            }
+        )

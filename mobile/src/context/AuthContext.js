@@ -9,6 +9,13 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [userRole, setUserRole] = useState(null);
     const [loading, setLoading] = useState(true);
+    // A role to land Register on right after the sign-out below finishes -
+    // set by "Earn as a Collector" so a disposer wanting a second account
+    // doesn't just get dropped on the plain Login screen. Lives here rather
+    // than in navigation params because signing out swaps which screens the
+    // root navigator even has mounted, so there's no screen alive to receive
+    // a param at the moment sign-out happens.
+    const [pendingRegisterRole, setPendingRegisterRole] = useState(null);
 
     useEffect(() => {
         loadStoredAuth();
@@ -175,8 +182,10 @@ export const AuthProvider = ({ children }) => {
         signUp,
         googleSignIn,
         signOut,
-        isAuthenticated: !!user
-    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut, updateUser, hydrateProfile]);
+        isAuthenticated: !!user,
+        pendingRegisterRole,
+        setPendingRegisterRole,
+    }), [user, userRole, loading, signIn, verifyLogin, signUp, googleSignIn, signOut, updateUser, hydrateProfile, pendingRegisterRole]);
 
     return (
         <AuthContext.Provider value={value}>

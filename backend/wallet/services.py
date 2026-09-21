@@ -338,7 +338,12 @@ class WalletService:
         """
         from .models import Escrow, Transaction
         from django.db import transaction
-        
+
+        # `escrow` is None for a seller-initiated Track B job (no payer locked
+        # anything up front) - every branch below already handles that case,
+        # it just needs the lookup done first instead of never at all.
+        escrow = Escrow.objects.filter(pickup=pickup_request, status='HELD').first()
+
         waste_price = pickup_request.waste_price or Decimal('0.00')
         delivery_fee = pickup_request.delivery_fee or Decimal('0.00')
         total_value = escrow.amount if escrow else (waste_price + delivery_fee)
@@ -663,8 +668,21 @@ class PaystackService:
             data = response.json()
             
             if data['status'] and data['data']['status'] == 'success':
-                verified_amount = data['data']['amount'] / 100  # Paystack returns kobo/pesewas
-                
+                # initialize_transaction always stamps metadata.user_id with
+                # whoever started this specific reference - without checking
+                # it here, any authenticated user who learns someone else's
+                # reference (it's returned client-side, so not exactly
+                # secret) could call this endpoint first and have Paystack's
+                # confirmed deposit credited to their own wallet instead.
+                metadata_user_id = (data['data'].get('metadata') or {}).get('user_id')
+                if metadata_user_id is None or str(metadata_user_id) != str(user.id):
+                    return False, "This transaction does not belong to the current user."
+
+                # Paystack returns kobo/pesewas as an integer - go through
+                # Decimal from the string form, not a plain float division,
+                # so a deposit can't drift by a fraction of a pesewa.
+                verified_amount = Decimal(str(data['data']['amount'])) / Decimal('100')
+
                 # Check if amount matches (optional but recommended)
                 # if float(verified_amount) != float(amount):
                 #     return False, "Amount mismatch"
@@ -675,8 +693,8 @@ class PaystackService:
 
                 # Atomic Transaction to Credit Wallet
                 with transaction.atomic():
-                    wallet, _ = Wallet.objects.get_or_create(user=user)
-                    
+                    wallet, _ = Wallet.objects.select_for_update().get_or_create(user=user)
+
                     Transaction.objects.create(
                         wallet=wallet,
                         amount=verified_amount,
@@ -685,10 +703,10 @@ class PaystackService:
                         description=f"Paystack Top-up: {reference}",
                         reference=reference
                     )
-                    
+
                     wallet.balance += verified_amount
                     wallet.save()
-                    
+
                 return True, "Wallet credited successfully"
             
             return False, data['data'].get('gateway_response', 'Verification failed')

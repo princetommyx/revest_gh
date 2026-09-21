@@ -5,7 +5,7 @@ import {
     Platform, Dimensions, StatusBar, KeyboardAvoidingView
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Upload, Camera, MapPin, Package, Tag, Info, Check, ArrowLeft, Database, FileText, Wine, Monitor, Grid } from 'lucide-react-native';
+import { X, Upload, Camera, MapPin, Tag, Info, Check, ArrowLeft } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import AnimatedButton from '../components/AnimatedButton';
@@ -14,12 +14,24 @@ import Toast from 'react-native-toast-message';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
 
 const { width } = Dimensions.get('window');
+
+// Same real rendered icons as Home/Marketplace's category rows, in place of
+// the flat outline icons here - keeps the material picker visually
+// consistent with everywhere else a disposer picks a material.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+const METALS_ICON = require('../../assets/metals-icon.png');
+const PLASTICS_ICON = require('../../assets/plastics-icon.png');
+const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
+const GLASS_ICON = require('../../assets/glass-icon.png');
+const OTHER_ICON = require('../../assets/other-icon.png');
 
 export default function CreateListingScreen({ route, navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const editListing = route?.params?.editListing;
     const queryClient = useQueryClient();
     const [loading, setLoading] = useState(false);
@@ -107,14 +119,23 @@ export default function CreateListingScreen({ route, navigation }) {
     // ... Get Location on Mount ...
     React.useEffect(() => {
         (async () => {
-            let { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            let location = await Location.getCurrentPositionAsync({});
-            setFormData(prev => ({
-                ...prev,
-                latitude: parseFloat(location.coords.latitude.toFixed(6)),
-                longitude: parseFloat(location.coords.longitude.toFixed(6))
-            }));
+            // getCurrentPositionAsync rejects with "Current location is
+            // unavailable" whenever location services are off or no fix has
+            // been acquired yet - granted permission is not a promise of a
+            // position. Uncaught, that crashed the screen on open; the form
+            // is perfectly usable without coordinates.
+            try {
+                let { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') return;
+                let location = await Location.getCurrentPositionAsync({});
+                setFormData(prev => ({
+                    ...prev,
+                    latitude: parseFloat(location.coords.latitude.toFixed(6)),
+                    longitude: parseFloat(location.coords.longitude.toFixed(6))
+                }));
+            } catch (e) {
+                console.warn('[CreateListing] Could not read location:', e?.message);
+            }
         })();
     }, []);
 
@@ -176,6 +197,12 @@ export default function CreateListingScreen({ route, navigation }) {
                 allowsEditing: true,
                 aspect: [4, 3],
                 quality: 0.7,
+                // iOS can otherwise hand back the original HEIC file even
+                // through the edit/crop step - the backend only accepts
+                // JPEG/PNG/WebP (market/serializers.py ListingCreateSerializer),
+                // so a HEIC photo fails submission with no obvious reason
+                // from the picker step itself.
+                preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
             });
             if (!result.canceled) {
                 const asset = result.assets[0];
@@ -204,7 +231,7 @@ export default function CreateListingScreen({ route, navigation }) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please enter a location' });
             return;
         }
-        if (formData.track_type === 'B' && (formData.price === '' || isNaN(parseFloat(formData.price)))) {
+        if (pricingEnabled && formData.track_type === 'B' && (formData.price === '' || isNaN(parseFloat(formData.price)))) {
             Toast.show({ type: 'error', text1: 'Missing field', text2: 'Please set an asking price' });
             return;
         }
@@ -249,8 +276,31 @@ export default function CreateListingScreen({ route, navigation }) {
             queryClient.invalidateQueries(['listings']);
             navigation.goBack();
         } catch (error) {
-            console.error("Submission Error:", error.response?.data || error.message);
-            Toast.show({ type: 'error', text1: 'Submission failed', text2: editListing ? 'Failed to update listing' : 'Failed to create listing' });
+            const data = error.response?.data;
+            console.error("Submission Error:", data || error.message);
+
+            // Surface the actual validation reason instead of a generic
+            // "failed" message - a DRF error is either {"detail": "..."} or
+            // {"field_name": ["reason"]}, and the field-error form was
+            // previously swallowed entirely, leaving no way to tell a bad
+            // price from a missing location without reading server logs.
+            let reason;
+            if (typeof data?.detail === 'string') {
+                reason = data.detail;
+            } else if (data && typeof data === 'object') {
+                const firstKey = Object.keys(data)[0];
+                const firstValue = data[firstKey];
+                const firstMessage = Array.isArray(firstValue) ? firstValue[0] : firstValue;
+                if (firstMessage) {
+                    reason = firstKey === 'non_field_errors' ? String(firstMessage) : `${firstKey}: ${firstMessage}`;
+                }
+            }
+
+            Toast.show({
+                type: 'error',
+                text1: 'Submission failed',
+                text2: reason || (editListing ? 'Failed to update listing' : 'Failed to create listing'),
+            });
         } finally {
             setLoading(false);
         }
@@ -311,7 +361,10 @@ export default function CreateListingScreen({ route, navigation }) {
                     {/* Form Fields */}
                     <View style={styles.formSection}>
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>What are you selling?</Text>
+                            {/* Not "What are you selling?" - this same form also
+                                covers Track A, where the disposer is paying to have
+                                waste hauled away rather than selling anything. */}
+                            <Text style={styles.sectionTitle}>What type of waste is it?</Text>
                             {([
                                 'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
                                 'PLASTIC_BOTTLES', 'PLASTIC_BOTTLES_BALE'
@@ -322,12 +375,12 @@ export default function CreateListingScreen({ route, navigation }) {
                             {[
                                 // Material hues are categorical identity, not theming -
                                 // each is mid-tone and legible on either ground.
-                                { id: 'Plastics', icon: Package, color: '#3B82F6' },
-                                { id: 'Metals', icon: Database, color: '#64748B' },
-                                { id: 'Paper', icon: FileText, color: '#EAB308' },
-                                { id: 'Glass', icon: Wine, color: '#10B981' },
-                                { id: 'Electronics', icon: Monitor, color: '#8B5CF6' },
-                                { id: 'Other', icon: Grid, color: '#F97316' }
+                                { id: 'Plastics', image: PLASTICS_ICON, color: '#3B82F6' },
+                                { id: 'Metals', image: METALS_ICON, color: '#64748B' },
+                                { id: 'Paper', image: PAPER_ICON, color: '#EAB308' },
+                                { id: 'Glass', image: GLASS_ICON, color: '#10B981' },
+                                { id: 'Electronics', image: ELECTRONICS_ICON, color: '#8B5CF6' },
+                                { id: 'Other', image: OTHER_ICON, color: '#F97316' }
                             ].map(cat => {
                                 const isFixedItem = [
                                     'PURE_WATER_RUBBERS', 'PURE_WATER_RUBBERS_BALE',
@@ -352,7 +405,11 @@ export default function CreateListingScreen({ route, navigation }) {
                                         onPress={() => handleChange('material_type', cat.id)}
                                     >
                                         <View style={styles.categoryCardInner}>
-                                            <IconComp size={20} color={isActive ? colors.text : colors.textSecondary} />
+                                            {cat.image ? (
+                                                <Image source={cat.image} style={styles.categoryCardIconImage} resizeMode="contain" />
+                                            ) : (
+                                                <IconComp size={20} color={isActive ? colors.text : colors.textSecondary} />
+                                            )}
                                             <Text style={[styles.categoryCardText, isActive && styles.categoryCardTextActive]}>
                                                 {cat.id}
                                             </Text>
@@ -433,7 +490,7 @@ export default function CreateListingScreen({ route, navigation }) {
                             </TouchableOpacity>
                         </View>
 
-                        {formData.track_type === 'B' ? (
+                        {formData.track_type === 'B' && pricingEnabled ? (
                             <View style={styles.inputGroup}>
                                 <Text style={styles.label}>Asking Price (GHS)</Text>
                                 <View style={styles.inputWrapper}>
@@ -454,6 +511,11 @@ export default function CreateListingScreen({ route, navigation }) {
                                 ) : (
                                     <Text style={styles.priceHint}>Add a photo or pick a material for a price suggestion, or just set your own.</Text>
                                 )}
+                            </View>
+                        ) : formData.track_type === 'B' ? (
+                            <View style={styles.freeNotice}>
+                                <Info size={16} color={colors.textSecondary} />
+                                <Text style={styles.freeNoticeText}>We're not setting prices yet - connect with a collector and agree on value directly.</Text>
                             </View>
                         ) : (
                             <View style={styles.freeNotice}>
@@ -658,6 +720,10 @@ const useStyles = makeStyles((c) => ({
     categoryCardInner: {
         flexDirection: 'row',
         alignItems: 'center',
+    },
+    categoryCardIconImage: {
+        width: 22,
+        height: 22,
     },
     categoryCardText: {
         fontSize: 14,

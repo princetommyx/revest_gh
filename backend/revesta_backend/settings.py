@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # PyMySQL compatibility patch for XAMPP/MariaDB 10.4
 # Allows Django 6 to work with MariaDB < 10.6 by spoofing the version string
@@ -34,11 +35,22 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback only applies in local dev (DEBUG=True) - it used to
+# apply unconditionally, which meant a misconfigured production deploy would
+# silently sign JWTs (SIMPLE_JWT['SIGNING_KEY'] below) and sessions with a
+# key sitting in the git history instead of failing loudly. Render already
+# sets a real SECRET_KEY for every service (see render.yaml), so this never
+# fires there.
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-db+coeekbvf0!-21p2rdol2bq074dqze=h$hizcfc12-x5w56m'
+    else:
+        raise ImproperlyConfigured('SECRET_KEY environment variable must be set when DEBUG=False.')
 
 # ALLOWED_HOSTS configuration
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
@@ -69,6 +81,20 @@ if not DEBUG:
 # Encryption Key for sensitive data (e.g. KYC ID numbers)
 FERNET_KEY = os.environ.get('FERNET_KEY', b'osLlL5AzQozSnG3c6TLOptUE1lAr_3kO3nyiOO88b38=')
 
+# Used server-side for real driving-time/distance estimates instead of a
+# straight-line haversine guess. Not set by default - without it,
+# estimate_price() falls back to the haversine calculation it always used.
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+# Assumed driving speed for the fallback travel estimate, used only when
+# Google can't be reached AND Revesta has too few completed pickups to have
+# measured its own (see intelligence.routing). Defaults to the 40 km/h that
+# was previously written into three separate call sites - almost certainly
+# too fast for Accra traffic, but changing it changes live fares, so it is
+# left as it was and `manage.py show_routing_calibration` prints what
+# Revesta's own pickups say the figure should be.
+FALLBACK_SPEED_KMH = float(os.environ.get('FALLBACK_SPEED_KMH', '40'))
+
 
 # Application definition
 
@@ -86,6 +112,8 @@ INSTALLED_APPS = [
     'channels',
     'drf_spectacular',  # API documentation
     'django_filters',   # Advanced filtering
+    'cloudinary_storage',  # Media uploads - see DEFAULT_FILE_STORAGE below
+    'cloudinary',
     # Local apps
     'users',
     'market',
@@ -94,6 +122,8 @@ INSTALLED_APPS = [
     'admin_dashboard',  # Admin dashboard system
     'wallet',  # Enabled for mobile app
     'moderation',  # User blocking + content reporting
+    'intelligence',  # AI prediction logging - see intelligence/models.py
+    'ratings',  # Provider/collector ratings on completed pickups
 ]
 
 MIDDLEWARE = [
@@ -205,24 +235,29 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
 # CORS configuration
-CORS_ALLOW_ALL_ORIGINS = True
-if not CORS_ALLOW_ALL_ORIGINS:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://localhost:5174",
-    ]
-    if os.environ.get('CORS_ALLOWED_ORIGINS'):
-        CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
-else:
-    # Warning for production
-    if not DEBUG:
-        print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
+# Was unconditionally True, which - combined with CORS_ALLOW_CREDENTIALS
+# below - let django-cors-headers reflect any site's Origin header instead
+# of restricting to an allowlist, so any website could make credentialed
+# requests against this API using a logged-in user's browser. Only allow
+# everything in local dev now; production uses the explicit allowlist below.
+CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost:5174",
+    # Admin dashboard (admin/, deployed on Vercel).
+    "https://revest-gh-zh89.vercel.app",
+]
+if os.environ.get('CORS_ALLOWED_ORIGINS'):
+    CORS_ALLOWED_ORIGINS.extend(os.environ.get('CORS_ALLOWED_ORIGINS').split(','))
+
+if CORS_ALLOW_ALL_ORIGINS and not DEBUG:
+    print("WARNING: CORS_ALLOW_ALL_ORIGINS is True in production!")
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000"]
+CSRF_TRUSTED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "http://192.168.100.7:8000", "http://localhost:3000", "http://localhost:5174", "http://localhost:8000", "https://revest-gh-zh89.vercel.app"]
 if 'RENDER_EXTERNAL_HOSTNAME' in os.environ:
     CSRF_TRUSTED_ORIGINS.append(f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}")
 if RAILWAY_STATIC_URL:
@@ -255,7 +290,9 @@ REST_FRAMEWORK = {
         'register': '5/minute', # Strict limit for registration
         'login': '10/minute',    # Strict limit for login (brute-force protection)
         'otp': '10/minute',      # OTP send/verify endpoints - resist code guessing
+        'otp_identifier': '30/hour', # Increased for testing (originally 3/hour)
         'wallet': '100/minute',   # Increased for usability
+        'email_test': '5/hour',  # EmailHealthCheckView's send_test - AllowAny, so capped to resist being used as a spam relay
     },
     'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     'DEFAULT_RENDERER_CLASSES': [
@@ -309,6 +346,18 @@ else:
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Uploads (profile pictures, listing photos, KYC documents, pickup
+# verification photos) default to local disk above, which on Render's free
+# tier is small and doesn't survive a redeploy - a real production bug
+# (profile updates with a photo failing outright once the disk filled).
+# Cloudinary's free tier fixes both problems and needs no code changes
+# beyond this file: every ImageField/FileField save just goes there instead
+# once CLOUDINARY_URL is set. Until that env var exists, uploads keep using
+# local disk exactly as before - nothing breaks for anyone who hasn't set
+# this up yet (e.g. local development).
+if os.environ.get('CLOUDINARY_URL'):
+    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 # Google Sign-In.
 # Every OAuth client that is allowed to authenticate against this backend. A
 # token is only accepted if its audience is one of these, which is what stops
@@ -338,26 +387,46 @@ HUBTEL_FROM = os.environ.get('HUBTEL_FROM', 'Revesta')
 import logging
 email_logger = logging.getLogger('revesta.email')
 
-if os.environ.get('RESEND_API_KEY'):
-    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
-    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
-    DEFAULT_FROM_EMAIL = 'onboarding@resend.dev'  # Resend sandbox email
-    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)})")
-else:
-    # Fallback to SMTP (for local development)
+# Absolute base URL of this backend deployment - used to build absolute
+# asset URLs (e.g. the logo image in transactional emails) since email
+# clients fetch images over HTTP and can't resolve relative paths.
+BACKEND_URL = os.environ.get('BACKEND_URL', 'https://revest-gh.onrender.com')
+
+# Gmail SMTP takes priority over Resend when both are configured: Resend's
+# sandbox sender (onboarding@resend.dev) only delivers to the Resend
+# account owner's own inbox until a domain is verified, so it can't reach
+# real users on its own. Gmail SMTP can send to anyone right away (capped
+# at ~500/day) - a working bridge until a domain is verified, at which
+# point removing EMAIL_HOST_USER/EMAIL_HOST_PASSWORD from Render falls
+# back to Resend automatically, no code change needed either way.
+_email_host_user = os.environ.get('EMAIL_HOST_USER', '')
+_email_host_password = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+if _email_host_user and _email_host_password:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = 'smtp.gmail.com'
     EMAIL_PORT = 587
     EMAIL_USE_TLS = True
     EMAIL_USE_SSL = False
-    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
-    DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER', 'noreply@revesta.com')
-    
-    if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-        email_logger.info(f"✓ Email configured with SMTP ({EMAIL_HOST}:{EMAIL_PORT})")
-    else:
-        email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or SMTP credentials")
+    EMAIL_HOST_USER = _email_host_user
+    EMAIL_HOST_PASSWORD = _email_host_password
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', _email_host_user)
+    email_logger.info(f"✓ Email configured with Gmail SMTP ({EMAIL_HOST}:{EMAIL_PORT}, from: {DEFAULT_FROM_EMAIL})")
+elif os.environ.get('RESEND_API_KEY'):
+    EMAIL_BACKEND = 'users.email_backend.ResendBackend'
+    RESEND_API_KEY = os.environ.get('RESEND_API_KEY')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'onboarding@resend.dev')
+    email_logger.info(f"✓ Email configured with Resend API (key length: {len(RESEND_API_KEY)}, from: {DEFAULT_FROM_EMAIL})")
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_USE_SSL = False
+    EMAIL_HOST_USER = ''
+    EMAIL_HOST_PASSWORD = ''
+    DEFAULT_FROM_EMAIL = 'noreply@revesta.com'
+    email_logger.warning("⚠ Email NOT configured - missing RESEND_API_KEY or Gmail SMTP credentials")
 
 EMAIL_TIMEOUT = 5  # Timeout in seconds to prevent hanging
 

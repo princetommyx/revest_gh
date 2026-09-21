@@ -34,3 +34,37 @@ TaskManager.defineTask(COLLECTOR_LOCATION_TASK, async ({ data, error }) => {
         console.warn('[CollectorLocationTask] Failed to push location:', e?.message);
     }
 });
+
+
+/**
+ * Stops any background location task the OS still has registered for this
+ * app under a name we no longer define.
+ *
+ * Android keeps a location-updates registration alive across app restarts
+ * and reinstalls-in-place, so a task name that has been deleted from the
+ * source is still requested by the OS on launch. An earlier tracker used
+ * 'REVESTA_COLLECTOR_TRACKING'; that code is gone, but devices that ran it
+ * carry the registration forever, and every launch logs "Execution of
+ * REVESTA_COLLECTOR_TRACKING was requested but looks like it is not
+ * defined". Worse than the noise: the OS is waking the app to run a task
+ * that no longer exists, and the real tracker below cannot start while a
+ * stale one holds the slot.
+ *
+ * Deliberately keyed on "not this task" rather than on the old name, so a
+ * future rename cleans up after itself without anyone having to remember.
+ */
+export async function stopOrphanedLocationTasks() {
+    try {
+        const tasks = await TaskManager.getRegisteredTasksAsync();
+        for (const task of tasks) {
+            if (task.taskName === COLLECTOR_LOCATION_TASK) continue;
+            if (task.taskType !== 'location') continue;
+            await TaskManager.unregisterTaskAsync(task.taskName);
+            console.warn(`[CollectorLocationTask] Removed orphaned location task: ${task.taskName}`);
+        }
+    } catch (e) {
+        // Never fatal: a device with no registrations, or an OS that refuses
+        // the query, must still boot the app normally.
+        console.warn('[CollectorLocationTask] Could not clean orphaned tasks:', e?.message);
+    }
+}

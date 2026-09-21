@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     View, Text, StyleSheet, TouchableOpacity,
     Dimensions, Modal, TextInput, ScrollView, StatusBar,
-    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState
+    ActivityIndicator, FlatList, Platform, Linking, KeyboardAvoidingView, Alert, AppState, Image,
+    useWindowDimensions
 } from 'react-native';
 import { logisticsApi } from '../api/logistics';
 import { authApi } from '../api/auth';
@@ -19,13 +20,12 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { BASE_URL } from '../api/client';
 import { getMaterialImage } from './HomeScreen';
 import {
-    Truck, MapPin, Navigation, Menu, Bell,
+    Truck, MapPin, Navigation, Bell,
     CircleCheck, CircleAlert, Info, Clock, Search, X, ArrowLeft, ArrowRight, Plus, Calendar,
     ChevronRight, Activity, Upload, Package, Image as LucideImage, Globe, ShieldAlert,
     User, LocateFixed, ShieldCheck, Leaf
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { usePickups } from '../hooks/usePickups';
 import * as Location from 'expo-location';
@@ -38,14 +38,17 @@ import SearchingCollectorCard from '../components/SearchingCollectorCard';
 import RatingModal from '../components/RatingModal';
 import AnimatedButton from '../components/AnimatedButton';
 import PageLoader from '../components/PageLoader';
+import OnlineToggleCard from '../components/OnlineToggleCard';
 
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const ActiveMap = MapView;
 const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
 import { Image as ExpoImage } from 'expo-image';
+import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 const { width, height } = Dimensions.get('window');
 
 const MATERIALS = ['Plastics', 'Metals', 'Paper', 'Electronics', 'Glass', 'Mixed'];
@@ -270,17 +273,52 @@ const darkMapStyle = [
 export default function PickupsScreen({ route }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
     const navigation = useNavigation();
     const { userRole, user } = useAuth();
+
+    // null until the stored preference has been read - see sortedJobs, which
+    // must not hide requests during that first moment.
+    const [collectorIsOnline, setCollectorIsOnline] = useState(null);
+    // The map is sized explicitly from here rather than stretched by
+    // absoluteFill. onLayout reported 384x0 - full width, no height - because
+    // absoluteFill takes its height from an ancestor that never resolves one,
+    // and a view with no height draws nothing while still firing onMapReady.
+    //
+    // useWindowDimensions rather than the module-level Dimensions.get()
+    // snapshot this file used to use: that one was captured once at import
+    // and went stale on rotation, which is the bug the comment on styles.map
+    // records. This hook re-renders on every size change.
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+    const [mapReady, setMapReady] = useState(false);
+    const [mapTimedOut, setMapTimedOut] = useState(false);
+    // A profile photo that 404s would otherwise leave an empty white circle
+    // on the map with nothing to indicate it is a button.
+    const [mapAvatarFailed, setMapAvatarFailed] = useState(false);
+    const mapAvatarUri = useMemo(() => {
+        if (mapAvatarFailed) return null;
+        return resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
+    }, [user?.profile_picture_url, user?.profile_picture, mapAvatarFailed]);
+
+    // If onMapReady has not fired by now the map is not coming up, and the
+    // screen should say so rather than leave a blank rectangle that looks
+    // exactly like a map of nowhere. Generous, because a cold Apple/Google
+    // map on a slow connection can take a few seconds.
+    useEffect(() => {
+        if (mapReady) return;
+        const timer = setTimeout(() => setMapTimedOut(true), 8000);
+        return () => clearTimeout(timer);
+    }, [mapReady]);
 
     // Recyclers run pickups exactly like collectors do, but most of this screen
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
     // map behaviour and a reversed route label on their own job.
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
-    // Availability is a collector-only concept - see the presence heartbeat
-    // below. A recycler has no online/offline control on Home, so they must
-    // not be broadcasting themselves as available either.
-    const isDispatchable = userRole === 'COLLECTOR';
+    // Narrower than isCollectorRole. Availability is a collector-only
+    // concept: a recycler is never dispatched a pickup, so they have no
+    // online/offline control anywhere and must not be broadcasting
+    // themselves as available either (see the presence heartbeat below).
+    const isCollectorOnly = userRole === 'COLLECTOR';
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
@@ -385,8 +423,20 @@ export default function PickupsScreen({ route }) {
 
     useEffect(() => {
         (async () => {
-            let { status } = await Location.getForegroundPermissionsAsync();
-            if (status === 'granted') {
+            // Permission granted is not the same as a fix being available:
+            // with location services switched off at the OS level, or indoors
+            // before the first fix, getCurrentPositionAsync rejects with
+            // "Current location is unavailable". Uncaught, that surfaced as a
+            // red "Uncaught (in promise)" screen on launch and left the rest
+            // of this effect unrun. The map already falls back to an
+            // Accra-level region, so the screen works without a fix - it just
+            // cannot centre on the user.
+            try {
+                let { status } = await Location.getForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    setHasLocationPermission(false);
+                    return;
+                }
                 setHasLocationPermission(true);
                 let loc = await Location.getCurrentPositionAsync({});
                 deviceLocationRef.current = loc.coords;
@@ -397,15 +447,23 @@ export default function PickupsScreen({ route }) {
                     latitudeDelta: 0.005,
                     longitudeDelta: 0.005,
                 });
-            } else {
-                setHasLocationPermission(false);
+            } catch (e) {
+                console.warn('[Pickups] Could not read initial location:', e?.message);
+                setErrorMsg('Location unavailable. Turn on location services to see jobs near you.');
             }
         })();
     }, []);
 
     const requestLocationAccess = async () => {
-        let { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
+        // Same failure mode as the effect above, and the same reason to
+        // catch it: this runs from a button, so an unhandled rejection here
+        // is a crash the user triggered by asking for the thing to work.
+        try {
+            let { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') {
+                setErrorMsg('Permission to access location was denied');
+                return;
+            }
             setHasLocationPermission(true);
             let loc = await Location.getCurrentPositionAsync({});
             deviceLocationRef.current = loc.coords;
@@ -416,8 +474,9 @@ export default function PickupsScreen({ route }) {
                 latitudeDelta: 0.005,
                 longitudeDelta: 0.005,
             });
-        } else {
-            setErrorMsg('Permission to access location was denied');
+        } catch (e) {
+            console.warn('[Pickups] Could not read location after permission:', e?.message);
+            setErrorMsg('Location unavailable. Check that location services are on.');
         }
     };
 
@@ -605,12 +664,30 @@ export default function PickupsScreen({ route }) {
     // navigation UI. Was gated to 'COLLECTOR' only, so a recycler's accepted
     // job never started background tracking at all - the disposer would see
     // no live position for the entire job.
+    //
+    // `jobs` is a new array reference on every refetch (the 25s poll, every
+    // socket message, every screen focus - all of them, whether or not this
+    // collector's own job actually changed), so this effect used to re-fire
+    // and re-call startCollectorLocationTracking() every single time, which
+    // re-requests foreground *and* background location permission before it
+    // ever checks whether tracking is already running. If the collector
+    // hadn't granted "Allow all the time" yet, that meant the native
+    // background-location dialog kept reappearing every ~25s for as long as
+    // the job stayed active - indistinguishable from the app being frozen,
+    // since a fresh system dialog just kept replacing the one they'd been
+    // trying to dismiss. Only call start/stop when the active job actually
+    // changes.
+    const trackedJobIdRef = useRef(null);
     useEffect(() => {
         if (!isCollectorRole) return;
 
         const activeJob = jobs.find(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
-        if (activeJob) {
-            startCollectorLocationTracking(activeJob.id);
+        const activeJobId = activeJob?.id ?? null;
+        if (activeJobId === trackedJobIdRef.current) return;
+
+        trackedJobIdRef.current = activeJobId;
+        if (activeJobId) {
+            startCollectorLocationTracking(activeJobId);
         } else {
             stopCollectorLocationTracking();
         }
@@ -618,13 +695,13 @@ export default function PickupsScreen({ route }) {
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
-    // Respects the online/offline toggle on Home - this just keeps the
-    // preference re-affirmed with a fresh position while the preference is on.
+    // Respects the online/offline toggle. This just keeps the preference
+    // re-affirmed with a fresh position while the preference is on.
     // Collectors only: a recycler is never dispatched a pickup, so marking
-    // them online would just put them in the matching pool for requests they
-    // have no toggle to decline.
+    // them online would put them in the matching pool for requests they have
+    // no toggle to decline.
     useEffect(() => {
-        if (!isDispatchable) return;
+        if (!isCollectorOnly) return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
         const pushPresence = async (wantsOnline) => {
@@ -647,7 +724,7 @@ export default function PickupsScreen({ route }) {
             appStateSub.remove();
             pushPresence(false);
         };
-    }, [isDispatchable]);
+    }, [isCollectorOnly]);
 
     // Collector/recycler camera following while actively navigating (foreground
     // UX only - location reporting to the server is handled by the background
@@ -869,9 +946,17 @@ export default function PickupsScreen({ route }) {
                 finalData.append('image', { uri, name, type });
             }
 
-            await logisticsApi.createPickupRequest(finalData);
+            const created = await logisticsApi.createPickupRequest(finalData);
 
-            Toast.show({ type: 'success', text1: 'Success', text2: 'Pickup request created!' });
+            // A collector claiming someone else's listing lands ACCEPTED
+            // immediately (see perform_create) rather than going out to the
+            // job board, so the toast should say so instead of "created".
+            const isDirectClaim = created?.status === 'ACCEPTED' && created?.collector;
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: isDirectClaim ? 'Job accepted! Head over to pick it up.' : 'Pickup request created!'
+            });
             setShowRequestModal(false);
             setUiState('IDLE');
             setCustomAddress('');
@@ -930,6 +1015,14 @@ export default function PickupsScreen({ route }) {
                 if (isMounted) setSearchResults(results);
             } catch (err) {
                 console.log('Search Error', err);
+                // Distinguishes a real failure (bad API key, API not enabled,
+                // no billing) from a genuine zero-results search - both used
+                // to render as the same silent "No locations found", with no
+                // way to tell a broken search from an obscure address.
+                if (isMounted) {
+                    setSearchResults([]);
+                    Toast.show({ type: 'error', text1: 'Search unavailable', text2: err.message || 'Please try again' });
+                }
             } finally {
                 if (isMounted) setIsSearchingLocation(false);
             }
@@ -1223,15 +1316,39 @@ export default function PickupsScreen({ route }) {
 
     const sortedJobs = useMemo(() => {
         if (!isCollectorRole) return jobs;
-        const activeJobs = jobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
-        const pendingJobs = jobs.filter(j => j.status === 'PENDING');
-        return [...activeJobs, ...pendingJobs];
-    }, [jobs, userRole]);
+        // A job this user raised is never work they can take. The backend
+        // returns it now so they can track it, which means the board has to
+        // filter it out here or a recycler would be offered their own pickup.
+        const boardJobs = jobs.filter(j => j.provider?.id !== user?.id);
+        const activeJobs = boardJobs.filter(j => j.status === 'ACCEPTED' || j.status === 'ARRIVED');
+        const pendingJobs = boardJobs.filter(j => j.status === 'PENDING');
 
+        // Offline means offline: new requests stop surfacing, which is what
+        // the toggle promises ("Go online to start receiving requests") and
+        // what it previously failed to do - jobs appeared either way, so the
+        // switch looked decorative.
+        //
+        // A job already accepted is never hidden. Going offline mid-run must
+        // not make the pickup someone is driving to disappear; it only stops
+        // new work arriving. Only applied to collectors: a recycler's toggle
+        // still lives on Home, so this screen does not know their state and
+        // must not guess at it.
+        const takingWork = !isCollectorOnly || collectorIsOnline !== false;
+        return takingWork ? [...activeJobs, ...pendingJobs] : activeJobs;
+    }, [jobs, userRole, isCollectorOnly, collectorIsOnline, user?.id]);
+
+    // The job THIS user raised, whatever their role - not "the seller's job".
+    // A recycler who requests a collector is the provider on that job, and
+    // gating this on SELLER meant they got no tracking card for a pickup they
+    // had paid for: the collector_location events arrived over the socket and
+    // nothing on screen consumed them.
     const activeSellerJob = useMemo(() => {
-        if (userRole !== 'SELLER') return null;
-        return jobs.find(j => ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status));
-    }, [jobs, userRole]);
+        const mine = jobs.filter(j => (
+            ['PENDING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED'].includes(j.status) &&
+            (userRole === 'SELLER' ? true : j.provider?.id === user?.id)
+        ));
+        return mine[0] ?? null;
+    }, [jobs, userRole, user?.id]);
 
     // Fallback "collector found" celebration in case the websocket push was
     // missed (reconnecting) - fires once per PENDING -> ACCEPTED transition
@@ -1258,9 +1375,12 @@ export default function PickupsScreen({ route }) {
 
     const handleRatingSubmit = async (rating, feedback) => {
         try {
-            // await logisticsApi.submitRating(jobToRate.id, rating, feedback);
+            await logisticsApi.submitRating(jobToRate.id, rating, feedback);
             Toast.show({ type: 'success', text1: 'Thank you!', text2: 'Your feedback has been submitted.' });
-            // Ideally we should refetch or update local state to mark as rated
+            // is_rated only flips once the job list refetches - without this
+            // the effect above sees the same completed-and-still-unrated job
+            // on its next run and pops the modal right back open.
+            refetch();
         } catch (error) {
             Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to submit rating' });
         }
@@ -1301,18 +1421,64 @@ export default function PickupsScreen({ route }) {
         <View style={styles.container}>
             <ActiveMap
                 ref={mapRef}
-                style={styles.map}
-                initialRegion={location ? {
-                    latitude: location.coords?.latitude || location.latitude,
-                    longitude: location.coords?.longitude || location.longitude,
+                // iOS deliberately stays on Apple Maps. app.json now does
+                // set ios.config.googleMapsApiKey (it did not when this was
+                // written), so Google could be forced here - but Apple Maps
+                // needs no key, no Cloud project and no billing account,
+                // while Maps SDK for iOS needs all three. Android has no
+                // such free fallback, so it uses PROVIDER_GOOGLE and does
+                // depend on that key and on billing being enabled.
+                //
+                // Neither path explains a blank map in Expo Go:
+                // react-native-maps is native code, and Expo Go only ships
+                // the modules Expo bundles. This project depends on
+                // expo-dev-client precisely because it needs a development
+                // build - in Expo Go the map surface renders nothing while
+                // every JS overlay above it draws normally.
+                provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                style={[styles.map, { width: windowWidth, height: windowHeight }]}
+                // initialRegion is captured once on mount and never reacts to
+                // later prop changes (unlike `region`) - so it must never be
+                // null, or the map has nothing to render and stays blank even
+                // after location resolves and the animateCamera effect below
+                // fires. Fall back to an Accra-level view until GPS is ready.
+                initialRegion={{
+                    latitude: location?.coords?.latitude ?? location?.latitude ?? 5.6037,
+                    longitude: location?.coords?.longitude ?? location?.longitude ?? -0.1870,
                     latitudeDelta: 0.0922,
                     longitudeDelta: 0.0421,
-                } : null}
+                }}
                 showsUserLocation={true}
                 showsMyLocationButton={false}
                 followsUserLocation={!!navigatingJob && isCollectorRole}
-                userInterfaceStyle="dark"
-                customMapStyle={darkMapStyle}
+                // Follows the app theme instead of being pinned to "dark".
+                // Pinned, it asked Apple Maps for a dark surface under a light
+                // UI, and this is the very prop the note below flags as
+                // implicated in blanking the map on iOS.
+                userInterfaceStyle={isDark ? 'dark' : 'light'}
+                // darkMapStyle is Google-Maps-JSON styling - only meaningful
+                // (and only safe) on the Google provider. Applying it to
+                // Apple Maps alongside userInterfaceStyle="dark" is a known
+                // react-native-maps conflict that blacks out the whole map
+                // on iOS; Apple's own dark mode above already covers it there.
+                // Follows the theme rather than being forced on always:
+                // darkMapStyle paints the base #212121, so in light mode it
+                // was handing Android a night map under a light UI.
+                customMapStyle={Platform.OS === 'android' && isDark ? darkMapStyle : undefined}
+                // Nothing observed whether the map ever came up, so a failure
+                // looked identical to an empty city: a blank rectangle with
+                // the overlays floating on it and no way to tell which.
+                onMapReady={() => setMapReady(true)}
+                // Silent when the map has a size, loud when it does not.
+                // A zero dimension here is the difference between a blank
+                // map and a working one, and it is otherwise invisible -
+                // the view still mounts, still fires onMapReady, and still
+                // draws the theme colour.
+                onLayout={(e) => {
+                    const { width: w, height: h } = e.nativeEvent.layout;
+                    if (w > 0 && h > 0) return;
+                    console.warn(`[Map] no drawable size: ${Math.round(w)}x${Math.round(h)} - the map will render blank.`);
+                }}
             >
                 {memoizedMarkers}
 
@@ -1367,7 +1533,20 @@ export default function PickupsScreen({ route }) {
                         </TouchableOpacity>
                     ) : (
                         <TouchableOpacity style={styles.menuBtn} onPress={() => navigation.navigate('Profile')}>
-                            <Menu size={20} color={colors.text} />
+                            {/* This has always opened Profile - a hamburger
+                                promised a drawer that does not exist. Shows
+                                the user's own photo where there is one, the
+                                same way the You tab does, and falls back to
+                                the person mark when there is not. */}
+                            {mapAvatarUri ? (
+                                <Image
+                                    source={{ uri: mapAvatarUri }}
+                                    style={styles.menuBtnAvatar}
+                                    onError={() => setMapAvatarFailed(true)}
+                                />
+                            ) : (
+                                <User size={20} color={colors.text} />
+                            )}
                         </TouchableOpacity>
                     )}
                     <View style={{ flex: 1 }} />
@@ -1376,6 +1555,35 @@ export default function PickupsScreen({ route }) {
                             <LocateFixed size={20} color={colors.text} />
                         </TouchableOpacity>
                     )}
+                </View>
+            )}
+
+            {mapTimedOut && !mapReady && (
+                <View style={styles.mapFallbackNotice} pointerEvents="none">
+                    <Text style={styles.mapFallbackTitle}>Map didn't load</Text>
+                    <Text style={styles.mapFallbackBody}>
+                        {Platform.OS === 'ios'
+                            ? "Everything else on this screen is working. iOS uses Apple Maps here, which needs no API key and no billing - so this is the map component itself, not your Google account. In Expo Go, maps need a development build (npx expo run:ios)."
+                            : "Everything else on this screen is working. Android draws this with Google Maps, which needs a valid key with the Maps SDK for Android enabled and billing active on the Cloud project. In Expo Go, maps also need a development build (npx expo run:android)."}
+                    </Text>
+                </View>
+            )}
+
+            {/* Going online is what makes a collector discoverable, and this
+                was the only control for it - it used to live on Home, which
+                collectors no longer have, so removing that tab left them no
+                way to go online at all.
+
+                Sits under the top bar rather than at the bottom because the
+                job pager owns the bottom edge: down there it would either
+                collide with incoming requests or have to hide whenever any
+                arrived, and "go offline" has to stay reachable precisely
+                when work is coming in. Collector-only - recyclers still have
+                Home, and a second copy there would be two switches for one
+                setting. */}
+            {isCollectorOnly && !isSelectingLocation && !navigatingJob && uiState !== 'VEHICLE_SELECT' && (
+                <View style={styles.onlineTogglePane} pointerEvents="box-none">
+                    <OnlineToggleCard location={location} onChange={setCollectorIsOnline} />
                 </View>
             )}
 
@@ -1458,12 +1666,7 @@ export default function PickupsScreen({ route }) {
                                     setUiState('VEHICLE_SELECT');
                                 }}
                             >
-                                <LinearGradient
-                                    colors={['#1F2937', '#0B0B0B']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.continueBtnUbride}
-                                >
+                                <View style={[styles.continueBtnUbride, { backgroundColor: colors.primary }]}>
                                     {requestLoading ? (
                                         <ActivityIndicator color={colors.onPrimary} />
                                     ) : (
@@ -1474,7 +1677,7 @@ export default function PickupsScreen({ route }) {
                                             </View>
                                         </>
                                     )}
-                                </LinearGradient>
+                                </View>
                             </AnimatedButton>
                         )}
                     </View>
@@ -1592,7 +1795,7 @@ export default function PickupsScreen({ route }) {
                             <View style={styles.confirmHandle} />
                         </View>
 
-                        <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                        <ScrollView style={{ flexShrink: 1 }} showsVerticalScrollIndicator={false} bounces={false}>
                             <View style={styles.confirmTitleRow}>
                                 <View style={styles.confirmLogoBox}>
                                     <Leaf size={22} color={BRAND_GREEN} />
@@ -1820,19 +2023,36 @@ export default function PickupsScreen({ route }) {
                                 than sitting in a list row. Revesta takes nothing and
                                 pays nothing while monetization is off, so the note
                                 says who actually settles it - promising an in-app
-                                payout the backend won't make would be a lie. */}
+                                payout the backend won't make would be a lie. With
+                                pricing switched off there is no figure to quote at
+                                all, so the card says how it gets settled instead of
+                                showing a number the app did not set. */}
                             <View style={styles.reqAmountCard}>
-                                <Text style={styles.reqAmountLabel}>
-                                    {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
-                                </Text>
-                                <Text style={styles.reqAmountValue}>
-                                    ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
-                                </Text>
-                                <Text style={styles.reqAmountNote}>
-                                    {requestForm.track_type === 'A'
-                                        ? 'Paid directly to your collector on pickup.'
-                                        : 'Settled directly with the disposer on pickup.'}
-                                </Text>
+                                {pricingEnabled ? (
+                                    <>
+                                        <Text style={styles.reqAmountLabel}>
+                                            {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
+                                        </Text>
+                                        <Text style={styles.reqAmountValue}>
+                                            ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
+                                        </Text>
+                                        <Text style={styles.reqAmountNote}>
+                                            {requestForm.track_type === 'A'
+                                                ? 'Paid directly to your collector on pickup.'
+                                                : 'Settled directly with the disposer on pickup.'}
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text style={styles.reqAmountLabel}>Payment</Text>
+                                        <Text style={styles.reqAmountValue}>Arranged directly</Text>
+                                        <Text style={styles.reqAmountNote}>
+                                            {requestForm.track_type === 'A'
+                                                ? 'Agree the price with your collector at pickup.'
+                                                : 'Agree the price with the disposer at pickup.'}
+                                        </Text>
+                                    </>
+                                )}
                             </View>
 
                             <View style={styles.reqNoteRow}>
@@ -1868,8 +2088,11 @@ export default function PickupsScreen({ route }) {
                 onRequestClose={() => setShowSearchModal(false)}
             >
                 <SafeAreaView style={{ flex: 1, backgroundColor: colors.onPrimary }}>
-                    <StatusBar barStyle="dark-content" />
-                    
+                    {/* colors.onPrimary flips to near-black in dark mode (it
+                        inverts opposite colors.primary), so a status bar
+                        stuck on dark-content here went invisible against it. */}
+                    <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
                     {/* Search Header */}
                     <View style={styles.searchHeader}>
                         <TouchableOpacity onPress={() => setShowSearchModal(false)} style={styles.searchCloseBtn}>
@@ -2353,7 +2576,14 @@ const useStyles = makeStyles((c) => ({
         fontWeight: '500',
     },
     // Ubride Styles
+    // Clears floatingTopBarUbride (its top, plus the 44pt button row, plus
+    // a gap) so the two never overlap on either platform.
+    mapFallbackNotice: { position: 'absolute', top: '38%', left: 32, right: 32, backgroundColor: c.surface, borderRadius: 20, padding: 20, borderWidth: 1, borderColor: c.borderSubtle },
+    mapFallbackTitle: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 6 },
+    mapFallbackBody: { fontSize: 13, lineHeight: 19, color: c.textSecondary },
+    onlineTogglePane: { position: 'absolute', top: Platform.OS === 'ios' ? 116 : 96, left: 16, right: 16, zIndex: 9 },
     floatingTopBarUbride: { position: 'absolute', top: Platform.OS === 'ios' ? 60 : 40, left: 16, right: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
+    menuBtnAvatar: { width: 44, height: 44, borderRadius: 22 },
     menuBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     bellBtnUbride: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', shadowColor: c.shadow, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 },
     
@@ -2392,6 +2622,11 @@ const useStyles = makeStyles((c) => ({
         elevation: 6,
     },
     continueBtnUbride: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 20 },
+    // Now follows c.primary (set inline where this style is used) instead of
+    // a fixed dark background, matching the plain "Continue" button one step
+    // later in this same flow - the button turns light in dark mode instead
+    // of staying a dark button that barely stood out against an equally dark
+    // card behind it.
     continueBtnTextUbride: { color: c.onPrimary, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
     continueBtnIconBubble: { position: 'absolute', right: 8, width: 32, height: 32, borderRadius: 16, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
 
@@ -2447,10 +2682,17 @@ const useStyles = makeStyles((c) => ({
     },
     confirmSheet: {
         position: 'absolute',
-        bottom: 0,
+        // The other two sheets in this same flow (bottomSheetUbride,
+        // bottomSheetUbrideVehicles) sit at bottom:120 to clear the floating
+        // tab bar - this one was left at bottom:0, so its own small
+        // paddingBottom was the only thing between the "Confirm Request"
+        // button and the tab bar, and on devices with on-screen system nav
+        // buttons underneath that too, the button ended up rendered behind
+        // both, invisible and untappable.
+        bottom: TAB_BAR_CLEARANCE,
         left: 0,
         right: 0,
-        backgroundColor: '#0D0D0F',
+        backgroundColor: c.surface,
         borderTopLeftRadius: 28,
         borderTopRightRadius: 28,
         paddingHorizontal: 20,
@@ -2458,37 +2700,37 @@ const useStyles = makeStyles((c) => ({
         paddingBottom: Platform.OS === 'ios' ? 34 : 24,
         maxHeight: Dimensions.get('window').height * 0.78,
         borderTopWidth: 1,
-        borderTopColor: 'rgba(255,255,255,0.08)',
+        borderTopColor: c.border,
     },
     confirmHandleWrap: { alignItems: 'center', paddingVertical: 8 },
-    confirmHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.22)' },
+    confirmHandle: { width: 44, height: 4, borderRadius: 2, backgroundColor: c.border },
     confirmTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10, marginBottom: 8 },
     confirmLogoBox: {
         width: 42,
         height: 42,
         borderRadius: 12,
-        backgroundColor: 'rgba(52,211,153,0.14)',
+        backgroundColor: c.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
-    confirmTitle: { fontSize: 24, fontWeight: '800', color: '#F7F7F8', letterSpacing: -0.3 },
-    confirmSubtitle: { fontSize: 14.5, color: '#9BA1A6', marginBottom: 18, lineHeight: 20 },
+    confirmTitle: { fontSize: 24, fontWeight: '800', color: c.text, letterSpacing: -0.3 },
+    confirmSubtitle: { fontSize: 14.5, color: c.textSecondary, marginBottom: 18, lineHeight: 20 },
     confirmCard: {
-        backgroundColor: '#17181B',
+        backgroundColor: c.surfaceAlt,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.06)',
+        borderColor: c.borderSubtle,
         paddingHorizontal: 14,
         paddingVertical: 14,
         marginBottom: 12,
     },
     confirmCardRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    confirmCardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+    confirmCardDivider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 14 },
     confirmIconBoxGreen: {
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(52,211,153,0.14)',
+        backgroundColor: c.accentSoft,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -2496,26 +2738,26 @@ const useStyles = makeStyles((c) => ({
         width: 44,
         height: 44,
         borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
     },
     confirmCardTextCol: { flex: 1 },
-    confirmCardLabel: { fontSize: 12.5, color: '#8B9096', marginBottom: 3 },
-    confirmCardValue: { fontSize: 16, fontWeight: '700', color: '#F2F3F4', marginBottom: 2 },
-    confirmCardSub: { fontSize: 13, color: '#7C8288' },
+    confirmCardLabel: { fontSize: 12.5, color: c.textMuted, marginBottom: 3 },
+    confirmCardValue: { fontSize: 16, fontWeight: '700', color: c.text, marginBottom: 2 },
+    confirmCardSub: { fontSize: 13, color: c.textMuted },
     confirmChangeBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
-        backgroundColor: 'rgba(52,211,153,0.10)',
+        backgroundColor: c.accentSoft,
         paddingHorizontal: 10,
         paddingVertical: 8,
         borderRadius: 10,
     },
     confirmChangeText: { fontSize: 13.5, fontWeight: '600', color: BRAND_GREEN },
-    confirmInfoTitle: { fontSize: 15.5, fontWeight: '700', color: '#F2F3F4', marginBottom: 5 },
-    confirmInfoBody: { fontSize: 13.5, color: '#9BA1A6', lineHeight: 19.5 },
+    confirmInfoTitle: { fontSize: 15.5, fontWeight: '700', color: c.text, marginBottom: 5 },
+    confirmInfoBody: { fontSize: 13.5, color: c.textSecondary, lineHeight: 19.5 },
     confirmCtaBtn: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -2574,7 +2816,7 @@ const useStyles = makeStyles((c) => ({
         backgroundColor: c.primary,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: c.isDark ? 'rgba(11,15,14,0.1)' : 'rgba(255,255,255,0.1)',
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 14,
@@ -2590,18 +2832,32 @@ const useStyles = makeStyles((c) => ({
         width: 42,
         height: 42,
         borderRadius: 12,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: c.isDark ? 'rgba(11,15,14,0.1)' : 'rgba(255,255,255,0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     kycBannerText: { flex: 1 },
     kycBannerTitle: { fontSize: 14, fontWeight: '700', color: c.onPrimary, marginBottom: 2 },
-    kycBannerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)' },
+    // Same c.primary-inversion issue as requestPickupSubtitle/heroSubtitle/
+    // ToastConfig's subtext - this banner turns light in dark mode too.
+    kycBannerSub: { fontSize: 12, color: c.isDark ? 'rgba(11,15,14,0.6)' : 'rgba(255,255,255,0.6)' },
     jobListContainerAbsolute: { position: 'absolute', bottom: 100, left: 0, right: 0 },
 
     container: { flex: 1 },
-    map: { width: width, height: height },
+    // Was { width, height } from a module-level Dimensions.get('window')
+    // snapshot taken once at import time - when that snapshot came back
+    // wrong (or just stale after a rotation/resize), the map rendered at
+    // whatever undersized dimensions it had captured, with the screen's
+    // own background showing through everywhere below it. Filling the
+    // flex:1 parent directly means there's nothing to get stale.
+    // Anchored top-left and sized explicitly by the component from
+    // useWindowDimensions. Deliberately not absoluteFillObject any more:
+    // that sets right/bottom to 0 and derives the size from the ancestor,
+    // which is exactly what produced a 384x0 map - full width, no height,
+    // and so nothing drawn. Pairing insets with an explicit width/height
+    // would also leave two competing definitions of the same edges.
+    map: { position: 'absolute', top: 0, left: 0 },
 
     header: {
         position: 'absolute',
@@ -2965,7 +3221,7 @@ const useStyles = makeStyles((c) => ({
         paddingHorizontal: 24,
         paddingTop: 24,
         paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-        maxHeight: height * 0.9,
+        maxHeight: Dimensions.get('window').height * 0.9,
     },
     modalBody: {},
     pickerContainer: {

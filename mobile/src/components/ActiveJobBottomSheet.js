@@ -1,10 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Animated, Easing, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Easing, Dimensions } from 'react-native';
 import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User, Check } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
+import PremiumButton from './PremiumButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
 import { BASE_URL } from '../api/client';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 
 // The sheet is absolutely positioned at bottom:0 inside a parent with no fixed
@@ -18,7 +21,9 @@ const SHEET_MAX_HEIGHT = Dimensions.get('window').height * 0.74;
 
 // The final node always renders as a checkmark once reached (handled by
 // PickupProgressRoadmap itself), so this icon is only a fallback.
-const ROADMAP_STEPS = [
+// Exported so CollectorBottomSheet (the disposer's view of the same job)
+// tracks the exact same real, backend-confirmed milestones.
+export const ROADMAP_STEPS = [
     { key: 'requested', label: 'Requested', icon: Clock },
     { key: 'assigned', label: 'Accepted', icon: UserCheck },
     { key: 'arrived', label: 'Arrived', icon: MapPin },
@@ -47,6 +52,7 @@ const formatDate = (value) => {
 export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, onNavigate, onArrive, onComplete, onAccept, requestLoading, isCollapsed, onToggleCollapse }) {
     const styles = useStyles();
     const { colors } = useTheme();
+    const { pricingEnabled } = usePricing();
     const pulseAnim = useRef(new Animated.Value(0.5)).current;
     const isPending = job?.status === 'PENDING';
 
@@ -203,7 +209,7 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
                             or collect a fee for it, so a Price/Fee/Total breakdown
                             here would just show a misleading GHS 0.00 all the way
                             down. Say what's actually true instead. */}
-                        {job.track_type === 'A' ? (
+                        {job.track_type === 'A' || !pricingEnabled ? (
                             <View style={styles.paymentSummary}>
                                 <Text style={styles.paymentTitle}>Payment</Text>
                                 <Text style={styles.cashNote}>Arranged directly with the disposer - no in-app charge for this job.</Text>
@@ -230,34 +236,43 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
 
                 {/* Actions */}
                 <View style={styles.actionContainer}>
+                    {/* A check, not a briefcase: a briefcase said "job" but
+                        nothing about accepting. Same glyph as the accept button
+                        on the listing screen. */}
                     {job.status === 'PENDING' && (
-                        <AnimatedButton style={styles.primaryBtn} onPress={() => onAccept(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color={colors.onPrimary} /> : (
-                                <>
-                                    {/* Same accept affordance as the listing screen. */}
-                                    <View style={styles.acceptCheckBadge}>
-                                        <Check size={14} color={colors.primary} strokeWidth={3.5} />
-                                    </View>
-                                    <Text style={styles.primaryBtnText}>Accept Job</Text>
-                                </>
-                            )}
-                        </AnimatedButton>
+                        <PremiumButton
+                            title="Accept Job"
+                            leftIcon={Check}
+                            variant="primary"
+                            onPress={() => onAccept(job.id)}
+                            loading={requestLoading}
+                        />
                     )}
                     {job.status === 'ACCEPTED' && (
-                        <View style={styles.dualActions}>
-                            <AnimatedButton style={[styles.primaryBtn, { flex: 1, backgroundColor: colors.surfaceSunken }]} onPress={() => onNavigate(job)}>
-                                <Navigation size={20} color={colors.text} style={{ marginRight: 8 }} />
-                                <Text style={[styles.primaryBtnText, { color: colors.text }]}>{isCollapsed ? 'Show Details' : 'Navigate'}</Text>
-                            </AnimatedButton>
-                            <AnimatedButton style={[styles.primaryBtn, { flex: 1 }]} onPress={() => onArrive(job.id)} disabled={requestLoading}>
-                                {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Arrived</Text>}
-                            </AnimatedButton>
+                        <View style={[styles.dualActions, { flexDirection: 'column', gap: 8 }]}>
+                            <PremiumButton
+                                title={isCollapsed ? 'Show Details' : 'Navigate'}
+                                leftIcon={Navigation}
+                                variant="secondary"
+                                onPress={() => onNavigate(job)}
+                            />
+                            <PremiumButton
+                                title="Arrived"
+                                leftIcon={MapPin}
+                                variant="primary"
+                                onPress={() => onArrive(job.id)}
+                                loading={requestLoading}
+                            />
                         </View>
                     )}
                     {job.status === 'ARRIVED' && (
-                        <AnimatedButton style={styles.primaryBtn} onPress={() => onComplete(job.id)} disabled={requestLoading}>
-                            {requestLoading ? <Activity color={colors.onPrimary} /> : <Text style={styles.primaryBtnText}>Complete Job</Text>}
-                        </AnimatedButton>
+                        <PremiumButton
+                            title="Complete Job"
+                            leftIcon={CheckCircle}
+                            variant="primary"
+                            onPress={() => onComplete(job.id)}
+                            loading={requestLoading}
+                        />
                     )}
                 </View>
             </ScrollView>
@@ -280,7 +295,13 @@ const useStyles = makeStyles((c) => ({
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 100 : 90,
+        // This sheet sits at bottom:0 behind the floating tab bar (see
+        // PickupsScreen's collectorBottomSheetUbride), so its own bottom
+        // padding is the only thing keeping the Arrived/Complete buttons -
+        // the very last thing in the ScrollView - from rendering underneath
+        // it. The old fixed 90/100 fell short of the tab bar's real height,
+        // hiding those buttons entirely on some devices.
+        paddingBottom: TAB_BAR_CLEARANCE + 8,
         shadowColor: c.shadow,
         shadowOffset: { width: 0, height: -10 },
         shadowOpacity: 0.1,

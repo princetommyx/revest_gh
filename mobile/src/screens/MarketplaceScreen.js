@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import {
-    Search, MapPin, Package, ShoppingCart, ChevronLeft, Heart, ChevronDown, SlidersHorizontal, LayoutGrid, Droplet, Magnet, FileText, Blocks
+    Search, MapPin, Package, ShoppingCart, ChevronLeft, ChevronRight, Heart, ChevronDown, SlidersHorizontal, LayoutGrid
 } from 'lucide-react-native';
 import { BASE_URL } from '../api/client';
 import { marketApi } from '../api/market';
@@ -16,16 +16,26 @@ import { SkeletonCard } from '../components/Skeleton';
 import * as Haptics from 'expo-haptics';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { usePricing } from '../context/PricingContext';
+import { TAB_BAR_CLEARANCE } from '../constants/layout';
 
 const { width } = Dimensions.get('window');
 
+// Real rendered icons rather than flat outline shapes - stand out against
+// the plain stroke icons around them in the category row.
+const PAPER_ICON = require('../../assets/paper-icon.png');
+const METALS_ICON = require('../../assets/metals-icon.png');
+const PLASTICS_ICON = require('../../assets/plastics-icon.png');
+const ELECTRONICS_ICON = require('../../assets/electronics-icon.png');
+const GLASS_ICON = require('../../assets/glass-icon.png');
+
 const CATEGORIES = [
     { id: '', name: 'All', icon: LayoutGrid },
-    { id: 'Plastics', name: 'Plastics', icon: Droplet },
-    { id: 'Metals', name: 'Metals', icon: Magnet },
-    { id: 'Paper', name: 'Paper', icon: FileText },
-    { id: 'Glass', name: 'Glass', icon: Droplet },
-    { id: 'Electronics', name: 'E-Waste', icon: Blocks }
+    { id: 'Plastics', name: 'Plastics', image: PLASTICS_ICON },
+    { id: 'Metals', name: 'Metals', image: METALS_ICON },
+    { id: 'Paper', name: 'Paper', image: PAPER_ICON },
+    { id: 'Glass', name: 'Glass', image: GLASS_ICON },
+    { id: 'Electronics', name: 'E-Waste', image: ELECTRONICS_ICON }
 ];
 
 const AVAILABLE_LOCATIONS = [
@@ -44,6 +54,9 @@ const SORT_OPTIONS = [
 export default function MarketplaceScreen({ navigation, route }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
+    const { pricingEnabled } = usePricing();
+    // Sorting by a price nobody can see would just be confusing.
+    const sortOptions = pricingEnabled ? SORT_OPTIONS : SORT_OPTIONS.filter(o => !o.id.startsWith('price_'));
     const insets = useSafeAreaInsets();
     const { userRole, user } = useAuth();
     const [filter, setFilter] = useState('');
@@ -129,6 +142,10 @@ export default function MarketplaceScreen({ navigation, route }) {
     const renderListing = ({ item }) => {
         const liked = likeOverrides[item.id] ?? item.is_liked;
         const materialObj = CATEGORIES.find(c => c.id.toLowerCase() === item.material_type?.toLowerCase()) || CATEGORIES[1];
+        // Every CATEGORIES entry except "All" carries `image` (a rendered
+        // PNG), not `icon` (a component) - MaterialIcon was undefined for
+        // every real material and rendered unconditionally below, crashing
+        // this card the instant it appeared.
         const MaterialIcon = materialObj.icon;
         
         return (
@@ -169,27 +186,30 @@ export default function MarketplaceScreen({ navigation, route }) {
             </View>
             <View style={styles.listingDetails}>
                 <Text style={styles.listingTitle} numberOfLines={1}>{item.title}</Text>
-                
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{materialObj.name}</Text>
-                </View>
-                
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
-                    <Package size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
-                    <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
+
+                <View style={styles.iconRow}>
+                    {materialObj.image ? (
+                        <Image source={materialObj.image} style={{ width: 12, height: 12, marginRight: 4 }} contentFit="contain" />
+                    ) : MaterialIcon ? (
+                        <MaterialIcon size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                    ) : null}
+                    <Text style={[styles.listingLoc, { flexShrink: 3 }]} numberOfLines={1}>{materialObj.name}</Text>
+                    <Text style={styles.metaDot}>{'·'}</Text>
+                    <Text style={[styles.listingLoc, { flexShrink: 2 }]} numberOfLines={1}>{item.quantity || '1 Bag'}</Text>
                 </View>
 
-                <View style={[styles.iconRow, { marginBottom: 4 }]}>
+                <View style={styles.iconRow}>
                     <MapPin size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
                     <Text style={[styles.listingLoc, { flexShrink: 1 }]} numberOfLines={1}>{item.location?.split(',')[0] || item.location || 'Accra'}</Text>
                     <Text style={styles.distanceText}> • 1.8 km</Text>
                 </View>
 
                 <View style={styles.priceRow}>
-                    <Text style={styles.listingPrice}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
-                    <View style={styles.viewDetailsBtn}>
-                        <Text style={styles.viewDetailsText}>View details &gt;</Text>
+                    {pricingEnabled && (
+                        <Text style={styles.listingPrice} numberOfLines={1}>{item.is_free ? 'Free' : `GH₵ ${parseFloat(item.price || 0).toFixed(0)}`}</Text>
+                    )}
+                    <View style={[styles.viewDetailsBtn, !pricingEnabled && { marginLeft: 'auto' }]}>
+                        <ChevronRight size={16} color={colors.onAccent} />
                     </View>
                 </View>
             </View>
@@ -240,6 +260,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                             >
                                 {IconComp && isActive && item.id === '' && <IconComp size={16} color={colors.onPrimary} style={{ marginRight: 6 }} />}
                                 {IconComp && !isActive && <IconComp size={16} color={colors.text} style={{ marginRight: 6 }} />}
+                                {item.image && !isActive && <Image source={item.image} style={{ width: 18, height: 18, marginRight: 6 }} contentFit="contain" />}
                                 <Text style={[styles.catChipText, isActive && styles.catChipTextActive]}>
                                     {item.name}
                                 </Text>
@@ -269,7 +290,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                     </View>
                 )}
                 <TouchableOpacity style={styles.dropdownChip} onPress={() => setShowSortModal(true)}>
-                    <Text style={styles.dropdownText}>{sortBy ? SORT_OPTIONS.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
+                    <Text style={styles.dropdownText}>{sortBy ? sortOptions.find(o => o.id === sortBy)?.label.split(':')[0] : 'Recently added'}</Text>
                     <ChevronDown size={14} color={colors.text} style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
             </View>
@@ -312,7 +333,7 @@ export default function MarketplaceScreen({ navigation, route }) {
             </View>
 
             {/* Request Pickup FAB for Disposers */}
-            {userRole !== 'RECYCLER' && (
+            {userRole === 'SELLER' && (
                 <TouchableOpacity 
                     style={styles.fab} 
                     onPress={() => navigation.navigate('CreateListing')}
@@ -362,7 +383,7 @@ export default function MarketplaceScreen({ navigation, route }) {
                                 <Text style={styles.closeModalText}>Close</Text>
                             </TouchableOpacity>
                         </View>
-                        {SORT_OPTIONS.map((option) => (
+                        {sortOptions.map((option) => (
                             <TouchableOpacity
                                 key={option.id}
                                 style={[styles.modalOption, sortBy === option.id && styles.modalOptionActive]}
@@ -582,11 +603,16 @@ const useStyles = makeStyles((c) => ({
     iconRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 6,
+        marginBottom: 5,
     },
     listingLoc: {
         fontSize: 12,
         color: c.textSecondary,
+    },
+    metaDot: {
+        fontSize: 12,
+        color: c.textMuted,
+        marginHorizontal: 4,
     },
     distanceText: {
         fontSize: 12,
@@ -597,24 +623,23 @@ const useStyles = makeStyles((c) => ({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: 6,
+        marginTop: 8,
+        gap: 8,
     },
     listingPrice: {
-        fontSize: 16,
+        flexShrink: 1,
+        fontSize: 15,
         fontWeight: 'bold',
-        color: c.accent,
+        color: c.text,
     },
     viewDetailsBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: c.accent,
-    },
-    viewDetailsText: {
-        color: c.accent,
-        fontSize: 12,
-        fontWeight: '600',
+        flexShrink: 0,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: c.accent,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     emptyBox: {
         alignItems: 'center',
@@ -700,7 +725,13 @@ const useStyles = makeStyles((c) => ({
     },
     fab: {
         position: 'absolute',
-        bottom: 30,
+        // This screen renders both as a tab (with the floating tab bar) and
+        // as a plain pushed stack screen (no tab bar, just the phone's own
+        // system nav) - the fixed bottom:30 cleared neither, so on Android
+        // this button ended up sitting under the on-screen nav buttons.
+        // TAB_BAR_CLEARANCE clears both cases the same way every other
+        // bottom-pinned control in the app already does.
+        bottom: TAB_BAR_CLEARANCE,
         alignSelf: 'center',
         backgroundColor: c.primary,
         paddingHorizontal: 24,

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator, Image, Modal, Dimensions, Platform, KeyboardAvoidingView, Switch, Animated, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Truck, Trash, Recycle, Check, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { ArrowLeft, Upload, Smartphone, Lock, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { useAuth } from '../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { PhoneAuth } from '../services/PhoneAuth';
@@ -10,6 +10,7 @@ import Toast from 'react-native-toast-message';
 import { authApi } from '../api/auth';
 import { useGoogleAuth, isGoogleAuthSupported } from '../hooks/useGoogleAuth';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import RoleMarkBadge from '../components/RoleMarkBadge';
 
 // Google's brand red - a brand mark keeps its colour in both themes.
 const GOOGLE_RED = '#DB4437';
@@ -20,11 +21,17 @@ export default function RegisterScreen() {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
     const navigation = useNavigation();
+    const route = useRoute();
     const { signUp, googleSignIn } = useAuth();
-    const [step, setStep] = useState(1);
+    // "Earn as a Collector" on Profile sends a signed-out user straight here
+    // with a role already chosen - skip the role-picker step entirely
+    // instead of making them pick it again.
+    const preselectedRole = ['COLLECTOR', 'SELLER', 'RECYCLER'].includes(route.params?.role) ? route.params.role : '';
+    const [step, setStep] = useState(preselectedRole ? 2 : 1);
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const otpInputRef = React.useRef(null);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -34,7 +41,7 @@ export default function RegisterScreen() {
         confirm_password: '',
         phone_number: '',
         city: 'Accra',
-        role: '',
+        role: preselectedRole || 'SELLER',
         vehicle_type: '',
         license_plate: '',
         recycler_type: 'INDIVIDUAL',
@@ -89,17 +96,26 @@ export default function RegisterScreen() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleRoleSelect = (role) => {
-        if (role === 'RECYCLER') {
-            Toast.show({
-                type: 'info',
-                text1: 'Coming Soon',
-                text2: 'The Recycler role is currently under development.',
-            });
-            return;
-        }
+    // Tapping a role card only selects it - Continue advances to step 2.
+    //
+    // Recycler used to be blocked here with a "Coming Soon" toast while the
+    // rest of its flow - the company/individual fields below, the
+    // certification upload, the serializer, the job board - was already
+    // built and working. Recyclers are the marketplace's users now, so the
+    // block was the only thing standing between them and an account.
+    const selectRoleCard = (role) => {
         handleChange('role', role);
-        setTimeout(() => setStep(2), 200);
+    };
+
+    const continueFromRoleStep = () => setStep(2);
+
+    const getRoleLabel = (role) => {
+        switch (role) {
+            case 'SELLER': return 'Disposer';
+            case 'COLLECTOR': return 'Collector';
+            case 'RECYCLER': return 'Recycler';
+            default: return 'User';
+        }
     };
 
     const completeRegistration = async () => {
@@ -324,24 +340,86 @@ export default function RegisterScreen() {
         });
     };
 
-    const RoleCard = ({ role, title, desc, icon: Icon, color, bgColor }) => {
+    const RoleGridCard = ({ role, title, desc, markRole, pillLabel, pillVariant }) => {
         const isSelected = formData.role === role;
+        const animation = React.useRef(new Animated.Value(isSelected ? 1 : 0)).current;
+
+        React.useEffect(() => {
+            Animated.spring(animation, {
+                toValue: isSelected ? 1 : 0,
+                useNativeDriver: false,
+                friction: 7,
+                tension: 40,
+            }).start();
+        }, [isSelected]);
+
+        const borderColor = animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [colors.border, colors.primary]
+        });
+
+        const scale = animation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [1, 1.02]
+        });
+
         return (
             <TouchableOpacity
-                onPress={() => handleRoleSelect(role)}
+                onPress={() => selectRoleCard(role)}
+                activeOpacity={0.9}
+                style={{ flex: 1 }}
+            >
+                <Animated.View
+                    style={[
+                        styles.roleGridCard,
+                        {
+                            borderColor,
+                            transform: [{ scale }]
+                        }
+                    ]}
+                >
+                    <View style={styles.roleImageArea}>
+                        <RoleMarkBadge role={markRole} />
+                    </View>
+                    <Text style={styles.roleGridTitle}>{title}</Text>
+                    <Text style={styles.roleGridDesc}>{desc}</Text>
+                    <View style={[styles.pill, pillVariant === 'success' ? styles.pillSuccess : styles.pillNeutral]}>
+                        <Text style={[styles.pillText, pillVariant === 'success' ? styles.pillTextSuccess : styles.pillTextNeutral]}>
+                            {pillLabel}
+                        </Text>
+                    </View>
+                </Animated.View>
+            </TouchableOpacity>
+        );
+    };
+
+    // Selectable like the two grid cards above it, and showing the same
+    // border feedback - it was previously a dead row with a SOON pill, so
+    // it had no selected state to show.
+    const RecyclerRow = () => {
+        const isSelected = formData.role === 'RECYCLER';
+
+        return (
+            <TouchableOpacity
+                onPress={() => selectRoleCard('RECYCLER')}
+                activeOpacity={0.8}
                 style={[
-                    styles.roleCard,
-                    isSelected && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }
+                    styles.recyclerRow,
+                    isSelected && { borderColor: colors.primary, borderWidth: 2 },
                 ]}
             >
-                <View style={[styles.iconCircle, { backgroundColor: bgColor }]}>
-                    <Icon size={24} color={color} />
+                <View style={styles.recyclerImageCircle}>
+                    <RoleMarkBadge role="recycler" />
                 </View>
-                <View style={styles.roleInfo}>
-                    <Text style={styles.roleTitle}>{title}</Text>
-                    <Text style={styles.roleDesc}>{desc}</Text>
+                <View style={styles.recyclerInfo}>
+                    <Text style={styles.recyclerTitle}>Recycler</Text>
+                    <Text style={styles.recyclerDesc}>Buy sorted waste from the marketplace and request a collector to move it.</Text>
                 </View>
-                {isSelected && <Check size={20} color={colors.text} />}
+                <View style={[styles.pill, isSelected ? styles.pillSuccess : styles.pillNeutral]}>
+                    <Text style={[styles.pillText, isSelected ? styles.pillTextSuccess : styles.pillTextNeutral]}>
+                        {isSelected ? 'SELECTED' : 'OPEN'}
+                    </Text>
+                </View>
             </TouchableOpacity>
         );
     };
@@ -370,34 +448,53 @@ export default function RegisterScreen() {
         return (
             <SafeAreaView style={styles.container}>
                 <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                    {renderHeader()}
-                    <Text style={styles.cardTitle}>Choose your role</Text>
-                    <View style={styles.rolesContainer}>
-                        <RoleCard
-                            role="COLLECTOR"
-                            title="Become a Collector"
-                            desc="Pick up waste and earn money"
-                            icon={Truck}
-                            color={colors.text}
-                            bgColor={colors.surfaceSunken}
-                        />
-                        <RoleCard
+                    <View style={styles.progressRow}>
+                        <TouchableOpacity onPress={handleBack} style={styles.backButtonRound}>
+                            <ArrowLeft size={20} color={colors.text} />
+                        </TouchableOpacity>
+                        <View style={styles.progressBars}>
+                            <View style={[styles.progressBar, styles.progressBarActive]} />
+                            <View style={styles.progressBar} />
+                            <View style={styles.progressBar} />
+                        </View>
+                        <Text style={styles.progressLabel}>1 of 3</Text>
+                    </View>
+
+                    <Text style={styles.stepTitle}>How will you use Revesta?</Text>
+                    <Text style={styles.stepSubtitle}>
+                        Pick a role. Account details come next.{'\n'}You can add a second role later.
+                    </Text>
+
+                    <View style={styles.roleGrid}>
+                        <RoleGridCard
                             role="SELLER"
-                            title="Become a Disposer"
-                            desc="Dispose of waste responsibly"
-                            icon={Trash}
-                            color={colors.text}
-                            bgColor={colors.surfaceSunken}
+                            title="Disposer"
+                            desc="Hand over sorted waste and get paid."
+                            markRole="disposer"
+                            pillLabel="FREE TO JOIN"
+                            pillVariant="success"
                         />
-                        <RoleCard
-                            role="RECYCLER"
-                            title="Become a Recycler"
-                            desc="Buy and process recyclables"
-                            icon={Recycle}
-                            color={colors.text}
-                            bgColor={colors.surfaceSunken}
+                        <RoleGridCard
+                            role="COLLECTOR"
+                            title="Collector"
+                            desc="Take pickup jobs near you and earn."
+                            markRole="collector"
+                            pillLabel="VERIFIED ROLE"
+                            pillVariant="neutral"
                         />
                     </View>
+
+                    <RecyclerRow />
+
+                    <TouchableOpacity style={styles.registerButton} onPress={continueFromRoleStep}>
+                        <Text style={styles.registerButtonText}>Continue as {getRoleLabel(formData.role)}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.footerLink}>
+                        <Text style={styles.footerText}>
+                            Already have an account? <Text style={styles.footerLinkBold}>Sign In</Text>
+                        </Text>
+                    </TouchableOpacity>
                 </ScrollView>
             </SafeAreaView>
         );
@@ -423,8 +520,9 @@ export default function RegisterScreen() {
                                 </Text>
                             </Text>
 
-                            <View style={styles.otpContainerCircles}>
+                            <Pressable style={styles.otpContainerCircles} onPress={() => otpInputRef.current?.focus()}>
                                 <TextInput
+                                    ref={otpInputRef}
                                     style={styles.hiddenOtpInput}
                                     value={verificationCode}
                                     onChangeText={setVerificationCode}
@@ -437,7 +535,7 @@ export default function RegisterScreen() {
                                         <Text style={styles.otpText}>{verificationCode[i] || ''}</Text>
                                     </View>
                                 ))}
-                            </View>
+                            </Pressable>
 
                             <View style={styles.spacer} />
 
@@ -478,7 +576,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="ethan_miller"
+                                    placeholder="johndoe"
                                     placeholderTextColor={colors.textMuted}
                                     value={formData.username}
                                     onChangeText={(val) => handleChange('username', val.toLowerCase().replace(/\s/g, ''))}
@@ -492,7 +590,7 @@ export default function RegisterScreen() {
                             <View style={styles.inputWrapper}>
                                 <TextInput
                                     style={styles.input}
-                                    placeholder="ethan_miller007@gmail.com"
+                                    placeholder="name@example.com"
                                     placeholderTextColor={colors.textMuted}
                                     value={formData.email}
                                     onChangeText={(val) => handleChange('email', val)}
@@ -751,7 +849,6 @@ export default function RegisterScreen() {
                     </View>
                 </View>
             </Modal>
-            <Toast />
         </SafeAreaView>
     );
 }
@@ -855,53 +952,148 @@ const useStyles = makeStyles((c) => ({
         color: c.textMuted,
         fontSize: 14,
     },
-    cardTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: c.text,
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    roleLabel: {
-        fontSize: 14,
-        color: c.textMuted,
-        marginBottom: 25,
-        fontWeight: '500',
-        textAlign: 'center',
-    },
-    rolesContainer: {
-        gap: 15,
-        paddingBottom: 20,
-    },
-    roleCard: {
+    // Step 1 - role picker
+    progressRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 20,
-        borderWidth: 2,
-        borderColor: c.border,
-        borderRadius: 20,
-        backgroundColor: c.surface,
+        gap: 12,
+        marginBottom: 28,
     },
-    iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+    backButtonRound: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: c.surface,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 15,
+        borderWidth: 1,
+        borderColor: c.borderSubtle,
     },
-    roleInfo: {
+    progressBars: {
         flex: 1,
+        flexDirection: 'row',
+        gap: 6,
     },
-    roleTitle: {
+    progressBar: {
+        flex: 1,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: c.surfaceSunken,
+    },
+    progressBarActive: {
+        backgroundColor: c.accent,
+    },
+    progressLabel: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: c.textMuted,
+    },
+    stepTitle: {
+        fontSize: 28,
+        fontWeight: '800',
+        color: c.text,
+        marginBottom: 10,
+    },
+    stepSubtitle: {
+        fontSize: 14,
+        color: c.textSecondary,
+        lineHeight: 20,
+        marginBottom: 24,
+    },
+    roleGrid: {
+        flexDirection: 'row',
+        gap: 14,
+        marginBottom: 14,
+    },
+    roleGridCard: {
+        flex: 1,
+        borderWidth: 2,
+        borderColor: c.border,
+        borderRadius: 24,
+        padding: 14,
+        backgroundColor: c.surface,
+    },
+    roleGridCardSelected: {
+        borderColor: c.primary,
+    },
+    roleImageArea: {
+        width: '100%',
+        aspectRatio: 1.15,
+        backgroundColor: c.surfaceSunken,
+        borderRadius: 18,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+        overflow: 'hidden',
+    },
+    roleGridTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: c.text,
+        marginBottom: 6,
+    },
+    roleGridDesc: {
+        fontSize: 13,
+        color: c.textSecondary,
+        lineHeight: 18,
+        marginBottom: 12,
+    },
+    pill: {
+        alignSelf: 'flex-start',
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 20,
+    },
+    pillSuccess: {
+        backgroundColor: c.successSoft,
+    },
+    pillNeutral: {
+        backgroundColor: c.surfaceSunken,
+    },
+    pillText: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+    },
+    pillTextSuccess: {
+        color: c.accent,
+    },
+    pillTextNeutral: {
+        color: c.textSecondary,
+    },
+    recyclerRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: c.borderSubtle,
+        borderRadius: 20,
+        padding: 14,
+        marginBottom: 32,
+    },
+    recyclerImageCircle: {
+        width: 72,
+        height: 72,
+        borderRadius: 36,
+        backgroundColor: c.surfaceSunken,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 14,
+        overflow: 'hidden',
+    },
+    recyclerInfo: {
+        flex: 1,
+        marginRight: 10,
+    },
+    recyclerTitle: {
         fontSize: 16,
         fontWeight: 'bold',
         color: c.text,
         marginBottom: 4,
     },
-    roleDesc: {
+    recyclerDesc: {
         fontSize: 13,
-        color: c.textSecondary,
+        color: c.textMuted,
+        lineHeight: 18,
     },
     formFields: {
         marginBottom: 20,
@@ -1253,6 +1445,7 @@ const useStyles = makeStyles((c) => ({
         width: '100%',
         height: '100%',
         opacity: 0,
+        color: 'transparent',
         zIndex: 10,
     },
     phoneDisplayRow: {

@@ -359,7 +359,10 @@ const useStyles = makeStyles((c) => ({
     textSystem: { color: c.textSecondary, fontSize: 12, fontWeight: '600' },
     
     msgTime: { fontSize: 11, marginTop: 6, alignSelf: 'flex-end' },
-    timeUser: { color: 'rgba(255,255,255,0.7)' },
+    // Same c.primary-inversion issue found elsewhere: bubbleUser's
+    // background turns light in dark mode, so a hardcoded white timestamp
+    // vanished on it.
+    timeUser: { color: c.isDark ? 'rgba(11,15,14,0.7)' : 'rgba(255,255,255,0.7)' },
     timeSupport: { color: c.textMuted },
     
     typingBox: { flexDirection: 'row', alignItems: 'center', marginLeft: 42, marginBottom: 15 },
@@ -395,7 +398,7 @@ const useStyles = makeStyles((c) => ({
         borderRadius: 8,
         marginBottom: 4,
     },
-    attachmentBubbleUser: { backgroundColor: 'rgba(255,255,255,0.2)' },
+    attachmentBubbleUser: { backgroundColor: c.isDark ? 'rgba(11,15,14,0.2)' : 'rgba(255,255,255,0.2)' },
     attachmentBubbleSupport: { backgroundColor: c.surfaceSunken },
     attachmentText: { marginLeft: 6, fontSize: 13, flex: 1 },
     

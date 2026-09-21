@@ -11,20 +11,28 @@ import { useTheme, makeStyles } from '../theme/ThemeContext';
  * collector actually see and control whether they're discoverable for new
  * pickup requests, instead of it happening silently in the background.
  */
-export default function OnlineToggleCard({ location }) {
+export default function OnlineToggleCard({ location, onChange }) {
     const styles = useStyles();
     const { colors } = useTheme();
     const [isOnline, setIsOnline] = useState(null); // null = loading
     const [busy, setBusy] = useState(false);
 
+    // Optional: lets a parent mirror the state. The map needs it to decide
+    // whether to surface incoming requests, and the stored preference is
+    // otherwise only known in here.
+    const report = (next) => {
+        setIsOnline(next);
+        if (onChange) onChange(next);
+    };
+
     useEffect(() => {
-        getOnlinePreference().then(setIsOnline);
+        getOnlinePreference().then(report);
     }, []);
 
     const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
 
     const handleToggle = async (next) => {
-        setIsOnline(next);
+        report(next);
         setBusy(true);
         Haptics.impactAsync(next ? Haptics.ImpactFeedbackStyle.Medium : Haptics.ImpactFeedbackStyle.Light);
         await setOnlinePreference(next);

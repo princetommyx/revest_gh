@@ -33,7 +33,7 @@ class MessageViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
         blocked_ids = BlockedUser.blocked_user_ids(user)
-        qs = Message.objects.filter(Q(sender=user) | Q(receiver=user))
+        qs = Message.objects.select_related('sender', 'receiver').filter(Q(sender=user) | Q(receiver=user))
         if blocked_ids:
             qs = qs.exclude(Q(sender_id__in=blocked_ids) | Q(receiver_id__in=blocked_ids))
         return qs.order_by('-timestamp')
@@ -103,17 +103,35 @@ class MessageViewSet(viewsets.ModelViewSet):
         # Blocked threads disappear from the inbox entirely, in both directions.
         contact_ids -= BlockedUser.blocked_user_ids(user)
 
+        if not contact_ids:
+            return Response([])
+
+        # Two queries total instead of two per contact (a user with 50
+        # conversations was triggering ~100 extra queries on every inbox
+        # load): fetch every contact in one go, and every message between
+        # `user` and any of them in one go, newest first, then pick each
+        # contact's most recent message in Python.
+        contacts_by_id = {c.id: c for c in User.objects.filter(id__in=contact_ids)}
+
+        relevant_messages = Message.objects.filter(
+            (Q(sender=user) & Q(receiver_id__in=contact_ids)) |
+            (Q(receiver=user) & Q(sender_id__in=contact_ids))
+        ).order_by('-timestamp')
+
+        last_message_by_contact = {}
+        for msg in relevant_messages:
+            other_id = msg.receiver_id if msg.sender_id == user.id else msg.sender_id
+            if other_id not in last_message_by_contact:
+                last_message_by_contact[other_id] = msg
+
         conversations = []
         for contact_id in contact_ids:
-            contact = User.objects.filter(id=contact_id).first()
+            contact = contacts_by_id.get(contact_id)
             if not contact:
                 continue
-                
-            last_msg = Message.objects.filter(
-                (Q(sender=user) & Q(receiver=contact)) |
-                (Q(sender=contact) & Q(receiver=user))
-            ).order_by('-timestamp').first()
-            
+
+            last_msg = last_message_by_contact.get(contact_id)
+
             conversations.append({
                 'contact_id': contact.id,
                 'contact_username': contact.username,
@@ -124,10 +142,10 @@ class MessageViewSet(viewsets.ModelViewSet):
                 'timestamp': last_msg.timestamp if last_msg else None,
                 'unread_count': 0 # TODO: Add is_read field to Message model
             })
-        
+
         # Sort by last message timestamp
         conversations.sort(key=lambda x: x['timestamp'] or timezone.now(), reverse=True)
-        
+
         return Response(conversations)
 
     @extend_schema(summary="Get messages with user")
@@ -148,7 +166,7 @@ class MessageViewSet(viewsets.ModelViewSet):
                 status=403,
             )
 
-        messages = Message.objects.filter(
+        messages = Message.objects.select_related('sender', 'receiver').filter(
             (Q(sender=user) & Q(receiver=other_user)) |
             (Q(sender=other_user) & Q(receiver=user))
         ).order_by('timestamp') # Ascending for chat UI

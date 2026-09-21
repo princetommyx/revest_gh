@@ -14,7 +14,7 @@ import { BASE_URL } from '../api/client';
 import Toast from 'react-native-toast-message';
 import {
     MapPin, Box, ChevronRight, BadgeCheck, Truck, Clock, Bookmark,
-    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestion, LogOut,
+    UserCog, ShieldCheck, ShieldAlert, Share2, MessageCircleQuestionMark, LogOut,
     Recycle, UserX, Trash2, X, Ban
 } from 'lucide-react-native';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
@@ -69,12 +69,10 @@ const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, iconBg
 };
 
 export default function ProfileScreen({ navigation }) {
-    const { user, signOut, userRole } = useAuth();
+    const { user, signOut, userRole, setPendingRegisterRole } = useAuth();
     const styles = useStyles();
     const { colors, isDark } = useTheme();
 
-    // Collectors and recyclers consume listings; only disposers create them.
-    const isWasteBrowser = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
 
     // 'deactivate' | 'delete' | null
     const [dangerModal, setDangerModal] = useState(null);
@@ -131,6 +129,29 @@ export default function ProfileScreen({ navigation }) {
         );
     };
 
+    // A phone number and email are tied to one account, so a disposer
+    // wanting to also collect can't just flip their existing account to
+    // Collector - they need a second account under a different number/email.
+    // Sign out and drop them straight onto a Register screen with Collector
+    // pre-selected instead of routing them through a support chat for
+    // something they can already self-serve.
+    const handleBecomeCollector = () => {
+        Alert.alert(
+            "Sign up as a Collector",
+            "You'll need to sign out and create a new account with a different phone number and email - your current ones are already tied to your Disposer account.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Continue",
+                    onPress: async () => {
+                        setPendingRegisterRole('COLLECTOR');
+                        await signOut();
+                    }
+                }
+            ]
+        );
+    };
+
 
     const handleInvite = async () => {
         try {
@@ -155,11 +176,14 @@ export default function ProfileScreen({ navigation }) {
         queryFn: () => marketApi.getMyListings(),
     });
 
-    // Fetch KYC status (used for the verification status subtitle + completion nudge)
+    // Fetch KYC status (used for the verification status subtitle + completion
+    // nudge) - Disposers never need to verify identity, only Collectors and
+    // Recyclers do, so skip the call entirely for them.
     const { data: kycData } = useQuery({
         queryKey: ['kycStatus'],
         queryFn: () => authApi.getKycStatus(),
         staleTime: 60000,
+        enabled: userRole !== 'SELLER',
     });
     const kycStatus = kycData?.status || 'UNVERIFIED';
     const kycLabel = kycStatus === 'VERIFIED' ? 'Verified' : kycStatus === 'PENDING' ? 'Pending review' : kycStatus === 'REJECTED' ? 'Resubmission needed' : 'Not verified';
@@ -180,12 +204,14 @@ export default function ProfileScreen({ navigation }) {
 
     const avatarUri = resolveImageUrl(user?.profile_picture_url || user?.profile_picture);
 
-    // Profile completion nudge - only counts fields that genuinely exist on the User model
+    // Profile completion nudge - only counts fields that genuinely exist on
+    // the User model. KYC only counts for Collectors/Recyclers - Disposers
+    // are never asked to verify, so it shouldn't hold their profile "incomplete".
     const completionChecks = [
         !!(user?.profile_picture_url || user?.profile_picture),
         !!user?.phone_number,
         !!user?.city,
-        kycStatus === 'VERIFIED',
+        ...(userRole !== 'SELLER' ? [kycStatus === 'VERIFIED'] : []),
     ];
     const completionDone = completionChecks.filter(Boolean).length;
     const completionTotal = completionChecks.length;
@@ -222,7 +248,11 @@ export default function ProfileScreen({ navigation }) {
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.completionTitle}>Complete your profile</Text>
-                                <Text style={styles.completionDesc}>Add a photo, phone number, city and get verified to build trust with the other side.</Text>
+                                <Text style={styles.completionDesc}>
+                                    {userRole === 'SELLER'
+                                        ? 'Add a photo, phone number and city to build trust with the other side.'
+                                        : 'Add a photo, phone number, city and get verified to build trust with the other side.'}
+                                </Text>
                             </View>
                             <ChevronRight size={18} color={colors.textMuted} />
                         </TouchableOpacity>
@@ -261,8 +291,8 @@ export default function ProfileScreen({ navigation }) {
                                 </View>
                                 <Text style={styles.contextLink}>View details</Text>
                             </TouchableOpacity>
-                        ) : activeListing ? (
-                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} activeOpacity={0.8}>
+                        ) : (activeListing && userRole !== 'COLLECTOR') ? (
+                            <TouchableOpacity style={styles.contextCard} onPress={() => navigation.navigate('Marketplace')} activeOpacity={0.8}>
                                 <Text style={styles.contextHeader}>ACTIVE LISTING</Text>
                                 <Text style={styles.contextTitle}>{activeListing.quantity} {activeListing.material_type}</Text>
                                 <View style={styles.contextRow}>
@@ -279,24 +309,27 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        {/* A recycler never posts waste - they browse what
-                            disposers have listed - so "My Listings" was the wrong
-                            thing to offer them. Collectors are in the same
-                            position. Only a disposer has listings of their own.
+{/* Three different answers here. A collector works the map and
+                            has no marketplace at all, so the link is gone for
+                            them. A recycler browses what disposers have listed
+                            but posts nothing, so "My Listings" was wrong - they
+                            get the Discover tab. Only a disposer has listings of
+                            their own.
 
-                            The old target was also dead: it navigated to a tab
-                            named 'Marketplace', but that tab is called 'Discover'.
-                            Sellers have no Discover tab at all, so they get the
-                            stack-level Marketplace screen, which titles itself
-                            "My Waste" for them. */}
-                        {isWasteBrowser ? (
+                            The old target was dead for everyone: it navigated to
+                            a tab named 'Marketplace', but that tab is called
+                            'Discover'. Sellers have no Discover tab, so they get
+                            the stack-level Marketplace screen, which titles
+                            itself "My Waste" for them. */}
+                        {userRole === 'RECYCLER' && (
                             <NavLink
                                 title="All Waste"
                                 subtitle="Browse everything disposers have listed"
                                 icon={Recycle}
                                 onPress={() => navigation.navigate('Main', { screen: 'Discover' })}
                             />
-                        ) : (
+                        )}
+                        {userRole === 'SELLER' && (
                             <NavLink
                                 title="My Listings"
                                 subtitle="Waste you've posted"
@@ -304,7 +337,12 @@ export default function ProfileScreen({ navigation }) {
                                 onPress={() => navigation.navigate('Marketplace')}
                             />
                         )}
-                        <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        {/* Collectors reach this from their History tab now;
+                            keeping it here too would be two routes to one
+                            screen. Every other role still needs the link. */}
+                        {userRole !== 'COLLECTOR' && (
+                            <NavLink title="Pickup History" icon={Truck} onPress={() => navigation.navigate('PickupHistory')} />
+                        )}
                         <NavLink title="Transaction History" icon={Clock} onPress={() => navigation.navigate('TransactionHistory')} />
                         <NavLink title="Saved Locations" icon={Bookmark} onPress={() => navigation.navigate('SavedLocations')} isLast />
                     </NavCard>
@@ -313,13 +351,13 @@ export default function ProfileScreen({ navigation }) {
                 {/* Become a Collector cross-sell (Disposers only) */}
                 {userRole === 'SELLER' && (
                     <View style={styles.navBlock}>
-                        <TouchableOpacity style={styles.earnCard} onPress={() => navigation.navigate('SupportChat')} activeOpacity={0.85}>
+                        <TouchableOpacity style={styles.earnCard} onPress={handleBecomeCollector} activeOpacity={0.85}>
                             <View style={styles.earnIconBox}>
                                 <Recycle size={22} color={colors.text} />
                             </View>
                             <View style={{ flex: 1 }}>
                                 <Text style={styles.earnTitle}>Earn as a Collector</Text>
-                                <Text style={styles.earnDesc}>Pick up listed waste and get paid. Chat with our team to get set up.</Text>
+                                <Text style={styles.earnDesc}>Pick up listed waste and get paid. Sign up with a different number and email.</Text>
                             </View>
                             <ChevronRight size={18} color={colors.textSecondary} />
                         </TouchableOpacity>
@@ -330,13 +368,15 @@ export default function ProfileScreen({ navigation }) {
                     <SectionHeader title="Account" />
                     <NavCard>
                         <NavLink title="Profile Information" icon={UserCog} onPress={() => navigation.navigate('EditProfile')} />
-                        <NavLink
-                            title="Verification"
-                            subtitle={kycLabel}
-                            subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
-                            icon={ShieldCheck}
-                            onPress={() => navigation.navigate('KYCVerification')}
-                        />
+                        {userRole !== 'SELLER' && (
+                            <NavLink
+                                title="Verification"
+                                subtitle={kycLabel}
+                                subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
+                                icon={ShieldCheck}
+                                onPress={() => navigation.navigate('KYCVerification')}
+                            />
+                        )}
                         <NavLink title="Security" icon={ShieldAlert} onPress={() => navigation.navigate('Security')} />
                         <NavLink
                             title="Blocked Accounts"
@@ -362,7 +402,7 @@ export default function ProfileScreen({ navigation }) {
                     <SectionHeader title="Support & Community" />
                     <NavCard>
                         <NavLink title="Invite someone" icon={Share2} onPress={handleInvite} />
-                        <NavLink title="Help & Support" icon={MessageCircleQuestion} onPress={() => navigation.navigate('SupportChat')} isLast />
+                        <NavLink title="Help & Support" icon={MessageCircleQuestionMark} onPress={() => navigation.navigate('SupportChat')} isLast />
                     </NavCard>
                 </View>
 

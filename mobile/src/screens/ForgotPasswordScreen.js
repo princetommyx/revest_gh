@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Modal, Pressable } from 'react-native';
 import { ArrowLeft, Eye, EyeOff, CircleCheck } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -18,6 +18,7 @@ export default function ForgotPasswordScreen() {
     // State
     const [identifier, setIdentifier] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
+    const otpInputRef = React.useRef(null);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -38,12 +39,21 @@ export default function ForgotPasswordScreen() {
         setLoading(true);
         try {
             await authApi.requestPasswordReset(formattedIdentifier());
-            setStep(2);
+            if (step === 2) {
+                Toast.show({ type: 'success', text1: 'Code Resent', text2: `A new verification code was sent to your ${resetMethod}.` });
+            } else {
+                setStep(2);
+                Toast.show({ type: 'success', text1: 'Code Sent', text2: `A verification code was sent to your ${resetMethod}.` });
+            }
         } catch (error) {
+            let errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Could not send verification code.';
+            if (error.response?.status === 429) {
+                errorMsg = 'You have requested too many codes. Please wait a while before trying again.';
+            }
             Toast.show({
                 type: 'error',
                 text1: 'Request Failed',
-                text2: error.response?.data?.error || 'Could not send verification code.'
+                text2: errorMsg
             });
         } finally {
             setLoading(false);
@@ -111,7 +121,13 @@ export default function ForgotPasswordScreen() {
 
     const handleDone = () => {
         setShowSuccessModal(false);
-        navigation.navigate('Login');
+        // When reached from the Security screen (authenticated stack), 'Login'
+        // doesn't exist — just go back to where they came from.
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        } else {
+            navigation.navigate('Login');
+        }
     };
 
     const renderHeader = () => (
@@ -159,7 +175,7 @@ export default function ForgotPasswordScreen() {
                         <View style={styles.inputWrapperFilled}>
                             <TextInput
                                 style={styles.input}
-                                placeholder="revestagh@gmail.com"
+                                placeholder="name@example.com"
                                 value={identifier}
                                 onChangeText={setIdentifier}
                                 autoCapitalize="none"
@@ -195,7 +211,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleRequestOTP}
                     disabled={loading || !isFilled}
                 >
-                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Continue</Text>}
                 </TouchableOpacity>
             </View>
         );
@@ -213,8 +229,9 @@ export default function ForgotPasswordScreen() {
                     </Text>
                 </Text>
 
-                <View style={styles.otpContainerCircles}>
+                <Pressable style={styles.otpContainerCircles} onPress={() => otpInputRef.current?.focus()}>
                     <TextInput
+                        ref={otpInputRef}
                         style={styles.hiddenOtpInput}
                         value={verificationCode}
                         onChangeText={setVerificationCode}
@@ -227,7 +244,7 @@ export default function ForgotPasswordScreen() {
                             <Text style={styles.otpText}>{verificationCode[i] || ''}</Text>
                         </View>
                     ))}
-                </View>
+                </Pressable>
 
                 <View style={styles.spacer} />
 
@@ -236,7 +253,7 @@ export default function ForgotPasswordScreen() {
                     onPress={handleVerifyOTP}
                     disabled={!isFilled || loading}
                 >
-                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.btnText}>Continue</Text>}
+                    {loading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={[styles.btnText, (!isFilled || loading) && styles.btnTextDisabled]}>Continue</Text>}
                 </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleRequestOTP} style={styles.resendBtn} disabled={loading}>
@@ -262,6 +279,8 @@ export default function ForgotPasswordScreen() {
                             value={newPassword}
                             onChangeText={setNewPassword}
                             secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
@@ -279,6 +298,8 @@ export default function ForgotPasswordScreen() {
                             value={confirmPassword}
                             onChangeText={setConfirmPassword}
                             secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             placeholderTextColor={colors.textMuted}
                         />
                         <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
@@ -297,10 +318,10 @@ export default function ForgotPasswordScreen() {
                     {loading ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <ActivityIndicator color={colors.onPrimary} style={{ marginRight: 10 }} />
-                            <Text style={styles.btnText}>Submitting...</Text>
+                            <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Submitting...</Text>
                         </View>
                     ) : (
-                        <Text style={styles.btnText}>Continue</Text>
+                        <Text style={[styles.btnText, !isFilled && styles.btnTextDisabled]}>Continue</Text>
                     )}
                 </TouchableOpacity>
             </View>
@@ -345,7 +366,6 @@ export default function ForgotPasswordScreen() {
                 </View>
             </Modal>
             
-            <Toast />
         </SafeAreaView>
     );
 }
@@ -480,6 +500,9 @@ const useStyles = makeStyles((c) => ({
     btnDisabled: {
         backgroundColor: c.surfaceSunken,
     },
+    btnTextDisabled: {
+        color: c.textMuted,
+    },
     btnText: {
         fontSize: 16,
         fontWeight: '600',
@@ -517,6 +540,7 @@ const useStyles = makeStyles((c) => ({
         width: '100%',
         height: '100%',
         opacity: 0,
+        color: 'transparent',
         zIndex: 10,
     },
     resendBtn: {

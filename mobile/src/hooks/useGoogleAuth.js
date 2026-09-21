@@ -12,7 +12,9 @@ export const isGoogleAuthSupported = Platform.OS !== 'ios' || !!GOOGLE_IOS_CLIEN
 export function useGoogleAuth({ onToken, onError }) {
     const [request, response, promptAsync] = Google.useAuthRequest({
         androidClientId: GOOGLE_ANDROID_CLIENT_ID,
-        iosClientId: GOOGLE_IOS_CLIENT_ID || undefined,
+        // expo-auth-session crashes on mount if iosClientId is missing on iOS.
+        // We pass a placeholder to prevent the crash; the LoginScreen already blocks the prompt.
+        iosClientId: GOOGLE_IOS_CLIENT_ID || (Platform.OS === 'ios' ? 'placeholder' : undefined),
         webClientId: GOOGLE_WEB_CLIENT_ID,
         scopes: ['openid', 'profile', 'email'],
     });

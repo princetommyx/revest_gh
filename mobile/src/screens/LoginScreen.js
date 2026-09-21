@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Dimensions, Modal } from 'react-native';
 import { Eye, EyeOff, ArrowLeft, Lock } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -34,7 +34,19 @@ export default function LoginScreen() {
     const [verifying, setVerifying] = useState(false);
     const [pendingUser, setPendingUser] = useState(null);
 
-    const { signIn, verifyLogin, googleSignIn } = useAuth();
+    const { signIn, verifyLogin, googleSignIn, pendingRegisterRole, setPendingRegisterRole } = useAuth();
+
+    // "Earn as a Collector" signs the user out and lands them here (the auth
+    // stack's default screen) with the role they want to register as stashed
+    // in context, since sign-out swaps the whole navigator and there's no
+    // Register screen mounted yet to hand a param to directly.
+    useEffect(() => {
+        if (pendingRegisterRole) {
+            const role = pendingRegisterRole;
+            setPendingRegisterRole(null);
+            navigation.replace('Register', { role });
+        }
+    }, [pendingRegisterRole]);
 
     const { promptAsync: promptGoogle } = useGoogleAuth({
         onToken: async (token) => {
@@ -262,7 +274,7 @@ export default function LoginScreen() {
                                 <View style={styles.inputWrapper}>
                                     <TextInput
                                         style={styles.input}
-                                        placeholder="ethan_miller007@gmail.com"
+                                        placeholder="name@example.com"
                                         value={email}
                                         onChangeText={setEmail}
                                         autoCapitalize="none"
@@ -281,6 +293,8 @@ export default function LoginScreen() {
                                     value={password}
                                     onChangeText={setPassword}
                                     secureTextEntry={!showPassword}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
                                     placeholderTextColor={colors.textMuted}
                                 />
                                 <TouchableOpacity
@@ -643,5 +657,6 @@ const useStyles = makeStyles((c) => ({
         shadowOpacity: 0.05,
         shadowRadius: 10,
         elevation: 2,
+        color: c.text,
     }
 }));
