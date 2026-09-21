@@ -101,6 +101,11 @@ export default function HomeScreen({ navigation }) {
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
 
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+    // Only collectors drive out to jobs, so only they have an availability
+    // state to control. A recycler browses waste and books a collector to
+    // move it - nothing is ever dispatched to them, so an online/offline
+    // switch would be a control over nothing.
+    const isDispatchable = userRole === 'COLLECTOR';
 
     // Jobs still waiting for someone to take them - the collector's own
     // accepted work is in this list too, so it has to be filtered out.
@@ -364,9 +369,9 @@ export default function HomeScreen({ navigation }) {
 
                         {myActiveJob ? (
                             <ActivePickupBanner job={myActiveJob} role={userRole} onPress={() => navigation.navigate('Pickups')} />
-                        ) : (
+                        ) : isDispatchable ? (
                             <OnlineToggleCard location={location} />
-                        )}
+                        ) : null}
 
                         <View style={styles.searchRow}>
                             <View style={styles.searchBar}>
@@ -544,9 +549,11 @@ export default function HomeScreen({ navigation }) {
                                 role={userRole}
                                 onPress={() => navigation.navigate('Pickups')}
                             />
-                        ) : isCollectorRole ? (
-                            <OnlineToggleCard location={location} />
                         ) : (
+                            // Collectors and recyclers returned above via
+                            // renderCollectorHome, so only a disposer reaches
+                            // here - the online toggle branch that used to sit
+                            // here could never render.
                             <AnimatedButton
                                 style={styles.requestPickupCard}
                                 haptic

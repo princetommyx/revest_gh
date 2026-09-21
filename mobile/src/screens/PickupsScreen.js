@@ -276,6 +276,10 @@ export default function PickupsScreen({ route }) {
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
     // map behaviour and a reversed route label on their own job.
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+    // Availability is a collector-only concept - see the presence heartbeat
+    // below. A recycler has no online/offline control on Home, so they must
+    // not be broadcasting themselves as available either.
+    const isDispatchable = userRole === 'COLLECTOR';
 
     // Check for params from ListingDetail
     const pickupData = route?.params?.pickupData;
@@ -630,11 +634,11 @@ export default function PickupsScreen({ route }) {
     // position so the backend can find them when matching new requests.
     // Respects the online/offline toggle on Home - this just keeps the
     // preference re-affirmed with a fresh position while the preference is on.
-    // Was gated to 'COLLECTOR' only, so a RECYCLER's location/online status
-    // never reached the backend at all - they'd never be found "nearby" for
-    // a new request no matter how the matching query itself was scoped.
+    // Collectors only: a recycler is never dispatched a pickup, so marking
+    // them online would just put them in the matching pool for requests they
+    // have no toggle to decline.
     useEffect(() => {
-        if (!isCollectorRole) return;
+        if (!isDispatchable) return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
         const pushPresence = async (wantsOnline) => {
@@ -657,7 +661,7 @@ export default function PickupsScreen({ route }) {
             appStateSub.remove();
             pushPresence(false);
         };
-    }, [isCollectorRole]);
+    }, [isDispatchable]);
 
     // Collector/recycler camera following while actively navigating (foreground
     // UX only - location reporting to the server is handled by the background

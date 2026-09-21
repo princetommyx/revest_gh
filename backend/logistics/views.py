@@ -532,10 +532,12 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     def notify_nearby_collectors(self, request):
         # Radius in km
         RADIUS = 10
-        # Excluded RECYCLER here (and nowhere else in the accept/track flow),
-        # so a recycler was never pushed a 'new_request' event or push
-        # notification for a job they were otherwise fully able to accept.
-        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
+        # Collectors only. A recycler is demand-side - they buy posted waste
+        # and then book a collector to move it - so they have no availability
+        # toggle in the app and must not be matched to inbound requests. Any
+        # recycler left flagged online by an older build is excluded by role
+        # here rather than relying on their stale flag being cleared.
+        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
 
         # Don't alert a collector to a job they can't see on the board anyway
         # (see get_queryset) - otherwise a block still leaks a push notification
@@ -637,8 +639,10 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
         except ValueError:
              return Response({'error': 'Invalid coordinates'}, status=400)
 
-        # 1. Find nearest online collector (recyclers pick up Track A jobs too)
-        online_collectors = User.objects.filter(role__in=('COLLECTOR', 'RECYCLER'), is_online=True)
+        # 1. Find nearest online collector. Recyclers are excluded for the
+        # same reason as in notify_nearby_collectors - quoting off a recycler's
+        # position would price a trip nobody is going to make.
+        online_collectors = User.objects.filter(role='COLLECTOR', is_online=True)
         nearest_collector = None
         min_dist = float('inf')
         
