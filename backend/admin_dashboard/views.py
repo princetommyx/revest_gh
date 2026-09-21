@@ -132,6 +132,12 @@ class UserListView(generics.ListCreateAPIView):
         
         if role:
             queryset = queryset.filter(role=role)
+        # The dashboard splits app users from admins across two screens and
+        # sends exclude_role=ADMIN for the first. It was never read here, so
+        # every admin appeared in both lists.
+        exclude_role = self.request.query_params.get('exclude_role')
+        if exclude_role:
+            queryset = queryset.exclude(role=exclude_role)
         if is_verified is not None:
             queryset = queryset.filter(is_verified=is_verified.lower() == 'true')
         if is_online is not None:

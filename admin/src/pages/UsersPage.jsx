@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
@@ -21,6 +21,7 @@ const roleOptions = [
 
 export default function UsersPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [currentPage, setCurrentPage] = useState(1);
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
@@ -38,7 +39,7 @@ export default function UsersPage() {
             role: roleFilter,
             exclude_role: 'ADMIN', // Exclude admins from app users list
         }),
-        keepPreviousData: true,
+        placeholderData: keepPreviousData,
     });
 
     const handlePageChange = (page) => {
@@ -70,10 +71,27 @@ export default function UsersPage() {
         setToast(toastData);
     };
 
+    // The API call was never made - this reported the user deleted and left
+    // them in the table, so the next refresh brought them back.
+    const deleteUser = useMutation({
+        mutationFn: (user) => usersApi.deleteUser(user.id),
+        onSuccess: (_data, user) => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            setToast({ type: 'success', message: `${user.first_name} ${user.last_name} deleted` });
+        },
+        onError: (err) => {
+            setToast({
+                type: 'error',
+                message: err?.response?.data?.detail || 'Could not delete this user.',
+            });
+        },
+    });
+
     const handleDeleteUser = (user) => {
-        if (window.confirm(`Are you sure you want to delete ${user.first_name} ${user.last_name}?`)) {
-            // TODO: Implement delete API call
-            setToast({ type: 'success', message: `User ${user.first_name} ${user.last_name} deleted` });
+        if (window.confirm(
+            `Delete ${user.first_name} ${user.last_name}? This cannot be undone.`
+        )) {
+            deleteUser.mutate(user);
         }
     };
 

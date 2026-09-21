@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { User, Mail, Shield, Lock, Save, Loader2 } from 'lucide-react';
 import Toast from '../components/common/Toast';
+import { authApi } from '../api/auth';
 
 export default function ProfilePage() {
     const [toast, setToast] = useState(null);
@@ -9,17 +10,38 @@ export default function ProfilePage() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
 
-    // Placeholder admin data - will integrate with real API
-    const adminData = {
-        id: 1,
-        first_name: 'Admin',
-        last_name: 'User',
-        username: 'admin',
-        email: 'admin@revesta.com',
-        role: 'ADMIN',
-        is_superuser: true,
-        last_login: new Date().toISOString(),
-    };
+    // This page used to render a hardcoded "Admin User / admin@revesta.com"
+    // regardless of who was signed in.
+    const { data: adminData, isLoading: loadingProfile } = useQuery({
+        queryKey: ['currentUser'],
+        queryFn: authApi.getCurrentUser,
+    });
+
+    // And the password form reported success without calling anything, so an
+    // admin could believe they had changed a password that was unchanged -
+    // the worst possible thing to be wrong about after a suspected breach.
+    const changePassword = useMutation({
+        mutationFn: () => authApi.changePassword({
+            oldPassword: currentPassword,
+            newPassword,
+        }),
+        onSuccess: () => {
+            setToast({ type: 'success', message: 'Password changed' });
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        },
+        onError: (err) => {
+            const data = err?.response?.data;
+            // DRF returns {field: [messages]}; surface the real reason
+            // ("wrong current password", "this password is too common")
+            // rather than a generic failure.
+            const detail = data && typeof data === 'object'
+                ? Object.values(data).flat().join(' ')
+                : null;
+            setToast({ type: 'error', message: detail || 'Could not change password.' });
+        },
+    });
 
     const handlePasswordChange = (e) => {
         e.preventDefault();
@@ -34,12 +56,23 @@ export default function ProfilePage() {
             return;
         }
 
-        // TODO: Implement password change API call
-        setToast({ type: 'success', message: 'Password changed successfully' });
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        changePassword.mutate();
     };
+
+    if (loadingProfile || !adminData) {
+        return (
+            <div className="flex items-center justify-center h-full p-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+            </div>
+        );
+    }
+
+    // Names are optional on the user model, so build initials from whatever
+    // is actually set rather than indexing into a possibly-null string.
+    const initials = [adminData.first_name, adminData.last_name]
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join('') || (adminData.username?.[0] ?? '?').toUpperCase();
 
     return (
         <div className="p-6 space-y-6">
@@ -66,11 +99,11 @@ export default function ProfilePage() {
                 <div className="bg-gradient-to-r from-purple-500 to-indigo-600 px-6 py-8 text-center">
                     <div className="inline-block">
                         <div className="w-24 h-24 mx-auto bg-white dark:bg-gray-800 rounded-2xl flex items-center justify-center text-4xl font-bold bg-gradient-to-br from-purple-500 to-indigo-600 bg-clip-text text-transparent shadow-xl transition-colors">
-                            {adminData.first_name[0]}{adminData.last_name[0]}
+                            {initials}
                         </div>
                     </div>
                     <h2 className="text-2xl font-bold text-white mt-4">
-                        {adminData.first_name} {adminData.last_name}
+                        {[adminData.first_name, adminData.last_name].filter(Boolean).join(' ') || adminData.username}
                     </h2>
                     <div className="inline-flex items-center space-x-2 mt-2 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full">
                         <Shield className="w-4 h-4 text-white" />
@@ -123,7 +156,7 @@ export default function ProfilePage() {
                                     Last Login
                                 </label>
                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mt-1">
-                                    {new Date(adminData.last_login).toLocaleString()}
+                                    {adminData.last_login ? new Date(adminData.last_login).toLocaleString() : 'Never'}
                                 </p>
                             </div>
                         </div>

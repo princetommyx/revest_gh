@@ -1,15 +1,34 @@
 import { useState } from 'react';
 import { Settings as SettingsIcon, Bell, Mail, Lock, Globe, Shield, Save } from 'lucide-react';
 
-export default function SettingsPage() {
-    const [emailNotifications, setEmailNotifications] = useState(true);
-    const [pushNotifications, setPushNotifications] = useState(true);
-    const [emailAlerts, setEmailAlerts] = useState(true);
-    const [maintenanceMode, setMaintenanceMode] = useState(false);
+const PREFS_KEY = 'admin_notification_prefs';
 
+function loadPrefs() {
+    try {
+        return JSON.parse(localStorage.getItem(PREFS_KEY)) || {};
+    } catch {
+        return {};
+    }
+}
+
+export default function SettingsPage() {
+    const saved = loadPrefs();
+    const [emailNotifications, setEmailNotifications] = useState(saved.emailNotifications ?? true);
+    const [pushNotifications, setPushNotifications] = useState(saved.pushNotifications ?? true);
+    const [emailAlerts, setEmailAlerts] = useState(saved.emailAlerts ?? true);
+    const [savedAt, setSavedAt] = useState(null);
+
+    // This used to alert "Settings saved successfully!" without saving
+    // anything at all. There is no settings endpoint on the backend, so
+    // these notification preferences are stored per browser - which is
+    // honest about what they are - and the platform-wide toggle that has no
+    // backend behind it has been removed rather than left to imply it does
+    // something. See the note in the UI below.
     const handleSave = () => {
-        // TODO: Implement save settings API call
-        alert('Settings saved successfully!');
+        localStorage.setItem(PREFS_KEY, JSON.stringify({
+            emailNotifications, pushNotifications, emailAlerts,
+        }));
+        setSavedAt(new Date());
     };
 
     return (
@@ -98,20 +117,16 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl transition-colors">
+                    <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                        <Shield className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                         <div>
-                            <p className="font-medium text-gray-900 dark:text-gray-200">Maintenance Mode</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Put the platform in maintenance mode</p>
+                            <p className="font-medium text-gray-900 dark:text-gray-200">Maintenance mode is not available yet</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                The switch that used to sit here was not connected to anything - nothing on
+                                the platform read it. It has been removed rather than left to suggest the
+                                app could be taken offline from this page.
+                            </p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={maintenanceMode}
-                                onChange={(e) => setMaintenanceMode(e.target.checked)}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-900 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-red-500 peer-checked:to-pink-600"></div>
-                        </label>
                     </div>
 
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 transition-colors">
@@ -189,9 +204,16 @@ export default function SettingsPage() {
                     className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-600 hover:to-indigo-700 transition-all hover-scale shadow-lg shadow-purple-500/25"
                 >
                     <Save className="w-5 h-5 mr-2" />
-                    Save Settings
+                    Save preferences
                 </button>
             </div>
+
+            {savedAt && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-right">
+                    Saved to this browser at {savedAt.toLocaleTimeString()}. These preferences are
+                    per-device, not account-wide.
+                </p>
+            )}
         </div>
     );
 }

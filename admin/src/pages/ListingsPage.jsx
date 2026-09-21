@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { listingsApi } from '../api/listings';
 import { Loader2, Package, MapPin } from 'lucide-react';
@@ -31,7 +31,7 @@ export default function ListingsPage() {
             search: searchTerm,
             material_type: materialFilter,
         }),
-        keepPreviousData: true,
+        placeholderData: keepPreviousData,
     });
 
     const handlePageChange = (page) => {
