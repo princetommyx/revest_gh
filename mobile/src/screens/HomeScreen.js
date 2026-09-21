@@ -101,6 +101,10 @@ export default function HomeScreen({ navigation }) {
     const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
 
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+
+    // Jobs still waiting for someone to take them - the collector's own
+    // accepted work is in this list too, so it has to be filtered out.
+    const openPickupCount = pickupJobs.filter(j => j.status === 'PENDING').length;
     const myActiveJob = isCollectorRole
         // `collector` is now the serialized user object (see logistics
         // serializers), not a bare id - compare .id, not the object itself.
@@ -419,19 +423,34 @@ export default function HomeScreen({ navigation }) {
                             <Text style={{ color: colors.textMuted, marginBottom: 10 }}>No recommendations found.</Text>
                         )}
 
-                        <View style={styles.collBanner}>
-                            <View style={{ flex: 1, marginRight: 16 }}>
-                                <Text style={styles.collBannerTitle}>Let's keep Accra clean</Text>
-                                <TouchableOpacity style={styles.collBannerBtn}>
-                                    <Text style={styles.collBannerBtnText}>Learn more →</Text>
-                                </TouchableOpacity>
+                        {/* Was a slogan, a stock photo of wheelie bins and a
+                            "Learn more" button with no onPress - it said nothing
+                            and did nothing. This reports the one number a
+                            collector opens the app for, and the button goes
+                            where that number lives. When there's nothing open it
+                            says so rather than inventing a figure. */}
+                        <TouchableOpacity
+                            style={styles.collBanner}
+                            activeOpacity={0.9}
+                            onPress={() => navigation.navigate('Pickups')}
+                        >
+                            <View style={styles.collBannerIconWrap}>
+                                <Truck size={26} color={colors.onAccent} />
                             </View>
-                            <Image 
-                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
-                                style={{ width: 80, height: 80, borderRadius: 40 }} 
-                                contentFit="cover"
-                            />
-                        </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.collBannerTitle}>
+                                    {openPickupCount > 0
+                                        ? `${openPickupCount} pickup${openPickupCount === 1 ? '' : 's'} open near you`
+                                        : 'No open pickups right now'}
+                                </Text>
+                                <Text style={styles.collBannerSub}>
+                                    {openPickupCount > 0
+                                        ? 'Accept one to start a job.'
+                                        : "We'll alert you the moment one is posted nearby."}
+                                </Text>
+                            </View>
+                            <ArrowRight size={20} color={colors.onAccent} />
+                        </TouchableOpacity>
                     </SafeAreaView>
                 </ScrollView>
             </View>
@@ -737,8 +756,27 @@ const useStyles = makeStyles((c) => ({
     collCardPrice: { fontSize: 16, fontWeight: '800', color: c.success },
     collCardBtn: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
     collCardBtnText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 14 },
-    collBanner: { backgroundColor: c.accentSoft, borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 30 },
-    collBannerTitle: { fontSize: 18, fontWeight: '800', color: c.success, marginBottom: 8 },
-    collBannerBtn: { backgroundColor: c.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, alignSelf: 'flex-start' },
-    collBannerBtnText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 13 }
+    // Solid accent rather than a pale tint: this is the one thing on the
+    // screen meant to pull a tap, and mint-on-mint read as decoration.
+    collBanner: {
+        backgroundColor: c.accent,
+        borderRadius: 20,
+        paddingVertical: 18,
+        paddingHorizontal: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        marginTop: 10,
+        marginBottom: 30,
+    },
+    collBannerIconWrap: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    collBannerTitle: { fontSize: 16.5, fontWeight: '800', color: c.onAccent, letterSpacing: -0.2 },
+    collBannerSub: { fontSize: 13, color: c.onAccent, opacity: 0.85, marginTop: 3 }
 }));
