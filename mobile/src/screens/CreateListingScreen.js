@@ -259,8 +259,8 @@ export default function CreateListingScreen({ route, navigation }) {
     return (
         <KeyboardAvoidingView 
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : null}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            keyboardVerticalOffset={0}
         >
             <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.surface} />
 

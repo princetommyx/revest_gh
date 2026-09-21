@@ -368,7 +368,7 @@ export default function ProfileScreen({ navigation }) {
                 onRequestClose={closeDangerModal}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     style={styles.dangerOverlay}
                 >
                     <View style={styles.dangerCard}>
