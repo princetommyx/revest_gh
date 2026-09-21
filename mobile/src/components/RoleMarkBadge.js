@@ -83,10 +83,11 @@ export default function RoleMarkBadge({ role }) {
     // This guarantees that the base 'plinth' every mark stands on renders
     // at the exact same size and screen position across all three badges,
     // creating a consistent set.
-    // Height 0.35 centers the camera between the plinth and the tallest mark (disposer's bag).
-    // Distance 2.5 is enough to fit the widest mark (recycler) and tallest mark (disposer) within the 40deg FOV.
-    const target = new THREE.Vector3(0, 0.35, 0);
-    const dist = 2.5;
+    // Height 0.45 centers the camera slightly higher, pushing the rendered object down
+    // to give the tallest mark (disposer's bag) more headroom at the top edge.
+    // Distance 2.7 gives slightly more padding around all edges.
+    const target = new THREE.Vector3(0, 0.45, 0);
+    const dist = 2.7;
     const dir = new THREE.Vector3(1, 0.55, 1.25).normalize();
     
     camera.position.copy(target).add(dir.multiplyScalar(dist));

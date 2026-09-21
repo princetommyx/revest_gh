@@ -47,7 +47,7 @@ const NavCard = ({ children }) => {
 
 // Icon colours default to theme tokens rather than fixed hex, so a caller that
 // doesn't pass one still reads correctly in both modes.
-const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, iconBg, onPress, isLast, danger }) => {
+const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, onPress, isLast, danger }) => {
     const styles = useStyles();
     const { colors } = useTheme();
     return (
@@ -56,14 +56,14 @@ const NavLink = ({ title, subtitle, subtitleColor, icon: Icon, iconColor, iconBg
             onPress={onPress}
             activeOpacity={0.6}
         >
-            <View style={[styles.navLinkIconBox, { backgroundColor: danger ? colors.dangerSoft : (iconBg || colors.surfaceSunken) }]}>
-                <Icon size={18} color={danger ? colors.danger : (iconColor || colors.text)} />
+            <View style={styles.navLinkIconBox}>
+                <Icon size={22} color={danger ? colors.danger : (iconColor || colors.text)} />
             </View>
             <View style={{ flex: 1 }}>
                 <Text style={[styles.navLinkText, danger && styles.navLinkTextDanger]}>{title}</Text>
                 {!!subtitle && <Text style={[styles.navLinkSubtitle, { color: subtitleColor || colors.textMuted }]}>{subtitle}</Text>}
             </View>
-            {!danger && <ChevronRight size={18} color={colors.textMuted} />}
+            {!danger && <ChevronRight size={20} color={colors.textMuted} />}
         </TouchableOpacity>
     );
 };
@@ -625,28 +625,28 @@ const useStyles = makeStyles((c) => ({
         marginBottom: 32,
     },
     navCard: {
-        backgroundColor: c.surfaceAlt,
+        backgroundColor: c.surface,
         borderRadius: 18,
-        paddingHorizontal: 8,
         overflow: 'hidden',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: c.border,
     },
     navLink: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 8,
+        paddingVertical: 16,
+        paddingHorizontal: 16,
     },
     navLinkDivider: {
-        borderBottomWidth: 1,
-        borderBottomColor: c.surfaceSunken,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: c.border,
     },
     navLinkIconBox: {
-        width: 34,
-        height: 34,
-        borderRadius: 10,
+        width: 32,
+        height: 32,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 14,
+        marginRight: 12,
     },
     navLinkText: {
         fontSize: 15,

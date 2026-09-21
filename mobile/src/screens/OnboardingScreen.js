@@ -206,12 +206,12 @@ const useStyles = makeStyles((c) => ({
     title: {
         fontSize: 32,
         fontWeight: '900',
-        color: c.onPrimary,
+        color: '#FFFFFF',
         marginBottom: 10,
     },
     description: {
         fontSize: 18,
-        color: c.textSecondary,
+        color: 'rgba(255, 255, 255, 0.85)',
         lineHeight: 26,
     },
     skipContainer: {
@@ -221,7 +221,7 @@ const useStyles = makeStyles((c) => ({
         zIndex: 10,
     },
     skipText: {
-        color: c.onPrimary,
+        color: '#FFFFFF',
         fontSize: 16,
         fontWeight: 'bold',
         padding: 10,
