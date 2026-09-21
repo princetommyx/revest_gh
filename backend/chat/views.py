@@ -2,7 +2,7 @@ from rest_framework import viewsets, permissions, filters, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db.models import Q
+from django.db.models import Q, Count
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from .models import Message, SupportSession
 from .serializers import MessageSerializer, MessageCreateSerializer, SupportSessionSerializer
@@ -86,10 +86,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Get conversations")
     @action(detail=False, methods=['get'])
     def conversations(self, request):
-        print(f"DEBUG: conversations called by {request.user}")
         """
         Get list of unique users the current user has chatted with,
-        along with the last message.
+        along with the last message and how many of their messages are
+        still unread.
         """
         from moderation.models import BlockedUser
 
@@ -124,6 +124,20 @@ class MessageViewSet(viewsets.ModelViewSet):
             if other_id not in last_message_by_contact:
                 last_message_by_contact[other_id] = msg
 
+        # Unread counts in one grouped query rather than per contact.
+        # `unread_count` was hardcoded to 0 here behind a stale TODO saying
+        # Message needed an is_read field - it has had one since migration
+        # 0003. The client has always had the UI for this (bold rows, a dot,
+        # and an "Unread" tab), so that tab could never show anything.
+        # Only messages *to* this user count: your own outgoing messages are
+        # never unread to you.
+        unread_by_contact = dict(
+            Message.objects
+            .filter(receiver=user, sender_id__in=contact_ids, is_read=False)
+            .values_list('sender_id')
+            .annotate(n=Count('id'))
+        )
+
         conversations = []
         for contact_id in contact_ids:
             contact = contacts_by_id.get(contact_id)
@@ -140,13 +154,35 @@ class MessageViewSet(viewsets.ModelViewSet):
                 'contact_is_online': contact.is_online,
                 'last_message': last_msg.content if last_msg else '',
                 'timestamp': last_msg.timestamp if last_msg else None,
-                'unread_count': 0 # TODO: Add is_read field to Message model
+                'unread_count': unread_by_contact.get(contact_id, 0),
             })
 
         # Sort by last message timestamp
         conversations.sort(key=lambda x: x['timestamp'] or timezone.now(), reverse=True)
 
         return Response(conversations)
+
+    @extend_schema(summary="Mark a thread as read")
+    @action(detail=False, methods=['post'], url_path='mark-read')
+    def mark_read(self, request):
+        """
+        Mark every message from `user_id` to the caller as read.
+
+        Opening a thread already does this via chat_with, but a message that
+        arrives over the websocket while the thread is on screen has been
+        read by the time it renders and would otherwise stay unread until
+        the user navigated away and back.
+        """
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id is required'}, status=400)
+
+        # Only ever our own inbox: `receiver=request.user` means a caller
+        # cannot mark someone else's messages read by passing their id.
+        updated = Message.objects.filter(
+            sender_id=user_id, receiver=request.user, is_read=False
+        ).update(is_read=True)
+        return Response({'marked_read': updated})
 
     @extend_schema(summary="Get messages with user")
     @action(detail=False, methods=['get'], url_path='with/(?P<user_id>[^/.]+)')
@@ -166,13 +202,20 @@ class MessageViewSet(viewsets.ModelViewSet):
                 status=403,
             )
 
+        # Opening a thread is what marks it read. Done before the queryset
+        # below is evaluated so the response carries the updated is_read
+        # rather than the values from a moment ago. Only their messages to
+        # us - we never touch the read state of our own outgoing messages,
+        # which belongs to the other side.
+        Message.objects.filter(
+            sender=other_user, receiver=user, is_read=False
+        ).update(is_read=True)
+
         messages = Message.objects.select_related('sender', 'receiver').filter(
             (Q(sender=user) & Q(receiver=other_user)) |
             (Q(sender=other_user) & Q(receiver=user))
         ).order_by('timestamp') # Ascending for chat UI
-        
-        # Mark read logic could go here
-        
+
         serializer = self.get_serializer(messages, many=True)
         return Response(serializer.data)
 
