@@ -233,7 +233,7 @@ export default function HomeScreen({ navigation }) {
                     <View style={styles.heroContent}>
                         <Text style={styles.heroTitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Manage Pickups' : 'Recycle & Earn!'}</Text>
                         <Text style={styles.heroSubtitle}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Collect waste and earn rewards efficiently.' : 'Join the movement for a cleaner planet today.'}</Text>
-                        <AnimatedButton style={styles.heroBtn} onPress={() => navigation.navigate('Marketplace')}>
+                        <AnimatedButton style={styles.heroBtn} onPress={() => goToWasteList()}>
                             <Text style={styles.heroBtnText}>{userRole === 'COLLECTOR' || userRole === 'RECYCLER' ? 'Browse All Waste' : 'Start Now'}</Text>
                         </AnimatedButton>
                     </View>
@@ -295,6 +295,24 @@ export default function HomeScreen({ navigation }) {
         );
     };
 
+    // Where this role's waste list lives. A recycler browses everything
+    // disposers have posted, on the Discover tab; a disposer sees their own
+    // postings on the stack-level Marketplace screen, which titles itself
+    // "My Waste" for them. Collectors have neither - they have no Home tab
+    // at all (see AppNavigator), so they never reach this screen.
+    const goToWasteList = useCallback((category = '') => {
+        // Always send a category, even an empty one. MarketplaceScreen only
+        // applies the param when it is not undefined, so omitting it would
+        // leave whatever material was tapped last still filtering the list -
+        // "See all" would then quietly show one category.
+        const params = { category };
+        if (userRole === 'RECYCLER') {
+            navigation.navigate('Main', { screen: 'Discover', params });
+        } else {
+            navigation.navigate('Marketplace', params);
+        }
+    }, [navigation, userRole]);
+
     const renderCategory = (item) => {
         const isActive = filter === item.id;
         const IconComp = item.icon;
@@ -311,10 +329,7 @@ export default function HomeScreen({ navigation }) {
             <TouchableOpacity
                 key={item.id}
                 style={styles.catWrap}
-                onPress={() => {
-                    if (userRole === 'COLLECTOR' || userRole === 'RECYCLER') navigation.navigate('Pickups', { category: item.id });
-                    else setFilter(item.id);
-                }}
+                onPress={() => setFilter(item.id)}
             >
                 <View style={[styles.catCircle, isActive && activeStyle]}>
                     {item.image ? (
@@ -332,7 +347,7 @@ export default function HomeScreen({ navigation }) {
         if (!item.id) return null; // Skip 'All'
         const IconComp = item.icon;
         return (
-            <TouchableOpacity key={item.id} style={styles.collCatCard} onPress={() => navigation.navigate('Pickups', { category: item.id })}>
+            <TouchableOpacity key={item.id} style={styles.collCatCard} onPress={() => goToWasteList(item.id)}>
                 <View style={styles.collCatIconBox}>
                     {item.image ? (
                         <Image source={item.image} style={styles.collCatIconImage} contentFit="contain" />
@@ -463,14 +478,14 @@ export default function HomeScreen({ navigation }) {
                                     onChangeText={setSearch}
                                 />
                             </View>
-                            <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
+                            <TouchableOpacity style={styles.filterBtn} onPress={() => goToWasteList()}>
                                 <SlidersHorizontal size={20} color={colors.text} />
                             </TouchableOpacity>
                         </View>
 
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Category</Text>
-                            <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                            <TouchableOpacity onPress={() => goToWasteList()}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24, overflow: 'visible' }}>
                             {CATEGORIES.map(renderCollectorCategory)}
@@ -689,42 +704,25 @@ export default function HomeScreen({ navigation }) {
                             </ScrollView>
                         )}
 
-                        {isCollectorRole && (
-                            <View style={styles.searchRow}>
-                                <View style={styles.searchBar}>
-                                    <Search size={20} color={colors.textMuted} />
-                                    <TextInput
-                                        style={styles.searchInput}
-                                        placeholder="Search waste materials..."
-                                        placeholderTextColor={colors.textMuted}
-                                        value={search}
-                                        onChangeText={setSearch}
-                                    />
-                                </View>
-                                <TouchableOpacity style={styles.filterBtn} onPress={() => navigation.navigate('Marketplace')}>
-                                    <SlidersHorizontal size={20} color={colors.text} />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
                         {renderPromoBanners()}
 
-                        {!(userRole === 'COLLECTOR' || userRole === 'RECYCLER') && (
-                            <>
-                                <View style={styles.sectionHeader}>
-                                    <Text style={styles.sectionTitle}>Category</Text>
-                                    <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
-                                </View>
-                                <View style={styles.categoriesGrid}>
-                                    {CATEGORIES.slice(0, 4).map(renderCategory)}
-                                </View>
-                            </>
-                        )}
+                        {/* Only a disposer reaches this render path, so the
+                            role guards that used to wrap this section were
+                            always true. Tapping a category filters in place -
+                            this screen is already their own waste - while
+                            "See all" opens the full list. */}
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Category</Text>
+                            <TouchableOpacity onPress={() => goToWasteList()}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                        </View>
+                        <View style={styles.categoriesGrid}>
+                            {CATEGORIES.slice(0, 4).map(renderCategory)}
+                        </View>
                     </SafeAreaView>
 
                     <View style={styles.sectionHeader}>
                         <Text style={styles.sectionTitle}>{(userRole === 'COLLECTOR' || userRole === 'RECYCLER') ? 'Available Waste Near You' : 'My Deals'}</Text>
-                        <TouchableOpacity onPress={() => navigation.navigate('Marketplace')}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => goToWasteList()}><Text style={styles.viewAllText}>See all</Text></TouchableOpacity>
                     </View>
                 </>}
                 ListEmptyComponent={
