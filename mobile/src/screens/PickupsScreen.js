@@ -711,7 +711,7 @@ export default function PickupsScreen({ route }) {
             try {
                 await authApi.updateMyLocation({ latitude: coords.latitude, longitude: coords.longitude, is_online: isOnline });
             } catch (e) {
-                console.warn('Failed to update collector presence:', e?.message);
+                console.warn('Failed to update collector presence:', e?.response?.data || e?.message || e);
             }
         };
 

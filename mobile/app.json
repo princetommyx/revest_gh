@@ -4,7 +4,7 @@
     "name": "Revesta",
     "slug": "revesta-mobile",
     "scheme": "revesta",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -24,7 +24,7 @@
       }
     },
     "android": {
-      "versionCode": 20,
+      "versionCode": 21,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -88,9 +88,9 @@
     "runtimeVersion": "1.0.0",
     "extra": {
       "eas": {
-        "projectId": "8b99f6ee-5ad2-4b23-a14a-6b9fdf4ac4ad"
+        "projectId": "5676b5d3-5471-4666-8d9f-78149020af42"
       }
     },
-    "owner": "tommytechsxs-team"
+    "owner": "revestagh"
   }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogBox } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/context/AuthContext';
@@ -11,6 +12,8 @@ import { toastConfig } from './src/components/ToastConfig';
 import NetworkBanner from './src/components/NetworkBanner';
 import { ThemeProvider } from './src/theme/ThemeContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+
+LogBox.ignoreLogs(['THREE.WebGLRenderer: WebGL 1 support was deprecated']);
 
 const queryClient = new QueryClient();
 
