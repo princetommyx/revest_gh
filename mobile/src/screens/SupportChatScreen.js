@@ -243,7 +243,7 @@ export default function SupportChatScreen() {
             {/* Chat Content */}
             <KeyboardAvoidingView 
                 style={styles.contentContainer}
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
                 <FlatList
                     ref={flatListRef}

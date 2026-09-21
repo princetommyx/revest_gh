@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
     ArrowLeft, Clock, ShoppingCart, Info, BadgeCheck, Heart, 
     Weight, MapPin, Trash, Pencil, MessageCircle, Package, 
-    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase, Flag
+    ShieldAlert, Monitor, ChevronDown, ChevronUp, Briefcase, Flag, Check
 } from 'lucide-react-native';
 import * as Location from 'expo-location';
 import { marketApi } from '../api/market';
@@ -202,19 +202,19 @@ export default function ListingDetailScreen({ route, navigation }) {
                     {/* Stats Card */}
                     <View style={styles.statsCard}>
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: colors.accentSoft }]}>
-                                <Weight size={18} color={colors.accent} />
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.surfaceSunken }]}>
+                                <Weight size={18} color={colors.text} />
                             </View>
                             <Text style={styles.statValue}>{listing.quantity || '—'}</Text>
                             <Text style={styles.statLabel}>Weight</Text>
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: colors.warningSoft }]}>
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.surfaceSunken }]}>
                                 {listing.seller?.is_verified ? (
-                                    <BadgeCheck size={18} color={colors.warning} />
+                                    <BadgeCheck size={18} color={colors.text} />
                                 ) : (
-                                    <ShieldAlert size={18} color={colors.warning} />
+                                    <ShieldAlert size={18} color={colors.textMuted} />
                                 )}
                             </View>
                             <Text style={styles.statValue}>{listing.seller?.is_verified ? 'Verified' : 'Unverified'}</Text>
@@ -222,8 +222,8 @@ export default function ListingDetailScreen({ route, navigation }) {
                         </View>
                         <View style={styles.statDivider} />
                         <View style={styles.statColumn}>
-                            <View style={[styles.statIconWrap, { backgroundColor: colors.accentSoft }]}>
-                                <MapPin size={18} color={colors.accent} />
+                            <View style={[styles.statIconWrap, { backgroundColor: colors.surfaceSunken }]}>
+                                <MapPin size={18} color={colors.text} />
                             </View>
                             <Text style={styles.statValue}>{distanceKm != null ? `${distanceKm.toFixed(1)} km` : '—'}</Text>
                             <Text style={styles.statLabel}>Distance</Text>
@@ -391,7 +391,14 @@ export default function ListingDetailScreen({ route, navigation }) {
                                 <MessageCircle size={24} color={colors.text} />
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.solidPrimaryBtn, { flex: 1 }]} onPress={handleAcceptJob}>
-                                <Briefcase size={20} color={colors.onPrimary} style={{ marginRight: 8 }} />
+                                {/* A filled check badge rather than a stroke icon: a
+                                    briefcase said "job" but nothing about accepting.
+                                    Drawn as a filled circle with a bold check rather
+                                    than lucide's CircleCheck, whose `fill` prop also
+                                    fills the check stroke - white on white. */}
+                                <View style={styles.acceptCheckBadge}>
+                                    <Check size={14} color={colors.primary} strokeWidth={3.5} />
+                                </View>
                                 <Text style={styles.solidPrimaryBtnText}>Accept Job</Text>
                             </TouchableOpacity>
                         </View>
@@ -411,6 +418,15 @@ export default function ListingDetailScreen({ route, navigation }) {
 }
 
 const useStyles = makeStyles((c) => ({
+    acceptCheckBadge: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: c.onPrimary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 9,
+    },
     reportLink: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -461,7 +477,7 @@ const useStyles = makeStyles((c) => ({
     showMoreText: { fontSize: 14, color: c.accent, fontWeight: '700' },
     
     sellerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: 16, borderWidth: 1, borderColor: c.borderSubtle, padding: 16, marginTop: 24, shadowColor: c.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.02, shadowRadius: 4, elevation: 1 },
-    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: c.accentSoft, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+    sellerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: c.surfaceSunken, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
     sellerAvatarText: { fontSize: 20, fontWeight: '800', color: c.accent },
     sellerInfo: { flex: 1 },
     sellerName: { fontSize: 15, fontWeight: '800', color: c.text, marginBottom: 2 },

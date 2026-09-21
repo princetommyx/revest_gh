@@ -7,14 +7,14 @@ import { useTheme, makeStyles } from '../theme/ThemeContext';
 export default function TransactionRow({ item }) {
     const styles = useStyles();
     const { colors } = useTheme();
-    const { Icon, color } = getTxnMeta(item.transaction_type);
+    const { Icon } = getTxnMeta(item.transaction_type);
     const isCredit = isCreditAmount(item.amount);
     const statusMeta = STATUS_LABELS[item.status];
 
     return (
         <View style={styles.txnItem}>
-            <View style={[styles.txnIconBox, { backgroundColor: `${color}1A` }]}>
-                <Icon size={20} color={color} />
+            <View style={[styles.txnIconBox, { backgroundColor: colors.surfaceSunken }]}>
+                <Icon size={20} color={colors.text} />
             </View>
             <View style={styles.txnContent}>
                 <Text style={styles.txnTitle} numberOfLines={1}>

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Animated, Easing, Dimensions } from 'react-native';
-import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User } from 'lucide-react-native';
+import { Phone, MessageCircle, MapPin, CheckCircle, Clock, UserCheck, Package, Navigation, Activity, User, Check } from 'lucide-react-native';
 import AnimatedButton from './AnimatedButton';
 import PremiumButton from './PremiumButton';
 import PickupProgressRoadmap from './PickupProgressRoadmap';
@@ -236,10 +236,13 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
 
                 {/* Actions */}
                 <View style={styles.actionContainer}>
+                    {/* A check, not a briefcase: a briefcase said "job" but
+                        nothing about accepting. Same glyph as the accept button
+                        on the listing screen. */}
                     {job.status === 'PENDING' && (
                         <PremiumButton
                             title="Accept Job"
-                            leftIcon={UserCheck}
+                            leftIcon={Check}
                             variant="primary"
                             onPress={() => onAccept(job.id)}
                             loading={requestLoading}
@@ -278,6 +281,15 @@ export default function ActiveJobBottomSheet({ job, onChatPress, onCallPress, on
 }
 
 const useStyles = makeStyles((c) => ({
+    acceptCheckBadge: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: c.onPrimary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 9,
+    },
     container: {
         backgroundColor: c.surface,
         borderTopLeftRadius: 30,

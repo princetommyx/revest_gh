@@ -73,6 +73,7 @@ export default function ProfileScreen({ navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
 
+
     // 'deactivate' | 'delete' | null
     const [dangerModal, setDangerModal] = useState(null);
     const [dangerPassword, setDangerPassword] = useState('');
@@ -308,13 +309,33 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        {/* Collectors have no marketplace at all now - they
-                            work the map, and the waste listings belong to
-                            recyclers. Leaving this link would be the one
-                            remaining way for a collector to reach a screen
-                            they are no longer meant to have. */}
-                        {userRole !== 'COLLECTOR' && (
-                            <NavLink title="My Listings" icon={Box} onPress={() => navigation.navigate('Marketplace')} />
+{/* Three different answers here. A collector works the map and
+                            has no marketplace at all, so the link is gone for
+                            them. A recycler browses what disposers have listed
+                            but posts nothing, so "My Listings" was wrong - they
+                            get the Discover tab. Only a disposer has listings of
+                            their own.
+
+                            The old target was dead for everyone: it navigated to
+                            a tab named 'Marketplace', but that tab is called
+                            'Discover'. Sellers have no Discover tab, so they get
+                            the stack-level Marketplace screen, which titles
+                            itself "My Waste" for them. */}
+                        {userRole === 'RECYCLER' && (
+                            <NavLink
+                                title="All Waste"
+                                subtitle="Browse everything disposers have listed"
+                                icon={Recycle}
+                                onPress={() => navigation.navigate('Main', { screen: 'Discover' })}
+                            />
+                        )}
+                        {userRole === 'SELLER' && (
+                            <NavLink
+                                title="My Listings"
+                                subtitle="Waste you've posted"
+                                icon={Recycle}
+                                onPress={() => navigation.navigate('Marketplace')}
+                            />
                         )}
                         {/* Collectors reach this from their History tab now;
                             keeping it here too would be two routes to one
@@ -353,8 +374,6 @@ export default function ProfileScreen({ navigation }) {
                                 subtitle={kycLabel}
                                 subtitleColor={kycStatus === 'VERIFIED' ? colors.accent : kycStatus === 'REJECTED' ? colors.danger : colors.textMuted}
                                 icon={ShieldCheck}
-                                iconColor={kycStatus === 'VERIFIED' ? colors.accent : colors.text}
-                                iconBg={kycStatus === 'VERIFIED' ? colors.accentSoft : colors.surfaceSunken}
                                 onPress={() => navigation.navigate('KYCVerification')}
                             />
                         )}
@@ -394,8 +413,6 @@ export default function ProfileScreen({ navigation }) {
                             title="Deactivate Account"
                             subtitle="Hide your account temporarily. Log back in anytime to reactivate."
                             icon={UserX}
-                            iconColor={colors.warning}
-                            iconBg={colors.warningSoft}
                             onPress={() => setDangerModal('deactivate')}
                         />
                         <NavLink title="Delete Account" icon={Trash2} onPress={() => setDangerModal('delete')} danger />
@@ -412,7 +429,7 @@ export default function ProfileScreen({ navigation }) {
                 onRequestClose={closeDangerModal}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     style={styles.dangerOverlay}
                 >
                     <View style={styles.dangerCard}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity,
     FlatList, ActivityIndicator,
@@ -23,6 +23,8 @@ import { SkeletonCard } from '../components/Skeleton';
 import AnimatedButton from '../components/AnimatedButton';
 import ActivePickupBanner from '../components/ActivePickupBanner';
 import OnlineToggleCard from '../components/OnlineToggleCard';
+import LocationPickerSheet from '../components/LocationPickerSheet';
+import { reverseGeocodeShort } from '../utils/geo';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { MATERIAL_PLACEHOLDER, IMAGE_TRANSITION_MS } from '../constants/images';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
@@ -75,6 +77,12 @@ export default function HomeScreen({ navigation }) {
         return () => { clearTimeout(handler); };
     }, [search]);
 
+    // Where the feed is centred. Null means "follow the device", which is
+    // the default; picking a place in the header pins it to that instead.
+    const [pinnedPlace, setPinnedPlace] = useState(null);
+    const [devicePlaceName, setDevicePlaceName] = useState(null);
+    const [showLocationPicker, setShowLocationPicker] = useState(false);
+
     useEffect(() => {
         (async () => {
             try {
@@ -82,9 +90,30 @@ export default function HomeScreen({ navigation }) {
                 if (status !== 'granted') return;
                 let loc = await Location.getCurrentPositionAsync({});
                 setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+                // The header used to print user.city - whatever was typed at
+                // registration - so it read "Accra" no matter where the phone
+                // actually was. Resolve the real coordinates instead.
+                const name = await reverseGeocodeShort(loc.coords.latitude, loc.coords.longitude);
+                if (name) setDevicePlaceName(name);
             } catch (error) { console.log(error); }
         })();
     }, []);
+
+    // Coordinates everything on this screen is scoped to. Memoised so a
+    // consumer that keys on object identity rather than on the lat/lon
+    // primitives doesn't refetch on every render.
+    const activeCoords = useMemo(() => (
+        pinnedPlace
+            ? { latitude: pinnedPlace.latitude, longitude: pinnedPlace.longitude }
+            : location
+    ), [pinnedPlace, location]);
+
+    // Falls back through: a pinned place, the resolved device place, the
+    // profile city, and finally a prompt - never a hardcoded city.
+    const locationLabel = pinnedPlace?.label
+        || devicePlaceName
+        || user?.city
+        || 'Set location';
 
     const [promos, setPromos] = useState([]);
     const [promoIndex, setPromoIndex] = useState(0);
@@ -108,20 +137,33 @@ export default function HomeScreen({ navigation }) {
         }, [fetchPromos])
     );
 
-    const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(location);
+    const { data: pickupJobs = [], isLoading: pickupsLoading, refetch: refetchPickups } = usePickups(activeCoords);
 
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+    // Only collectors drive out to jobs, so only they have an availability
+    // state to control. A recycler browses waste and books a collector to
+    // move it - nothing is ever dispatched to them, so an online/offline
+    // switch would be a control over nothing.
+    const isDispatchable = userRole === 'COLLECTOR';
+
+    // Jobs still waiting for someone to take them - the collector's own
+    // accepted work is in this list too, so it has to be filtered out.
+    const openPickupCount = pickupJobs.filter(j => j.status === 'PENDING').length;
     const myActiveJob = isCollectorRole
         // `collector` is now the serialized user object (see logistics
         // serializers), not a bare id - compare .id, not the object itself.
         ? pickupJobs.find(j => j.collector?.id === user?.id && ['ACCEPTED', 'ARRIVED'].includes(j.status))
         : pickupJobs.find(j => ['PENDING', 'ACCEPTED', 'ARRIVED'].includes(j.status));
     const { recentLocations } = useRecentPickupLocations();
-    const [locationFilter, setLocationFilter] = useState('');
+    // Scoped by coordinates, not by a place name. The listings endpoint
+    // filters lat/lon to a 20km radius, while its `location` field is an
+    // exact string match - the old `location` param was wired to a piece of
+    // state nothing ever set, so the feed was never scoped at all and the
+    // header's place name meant nothing.
     const { data: listings = [], isLoading: loading, refetch } = useListings({
         search: debouncedSearch,
         material_type: filter,
-        location: locationFilter
+        ...(activeCoords ? { lat: activeCoords.latitude, lon: activeCoords.longitude } : {}),
     });
 
     const handleRefresh = async () => {
@@ -380,15 +422,24 @@ export default function HomeScreen({ navigation }) {
                 >
                     <SafeAreaView edges={['top']} style={styles.header}>
                         <View style={styles.headerTop}>
-                            <TouchableOpacity style={styles.locationDropdown} onPress={() => navigation.navigate('Profile')}>
-                                {user?.profile_picture ? (
-                                    <Image source={{ uri: resolveImageUrl(user.profile_picture) }} style={styles.headerAvatar} />
-                                ) : (
-                                    <View style={styles.headerAvatarPlaceholder}><User size={20} color={colors.text} /></View>
-                                )}
-                                <MapPin size={16} color={colors.text} style={{marginLeft: 4}} />
-                                <Text style={styles.locationTextHeader}>{user?.city || 'Accra, Ghana'}</Text>
-                            </TouchableOpacity>
+                            <View style={styles.locationDropdown}>
+                                <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
+                                    {user?.profile_picture ? (
+                                        <Image source={{ uri: resolveImageUrl(user.profile_picture) }} style={styles.headerAvatar} />
+                                    ) : (
+                                        <View style={styles.headerAvatarPlaceholder}><User size={20} color={colors.text} /></View>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.locationChip}
+                                    onPress={() => setShowLocationPicker(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <MapPin size={16} color={colors.text} />
+                                    <Text style={styles.locationTextHeader} numberOfLines={1}>{locationLabel}</Text>
+                                    <ChevronDown size={15} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            </View>
                             <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Chat', { tab: 'Notifications' })}>
                                 <Bell size={20} color={colors.text} />
                                 <View style={styles.bellBadge} />
@@ -397,9 +448,9 @@ export default function HomeScreen({ navigation }) {
 
                         {myActiveJob ? (
                             <ActivePickupBanner job={myActiveJob} role={userRole} onPress={() => navigation.navigate('Pickups')} />
-                        ) : (
+                        ) : isDispatchable ? (
                             <OnlineToggleCard location={location} />
-                        )}
+                        ) : null}
 
                         <View style={styles.searchRow}>
                             <View style={styles.searchBar}>
@@ -456,21 +507,42 @@ export default function HomeScreen({ navigation }) {
                             <Text style={{ color: colors.textMuted, marginBottom: 10 }}>No recommendations found.</Text>
                         )}
 
-                        <View style={styles.collBanner}>
-                            <View style={{ flex: 1, marginRight: 16 }}>
-                                <Text style={styles.collBannerTitle}>Let's keep Accra clean</Text>
-                                <TouchableOpacity style={styles.collBannerBtn}>
-                                    <Text style={styles.collBannerBtnText}>Learn more →</Text>
-                                </TouchableOpacity>
+                        {/* Was a slogan, a stock photo of wheelie bins and a
+                            "Learn more" button with no onPress - it said nothing
+                            and did nothing. This reports the one number a
+                            collector opens the app for, and the button goes
+                            where that number lives. When there's nothing open it
+                            says so rather than inventing a figure. */}
+                        <TouchableOpacity
+                            style={styles.collBanner}
+                            activeOpacity={0.9}
+                            onPress={() => navigation.navigate('Pickups')}
+                        >
+                            <View style={styles.collBannerIconWrap}>
+                                <Truck size={26} color={colors.onAccent} />
                             </View>
-                            <Image 
-                                source={{ uri: 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=400&q=80' }} 
-                                style={{ width: 80, height: 80, borderRadius: 40 }} 
-                                contentFit="cover"
-                            />
-                        </View>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.collBannerTitle}>
+                                    {openPickupCount > 0
+                                        ? `${openPickupCount} pickup${openPickupCount === 1 ? '' : 's'} open near you`
+                                        : 'No open pickups right now'}
+                                </Text>
+                                <Text style={styles.collBannerSub}>
+                                    {openPickupCount > 0
+                                        ? 'Accept one to start a job.'
+                                        : "We'll alert you the moment one is posted nearby."}
+                                </Text>
+                            </View>
+                            <ArrowRight size={20} color={colors.onAccent} />
+                        </TouchableOpacity>
                     </SafeAreaView>
                 </ScrollView>
+                <LocationPickerSheet
+                    visible={showLocationPicker}
+                    onClose={() => setShowLocationPicker(false)}
+                    onSelect={setPinnedPlace}
+                    currentCoords={location}
+                />
             </View>
         );
     };
@@ -541,15 +613,24 @@ export default function HomeScreen({ navigation }) {
                 ListHeaderComponent={<>
                     <SafeAreaView edges={['top']} style={styles.header}>
                         <View style={styles.headerTop}>
-                            <TouchableOpacity style={styles.locationDropdown} onPress={() => navigation.navigate('Profile')}>
-                                {user?.profile_picture ? (
-                                    <Image source={{ uri: resolveImageUrl(user.profile_picture) }} style={styles.headerAvatar} />
-                                ) : (
-                                    <View style={styles.headerAvatarPlaceholder}><User size={20} color={colors.text} /></View>
-                                )}
-                                <MapPin size={16} color={colors.text} style={{marginLeft: 4}} />
-                                <Text style={styles.locationTextHeader}>{user?.city || 'Accra, Ghana'}</Text>
-                            </TouchableOpacity>
+                            <View style={styles.locationDropdown}>
+                                <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.7}>
+                                    {user?.profile_picture ? (
+                                        <Image source={{ uri: resolveImageUrl(user.profile_picture) }} style={styles.headerAvatar} />
+                                    ) : (
+                                        <View style={styles.headerAvatarPlaceholder}><User size={20} color={colors.text} /></View>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.locationChip}
+                                    onPress={() => setShowLocationPicker(true)}
+                                    activeOpacity={0.7}
+                                >
+                                    <MapPin size={16} color={colors.text} />
+                                    <Text style={styles.locationTextHeader} numberOfLines={1}>{locationLabel}</Text>
+                                    <ChevronDown size={15} color={colors.textMuted} />
+                                </TouchableOpacity>
+                            </View>
                             <TouchableOpacity style={styles.bellBtn} onPress={() => navigation.navigate('Chat', { tab: 'Notifications' })}>
                                 <Bell size={20} color={colors.text} />
                                 <View style={styles.bellBadge} />
@@ -562,9 +643,11 @@ export default function HomeScreen({ navigation }) {
                                 role={userRole}
                                 onPress={() => navigation.navigate('Pickups')}
                             />
-                        ) : isCollectorRole ? (
-                            <OnlineToggleCard location={location} />
                         ) : (
+                            // Collectors and recyclers returned above via
+                            // renderCollectorHome, so only a disposer reaches
+                            // here - the online toggle branch that used to sit
+                            // here could never render.
                             <AnimatedButton
                                 style={styles.requestPickupCard}
                                 haptic
@@ -664,6 +747,12 @@ export default function HomeScreen({ navigation }) {
                     )
                 }
             />
+                <LocationPickerSheet
+                    visible={showLocationPicker}
+                    onClose={() => setShowLocationPicker(false)}
+                    onSelect={setPinnedPlace}
+                    currentCoords={location}
+                />
         </View>
     );
 }
@@ -673,10 +762,11 @@ const useStyles = makeStyles((c) => ({
     header: { paddingTop: 10, paddingBottom: 15 },
     headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
     
-    locationDropdown: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    locationDropdown: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 12 },
+    locationChip: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 1, paddingVertical: 6, paddingRight: 4 },
     headerAvatar: { width: 44, height: 44, borderRadius: 22 },
     headerAvatarPlaceholder: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: c.borderSubtle },
-    locationTextHeader: { fontSize: 16, fontWeight: '700', color: c.text },
+    locationTextHeader: { fontSize: 16, fontWeight: '700', color: c.text, flexShrink: 1 },
     
     bellBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: c.borderSubtle },
     bellBadge: { position: 'absolute', top: 12, right: 12, width: 8, height: 8, borderRadius: 4, backgroundColor: c.danger },
@@ -788,8 +878,27 @@ const useStyles = makeStyles((c) => ({
     collCardPrice: { fontSize: 16, fontWeight: '800', color: c.success },
     collCardBtn: { backgroundColor: c.primary, borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 12 },
     collCardBtnText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 14 },
-    collBanner: { backgroundColor: c.accentSoft, borderRadius: 20, padding: 20, flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 30 },
-    collBannerTitle: { fontSize: 18, fontWeight: '800', color: c.success, marginBottom: 8 },
-    collBannerBtn: { backgroundColor: c.accent, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, alignSelf: 'flex-start' },
-    collBannerBtnText: { color: c.onPrimary, fontWeight: 'bold', fontSize: 13 }
+    // Solid accent rather than a pale tint: this is the one thing on the
+    // screen meant to pull a tap, and mint-on-mint read as decoration.
+    collBanner: {
+        backgroundColor: c.accent,
+        borderRadius: 20,
+        paddingVertical: 18,
+        paddingHorizontal: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        marginTop: 10,
+        marginBottom: 30,
+    },
+    collBannerIconWrap: {
+        width: 46,
+        height: 46,
+        borderRadius: 23,
+        backgroundColor: 'rgba(255,255,255,0.18)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    collBannerTitle: { fontSize: 16.5, fontWeight: '800', color: c.onAccent, letterSpacing: -0.2 },
+    collBannerSub: { fontSize: 13, color: c.onAccent, opacity: 0.85, marginTop: 3 }
 }));

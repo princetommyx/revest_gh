@@ -503,7 +503,7 @@ export default function RegisterScreen() {
     if (step === 3) {
         return (
             <SafeAreaView style={styles.container}>
-                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                         <View style={styles.otpHeader}>
                             <TouchableOpacity onPress={() => setStep(2)} style={styles.otpBackButton}>
@@ -560,7 +560,7 @@ export default function RegisterScreen() {
     return (
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 style={{ flex: 1 }}
             >
                 <ScrollView

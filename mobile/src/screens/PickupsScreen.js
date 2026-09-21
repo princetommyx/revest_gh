@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
 import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
 import { getOnlinePreference } from '../utils/collectorPresence';
+import { reverseGeocode } from '../utils/geo';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -45,6 +46,7 @@ const ActiveMap = MapView;
 const ActiveMarker = Marker;
 import MapViewDirections from 'react-native-maps-directions';
 import { useTheme, makeStyles } from '../theme/ThemeContext';
+import { Image as ExpoImage } from 'expo-image';
 import { usePricing } from '../context/PricingContext';
 import { TAB_BAR_CLEARANCE } from '../constants/layout';
 const { width, height } = Dimensions.get('window');
@@ -312,8 +314,10 @@ export default function PickupsScreen({ route }) {
     // only ever checked for COLLECTOR - which left recyclers with the disposer's
     // map behaviour and a reversed route label on their own job.
     const isCollectorRole = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
-    // Narrower than isCollectorRole: recyclers kept their Home tab, and with
-    // it the online toggle that lives there.
+    // Narrower than isCollectorRole. Availability is a collector-only
+    // concept: a recycler is never dispatched a pickup, so they have no
+    // online/offline control anywhere and must not be broadcasting
+    // themselves as available either (see the presence heartbeat below).
     const isCollectorOnly = userRole === 'COLLECTOR';
 
     // Check for params from ListingDetail
@@ -414,21 +418,6 @@ export default function PickupsScreen({ route }) {
     const [isSelectingLocation, setIsSelectingLocation] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
     const [locationSubscription, setLocationSubscription] = useState(null);
-
-    // Reverse Geocode Function
-    const reverseGeocode = async (lat, lon) => {
-        try {
-            const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
-            if (address) {
-                const street = address.street || address.name || '';
-                const city = address.city || address.subregion || address.region || '';
-                return `${street}, ${city}`.replace(/^, /, '').trim();
-            }
-        } catch (error) {
-            console.log('Reverse geocode error:', error);
-        }
-        return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-    };
 
     const loading = jobsLoading && (!isCollectorRole || !!location);
 
@@ -706,14 +695,13 @@ export default function PickupsScreen({ route }) {
 
     // Collector presence heartbeat: marks the collector online with a
     // position so the backend can find them when matching new requests.
-    // Respects the online/offline toggle - which lives on this screen for
-    // collectors and on Home for recyclers. This just keeps the preference
+    // Respects the online/offline toggle. This just keeps the preference
     // re-affirmed with a fresh position while the preference is on.
-    // Was gated to 'COLLECTOR' only, so a RECYCLER's location/online status
-    // never reached the backend at all - they'd never be found "nearby" for
-    // a new request no matter how the matching query itself was scoped.
+    // Collectors only: a recycler is never dispatched a pickup, so marking
+    // them online would put them in the matching pool for requests they have
+    // no toggle to decline.
     useEffect(() => {
-        if (!isCollectorRole) return;
+        if (!isCollectorOnly) return;
 
         const coordsOf = (loc) => (loc?.coords ? loc.coords : loc);
         const pushPresence = async (wantsOnline) => {
@@ -736,7 +724,7 @@ export default function PickupsScreen({ route }) {
             appStateSub.remove();
             pushPresence(false);
         };
-    }, [isCollectorRole]);
+    }, [isCollectorOnly]);
 
     // Collector/recycler camera following while actively navigating (foreground
     // UX only - location reporting to the server is handled by the background
@@ -1655,7 +1643,7 @@ export default function PickupsScreen({ route }) {
                             didn't actually fit a "come collect my waste" service. */}
                         <TouchableOpacity style={styles.pickupFieldRow} onPress={() => { setShowSearchModal(true); }}>
                             <View style={styles.pickupIconBox}>
-                                <MapPin size={18} color={colors.accent} />
+                                <MapPin size={18} color={colors.text} />
                             </View>
                             <View style={styles.pickupFieldTextCol}>
                                 <Text style={styles.pickupFieldLabel}>Pickup from</Text>
@@ -1974,73 +1962,118 @@ export default function PickupsScreen({ route }) {
                 onRequestClose={() => setShowRequestModal(false)}
             >
                 <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                     style={styles.modalOverlay}
                 >
                     <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Confirm Request</Text>
-                            <TouchableOpacity onPress={() => setShowRequestModal(false)}>
-                                <X size={24} color={colors.textSecondary} />
+                        <View style={styles.reqHandleWrap}><View style={styles.reqHandle} /></View>
+
+                        <View style={styles.reqHeader}>
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.reqTitle}>Confirm request</Text>
+                                <Text style={styles.reqSubtitle}>Check the details before you send this.</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setShowRequestModal(false)} style={styles.reqCloseBtn}>
+                                <X size={18} color={colors.textSecondary} />
                             </TouchableOpacity>
                         </View>
 
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
 
-                            <View style={styles.summaryCard}>
-                                <View style={styles.summaryRow}>
-                                    <View style={styles.summaryIconBox}>
-                                        <Package size={16} color={colors.text} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.summaryLabel}>Material</Text>
-                                        <Text style={styles.summaryValue}>
-                                            {requestForm.material_type} · {requestForm.quantity_estimate}
+                            {/* Material, with the same thumbnail used across the app
+                                so the request is recognisable at a glance. */}
+                            <View style={styles.reqMaterialRow}>
+                                <View style={styles.reqThumbBox}>
+                                    <ExpoImage
+                                        source={{ uri: getMaterialImage(requestForm.material_type) }}
+                                        style={styles.reqThumb}
+                                        contentFit="cover"
+                                        transition={150}
+                                    />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.reqMaterialName}>{requestForm.material_type}</Text>
+                                    <Text style={styles.reqMaterialQty}>{requestForm.quantity_estimate}</Text>
+                                </View>
+                                {requestForm.distance_km != null && (
+                                    <View style={styles.reqDistanceChip}>
+                                        <Text style={styles.reqDistanceText}>
+                                            {parseFloat(requestForm.distance_km).toFixed(1)} km
                                         </Text>
                                     </View>
+                                )}
+                            </View>
+
+                            {/* Single stop, drawn like a route row so it reads the
+                                same as the tracking cards elsewhere. */}
+                            <View style={styles.reqStopRow}>
+                                <View style={styles.reqStopDot} />
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.reqStopLabel}>PICKUP</Text>
+                                    <Text style={styles.reqStopValue} numberOfLines={2}>
+                                        {customAddress || 'Seller location'}
+                                    </Text>
                                 </View>
+                                {requestForm.duration_min != null && (
+                                    <Text style={styles.reqEta}>~{Math.round(requestForm.duration_min)} min</Text>
+                                )}
+                            </View>
 
-                                <View style={styles.summaryDivider} />
-
-                                <View style={styles.summaryRow}>
-                                    <View style={styles.summaryIconBox}>
-                                        <MapPin size={16} color={colors.text} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={styles.summaryLabel}>Pickup Location</Text>
-                                        <Text style={styles.summaryValue} numberOfLines={2}>
-                                            {customAddress || 'Seller location'}
+                            {/* The amount is the decision here, so it leads rather
+                                than sitting in a list row. Revesta takes nothing and
+                                pays nothing while monetization is off, so the note
+                                says who actually settles it - promising an in-app
+                                payout the backend won't make would be a lie. With
+                                pricing switched off there is no figure to quote at
+                                all, so the card says how it gets settled instead of
+                                showing a number the app did not set. */}
+                            <View style={styles.reqAmountCard}>
+                                {pricingEnabled ? (
+                                    <>
+                                        <Text style={styles.reqAmountLabel}>
+                                            {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
                                         </Text>
-                                    </View>
-                                </View>
+                                        <Text style={styles.reqAmountValue}>
+                                            ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
+                                        </Text>
+                                        <Text style={styles.reqAmountNote}>
+                                            {requestForm.track_type === 'A'
+                                                ? 'Paid directly to your collector on pickup.'
+                                                : 'Settled directly with the disposer on pickup.'}
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text style={styles.reqAmountLabel}>Payment</Text>
+                                        <Text style={styles.reqAmountValue}>Arranged directly</Text>
+                                        <Text style={styles.reqAmountNote}>
+                                            {requestForm.track_type === 'A'
+                                                ? 'Agree the price with your collector at pickup.'
+                                                : 'Agree the price with the disposer at pickup.'}
+                                        </Text>
+                                    </>
+                                )}
+                            </View>
 
-                                <View style={styles.summaryDivider} />
-
-                                <View style={styles.summaryRow}>
-                                    {pricingEnabled ? (
-                                        <>
-                                            <Text style={styles.summaryLabel}>
-                                                {requestForm.track_type === 'A' ? 'Amount to pay' : "You'll earn"}
-                                            </Text>
-                                            <Text style={[styles.summaryPrice, { color: requestForm.track_type === 'A' ? colors.text : colors.accent }]}>
-                                                ₵{(parseFloat(requestForm.waste_value || 0) + parseFloat(requestForm.delivery_fee || 0)).toFixed(2)}
-                                            </Text>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Text style={styles.summaryLabel}>Payment</Text>
-                                            <Text style={styles.summaryPrice}>Arranged directly</Text>
-                                        </>
-                                    )}
-                                </View>
+                            <View style={styles.reqNoteRow}>
+                                <ShieldCheck size={15} color={colors.textMuted} />
+                                <Text style={styles.reqNoteText}>
+                                    You can cancel any time before the pickup starts.
+                                </Text>
                             </View>
 
                             <AnimatedButton
                                 style={styles.modalConfirmBtn}
+                                haptic
                                 onPress={handleCreateRequest}
                                 disabled={requestLoading}
                             >
-                                {requestLoading ? <ActivityIndicator color={colors.onPrimary} /> : <Text style={styles.modalConfirmText}>Confirm Request</Text>}
+                                {requestLoading ? <ActivityIndicator color={colors.onPrimary} /> : (
+                                    <>
+                                        <Text style={styles.modalConfirmText}>Confirm request</Text>
+                                        <ArrowRight size={19} color={colors.onPrimary} style={{ marginLeft: 8 }} />
+                                    </>
+                                )}
                             </AnimatedButton>
                         </ScrollView>
                     </View>
@@ -2154,7 +2187,7 @@ export default function PickupsScreen({ route }) {
                                             setShowSearchModal(false);
                                         }}
                                     >
-                                        <View style={[styles.searchResultIcon, { backgroundColor: colors.accentSoft }]}>
+                                        <View style={styles.searchResultIcon}>
                                             <Navigation size={20} color={colors.accent} />
                                         </View>
                                         <View style={styles.searchResultText}>
@@ -2376,6 +2409,77 @@ export default function PickupsScreen({ route }) {
 }
 
 const useStyles = makeStyles((c) => ({
+    // --- Confirm request sheet -------------------------------------------
+    reqHandleWrap: { alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
+    reqHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.border },
+    reqHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        paddingHorizontal: 22,
+        paddingTop: 6,
+        paddingBottom: 18,
+    },
+    reqTitle: { fontSize: 23, fontWeight: '800', color: c.text, letterSpacing: -0.4 },
+    reqSubtitle: { fontSize: 13.5, color: c.textSecondary, marginTop: 3 },
+    reqCloseBtn: {
+        width: 32, height: 32, borderRadius: 16, backgroundColor: c.surfaceSunken,
+        alignItems: 'center', justifyContent: 'center', marginLeft: 12,
+    },
+    reqMaterialRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        backgroundColor: c.surfaceAlt,
+        borderRadius: 18,
+        padding: 14,
+        marginBottom: 12,
+    },
+    reqThumbBox: {
+        width: 52, height: 52, borderRadius: 14, overflow: 'hidden',
+        backgroundColor: c.surfaceSunken, alignItems: 'center', justifyContent: 'center',
+    },
+    reqThumb: { width: 52, height: 52 },
+    reqMaterialName: { fontSize: 16, fontWeight: '700', color: c.text },
+    reqMaterialQty: { fontSize: 13, color: c.textSecondary, marginTop: 2 },
+    reqDistanceChip: {
+        backgroundColor: c.surfaceSunken, borderRadius: 20,
+        paddingHorizontal: 11, paddingVertical: 6,
+    },
+    reqDistanceText: { fontSize: 12.5, fontWeight: '700', color: c.textSecondary },
+    reqStopRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        backgroundColor: c.surfaceAlt,
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 12,
+    },
+    reqStopDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.accent },
+    reqStopLabel: {
+        fontSize: 10.5, fontWeight: '700', color: c.textMuted,
+        letterSpacing: 0.6, marginBottom: 3,
+    },
+    reqStopValue: { fontSize: 15, fontWeight: '600', color: c.text },
+    reqEta: { fontSize: 13, fontWeight: '700', color: c.textSecondary },
+    reqAmountCard: {
+        backgroundColor: c.accentSoft,
+        borderRadius: 18,
+        paddingVertical: 18,
+        paddingHorizontal: 18,
+        marginBottom: 14,
+    },
+    reqAmountLabel: { fontSize: 13, fontWeight: '600', color: c.textSecondary },
+    reqAmountValue: {
+        fontSize: 34, fontWeight: '800', color: c.accent,
+        letterSpacing: -0.8, marginTop: 2,
+    },
+    reqAmountNote: { fontSize: 12.5, color: c.textSecondary, marginTop: 6, lineHeight: 17 },
+    reqNoteRow: {
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        paddingHorizontal: 2, marginBottom: 18,
+    },
+    reqNoteText: { fontSize: 12.5, color: c.textMuted, flex: 1 },
     searchHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -2500,9 +2604,10 @@ const useStyles = makeStyles((c) => ({
         paddingHorizontal: 12,
         paddingVertical: 12,
     },
-    // Tinted icon box, matching the card-with-tinted-icon pattern used across
-    // the rest of the app (nav rows, job cards) instead of a bare dot.
-    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: c.accentSoft, alignItems: 'center', justifyContent: 'center' },
+    // Neutral icon box. Every decorative icon container in the app shares
+    // this one surface - colour is reserved for state (status, danger,
+    // selection), not for decoration.
+    pickupIconBox: { width: 38, height: 38, borderRadius: 12, backgroundColor: c.surfaceSunken, alignItems: 'center', justifyContent: 'center' },
     pickupFieldTextCol: { flex: 1 },
     pickupFieldLabel: { fontSize: 11, fontWeight: '600', color: c.textMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 2 },
     pickupFieldValue: { fontSize: 15, fontWeight: '700', color: c.text },
@@ -3118,13 +3223,6 @@ const useStyles = makeStyles((c) => ({
         paddingBottom: Platform.OS === 'ios' ? 40 : 24,
         maxHeight: Dimensions.get('window').height * 0.9,
     },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', color: c.text },
     modalBody: {},
     pickerContainer: {
         flexDirection: 'row',
@@ -3147,25 +3245,6 @@ const useStyles = makeStyles((c) => ({
     pickerItemText: { color: c.textSecondary, fontSize: 13, fontWeight: '500' },
     pickerItemTextActive: { color: c.onPrimary, fontWeight: 'bold' },
 
-    summaryCard: {
-        backgroundColor: c.surfaceAlt,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: c.borderSubtle,
-        padding: 16,
-        marginBottom: 20,
-        gap: 14,
-    },
-    summaryRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    summaryIconBox: {
-        width: 32, height: 32, borderRadius: 10,
-        backgroundColor: c.surface,
-        justifyContent: 'center', alignItems: 'center',
-    },
-    summaryLabel: { fontSize: 12, color: c.textMuted, fontWeight: '600', marginBottom: 2 },
-    summaryValue: { fontSize: 14, color: c.text, fontWeight: '600' },
-    summaryPrice: { fontSize: 20, fontWeight: '800' },
-    summaryDivider: { height: 1, backgroundColor: c.borderSubtle },
 
     estimateContainer: {
         marginBottom: 20,
@@ -3241,11 +3320,14 @@ const useStyles = makeStyles((c) => ({
     },
     modalConfirmBtn: {
         backgroundColor: c.primary,
-        paddingVertical: 16,
+        paddingVertical: 17,
         borderRadius: 16,
+        // Row so the trailing arrow sits inline with the label.
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: 20,
+        marginTop: 4,
+        marginBottom: 8,
     },
     modalConfirmText: {
         color: c.onPrimary,

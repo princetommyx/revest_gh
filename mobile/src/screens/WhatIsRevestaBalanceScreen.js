@@ -19,7 +19,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <View style={styles.iconContainer}>
-                    <Wallet size={48} color={colors.accent} />
+                    <Wallet size={48} color={colors.text} />
                 </View>
                 
                 <Text style={styles.mainTitle}>What is Revesta Balance?</Text>
@@ -30,7 +30,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
                 <View style={styles.featuresContainer}>
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <Banknote size={24} color={colors.accent} />
+                            <Banknote size={24} color={colors.text} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Cashless Payments</Text>
@@ -42,7 +42,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <Zap size={24} color={colors.warning} />
+                            <Zap size={24} color={colors.text} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Instant Transactions</Text>
@@ -54,7 +54,7 @@ const WhatIsRevestaBalanceScreen = ({ navigation }) => {
 
                     <View style={styles.featureItem}>
                         <View style={styles.featureIconWrapper}>
-                            <ShieldCheck size={24} color={colors.info} />
+                            <ShieldCheck size={24} color={colors.text} />
                         </View>
                         <View style={styles.featureTextContainer}>
                             <Text style={styles.featureTitle}>Safe & Secure</Text>
@@ -99,7 +99,7 @@ const useStyles = makeStyles((c) => ({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: c.accentSoft,
+        backgroundColor: c.surfaceSunken,
         alignItems: 'center',
         justifyContent: 'center',
         alignSelf: 'center',

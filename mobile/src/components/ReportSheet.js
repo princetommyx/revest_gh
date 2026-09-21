@@ -69,7 +69,7 @@ export default function ReportSheet({ visible, onClose, targetType, targetId, ta
                         <View style={styles.headerRow}>
                             <View style={styles.titleWrap}>
                                 <View style={styles.iconBox}>
-                                    <Flag size={16} color={colors.warning} />
+                                    <Flag size={16} color={colors.text} />
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <Text style={styles.title}>Report {targetLabel}</Text>
@@ -139,7 +139,7 @@ const useStyles = makeStyles((c) => ({
     headerRow: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 18 },
     titleWrap: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1 },
     iconBox: {
-        width: 34, height: 34, borderRadius: 10, backgroundColor: c.warningSoft,
+        width: 34, height: 34, borderRadius: 10, backgroundColor: c.surfaceSunken,
         alignItems: 'center', justifyContent: 'center',
     },
     title: { fontSize: 17, fontWeight: '800', color: c.text, marginBottom: 2 },
