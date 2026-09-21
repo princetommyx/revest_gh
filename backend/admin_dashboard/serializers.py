@@ -112,6 +112,13 @@ class DashboardStatsSerializer(serializers.Serializer):
     # Recent activity count
     activities_today = serializers.IntegerField()
 
+    # Chart data. Both of these replace values that were hardcoded in the
+    # dashboard component - a mock Jan-Sep growth curve and a fixed
+    # Paper/Plastic/Metal split - so the charts now show what is really
+    # there, including when that is nothing.
+    signup_trend = serializers.ListField(child=serializers.DictField(), required=False)
+    material_distribution = serializers.ListField(child=serializers.DictField(), required=False)
+
 
 class UserDetailSerializer(serializers.ModelSerializer):
     """
@@ -173,3 +180,43 @@ class OnboardingScreenSerializer(serializers.ModelSerializer):
         model = OnboardingScreen
         fields = '__all__'
         read_only_fields = ['created_at', 'updated_at']
+
+
+class AdminTransactionSerializer(serializers.ModelSerializer):
+    """
+    Platform-wide transaction row for the dashboard.
+
+    Nests the wallet's owner because the dashboard table renders
+    `transaction.wallet.user.first_name` - the mobile TransactionSerializer
+    returns no wallet at all, so that page would have thrown on its first
+    row even once it was pointed at data.
+    """
+    transaction_type_display = serializers.CharField(
+        source='get_transaction_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    wallet = serializers.SerializerMethodField()
+
+    class Meta:
+        from wallet.models import Transaction
+        model = Transaction
+        fields = (
+            'id', 'amount', 'transaction_type', 'transaction_type_display',
+            'status', 'status_display', 'description', 'reference',
+            'created_at', 'wallet',
+        )
+
+    def get_wallet(self, obj):
+        user = obj.wallet.user if obj.wallet_id else None
+        if not user:
+            return None
+        return {
+            'id': obj.wallet_id,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'email': user.email,
+                'role': user.role,
+            },
+        }

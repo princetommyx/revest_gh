@@ -80,3 +80,30 @@ export const getStatusBadgeColor = (status) => {
             return 'bg-gray-100 text-gray-800';
     }
 };
+
+/**
+ * A name to show for a user.
+ *
+ * first_name and last_name are optional on the user model and are empty for
+ * most accounts - the mobile app registers people with a username and a
+ * phone number. Every table in this dashboard rendered
+ * `{first_name} {last_name}` directly, so those rows showed a blank cell
+ * rather than telling the admin who they were looking at.
+ */
+export const displayName = (user) => {
+    if (!user) return 'Unknown';
+    const full = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();
+    if (full) return full;
+    if (user.username) return user.username;
+    if (user.email) return user.email.split('@')[0];
+    return 'Unknown';
+};
+
+/** Initials for an avatar, from whatever the user actually has. */
+export const initialsOf = (user) => {
+    if (!user) return '?';
+    const parts = [user.first_name, user.last_name].filter(Boolean);
+    if (parts.length) return parts.map((p) => p[0]).join('').toUpperCase();
+    const fallback = user.username || user.email || '';
+    return fallback ? fallback[0].toUpperCase() : '?';
+};

@@ -90,6 +90,16 @@ class PickupRequestViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         user = self.request.user
+
+        # Admins oversee the whole board from the dashboard. Without this
+        # they fell through to the provider-only branch at the bottom and
+        # saw only pickups they had raised themselves - which for a staff
+        # account is none, so the dashboard's Pickups page was permanently
+        # empty no matter how many requests existed.
+        if user.is_staff or user.is_superuser:
+            return PickupRequest.objects.select_related(
+                'provider', 'collector').all().order_by('-created_at')
+
         # RECYCLER picks up jobs from this same board exactly like COLLECTOR
         # does elsewhere in the app (accept/track/complete have no role
         # restriction) - this used to check only 'COLLECTOR', so a recycler

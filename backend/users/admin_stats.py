@@ -59,7 +59,14 @@ def admin_dashboard_stats(request):
     else:
         growth_percentage = 100.0 if new_this_month > 0 else 0.0
     
+    # Chart data for the dashboard. Both of these were hardcoded in the
+    # React component - a mock growth curve and a fixed material split -
+    # so the charts showed invented numbers next to real counters.
+    from admin_dashboard.metrics import signup_trend, material_distribution
+
     return Response({
+        'signup_trend': signup_trend(),
+        'material_distribution': material_distribution(),
         'total_users': total_users,
         'collectors': collectors_count,
         'sellers': sellers_count,  # Disposers

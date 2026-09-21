@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { listingsApi } from '../api/listings';
 import { Loader2, Package, MapPin } from 'lucide-react';
-import { formatDate, formatCurrency } from '../utils/formatters';
+import { formatDate, formatCurrency, displayName } from '../utils/formatters';
 import Pagination from '../components/common/Pagination';
 import SearchBar from '../components/common/SearchBar';
 import FilterDropdown from '../components/common/FilterDropdown';
@@ -182,7 +182,7 @@ export default function ListingsPage() {
                                     <div className="mt-3 pt-3 border-t border-gray-100">
                                         <p className="text-xs text-gray-500">
                                             Seller: <span className="font-medium text-gray-700">
-                                                {listing.seller.first_name} {listing.seller.last_name}
+                                                {displayName(listing.seller)}
                                             </span>
                                         </p>
                                     </div>

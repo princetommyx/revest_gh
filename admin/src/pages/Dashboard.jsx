@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '../api/users';
 import { Users, Truck, Trash2, Recycle, Loader2, Info, Activity, Wallet, UserPlus } from 'lucide-react';
@@ -38,7 +39,10 @@ function StatCard({ title, value, detail, icon: Icon, isPrimary, index }) {
     );
 }
 
-const COLORS = ['#0047ff', '#1e293b', '#94a3b8'];
+// One per slice the distribution can return (material_distribution caps at
+// six). The legend indexes this directly, so a short list left later rows
+// with an undefined colour and no dot at all.
+const COLORS = ['#0047ff', '#1e293b', '#94a3b8', '#059669', '#f59e0b', '#7c3aed'];
 
 export default function Dashboard() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -49,24 +53,20 @@ export default function Dashboard() {
         refetchInterval: 30000,
     });
 
-    // Mock trend data for the chart (alignment with the image)
-    const trendData = [
-        { name: 'Jan', value: 30 },
-        { name: 'Feb', value: 45 },
-        { name: 'Mar', value: 35 },
-        { name: 'Apr', value: 50 },
-        { name: 'May', value: 70 },
-        { name: 'Jun', value: 65 },
-        { name: 'Jul', value: 90 },
-        { name: 'Aug', value: 85 },
-        { name: 'Sep', value: 95 },
-    ];
+    // Both of these were hardcoded: a Jan-Sep curve with a comment saying
+    // it existed to match a mockup, and a fixed Paper 400 / Plastic 300 /
+    // Metal 300 split. An admin reading this dashboard had no way to know
+    // the numbers were invented. They now come from /admin/stats/.
+    const trendData = (stats?.signup_trend || []).map((point) => ({
+        name: point.label,
+        value: point.value,
+    }));
+    const distributionData = stats?.material_distribution || [];
 
-    const distributionData = [
-        { name: 'Paper', value: 400 },
-        { name: 'Plastic', value: 300 },
-        { name: 'Metal', value: 300 },
-    ];
+    // The chart header said "January 2025" no matter what it was showing.
+    const trendRange = trendData.length
+        ? `${trendData[0].name} – ${trendData[trendData.length - 1].name}`
+        : 'No data yet';
 
     if (isLoading) {
         return (
@@ -135,16 +135,17 @@ export default function Dashboard() {
                 <div className="lg:col-span-2 bg-white rounded-3xl sm:rounded-[32px] p-4 sm:p-8 shadow-premium border border-gray-100/50 overflow-hidden w-full max-w-full">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                         <div>
-                            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">January 2025</h3>
-                            <p className="text-sm text-gray-400 font-medium">Platform Growth Analysis</p>
-                        </div>
-                        <div className="flex items-center space-x-2 bg-gray-50 p-1 rounded-xl self-stretch sm:self-auto justify-center">
-                            <button className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg bg-white shadow-sm text-blue-600">Daily</button>
-                            <button className="flex-1 sm:flex-none px-4 py-2 text-xs font-bold rounded-lg text-gray-400">Weekly</button>
+                            <h3 className="text-xl font-extrabold text-gray-900 tracking-tight">New sign-ups</h3>
+                            <p className="text-sm text-gray-400 font-medium">{trendRange} · by month</p>
                         </div>
                     </div>
 
                     <div className="h-[250px] sm:h-[300px] w-full -ml-2 sm:ml-0">
+                        {trendData.length === 0 ? (
+                            <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                                No sign-ups recorded yet.
+                            </div>
+                        ) : (
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                 <defs>
@@ -169,17 +170,9 @@ export default function Dashboard() {
                                 />
                             </AreaChart>
                         </ResponsiveContainer>
+                        )}
                     </div>
 
-                    {/* Simple Date Selector as seen in image */}
-                    <div className="mt-8 flex justify-between overflow-x-auto hide-scrollbar items-center px-2 sm:px-4 gap-2 sm:gap-4 pb-2">
-                        {[5, 6, 7, 8, 9, 10, 11].map(day => (
-                            <div key={day} className={`flex-shrink-0 flex flex-col items-center p-2 sm:p-3 rounded-2xl transition-all ${day === 7 ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-                                <span className="text-[10px] font-bold uppercase opacity-60 mb-1">Mon</span>
-                                <span className="text-lg font-extrabold min-w-[1.5rem] text-center">{day}</span>
-                            </div>
-                        ))}
-                    </div>
                 </div>
 
                 {/* Right Side Widgets */}
@@ -187,6 +180,12 @@ export default function Dashboard() {
                     {/* Top Sale Pie Chart */}
                     <div className="bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
                         <h3 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">Top Material Source</h3>
+                        {distributionData.length === 0 ? (
+                            <p className="py-10 text-center text-sm text-gray-400">
+                                No listings yet, so there is no material mix to show.
+                            </p>
+                        ) : (
+                        <>
                         <div className="h-[200px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -209,29 +208,43 @@ export default function Dashboard() {
                             {distributionData.map((item, idx) => (
                                 <div key={item.name} className="flex justify-between items-center">
                                     <div className="flex items-center space-x-2">
-                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx] }}></div>
+                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
                                         <span className="text-sm font-bold text-gray-500">{item.name}</span>
                                     </div>
                                     <span className="text-sm font-extrabold text-gray-900">{item.value}</span>
                                 </div>
                             ))}
                         </div>
+                        </>
+                        )}
                     </div>
 
-                    {/* Traffic Source / Mini List */}
+                    {/* This panel was "System Status": three bars for API
+                        Server, Cloud Storage and Database, every one of them
+                        reading 98% UP from a literal width: '98%'. There is no
+                        uptime monitoring behind this dashboard, so it was
+                        inventing reassurance. Replaced with counts that are
+                        actually measured, each linking to the screen that
+                        clears it. */}
                     <div className="bg-white rounded-[32px] p-8 shadow-premium border border-gray-100/50">
-                        <h3 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">System Status</h3>
-                        <div className="space-y-6">
-                            {['API Server', 'Cloud Storage', 'Database'].map(item => (
-                                <div key={item}>
-                                    <div className="flex justify-between text-xs font-bold mb-2">
-                                        <span className="text-gray-400 uppercase">{item}</span>
-                                        <span className="text-blue-600">98% UP</span>
-                                    </div>
-                                    <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-blue-600 rounded-full" style={{ width: '98%' }}></div>
-                                    </div>
-                                </div>
+                        <h3 className="text-lg font-extrabold text-gray-900 mb-6 tracking-tight">Needs attention</h3>
+                        <div className="space-y-1">
+                            {[
+                                { label: 'Open support tickets', value: stats?.open_tickets ?? 0, to: '/support' },
+                                { label: 'Tickets in progress', value: stats?.in_progress_tickets ?? 0, to: '/support' },
+                                { label: 'Pickups in progress', value: stats?.active_rides ?? 0, to: '/pickups' },
+                                { label: 'New users today', value: stats?.new_users_today ?? 0, to: '/users' },
+                            ].map(({ label, value, to }) => (
+                                <Link
+                                    key={label}
+                                    to={to}
+                                    className="flex items-center justify-between rounded-xl px-3 py-3 -mx-3 transition-colors hover:bg-gray-50"
+                                >
+                                    <span className="text-sm font-medium text-gray-600">{label}</span>
+                                    <span className={`text-lg font-extrabold tabular-nums ${value > 0 ? 'text-gray-900' : 'text-gray-300'}`}>
+                                        {value}
+                                    </span>
+                                </Link>
                             ))}
                         </div>
                     </div>

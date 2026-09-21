@@ -11,6 +11,9 @@ urlpatterns = [
     path('users/<int:pk>/activity/', views.UserActivityView.as_view(), name='admin_user_activity'),
     path('users/<int:pk>/send-message/', views.SendUserMessageView.as_view(), name='admin_user_send_message'),
     
+    # Wallet transactions (platform-wide, for the dashboard)
+    path('transactions/', views.AdminTransactionListView.as_view(), name='admin_transactions'),
+
     # Activity Logs
     path('activity/', views.ActivityLogListView.as_view(), name='admin_activity_log'),
     

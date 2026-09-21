@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { pickupsApi } from '../api/pickups';
 import { Loader2, Truck, MapPin } from 'lucide-react';
-import { formatDate, formatCurrency, formatDateTime } from '../utils/formatters';
+import { formatDate, formatCurrency, formatDateTime, displayName } from '../utils/formatters';
 import Pagination from '../components/common/Pagination';
 import FilterDropdown from '../components/common/FilterDropdown';
 
@@ -155,7 +155,7 @@ export default function PickupsPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-900">
-                                                {pickup.provider?.first_name} {pickup.provider?.last_name}
+                                                {displayName(pickup.provider)}
                                             </div>
                                             {pickup.provider?.email && (
                                                 <div className="text-xs text-gray-500">
@@ -167,7 +167,7 @@ export default function PickupsPage() {
                                             {pickup.collector ? (
                                                 <>
                                                     <div className="text-sm text-gray-900">
-                                                        {pickup.collector.first_name} {pickup.collector.last_name}
+                                                        {displayName(pickup.collector)}
                                                     </div>
                                                     {pickup.collector.email && (
                                                         <div className="text-xs text-gray-500">

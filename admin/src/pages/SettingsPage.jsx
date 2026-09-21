@@ -129,28 +129,25 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 transition-colors">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Time Zone
-                        </label>
-                        <select className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                            <option>UTC (GMT+0:00)</option>
-                            <option>EST (GMT-5:00)</option>
-                            <option selected>PST (GMT-8:00)</option>
-                            <option>CET (GMT+1:00)</option>
-                        </select>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 transition-colors">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Date Format
-                        </label>
-                        <select className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                            <option selected>MM/DD/YYYY</option>
-                            <option>DD/MM/YYYY</option>
-                            <option>YYYY-MM-DD</option>
-                        </select>
-                    </div>
+                    {/* These were two dropdowns, neither wired to anything and
+                        both defaulted wrong for this product - PST and
+                        MM/DD/YYYY, for a platform that runs in Ghana. Nothing
+                        read either value, so they are stated as facts instead
+                        of offered as choices that would not take effect. */}
+                    <dl className="grid grid-cols-2 gap-4">
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 transition-colors">
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Time zone</dt>
+                            <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                GMT+0 · Accra
+                            </dd>
+                        </div>
+                        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 transition-colors">
+                            <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Date format</dt>
+                            <dd className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+                                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </dd>
+                        </div>
+                    </dl>
                 </div>
             </div>
 

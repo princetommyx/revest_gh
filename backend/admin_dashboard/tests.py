@@ -100,3 +100,128 @@ class UserListFilterTests(TestCase):
         client = APIClient()
         client.force_authenticate(user=intruder)
         self.assertIn(client.get(USERS).status_code, (401, 403))
+
+
+class AdminVisibilityTests(TestCase):
+    """
+    Two dashboard pages were permanently empty because their endpoints
+    scope to the caller's own records - which for a staff account is
+    nothing. Both had looked fine in code review; only opening the page
+    showed it.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='boss', password='pw', role='ADMIN', is_staff=True)
+        self.disposer = User.objects.create_user(
+            username='disposer', password='pw', role='SELLER')
+        self.collector = User.objects.create_user(
+            username='collector', password='pw', role='COLLECTOR')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+
+    def test_an_admin_sees_every_pickup_not_just_their_own(self):
+        from decimal import Decimal
+        from logistics.models import PickupRequest
+
+        for i in range(3):
+            PickupRequest.objects.create(
+                provider=self.disposer, material_type='Plastics',
+                latitude=5.6, longitude=-0.18, actual_price=Decimal('20.00'))
+
+        r = self.client.get('/api/v1/logistics/pickups/')
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        rows = body['results'] if isinstance(body, dict) else body
+        self.assertEqual(len(rows), 3, 'admin saw only pickups they raised')
+
+    def test_admin_transactions_lists_the_whole_platform(self):
+        from decimal import Decimal
+        from wallet.models import Wallet, Transaction
+
+        wallet = Wallet.objects.create(user=self.disposer, balance=Decimal('100.00'))
+        for i in range(4):
+            Transaction.objects.create(
+                wallet=wallet, amount=Decimal('10.00'),
+                transaction_type='DEPOSIT', status='COMPLETED',
+                description=f'seed {i}')
+
+        r = self.client.get('/api/v1/admin/transactions/')
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertEqual(body['count'], 4)
+        self.assertIn('results', body, 'the dashboard pager needs a count envelope')
+
+    def test_a_transaction_row_carries_the_wallet_owner(self):
+        """The dashboard table renders transaction.wallet.user.first_name."""
+        from decimal import Decimal
+        from wallet.models import Wallet, Transaction
+
+        wallet = Wallet.objects.create(user=self.disposer, balance=Decimal('50.00'))
+        Transaction.objects.create(
+            wallet=wallet, amount=Decimal('10.00'),
+            transaction_type='DEPOSIT', status='COMPLETED', description='x')
+
+        row = self.client.get('/api/v1/admin/transactions/').json()['results'][0]
+        self.assertIsNotNone(row['wallet'])
+        self.assertEqual(row['wallet']['user']['username'], 'disposer')
+
+    def test_a_non_admin_cannot_read_platform_transactions(self):
+        client = APIClient()
+        client.force_authenticate(user=self.disposer)
+        self.assertIn(client.get('/api/v1/admin/transactions/').status_code, (401, 403))
+
+
+class DashboardChartDataTests(TestCase):
+    """
+    The dashboard charts used to be hardcoded - a Jan-Sep growth curve and
+    a Paper 400 / Plastic 300 / Metal 300 split - sitting next to real
+    counters, with nothing marking them as invented.
+    """
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='boss', password='pw', role='ADMIN', is_staff=True)
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.admin)
+
+    def stats(self):
+        r = self.client.get('/api/v1/users/admin/stats/')
+        self.assertEqual(r.status_code, 200, r.content)
+        return r.json()
+
+    def test_the_endpoint_the_dashboard_calls_returns_chart_data(self):
+        body = self.stats()
+        self.assertIn('signup_trend', body)
+        self.assertIn('material_distribution', body)
+
+    def test_the_trend_covers_six_months_ending_now(self):
+        trend = self.stats()['signup_trend']
+        self.assertEqual(len(trend), 6)
+        from django.utils import timezone
+        self.assertEqual(trend[-1]['month'], timezone.now().strftime('%Y-%m'))
+
+    def test_the_trend_counts_real_signups(self):
+        before = self.stats()['signup_trend'][-1]['value']
+        User.objects.create_user(username='newbie', password='pw', role='SELLER')
+        self.assertEqual(self.stats()['signup_trend'][-1]['value'], before + 1)
+
+    def test_material_distribution_reflects_actual_listings(self):
+        from decimal import Decimal
+        from market.models import Listing
+
+        seller = User.objects.create_user(username='s', password='pw', role='SELLER')
+        for _ in range(3):
+            Listing.objects.create(
+                seller=seller, title='t', material_type='Plastics', description='d',
+                quantity='1 bag', price=Decimal('5.00'), location='Accra')
+        Listing.objects.create(
+            seller=seller, title='t', material_type='Metals', description='d',
+            quantity='1 bag', price=Decimal('5.00'), location='Accra')
+
+        dist = {row['name']: row['value'] for row in self.stats()['material_distribution']}
+        self.assertEqual(dist, {'Plastics': 3, 'Metals': 1})
+
+    def test_the_charts_are_empty_when_there_is_nothing_to_show(self):
+        """Better an empty chart than an invented one."""
+        self.assertEqual(self.stats()['material_distribution'], [])

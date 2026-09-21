@@ -2,7 +2,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useState } from 'react';
 import { walletApi } from '../api/wallet';
 import { Loader2, Wallet, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
-import { formatDateTime, formatCurrency } from '../utils/formatters';
+import { formatDateTime, formatCurrency, displayName } from '../utils/formatters';
 import Pagination from '../components/common/Pagination';
 import FilterDropdown from '../components/common/FilterDropdown';
 
@@ -249,7 +249,7 @@ export default function TransactionsPage() {
                                             {transaction.wallet?.user ? (
                                                 <>
                                                     <div className="text-sm text-gray-900">
-                                                        {transaction.wallet.user.first_name} {transaction.wallet.user.last_name}
+                                                        {displayName(transaction.wallet?.user)}
                                                     </div>
                                                     <div className="text-xs text-gray-500">
                                                         {transaction.wallet.user.email}

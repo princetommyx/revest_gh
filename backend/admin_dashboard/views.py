@@ -82,7 +82,11 @@ class DashboardStatsView(views.APIView):
         # Activity statistics
         activities_today = ActivityLog.objects.filter(timestamp__gte=today_start).count()
         
+        from .metrics import signup_trend, material_distribution
+
         stats = {
+            'signup_trend': signup_trend(),
+            'material_distribution': material_distribution(),
             'total_users': total_users,
             'total_collectors': total_collectors,
             'total_sellers': total_sellers,
@@ -106,6 +110,46 @@ class DashboardStatsView(views.APIView):
         
         serializer = DashboardStatsSerializer(stats)
         return Response(serializer.data)
+
+
+class AdminTransactionListView(generics.ListAPIView):
+    """
+    GET /api/v1/admin/transactions/ : every wallet transaction on the
+    platform, newest first.
+
+    The dashboard used to call /wallet/transactions/, which is the mobile
+    app's "my own history" route - it reads request.user's wallet. An admin
+    has no wallet activity of their own, so that page showed an empty table
+    however much money had moved. It is also unpaginated and returns a bare
+    array, so the page's count-based pager had nothing to work with.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get_serializer_class(self):
+        from .serializers import AdminTransactionSerializer
+        return AdminTransactionSerializer
+
+    def get_queryset(self):
+        from wallet.models import Transaction
+
+        queryset = Transaction.objects.select_related(
+            'wallet', 'wallet__user').order_by('-created_at')
+
+        txn_type = self.request.query_params.get('transaction_type')
+        status_param = self.request.query_params.get('status')
+        search = self.request.query_params.get('search')
+
+        if txn_type:
+            queryset = queryset.filter(transaction_type=txn_type)
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+        if search:
+            queryset = queryset.filter(
+                Q(description__icontains=search) |
+                Q(wallet__user__username__icontains=search) |
+                Q(wallet__user__email__icontains=search)
+            )
+        return queryset
 
 
 class UserListView(generics.ListCreateAPIView):

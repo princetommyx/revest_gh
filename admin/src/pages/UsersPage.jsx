@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usersApi } from '../api/users';
 import { Loader2, Users as UsersIcon, CheckCircle, XCircle, MessageSquare, Eye, Trash2, RefreshCw } from 'lucide-react';
-import { formatDate, getRoleBadgeColor } from '../utils/formatters';
+import { formatDate, getRoleBadgeColor, displayName, initialsOf } from '../utils/formatters';
 import Pagination from '../components/common/Pagination';
 import SearchBar from '../components/common/SearchBar';
 import FilterDropdown from '../components/common/FilterDropdown';
@@ -77,7 +77,7 @@ export default function UsersPage() {
         mutationFn: (user) => usersApi.deleteUser(user.id),
         onSuccess: (_data, user) => {
             queryClient.invalidateQueries({ queryKey: ['users'] });
-            setToast({ type: 'success', message: `${user.first_name} ${user.last_name} deleted` });
+            setToast({ type: 'success', message: `${displayName(user)} deleted` });
         },
         onError: (err) => {
             setToast({
@@ -89,7 +89,7 @@ export default function UsersPage() {
 
     const handleDeleteUser = (user) => {
         if (window.confirm(
-            `Delete ${user.first_name} ${user.last_name}? This cannot be undone.`
+            `Delete ${displayName(user)}? This cannot be undone.`
         )) {
             deleteUser.mutate(user);
         }
@@ -230,16 +230,20 @@ export default function UsersPage() {
                                             <div className="flex items-center">
                                                 <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-full flex items-center justify-center">
                                                     <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent font-bold text-sm">
-                                                        {user.first_name?.[0]}{user.last_name?.[0]}
+                                                        {initialsOf(user)}
                                                     </span>
                                                 </div>
                                                 <div className="ml-4">
                                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                                        {user.first_name} {user.last_name}
+                                                        {displayName(user)}
                                                     </div>
-                                                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                                                        @{user.username}
-                                                    </div>
+                                                    {/* Only when it adds something - displayName falls back to
+                                                        the username, and repeating it reads as a bug. */}
+                                                    {displayName(user) !== user.username && (
+                                                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                                                            @{user.username}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
