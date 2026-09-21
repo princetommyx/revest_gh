@@ -73,6 +73,9 @@ export default function ProfileScreen({ navigation }) {
     const styles = useStyles();
     const { colors, isDark } = useTheme();
 
+    // Collectors and recyclers consume listings; only disposers create them.
+    const isWasteBrowser = userRole === 'COLLECTOR' || userRole === 'RECYCLER';
+
     // 'deactivate' | 'delete' | null
     const [dangerModal, setDangerModal] = useState(null);
     const [dangerPassword, setDangerPassword] = useState('');
@@ -276,7 +279,35 @@ export default function ProfileScreen({ navigation }) {
                 <View style={styles.navBlock}>
                     <SectionHeader title="My Activity" />
                     <NavCard>
-                        <NavLink title="My Listings" icon={Box} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('Main', { screen: 'Marketplace' })} />
+                        {/* A recycler never posts waste - they browse what
+                            disposers have listed - so "My Listings" was the wrong
+                            thing to offer them. Collectors are in the same
+                            position. Only a disposer has listings of their own.
+
+                            The old target was also dead: it navigated to a tab
+                            named 'Marketplace', but that tab is called 'Discover'.
+                            Sellers have no Discover tab at all, so they get the
+                            stack-level Marketplace screen, which titles itself
+                            "My Waste" for them. */}
+                        {isWasteBrowser ? (
+                            <NavLink
+                                title="All Waste"
+                                subtitle="Browse everything disposers have listed"
+                                icon={Recycle}
+                                iconColor={colors.accent}
+                                iconBg={colors.accentSoft}
+                                onPress={() => navigation.navigate('Main', { screen: 'Discover' })}
+                            />
+                        ) : (
+                            <NavLink
+                                title="My Listings"
+                                subtitle="Waste you've posted"
+                                icon={Recycle}
+                                iconColor={colors.accent}
+                                iconBg={colors.accentSoft}
+                                onPress={() => navigation.navigate('Marketplace')}
+                            />
+                        )}
                         <NavLink title="Pickup History" icon={Truck} iconColor={colors.accent} iconBg={colors.accentSoft} onPress={() => navigation.navigate('PickupHistory')} />
                         <NavLink title="Transaction History" icon={Clock} iconColor={colors.info} iconBg={colors.infoSoft} onPress={() => navigation.navigate('TransactionHistory')} />
                         <NavLink title="Saved Locations" icon={Bookmark} iconColor={colors.warning} iconBg={colors.warningSoft} onPress={() => navigation.navigate('SavedLocations')} isLast />
