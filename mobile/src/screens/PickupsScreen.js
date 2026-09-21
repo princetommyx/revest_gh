@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLogisticsSocket } from '../hooks/useLogisticsSocket';
 import { startCollectorLocationTracking, stopCollectorLocationTracking } from '../utils/collectorTracking';
 import { getOnlinePreference } from '../utils/collectorPresence';
+import { reverseGeocode } from '../utils/geo';
 import { useRecentPickupLocations } from '../hooks/useRecentPickupLocations';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -379,21 +380,6 @@ export default function PickupsScreen({ route }) {
     const [isSelectingLocation, setIsSelectingLocation] = useState(false);
     const [mapRegion, setMapRegion] = useState(null);
     const [locationSubscription, setLocationSubscription] = useState(null);
-
-    // Reverse Geocode Function
-    const reverseGeocode = async (lat, lon) => {
-        try {
-            const [address] = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lon });
-            if (address) {
-                const street = address.street || address.name || '';
-                const city = address.city || address.subregion || address.region || '';
-                return `${street}, ${city}`.replace(/^, /, '').trim();
-            }
-        } catch (error) {
-            console.log('Reverse geocode error:', error);
-        }
-        return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
-    };
 
     const loading = jobsLoading && (!isCollectorRole || !!location);
 
