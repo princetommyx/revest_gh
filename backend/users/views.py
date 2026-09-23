@@ -20,6 +20,7 @@ from rest_framework.throttling import AnonRateThrottle
 from .throttles import OTPIdentifierRateThrottle
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.exceptions import APIException
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -210,8 +211,18 @@ class UserProfileView(generics.RetrieveUpdateDestroyAPIView):
         # error parsing expects a dict and silently falls back to a bare
         # "Please try again" with nothing to go on. Logging the real
         # exception here at least makes the next one diagnosable.
+        #
+        # APIException is deliberately re-raised rather than caught. DRF's
+        # ValidationError is an Exception like any other, so the blanket
+        # handler below was turning every rejected field into a 500 with
+        # "Could not update profile. Please try again." - which is precisely
+        # the uninformative message this block was written to avoid. A user
+        # whose phone number was already registered to someone else could
+        # only ever see "please try again", and retrying could never work.
         try:
             return super().update(request, *args, **kwargs)
+        except APIException:
+            raise
         except Exception as e:
             import traceback
             logger.error(f"Profile update failed for user {request.user.id}: {e}\n{traceback.format_exc()}")
