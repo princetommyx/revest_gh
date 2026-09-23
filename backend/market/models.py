@@ -12,7 +12,13 @@ class Listing(models.Model):
     title = models.CharField(max_length=200)
     material_type = models.CharField(max_length=100) # e.g. Plastics, Metals
     track = models.CharField(max_length=1, choices=TRACK_CHOICES, default='A', db_index=True)
-    description = models.TextField()
+    # Optional, and the form has always treated it that way: the submit
+    # button enables without one and the placeholder invites extra detail
+    # rather than demanding it. As a required model field it rejected every
+    # post that left it empty with "This field may not be blank" - which is
+    # most posts whenever the image analysis fails, since a successful
+    # analysis is what normally fills this in.
+    description = models.TextField(blank=True, default='')
     quantity = models.CharField(max_length=100) # e.g. "50kg" or "2 bags"
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True) # Fee (A) or Incentive (B)
     is_free = models.BooleanField(default=False)

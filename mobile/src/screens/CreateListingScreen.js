@@ -294,6 +294,16 @@ export default function CreateListingScreen({ route, navigation }) {
                 if (firstMessage) {
                     reason = firstKey === 'non_field_errors' ? String(firstMessage) : `${firstKey}: ${firstMessage}`;
                 }
+            } else if (error.response) {
+                // A 5xx with DEBUG off returns an HTML error page, not JSON,
+                // so `data` is a string and every branch above misses it -
+                // which left the generic "Failed to create listing" with no
+                // way to tell a server fault from a validation one.
+                reason = `Server error (${error.response.status}). Please try again.`;
+            } else if (error.code === 'ECONNABORTED') {
+                reason = 'The upload timed out. Check your connection and try again.';
+            } else if (error.message) {
+                reason = `Could not reach Revesta (${error.message}).`;
             }
 
             Toast.show({

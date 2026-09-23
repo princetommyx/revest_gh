@@ -116,3 +116,71 @@ class ListingVisibilityTests(TestCase):
         blocked_client = APIClient()
         blocked_client.force_authenticate(user=self.seller)
         self.assertNotIn(theirs.id, self.ids_from(blocked_client.get(f'{BASE}/')))
+
+
+class ListingCreationTests(TestCase):
+    """
+    What a disposer can actually post.
+
+    description was a required model field while the whole form treated it
+    as optional - the submit button enables without one, and the label
+    carries no required marker. Every post that left it empty came back
+    "This field may not be blank", which the app showed as a generic
+    "Failed to create listing". It normally went unnoticed because a
+    successful image analysis fills the description in; it only bit when
+    the analysis failed, which is exactly when it was reported.
+    """
+
+    def setUp(self):
+        self.seller = User.objects.create_user(
+            username='poster', password='pw', role='SELLER')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.seller)
+
+    def payload(self, **overrides):
+        data = {
+            'title': 'Pure water sachets',
+            'material_type': 'Plastics',
+            'quantity': '2 bags',
+            'price': '0.00',
+            'is_free': True,
+            'location': 'Accra',
+            'track': 'A',
+        }
+        data.update(overrides)
+        return data
+
+    def test_a_listing_posts_without_a_description(self):
+        r = self.client.post(BASE + '/', self.payload(description=''))
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()['description'], '')
+
+    def test_a_listing_posts_with_the_description_key_absent(self):
+        r = self.client.post(BASE + '/', self.payload())
+        self.assertEqual(r.status_code, 201, r.content)
+
+    def test_a_description_is_kept_when_given(self):
+        r = self.client.post(BASE + '/', self.payload(description='Clean, dry sachets'))
+        self.assertEqual(r.status_code, 201, r.content)
+        self.assertEqual(r.json()['description'], 'Clean, dry sachets')
+
+    def test_the_fields_the_form_does_validate_are_still_required(self):
+        """
+        These four gate the submit button, so the app never sends them
+        empty - they should stay required rather than quietly accepting
+        blanks alongside description.
+        """
+        for field in ('title', 'material_type', 'quantity', 'location'):
+            with self.subTest(field=field):
+                r = self.client.post(BASE + '/', self.payload(**{field: ''}))
+                self.assertEqual(r.status_code, 400, f'{field} accepted a blank')
+                self.assertIn(field, r.json())
+
+    def test_the_listing_is_owned_by_the_poster(self):
+        r = self.client.post(BASE + '/', self.payload())
+        self.assertEqual(Listing.objects.get(id=r.json()['id']).seller, self.seller)
+
+    def test_posting_requires_authentication(self):
+        anon = APIClient()
+        r = anon.post(BASE + '/', self.payload())
+        self.assertIn(r.status_code, (401, 403))
